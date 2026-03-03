@@ -1,0 +1,100 @@
+:root {
+    --green: #1a3c2f;
+    --maroon: #7b1d1d;
+    --light-bg: #f4f7f6;
+    --sidebar-w: 280px;
+}
+
+body { margin: 0; font-family: 'Roboto Flex', sans-serif; display: flex; height: 100vh; background: var(--light-bg); overflow: hidden; }
+
+/* Sidebar & Brand Area */
+.sidebar { width: var(--sidebar-w); background: var(--green); color: white; display: flex; flex-direction: column; transition: 0.3s; flex-shrink: 0; }
+.sidebar-brand-area { padding: 25px 20px; display: flex; align-items: center; gap: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+.hamburger-btn { background: none; border: none; color: white; cursor: pointer; font-size: 1.3rem; padding: 0; }
+.brand-name { display: flex; align-items: center; gap: 10px; font-weight: 700; white-space: nowrap; }
+.brand-name img { width: 30px; height: 30px; border-radius: 4px; }
+
+.sidebar-nav { flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
+.nav-item { display: flex; align-items: center; gap: 15px; padding: 18px 25px; color: #a5b5ad; text-decoration: none; transition: 0.2s; white-space: nowrap; }
+.nav-item.active, .nav-item:hover { background: #265543; color: white; }
+.nav-item i { width: 20px; font-size: 1.1rem; text-align: center; }
+
+/* Larger Maroon Header */
+.main-layout { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.top-header { background: var(--maroon); color: white; height: 95px; display: flex; align-items: center; justify-content: space-between; padding: 0 40px; flex-shrink: 0; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+.user-circle { width: 45px; height: 45px; background: white; color: var(--maroon); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; }
+
+.dashboard-body { padding: 30px; overflow-y: auto; flex: 1; }
+
+/* Stats Row - Hover Colors */
+.stats-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 15px; margin-bottom: 30px; }
+.stat-card { background: white; padding: 20px; border-radius: 10px; display: flex; align-items: center; gap: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); border: 1px solid transparent; transition: 0.2s; }
+.stat-card.clickable:hover { cursor: pointer; border-color: var(--maroon); background: #fffcfc; transform: translateY(-3px); box-shadow: 0 6px 15px rgba(123, 29, 29, 0.1); }
+.stat-card i { font-size: 1.8rem; color: #333; }
+.stat-card h3 { margin: 0; font-size: 0.75rem; color: #777; font-weight: 700; text-transform: uppercase; }
+.stat-card p { margin: 5px 0 0 0; font-size: 1.8rem; font-weight: 800; color: #111; }
+
+/* Grid Layout */
+.grid-container { display: grid; grid-template-columns: 1fr 340px; gap: 25px; }
+.card { background: white; border-radius: 10px; padding: 25px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+
+/* Fixed Table Layout */
+.card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.view-all { color: var(--maroon); font-weight: 800; font-size: 0.85rem; text-decoration: none; }
+
+.table-wrapper { width: 100%; overflow-x: auto; }
+.session-table { width: 100%; border-collapse: collapse; }
+.session-table th { text-align: left; color: #999; font-size: 0.8rem; padding: 12px 10px; border-bottom: 2px solid #f0f0f0; text-transform: uppercase; }
+.session-table td { padding: 18px 10px; border-bottom: 1px solid #f9f9f9; font-size: 0.95rem; font-weight: 600; color: #333; }
+.status-badge { background: #fff3cd; color: #856404; padding: 6px 12px; border-radius: 6px; font-weight: 800; font-size: 0.75rem; }
+.text-center { text-align: center; }
+
+/* Sidebar Widgets & Calendar */
+.widget-col { display: flex; flex-direction: column; gap: 25px; } /* Added space between widgets */
+.cal-nav { display: flex; justify-content: space-between; align-items: center; font-weight: 700; margin-bottom: 15px; }
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; }
+.cal-grid small { color: #aaa; font-weight: 700; font-size: 0.7rem; margin-bottom: 10px; }
+.cal-grid span { padding: 8px 0; font-size: 0.85rem; }
+.today { background: #333; color: white; border-radius: 6px; font-weight: 800; }
+.clock-display { text-align: center; margin-top: 20px; padding-top: 15px; border-top: 1px solid #eee; font-weight: 700; color: #444; }
+
+/* Quick Actions */
+.btn-action { width: 100%; background: var(--maroon); color: white; border: none; padding: 14px; border-radius: 6px; margin-bottom: 12px; font-weight: 700; cursor: pointer; transition: 0.2s; }
+.btn-action:hover { filter: brightness(1.2); }
+
+/* Sidebar Toggle Logic */
+.sidebar-closed .sidebar { width: 75px; }
+.sidebar-closed .brand-name, .sidebar-closed .nav-item span { display: none; }
+
+/* Maintain the tall Maroon Header */
+.top-header {
+    background: var(--maroon);
+    color: white;
+    height: 80px; /* Locked height */
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 40px;
+    flex-shrink: 0; 
+}
+
+/* Strict Table Alignment */
+.session-table {
+    width: 100%;
+    table-layout: fixed; /* Prevents columns from dancing around */
+    border-collapse: collapse;
+}
+
+.session-table th, .session-table td {
+    padding: 18px 10px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Vertical Spacing for Widgets */
+.widget-col {
+    display: flex;
+    flex-direction: column;
+    gap: 25px; /* Space between Calendar and Quick Actions */
+}
