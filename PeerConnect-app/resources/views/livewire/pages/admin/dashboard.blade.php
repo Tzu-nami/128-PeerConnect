@@ -1,0 +1,109 @@
+<?php
+
+use function Livewire\Volt\{layout, state, mount};
+
+layout('layouts.app');
+
+mount(function () {
+    abort_if(!auth()->user()->isAdmin(), 403, 'Unauthorized Access');
+});
+
+?>
+
+<div>
+    <x-slot name="header">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+        <link rel="stylesheet" href="{{ asset('css/style.css') }}">
+        
+        <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
+            {{ __('LRC PeerConnect Dashboard') }}
+        </h2>
+    </x-slot>
+
+    <div class="py-6">
+        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+            
+            <main class="dashboard-body">
+                <div class="stats-row grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
+                    <div class="stat-card clickable bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
+                        <i class="fa-solid fa-user-group"></i>
+                        <div class="txt"><h3>Total Mentors</h3><p>40</p></div>
+                    </div>
+                    <div class="stat-card clickable bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
+                        <i class="fa-solid fa-chalkboard-user"></i>
+                        <div class="txt"><h3>Sessions Today</h3><p>18</p></div>
+                    </div>
+                    <div class="stat-card clickable bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
+                        <i class="fa-solid fa-triangle-exclamation"></i>
+                        <div class="txt"><h3>Pending Requests</h3><p>5</p></div>
+                    </div>
+                    <div class="stat-card clickable bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
+                        <i class="fa-solid fa-star"></i>
+                        <div class="txt"><h3>Average Ratings</h3><p>4.9</p></div>
+                    </div>
+                    <div class="stat-card clickable bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
+                        <i class="fa-solid fa-user-graduate"></i>
+                        <div class="txt"><h3>Total Mentees</h3><p>75</p></div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="lg:col-span-2 table-section card bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
+                        <div class="card-header flex justify-between items-center mb-4">
+                            <h2 class="text-lg font-bold">Today's Sessions</h2>
+                            <a href="#" class="view-all text-blue-500">View All ></a>
+                        </div>
+                        <div class="table-wrapper overflow-x-auto">
+                            <table class="session-table w-full text-left">
+                                <thead>
+                                    <tr class="border-b dark:border-gray-700">
+                                        <th class="py-2" style="width: 40%;">Mentor</th>
+                                        <th class="py-2" style="width: 30%;">Student</th>
+                                        <th class="py-2" style="width: 15%;">Time</th>
+                                        <th class="py-2 text-center" style="width: 15%;">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr class="border-b dark:border-gray-700">
+                                        <td class="py-3">Dyoco, Daniel Joco</td>
+                                        <td>Nabo, Frian Karl</td>
+                                        <td>10:00 AM</td>
+                                        <td class="text-center"><span class="status-badge bg-green-100 text-green-800 px-2 py-1 rounded text-xs">Upcoming</span></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="widget-col space-y-6">
+                        <div class="calendar-card card bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
+                            <div class="cal-nav flex justify-between mb-4">
+                                <i class="fa-solid fa-chevron-left cursor-pointer" id="prevMonth"></i>
+                                <span id="monthYearDisplay" class="font-bold"></span>
+                                <i class="fa-solid fa-chevron-right cursor-pointer" id="nextMonth"></i>
+                            </div>
+                            <div class="cal-grid grid grid-cols-7 gap-1 text-center" id="calendarGrid"></div>
+                            <div class="clock-display mt-4 text-center text-sm italic">
+                                <i class="fa-regular fa-clock"></i> <span id="clock">00:00:00 PM</span>
+                            </div>
+                        </div>
+
+                        <div class="quick-actions-card card bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
+                            <h3 class="font-bold mb-4">Quick Actions</h3>
+                            <div class="action-buttons grid grid-cols-1 gap-2">
+                                <button class="btn-action bg-blue-600 text-white py-2 rounded hover:bg-blue-700">Add Mentor</button>
+                                <button class="btn-action bg-blue-600 text-white py-2 rounded hover:bg-blue-700">Create Session Slot</button>
+                                <button class="btn-action bg-blue-600 text-white py-2 rounded hover:bg-blue-700">Manage Subjects</button>
+                                <button class="btn-action bg-blue-600 text-white py-2 rounded hover:bg-blue-700">Generate Report</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    @push('scripts')
+        <script src="{{ asset('js/script.js') }}"></script>
+    @endpush
+</div>
