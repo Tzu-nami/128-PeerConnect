@@ -10,100 +10,179 @@ mount(function () {
 
 ?>
 
-<div>
-    <x-slot name="header">
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-        <link rel="stylesheet" href="{{ asset('css/style.css') }}">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LRC PeerConnect Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root { --sidebar-green: #1a3c2f; --header-maroon: #7b1d1d; --bg-light: #f4f7f6; }
+        body { margin: 0; font-family: 'Inter', sans-serif; background: var(--bg-light); }
+        .app-wrapper { display: flex; height: 100vh; overflow: hidden; }
+        .sidebar { width: 280px; background: var(--sidebar-green); flex-shrink: 0; display: flex; flex-direction: column; color: white; }
+        .main-content { flex-grow: 1; display: flex; flex-direction: column; overflow-y: auto; }
+        .nav-item { display: flex; align-items: center; gap: 15px; padding: 15px 25px; color: rgba(255,255,255,0.7); text-decoration: none; transition: 0.3s; }
+        .nav-item:hover, .nav-item.active { background: rgba(255,255,255,0.1); color: white; }
+        .nav-item.active { border-left: 4px solid white; }
+        .top-header { background: var(--header-maroon); height: 80px; padding: 0 40px; display: flex; align-items: center; justify-content: space-between; color: white; flex-shrink: 0; }
         
-        <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
-            {{ __('LRC PeerConnect Dashboard') }}
-        </h2>
-    </x-slot>
+        /* Stat Cards with Hover Effects */
+        .stat-card { background: white; padding: 25px; border-radius: 12px; transition: all 0.3s ease; border: 1px solid transparent; }
+        .stat-card:hover { transform: translateY(-5px); border-color: var(--header-maroon); box-shadow: 0 10px 20px rgba(0,0,0,0.05); }
+        .stat-card i { font-size: 24px; color: var(--sidebar-green); transition: 0.3s; }
+        .stat-card:hover i { transform: scale(1.2); color: var(--header-maroon); }
+        
+        /* Calendar Styling */
+        .cal-day { padding: 8px; border-radius: 8px; cursor: pointer; font-size: 13px; }
+        .cal-day:hover { background: #f0f0f0; }
+        .cal-today { background: var(--header-maroon) !important; color: white !important; font-weight: bold; }
+        
+        .btn-maroon { background: var(--header-maroon); color: white; font-weight: 700; width: 100%; padding: 12px; border-radius: 8px; margin-bottom: 10px; transition: 0.2s; }
+        .btn-maroon:hover { filter: brightness(1.2); transform: scale(1.02); }
+    </style>
+</head>
+<body>
 
-    <div class="py-6">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            
-            <main class="dashboard-body">
-                <div class="stats-row grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
-                    <div class="stat-card clickable bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
-                        <i class="fa-solid fa-user-group"></i>
-                        <div class="txt"><h3>Total Mentors</h3><p>40</p></div>
-                    </div>
-                    <div class="stat-card clickable bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
-                        <i class="fa-solid fa-chalkboard-user"></i>
-                        <div class="txt"><h3>Sessions Today</h3><p>18</p></div>
-                    </div>
-                    <div class="stat-card clickable bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
-                        <i class="fa-solid fa-triangle-exclamation"></i>
-                        <div class="txt"><h3>Pending Requests</h3><p>5</p></div>
-                    </div>
-                    <div class="stat-card clickable bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
-                        <i class="fa-solid fa-star"></i>
-                        <div class="txt"><h3>Average Ratings</h3><p>4.9</p></div>
-                    </div>
-                    <div class="stat-card clickable bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
-                        <i class="fa-solid fa-user-graduate"></i>
-                        <div class="txt"><h3>Total Mentees</h3><p>75</p></div>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <div class="lg:col-span-2 table-section card bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-                        <div class="card-header flex justify-between items-center mb-4">
-                            <h2 class="text-lg font-bold">Today's Sessions</h2>
-                            <a href="#" class="view-all text-blue-500">View All ></a>
-                        </div>
-                        <div class="table-wrapper overflow-x-auto">
-                            <table class="session-table w-full text-left">
-                                <thead>
-                                    <tr class="border-b dark:border-gray-700">
-                                        <th class="py-2" style="width: 40%;">Mentor</th>
-                                        <th class="py-2" style="width: 30%;">Student</th>
-                                        <th class="py-2" style="width: 15%;">Time</th>
-                                        <th class="py-2 text-center" style="width: 15%;">Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr class="border-b dark:border-gray-700">
-                                        <td class="py-3">Dyoco, Daniel Joco</td>
-                                        <td>Nabo, Frian Karl</td>
-                                        <td>10:00 AM</td>
-                                        <td class="text-center"><span class="status-badge bg-green-100 text-green-800 px-2 py-1 rounded text-xs">Upcoming</span></td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    <div class="widget-col space-y-6">
-                        <div class="calendar-card card bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-                            <div class="cal-nav flex justify-between mb-4">
-                                <i class="fa-solid fa-chevron-left cursor-pointer" id="prevMonth"></i>
-                                <span id="monthYearDisplay" class="font-bold"></span>
-                                <i class="fa-solid fa-chevron-right cursor-pointer" id="nextMonth"></i>
-                            </div>
-                            <div class="cal-grid grid grid-cols-7 gap-1 text-center" id="calendarGrid"></div>
-                            <div class="clock-display mt-4 text-center text-sm italic">
-                                <i class="fa-regular fa-clock"></i> <span id="clock">00:00:00 PM</span>
-                            </div>
-                        </div>
-
-                        <div class="quick-actions-card card bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-                            <h3 class="font-bold mb-4">Quick Actions</h3>
-                            <div class="action-buttons grid grid-cols-1 gap-2">
-                                <button class="btn-action bg-blue-600 text-white py-2 rounded hover:bg-blue-700">Add Mentor</button>
-                                <button class="btn-action bg-blue-600 text-white py-2 rounded hover:bg-blue-700">Create Session Slot</button>
-                                <button class="btn-action bg-blue-600 text-white py-2 rounded hover:bg-blue-700">Manage Subjects</button>
-                                <button class="btn-action bg-blue-600 text-white py-2 rounded hover:bg-blue-700">Generate Report</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </main>
+<div class="app-wrapper">
+    <aside class="sidebar">
+        <div class="p-8 text-xl font-bold flex items-center gap-3"><i class="fa-solid fa-graduation-cap"></i> <span>LRC PeerConnect</span></div>
+        <nav class="flex-grow">
+            <a href="#" class="nav-item active"><i class="fa-solid fa-gauge w-5"></i> Dashboard</a>
+            <a href="#" class="nav-item"><i class="fa-solid fa-user-tie w-5"></i> Mentor Management</a>
+            <a href="#" class="nav-item"><i class="fa-solid fa-calendar-check w-5"></i> Session Management</a>
+            <a href="#" class="nav-item"><i class="fa-solid fa-comment-dots w-5"></i> Student Feedback</a>
+        </nav>
+        <div class="p-4 border-t border-white/10">
+            <a href="#" class="nav-item"><i class="fa-solid fa-gear"></i> Settings</a>
+            <a href="#" class="nav-item"><i class="fa-solid fa-right-from-bracket"></i> Logout</a>
         </div>
-    </div>
+    </aside>
 
-    @push('scripts')
-        <script src="{{ asset('js/script.js') }}"></script>
-    @endpush
+    <div class="main-content">
+        <header class="top-header">
+            <div class="text-lg">Welcome, <span class="font-bold">Admin Name</span></div>
+            <div class="w-10 h-10 bg-white rounded-full flex items-center justify-center text-red-900 font-bold">AN</div>
+        </header>
+
+        <main class="p-8">
+            <div class="grid grid-cols-5 gap-4 mb-8">
+                <div class="stat-card flex items-center gap-4">
+                    <i class="fa-solid fa-users"></i>
+                    <div><h3>Total Mentors</h3><p class="text-2xl font-black">40</p></div>
+                </div>
+                <div class="stat-card flex items-center gap-4">
+                    <i class="fa-solid fa-calendar-day"></i>
+                    <div><h3>Sessions Today</h3><p class="text-2xl font-black">18</p></div>
+                </div>
+                <div class="stat-card flex items-center gap-4">
+                    <i class="fa-solid fa-circle-exclamation"></i>
+                    <div><h3>Pending</h3><p class="text-2xl font-black">5</p></div>
+                </div>
+                <div class="stat-card flex items-center gap-4">
+                    <i class="fa-solid fa-star"></i>
+                    <div><h3>Ratings</h3><p class="text-2xl font-black">4.9</p></div>
+                </div>
+                <div class="stat-card flex items-center gap-4">
+                    <i class="fa-solid fa-user-graduate"></i>
+                    <div><h3>Total Mentees</h3><p class="text-2xl font-black">75</p></div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-3 gap-8">
+                <div class="col-span-2 space-y-8">
+                    <div class="bg-white p-6 rounded-xl shadow-sm">
+                        <div class="flex justify-between items-center mb-6">
+                            <h2 class="text-xl font-bold">Today's Sessions</h2>
+                            <a href="#" class="text-red-800 font-bold text-sm">View All ></a>
+                        </div>
+                        <table class="w-full text-left">
+                            <thead class="text-gray-400 text-xs uppercase border-b">
+                                <tr><th class="pb-4">Mentor</th><th class="pb-4">Student</th><th class="pb-4">Time</th><th class="pb-4">Status</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr class="border-b"><td class="py-4 font-bold">Dyoco, Daniel Joco</td><td>Nabo, Frian Karl</td><td>10:00 AM</td><td><span class="bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full text-xs font-bold">Upcoming</span></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-sm p-6">
+                        <h2 class="text-xl font-bold mb-6">Statistics Overview</h2>
+                        <div class="grid grid-cols-2 gap-8">
+                            <div>
+                                <h3 class="text-gray-500 text-sm font-bold mb-4 uppercase">Sessions Overview</h3>
+                                <canvas id="sessionsChart"></canvas>
+                            </div>
+                            <div>
+                                <h3 class="text-gray-500 text-sm font-bold mb-4 uppercase">Feedback Summary</h3>
+                                <canvas id="feedbackChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="space-y-6">
+                    <div class="bg-white p-6 rounded-xl shadow-sm">
+                        <div class="flex justify-between items-center mb-4 font-bold">
+                            <button onclick="changeMonth(-1)"><i class="fa-solid fa-chevron-left"></i></button>
+                            <span id="monthDisplay">March 2026</span>
+                            <button onclick="changeMonth(1)"><i class="fa-solid fa-chevron-right"></i></button>
+                        </div>
+                        <div class="grid grid-cols-7 text-center text-xs font-bold text-gray-400 mb-2">
+                            <span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>
+                        </div>
+                        <div id="calendarGrid" class="grid grid-cols-7 text-center text-sm gap-1"></div>
+                        <div class="mt-4 pt-4 border-t text-center font-mono text-gray-400" id="liveClock">00:00:00 PM</div>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-xl shadow-sm">
+                        <h3 class="font-bold mb-4">Quick Actions</h3>
+                        <button class="btn-maroon">Add Mentor</button>
+                        <button class="btn-maroon">Create Session Slot</button>
+                        <button class="btn-maroon">Manage Subjects</button>
+                        <button class="btn-maroon">Generate Report</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
 </div>
+
+<script>
+    // 1. CALENDAR LOGIC
+    let date = new Date();
+    function renderCalendar() {
+        const grid = document.getElementById('calendarGrid');
+        const monthDisp = document.getElementById('monthDisplay');
+        grid.innerHTML = '';
+        monthDisp.innerText = date.toLocaleString('default', { month: 'long', year: 'numeric' });
+        
+        const lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+        const startDay = new Date(date.getFullYear(), date.getMonth(), 1).getDay();
+        
+        for(let i=0; i<startDay; i++) grid.innerHTML += '<div></div>';
+        for(let i=1; i<=lastDay; i++) {
+            const isToday = i === new Date().getDate() && date.getMonth() === new Date().getMonth();
+            grid.innerHTML += `<div class="cal-day ${isToday?'cal-today':''}">${i}</div>`;
+        }
+    }
+    function changeMonth(dir) { date.setMonth(date.getMonth() + dir); renderCalendar(); }
+    function updateClock() { document.getElementById('liveClock').innerText = new Date().toLocaleTimeString(); }
+    setInterval(updateClock, 1000);
+    renderCalendar();
+
+    // 2. ANALYTICS CHARTS (Dummy Data)
+    new Chart(document.getElementById('sessionsChart'), {
+        type: 'line',
+        data: { labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], datasets: [{ label: 'Sessions', data: [12, 19, 15, 25, 18], borderColor: '#7b1d1d', tension: 0.4 }] }
+    });
+    new Chart(document.getElementById('feedbackChart'), {
+        type: 'doughnut',
+        data: { labels: ['Excellent', 'Good', 'Average'], datasets: [{ data: [60, 30, 10], backgroundColor: ['#1a3c2f', '#7b1d1d', '#ccc'] }] }
+    });
+</script>
+</body>
+</html>
