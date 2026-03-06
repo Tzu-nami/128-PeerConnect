@@ -1,4 +1,4 @@
-<nav class="fixed top-0 left-0 right-0 z-500 flex items-center py-3 px-7 bg-up-maroon-dark">
+<nav class="fixed top-0 left-0 right-0 z-50 flex items-center h-[83px] px-7 bg-up-maroon-dark">
 
     {{-- Brand --}}
     <div class="flex items-center gap-4 w-1/3">
