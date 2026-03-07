@@ -6,7 +6,7 @@
             <img src="https://cwpbwqcxlccbittkhasq.supabase.co/storage/v1/object/public/assets/logos/uplogo.png"
                  alt="UPB Logo"
                  class="w-[60px] h-[60px] object-contain" />
-            <img src="https://cwpbwqcxlccbittkhasq.supabase.co/storage/v1/object/public/assets/logos/lrclogo.png"
+            <img src="https://cwpbwqcxlccbittkhasq.supabase.co/storage/v1/object/public/assets/logos/LRC_logo.png"
                  alt="UPB LRC Logo"
                  class="w-[60px] h-[60px] object-contain" />
         </div>

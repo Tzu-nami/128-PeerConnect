@@ -4,9 +4,7 @@ use function Livewire\Volt\{layout};
 
 layout('layouts.app');
 
-mount(function () {
-    abort_if(!auth()->user(), 403, 'Unauthorized Access');
-});
+$user = auth()->user();
 
 ?>
 
@@ -385,17 +383,17 @@ This is the LRC Enrichment Session Booking System. Mentor can:
 
 <label class="feature-item">
 <input type="checkbox" checked disabled>
-<span>Book a tutoring session</span>
+<span>Manage sessions</span>
 </label>
 
 <label class="feature-item">
 <input type="checkbox" checked disabled>
-<span>View available peer mentors</span>
+<span>Manage your schedule</span>
 </label>
 
 <label class="feature-item">
 <input type="checkbox" checked disabled>
-<span>Choose subject and schedule</span>
+<span>View feedbacks</span>
 </label>
 
 </div>

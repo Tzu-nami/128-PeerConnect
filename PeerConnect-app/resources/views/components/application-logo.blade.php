@@ -1,1 +1,1 @@
-<a href="/dashboard"><img src="{{ asset('images/LRC_Logo.png') }}" alt="LRC Logo" class="w-20 h-20"></a>
+<a href="/dashboard"><img src="https://cwpbwqcxlccbittkhasq.supabase.co/storage/v1/object/public/assets/logos/LRC_logo.png" alt="LRC Logo" {{ $attributes }}></a>
