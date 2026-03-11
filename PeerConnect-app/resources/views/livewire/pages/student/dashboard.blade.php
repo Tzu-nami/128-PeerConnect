@@ -56,12 +56,6 @@ mount(function () {
         </nav>
 <div class="p-4 border-t border-white/10">
 
-    <!-- Profile Settings -->
-    <a href="{{ route('profile.edit') }}" class="nav-item">
-        <i class="fa-solid fa-user-gear"></i>
-        Profile Settings
-    </a>
-
     <!-- Logout -->
     <form method="POST" action="{{ route('logout') }}">
         @csrf
@@ -98,13 +92,6 @@ mount(function () {
         <div class="font-semibold">{{ auth()->user()->name }}</div>
         <div class="text-xs text-gray-400">{{ auth()->user()->email }}</div>
     </div>
-
-    <!-- Profile Settings -->
-    <a href="{{ route('profile.edit') }}"
-       class="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100">
-        <i class="fa-solid fa-user w-4"></i>
-        Profile Settings
-    </a>
 
     <!-- Logout -->
     <form method="POST" action="{{ route('logout') }}">
