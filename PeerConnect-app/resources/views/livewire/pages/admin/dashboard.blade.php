@@ -10,8 +10,6 @@ mount(function () {
 
 ?>
 
-<!DOCTYPE html>
-<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -56,17 +54,73 @@ mount(function () {
             <a href="#" class="nav-item"><i class="fa-solid fa-calendar-check w-5"></i> Session Management</a>
             <a href="#" class="nav-item"><i class="fa-solid fa-comment-dots w-5"></i> Student Feedback</a>
         </nav>
-        <div class="p-4 border-t border-white/10">
-            <a href="#" class="nav-item"><i class="fa-solid fa-gear"></i> Settings</a>
-            <a href="#" class="nav-item"><i class="fa-solid fa-right-from-bracket"></i> Logout</a>
-        </div>
+<div class="p-4 border-t border-white/10">
+
+    <!-- Profile Settings -->
+    <a href="{{ route('profile.edit') }}" class="nav-item">
+        <i class="fa-solid fa-user-gear"></i>
+        Profile Settings
+    </a>
+
+    <!-- Logout -->
+    <form method="POST" action="{{ route('logout') }}">
+        @csrf
+
+        <button type="submit" class="nav-item w-full text-left">
+            <i class="fa-solid fa-right-from-bracket"></i>
+            Logout
+        </button>
+    </form>
+
+</div>
     </aside>
 
     <div class="main-content">
-        <header class="top-header">
-            <div class="text-lg">Welcome, <span class="font-bold">Admin Name</span></div>
-            <div class="w-10 h-10 bg-white rounded-full flex items-center justify-center text-red-900 font-bold">AN</div>
-        </header>
+<header class="top-header">
+    <div class="text-lg">
+        Welcome, <span class="font-bold">{{ auth()->user()->name }}</span>
+    </div>
+
+    <!-- Profile Dropdown -->
+    <div class="relative">
+        <button onclick="toggleProfileMenu()" 
+            class="w-10 h-10 bg-white rounded-full flex items-center justify-center text-red-900 font-bold">
+            
+            {{ strtoupper(substr(auth()->user()->name,0,2)) }}
+        </button>
+
+        <!-- Dropdown -->
+    <div id="profileMenu"
+     class="hidden absolute right-0 mt-3 w-56 bg-white rounded-lg shadow-lg border overflow-hidden">
+
+    <!-- User Info -->
+    <div class="px-4 py-3 border-b text-sm text-gray-600">
+        <div class="font-semibold">{{ auth()->user()->name }}</div>
+        <div class="text-xs text-gray-400">{{ auth()->user()->email }}</div>
+    </div>
+
+    <!-- Profile Settings -->
+    <a href="{{ route('profile.edit') }}"
+       class="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100">
+        <i class="fa-solid fa-user w-4"></i>
+        Profile Settings
+    </a>
+
+    <!-- Logout -->
+    <form method="POST" action="{{ route('logout') }}">
+        @csrf
+        <button type="submit"
+            class="flex items-center gap-2 w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100">
+            <i class="fa-solid fa-right-from-bracket w-4"></i>
+            Logout
+        </button>
+    </form>
+
+</div>
+    </div>
+</header>
+
+
 
         <main class="p-8">
             <div class="grid grid-cols-5 gap-4 mb-8">
@@ -183,6 +237,19 @@ mount(function () {
         type: 'doughnut',
         data: { labels: ['Excellent', 'Good', 'Average'], datasets: [{ data: [60, 30, 10], backgroundColor: ['#1a3c2f', '#7b1d1d', '#ccc'] }] }
     });
+
+    function toggleProfileMenu() {
+    document.getElementById("profileMenu").classList.toggle("hidden");
+}
+
+    window.addEventListener('click', function(e){
+        const menu = document.getElementById("profileMenu");
+        const button = e.target.closest("button");
+
+        if(!button && !e.target.closest("#profileMenu")){
+            menu.classList.add("hidden");
+}
+});
+
 </script>
 </body>
-</html>
