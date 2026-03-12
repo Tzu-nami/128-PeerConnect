@@ -113,7 +113,7 @@
             <div class="grid grid-cols-5 gap-4 mb-8">
                 <div class="stat-card flex items-center gap-4">
                     <i class="fa-solid fa-users"></i>
-                    <div><h3 class="text-xs text-gray-400 font-bold uppercase">Total Mentors</h3><p class="text-2xl font-black">40</p></div>
+                    <div><h3 class="text-xs text-gray-400 font-bold uppercase">Total</h3><p class="text-2xl font-black">40</p></div>
                 </div>
                 <div class="stat-card flex items-center gap-4">
                     <i class="fa-solid fa-calendar-day"></i>
