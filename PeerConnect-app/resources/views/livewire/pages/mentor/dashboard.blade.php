@@ -48,12 +48,33 @@ mount(function () {
 <div class="app-wrapper">
     <aside class="sidebar">
         <div class="p-8 text-xl font-bold flex items-center gap-3"><i class="fa-solid fa-graduation-cap"></i> <span>LRC PeerConnect</span></div>
-        <nav class="flex-grow">
-            <a href="#" class="nav-item active"><i class="fa-solid fa-gauge w-5"></i> Dashboard</a>
-            <a href="#" class="nav-item"><i class="fa-solid fa-user-tie w-5"></i> Mentor Management</a>
-            <a href="#" class="nav-item"><i class="fa-solid fa-calendar-check w-5"></i> Session Management</a>
-            <a href="#" class="nav-item"><i class="fa-solid fa-comment-dots w-5"></i> Student Feedback</a>
-        </nav>
+<nav class="flex-grow">
+
+<a href="{{ route('mentor.dashboard') }}"
+class="nav-item {{ request()->routeIs('mentor.dashboard') ? 'active' : '' }}">
+<i class="fa-solid fa-gauge w-5"></i>
+Dashboard
+</a>
+
+<a href="{{ route('mentor.bookings') }}"
+class="nav-item {{ request()->routeIs('mentor.bookings') ? 'active' : '' }}">
+<i class="fa-solid fa-calendar-check w-5"></i>
+Bookings
+</a>
+
+<a href="{{ route('mentor.sessions') }}"
+class="nav-item {{ request()->routeIs('mentor.sessions') ? 'active' : '' }}">
+<i class="fa-solid fa-clock w-5"></i>
+Sessions
+</a>
+
+<a href="{{ route('mentor.feedbacks') }}"
+class="nav-item {{ request()->routeIs('mentor.feedbacks') ? 'active' : '' }}">
+<i class="fa-solid fa-comment-dots w-5"></i>
+Feedbacks
+</a>
+
+</nav>
 <div class="p-4 border-t border-white/10">
 
     <!-- Logout -->
@@ -70,46 +91,45 @@ mount(function () {
     </aside>
 
     <div class="main-content">
-<header class="top-header">
-    <div class="text-lg">
+        <header class="top-header">
+            <div class="text-lg">
         Welcome, <span class="font-bold">{{ auth()->user()->name }}</span>
-    </div>
+            </div>
 
     <!-- Profile Dropdown -->
-    <div class="relative">
-        <button onclick="toggleProfileMenu()" 
-            class="w-10 h-10 bg-white rounded-full flex items-center justify-center text-red-900 font-bold">
+        <div class="relative">
+            <button onclick="toggleProfileMenu()" 
+                class="w-10 h-10 bg-white rounded-full flex items-center justify-center text-red-900 font-bold">
             
-            {{ strtoupper(substr(auth()->user()->name,0,2)) }}
-        </button>
+                {{ strtoupper(substr(auth()->user()->name,0,2)) }}
+            </button>
 
         <!-- Dropdown -->
-    <div id="profileMenu"
-     class="hidden absolute right-0 mt-3 w-56 bg-white rounded-lg shadow-lg border overflow-hidden">
+        <div id="profileMenu"
+            class="hidden absolute right-0 mt-3 w-56 bg-white rounded-lg shadow-lg border overflow-hidden">
 
     <!-- User Info -->
-    <div class="px-4 py-3 border-b text-sm text-gray-600">
-        <div class="font-semibold">{{ auth()->user()->name }}</div>
-        <div class="text-xs text-gray-400">{{ auth()->user()->email }}</div>
-    </div>
+            <div class="px-4 py-3 border-b text-sm text-gray-600">
+            <div class="font-semibold">{{ auth()->user()->name }}</div>
+            <div class="text-xs text-gray-400">{{ auth()->user()->email }}</div>
+        </div>
 
     <!-- Logout -->
-    <form method="POST" action="{{ route('logout') }}">
-        @csrf
-        <button type="submit"
-            class="flex items-center gap-2 w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100">
-            <i class="fa-solid fa-right-from-bracket w-4"></i>
-            Logout
-        </button>
-    </form>
+        <form method="POST" action="{{ route('logout') }}">
+            @csrf
+            <button type="submit"
+                class="flex items-center gap-2 w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100">
+                <i class="fa-solid fa-right-from-bracket w-4"></i>
+                Logout
+            </button>
+        </form>
 
-</div>
     </div>
-</header>
-
-
+    </div>
+    </header>
 
         <main class="p-8">
+        @if(request()->routeIs('mentor.dashboard'))
             <div class="grid grid-cols-5 gap-4 mb-8">
                 <div class="stat-card flex items-center gap-4">
                     <i class="fa-solid fa-users"></i>
@@ -188,6 +208,8 @@ mount(function () {
                     </div>
                 </div>
             </div>
+        @endif
+        @yield('tab-content')
         </main>
     </div>
 </div>

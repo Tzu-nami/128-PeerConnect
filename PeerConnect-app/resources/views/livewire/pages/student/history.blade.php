@@ -5,7 +5,7 @@ use function Livewire\Volt\{layout, state, mount};
 layout('layouts.app');
 
 mount(function () {
-    abort_if(!auth()->user()->isAdmin(), 403, 'Unauthorized Access');
+    abort_if(!auth()->user()->isStudent(), 403, 'Unauthorized Access');
 });
 
 ?>
@@ -61,28 +61,34 @@ body { margin: 0; font-family: 'Inter', sans-serif; background: var(--bg-light);
 
 <nav class="flex-grow">
 
-<a href="{{ route('admin.dashboard') }}"
-class="nav-item {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}">
+<a href="{{ route('student.dashboard') }}"
+class="nav-item {{ request()->routeIs('student.dashboard') ? 'active' : '' }}">
 <i class="fa-solid fa-gauge w-5"></i>
 Dashboard
 </a>
 
-<a href="{{ route('admin.mentors') }}"
-class="nav-item {{ request()->routeIs('admin.mentors') ? 'active' : '' }}">
+<a href="{{ route('student.bookings') }}"
+class="nav-item {{ request()->routeIs('student.bookings') ? 'active' : '' }}">
+<i class="fa-solid fa-calendar-check w-5"></i>
+Bookings
+</a>
+
+<a href="{{ route('student.history') }}"
+class="nav-item {{ request()->routeIs('student.history') ? 'active' : '' }}">
+<i class="fa-solid fa-clock-rotate-left w-5"></i>
+History
+</a>
+
+<a href="{{ route('student.mentors') }}"
+class="nav-item {{ request()->routeIs('student.mentors') ? 'active' : '' }}">
 <i class="fa-solid fa-chalkboard-user w-5"></i>
-Mentor Management
+Mentors
 </a>
 
-<a href="{{ route('admin.sessions') }}"
-class="nav-item {{ request()->routeIs('admin.sessions') ? 'active' : '' }}">
-<i class="fa-solid fa-calendar-days w-5"></i>
-Session Management
-</a>
-
-<a href="{{ route('admin.feedbacks') }}"
-class="nav-item {{ request()->routeIs('admin.feedbacks') ? 'active' : '' }}">
-<i class="fa-solid fa-comments w-5"></i>
-Student Feedback
+<a href="{{ route('student.about') }}"
+class="nav-item {{ request()->routeIs('student.about') ? 'active' : '' }}">
+<i class="fa-solid fa-circle-info w-5"></i>
+About Us
 </a>
 
 </nav>
@@ -147,7 +153,7 @@ Logout
 
 <main class="p-8">
 
-@if(request()->routeIs('admin.dashboard'))
+@if(request()->routeIs('student.history'))
 <!-- dito kayo mageedit --> 
             <div class="grid grid-cols-5 gap-4 mb-8">
                 <div class="stat-card flex items-center gap-4">
@@ -227,13 +233,10 @@ Logout
                     </div>
                 </div>
             </div>
-
 <!-- hanggang dito kayo mageedit --> 
-
 @endif
 
 @yield('tab-content')
-
 
 </main>
 
