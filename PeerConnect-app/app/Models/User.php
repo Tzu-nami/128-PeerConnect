@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -10,31 +10,67 @@ use Illuminate\Notifications\Notifiable;
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable;
+    use HasUuids, HasFactory, Notifiable;
 
     /**
      * The attributes that are mass assignable.
      *
      * @var list<string>
      */
+
+    protected $table = 'user_profiles';
+
     protected $fillable = [
-        'name',
+        'google_id',
+        'firstName',
+        'lastName',
+        'middleInitial',
+        'avatar',
+        'last_login_at',
         'email',
+        'user_roles',
         'password',
-        'role',
+        'remember_token',
+        'updated_at',
     ];
+
+    protected $hidden = [
+        'password',
+        'remember_token',
+    ];
+
+    protected $casts = [
+        'last_login_at' => 'datetime',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
+        'password' => 'hashed',
+    ];
+
+    public function getNameAttribute(): string
+    {
+        return "{$this->firstName} {$this->lastName}";
+    }
 
     //Role Checking
     public function isStudent(): bool {
-        return $this->role === 'student';
+        return strtolower(trim($this->user_roles)) === 'student';
     }
 
     public function isMentor(): bool {
-        return $this->role === 'mentor';
+        return strtolower(trim($this->user_roles)) === 'mentor';
     }
 
     public function isAdmin(): bool {
-        return $this->role === 'admin';
+        return strtolower(trim($this->user_roles)) === 'admin';
+    }
+
+    // Relationships of tables (naol relationships)
+    public function studentBookings() {
+        return $this->hasMany(Booking::class, 'student_id');
+    }
+
+    public function mentorBookings() {
+        return $this->hasMany(Booking::class, 'mentor_id');
     }
 
     /**
@@ -42,21 +78,10 @@ class User extends Authenticatable
      *
      * @var list<string>
      */
-    protected $hidden = [
-        'password',
-        'remember_token',
-    ];
 
     /**
      * Get the attributes that should be cast.
      *
      * @return array<string, string>
      */
-    protected function casts(): array
-    {
-        return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
-        ];
-    }
 }

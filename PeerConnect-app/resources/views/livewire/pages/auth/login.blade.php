@@ -17,7 +17,9 @@ $login = function () {
 
     $user = auth()->user();
 
-    $redirect = match($user->role) {
+    $user->update(['last_login_at' => now()]);
+
+    $redirect = match($user->user_roles) {
         'admin' => route('admin.dashboard', absolute: false),
         'mentor' => route('mentor.dashboard', absolute: false),
         default => route('student.dashboard', absolute: false),

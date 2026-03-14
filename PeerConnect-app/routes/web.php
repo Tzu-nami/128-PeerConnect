@@ -29,7 +29,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     */
 
     Route::get('/dashboard', function () {
-        return match(auth()->user()->role) {
+        return match(auth()->user()->user_roles) {
             'admin' => redirect()->route('admin.dashboard'),
             'mentor' => redirect()->route('mentor.dashboard'),
             'student' => redirect()->route('student.dashboard'),
