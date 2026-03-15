@@ -24,19 +24,15 @@
         <main>
             {{-- Hero --}}
             <section class="relative min-h-screen flex flex-col justify-center px-20 pt-[83px] bg-up-maroon">
-                <div class="max-w-[700px]">
+                <div class="max-w-[800px]">
                     {{-- Title --}}
-                    <p class="text-[12px] font-medium tracking-[0.15rem] uppercase text-up-yellow mb-6">
+                    <p class="text-[33px] font-medium tracking-[0.15rem] uppercase text-up-yellow mb-6">
                         University of the Philippines Baguio
                     </p>
 
                     <h1 class="font-serif text-8xl font-bold text-cream mb-2.5 tracking-wide">
                         Learning<br>Resource<br>Center
                     </h1>
-
-                    <h2 class="font-serif text-4xl font-normal text-up-yellow-light mb-8 tracking-[0.06em]">
-                        PeerConnect
-                    </h2>
 
                     {{-- Description --}}
                     <p class="font-sans font-light leading-[1.85] text-cream/70 max-w-[480px] mb-12">

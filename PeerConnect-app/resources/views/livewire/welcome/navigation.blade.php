@@ -6,15 +6,15 @@
             <img src="https://cwpbwqcxlccbittkhasq.supabase.co/storage/v1/object/public/assets/logos/uplogo.png"
                  alt="UPB Logo"
                  class="w-[60px] h-[60px] object-contain" />
-            <img src="https://cwpbwqcxlccbittkhasq.supabase.co/storage/v1/object/public/assets/logos/LRC_logo.png"
+            <img src="https://cwpbwqcxlccbittkhasq.supabase.co/storage/v1/object/public/assets/logos/logo_white_transparent.png"
                  alt="UPB LRC Logo"
-                 class="w-[60px] h-[60px] object-contain" />
+                 class="w-[70px] h-[70px] object-contain" />
         </div>
         <div class="leading-tight">
-            <span class="block text-[15px] font-medium text-cream/70 tracking-widest uppercase">
+            <span class="block text-[20px] font-medium text-cream/70 tracking-widest uppercase">
                 UPB LRC
             </span>
-            <span class="block text-[20px] font-semibold text-up-yellow-light tracking-wider">
+            <span class="block text-[15px] font-semibold text-up-yellow-light tracking-wider">
                 PeerConnect
             </span>
         </div>
