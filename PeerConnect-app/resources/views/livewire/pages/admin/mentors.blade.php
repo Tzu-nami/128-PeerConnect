@@ -83,11 +83,11 @@ $saveMentor = function () {
 
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-logo-container">
-            <button id="sidebarToggle"><i class="fa-solid fa-bars"></i></button>
-            <div class="logo-content">
-                <i class="fa-solid fa-graduation-cap text-xl"></i>
-                <span class="logo-text font-bold">LRC PeerConnect</span>
-            </div>
+                <button id="sidebarToggle"><i class="fa-solid fa-bars"></i></button>
+                <div class="logo-content">
+                    <i class="fa-solid fa-graduation-cap text-xl"></i>
+                    <span class="logo-text">LRC PeerConnect</span>
+                </div>
         </div>
         <nav class="flex-grow">
             <a href="{{ route('admin.dashboard') }}" class="nav-item" data-tooltip="Dashboard"><i class="fa-solid fa-gauge"></i><span>Dashboard</span></a>
@@ -95,15 +95,35 @@ $saveMentor = function () {
             <a href="{{ route('admin.sessions') }}" class="nav-item" data-tooltip="Sessions"><i class="fa-solid fa-calendar-days"></i><span>Session Management</span></a>
             <a href="{{ route('admin.feedbacks') }}" class="nav-item" data-tooltip="Feedback"><i class="fa-solid fa-comments"></i><span>Student Feedback</span></a>
         </nav>
+        <div class="p-4 border-t border-white/10">
+                <form method="POST" action="{{ route('logout') }}">
+                    @csrf
+                    <button type="submit" class="nav-item w-full bg-transparent border-none text-left" data-tooltip="Logout">
+                        <i class="fa-solid fa-right-from-bracket"></i><span>Logout</span>
+                    </button>
+                </form>
+            </div>
     </aside>
 
     <div class="main-content">
         <header class="top-header">
-            <div class="text-lg">Welcome, <span class="font-bold">{{ auth()->user()->name }}</span></div>
-            <div class="w-10 h-10 bg-white rounded-full flex items-center justify-center text-red-900 font-bold">
-                {{ strtoupper(substr(auth()->user()->name,0,2)) }}
-            </div>
-        </header>
+    <div class="text-lg">
+        Welcome, <span class="font-bold">{{ auth()->user()->name }}</span>
+    </div>
+
+    <!-- PROFILE BUTTON -->
+    <button id="profileTrigger"
+class="flex items-center gap-2 px-3 py-1 bg-white rounded-full hover:bg-gray-100 transition shadow-sm border-2 border-white/20 group">
+
+    <div class="w-8 h-8 bg-red-900 text-white rounded-full flex items-center justify-center text-xs font-bold">
+        {{ strtoupper(substr(auth()->user()->name,0,2)) }}
+    </div>
+
+    <!-- DROPDOWN ARROW -->
+    <i class="fa-solid fa-chevron-down text-gray-600 text-xs"></i>
+
+</button>
+</header>
 
         <main class="scroll-container">
             <div class="flex justify-between items-end mb-8">
