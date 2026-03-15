@@ -66,19 +66,21 @@ mount(function () {
         .nav-item { 
             display: flex; align-items: center; gap: 15px; padding: 15px 25px; 
             color: rgba(255,255,255,0.7); text-decoration: none; transition: background 0.3s; white-space: nowrap;
-            position: relative;
+            position: relative; text-align: left; background: transparent; border: none; width: 100%;
         }
         .nav-item i { width: 30px; text-align: center; flex-shrink: 0; font-size: 20px; }
         .nav-item:hover, .nav-item.active { background: rgba(255,255,255,0.1); color: white; }
         .nav-item.active { border-left: 4px solid white; }
 
         /* TOOLTIP LOGIC FOR COLLAPSED STATE */
-        .sidebar.collapsed .nav-item::after {
+        .nav-item::after {
             content: attr(data-tooltip);
             position: absolute;
             left: 100%;
+            top: 50%;
+            transform: translateY(-50%);
             margin-left: 10px;
-            background: rgba(0, 0, 0, 0.8);
+            background: rgba(0, 0, 0, 0.9);
             color: white;
             padding: 5px 12px;
             border-radius: 4px;
@@ -98,6 +100,7 @@ mount(function () {
 
         .sidebar.collapsed .logo-content, .sidebar.collapsed .nav-item span { display: none; }
         .sidebar.collapsed .sidebar-logo-container, .sidebar.collapsed .nav-item { justify-content: center; padding: 15px 0; }
+        .sidebar.collapsed .nav-item i { margin: 0; width: auto; }
         .sidebar.collapsed .nav-item.active { border-left: none; }
 
         /* MAIN CONTENT AREA FIXES */
@@ -114,6 +117,25 @@ mount(function () {
             display: flex; align-items: center; justify-content: space-between; color: white; flex-shrink: 0; 
         }
         .scroll-container { flex-grow: 1; overflow-y: auto; padding: 32px; width: 100%; }
+
+        /* PROFILE DROPDOWN STYLES */
+        .profile-dropdown {
+            position: absolute;
+            top: 70px;
+            right: 40px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.2);
+            width: 220px;
+            display: none;
+            flex-direction: column;
+            z-index: 50;
+            border: 1px solid #e2e8f0;
+            overflow: hidden;
+        }
+        .profile-dropdown.show { display: flex; }
+        .dropdown-item { padding: 12px 20px; font-size: 13px; color: #475569; display: flex; align-items: center; gap: 10px; transition: background 0.2s; }
+        .dropdown-item:hover { background: #f8fafc; color: var(--header-maroon); }
 
         /* CALENDAR STYLING */
         .cal-header-day { font-size: 11px; font-weight: 800; color: #94a3b8; text-align: center; padding-bottom: 10px; text-transform: uppercase; }
@@ -170,25 +192,44 @@ mount(function () {
             </div>
             <nav class="flex-grow">
                 <a href="#" class="nav-item active" data-tooltip="Dashboard"><i class="fa-solid fa-gauge"></i><span>Dashboard</span></a>
-                <a href="#" class="nav-item" data-tooltip="Mentor Management"><i class="fa-solid fa-chalkboard-user"></i><span>Mentor Management</span></a>
-                <a href="#" class="nav-item" data-tooltip="Session Management"><i class="fa-solid fa-calendar-days"></i><span>Session Management</span></a>
-                <a href="#" class="nav-item" data-tooltip="Student Feedback"><i class="fa-solid fa-comments"></i><span>Student Feedback</span></a>
+                <a href="{{ route('admin.mentors') }}" class="nav-item {{ request()->routeIs('admin.mentors') ? 'active' : '' }}" data-tooltip="Mentor Management">
+                <i class="fa-solid fa-chalkboard-user w-5"></i><span>Mentor Management</span></a>                
+                <a href="{{ route('admin.sessions') }}" class="nav-item {{ request()->routeIs('admin.sessions') ? 'active' : '' }}" data-tooltip="Session Management">
+                <i class="fa-solid fa-calendar-days w-5"></i><span>Session Management</span></a>                
+                <a href="{{ route('admin.feedbacks') }}" class="nav-item {{ request()->routeIs('admin.feedbacks') ? 'active' : '' }}" data-tooltip="Student Feedback">
+                <i class="fa-solid fa-comments w-5"></i><span>Student Feedback</span></a>            
             </nav>
             <div class="p-4 border-t border-white/10">
-                <form method="POST" action="{{ route('logout') }}">
-                    @csrf
-                    <button type="submit" class="nav-item w-full" data-tooltip="Logout">
-                        <i class="fa-solid fa-right-from-bracket"></i><span class="ml-4">Logout</span>
-                    </button>
-                </form>
-            </div>
+            <form method="POST" action="{{ route('logout') }}">
+                @csrf
+                <button type="submit" class="nav-item w-full bg-transparent border-none text-left" data-tooltip="Logout">
+                    <i class="fa-solid fa-right-from-bracket"></i><span>Logout</span>
+                </button>
+            </form>
+        </div>
         </aside>
 
         <div class="main-content">
-            <header class="top-header">
+            <header class="top-header relative">
                 <div class="text-lg">Welcome, <span class="font-bold">{{ auth()->user()->name }}</span></div>
-                <div class="w-10 h-10 bg-white rounded-full flex items-center justify-center text-red-900 font-bold">
+                
+                <button id="profileTrigger" class="w-10 h-10 bg-white rounded-full flex items-center justify-center text-red-900 font-bold hover:bg-gray-100 transition shadow-sm border-2 border-white/20">
                     {{ strtoupper(substr(auth()->user()->name,0,2)) }}
+                </button>
+
+                <div id="profileDropdown" class="profile-dropdown">
+                    <div class="p-4 border-b border-gray-100 bg-slate-50">
+                        <p class="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1">Signed in as</p>
+                        <p class="text-sm font-bold text-slate-800 truncate">{{ auth()->user()->name }}</p>
+                        <p class="text-xs text-slate-500 truncate">{{ auth()->user()->email }}</p>
+                    </div>
+                    <a href="#" class="dropdown-item"><i class="fa-solid fa-user-gear"></i> Account Settings</a>
+                    <form method="POST" action="{{ route('logout') }}" class="m-0">
+                        @csrf
+                        <button type="submit" class="dropdown-item w-full border-t border-gray-50 text-red-600 font-semibold">
+                            <i class="fa-solid fa-right-from-bracket"></i> Logout
+                        </button>
+                    </form>
                 </div>
             </header>
 
@@ -313,7 +354,7 @@ mount(function () {
                         <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
                             <div class="flex justify-between items-center mb-4">
                                 <h3 class="font-bold text-slate-800 text-sm tracking-tight">Pending Approvals</h3>
-                                <span class="bg-red-100 text-red-700 text-[10px] font-bold px-2 py-0.5 rounded-full">3 New</span>
+                                <span class="bg-red-100 text-red-700 text-[10px] font-bold px-2 py-0.5 rounded-full">5 New</span>
                             </div>
                             <div class="flex flex-col gap-4">
                                 <div class="flex items-center justify-between group">
@@ -331,10 +372,36 @@ mount(function () {
                                 </div>
                                 <div class="flex items-center justify-between group">
                                     <div class="flex items-center gap-3">
-                                        <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-[10px] font-bold">AS</div>
+                                        <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-[10px] font-bold">SM</div>
                                         <div>
-                                            <p class="text-[11px] font-bold text-slate-700">Anna Smith</p>
-                                            <p class="text-[9px] text-gray-400 font-medium">Session Change Request</p>
+                                            <p class="text-[11px] font-bold text-slate-700">Sarah Miller</p>
+                                            <p class="text-[9px] text-gray-400 font-medium">Session Change</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex gap-1">
+                                        <button class="w-6 h-6 rounded-md bg-gray-50 text-gray-400 hover:bg-red-50 hover:text-red-600 transition flex items-center justify-center"><i class="fa-solid fa-xmark text-[10px]"></i></button>
+                                        <button class="w-6 h-6 rounded-md bg-gray-50 text-gray-400 hover:bg-emerald-50 hover:text-emerald-600 transition flex items-center justify-center"><i class="fa-solid fa-check text-[10px]"></i></button>
+                                    </div>
+                                </div>
+                                <div class="flex items-center justify-between group">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-8 h-8 rounded-full bg-orange-100 text-orange-700 flex items-center justify-center text-[10px] font-bold">AL</div>
+                                        <div>
+                                            <p class="text-[11px] font-bold text-slate-700">Amy Lee</p>
+                                            <p class="text-[9px] text-gray-400 font-medium">Subject Add</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex gap-1">
+                                        <button class="w-6 h-6 rounded-md bg-gray-50 text-gray-400 hover:bg-red-50 hover:text-red-600 transition flex items-center justify-center"><i class="fa-solid fa-xmark text-[10px]"></i></button>
+                                        <button class="w-6 h-6 rounded-md bg-gray-50 text-gray-400 hover:bg-emerald-50 hover:text-emerald-600 transition flex items-center justify-center"><i class="fa-solid fa-check text-[10px]"></i></button>
+                                    </div>
+                                </div>
+                                <div class="flex items-center justify-between group">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-8 h-8 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center text-[10px] font-bold">TC</div>
+                                        <div>
+                                            <p class="text-[11px] font-bold text-slate-700">Tom Chen</p>
+                                            <p class="text-[9px] text-gray-400 font-medium">Profile Edit</p>
                                         </div>
                                     </div>
                                     <div class="flex gap-1">
@@ -354,24 +421,36 @@ mount(function () {
     </div>
 
     <script>
-        // Sidebar Toggle
+        // Sidebar & Profile Logic
         const sidebar = document.getElementById('sidebar');
+        const profileTrigger = document.getElementById('profileTrigger');
+        const profileDropdown = document.getElementById('profileDropdown');
         const charts = []; 
 
         document.getElementById('sidebarToggle').addEventListener('click', () => {
             sidebar.classList.toggle('collapsed');
-            // Manual resize call as fallback to the observer
             setTimeout(() => { charts.forEach(c => c.resize()); }, 310);
         });
 
-        // Robust Resize Observer to ensure charts always maximize space
+        // Toggle profile dropdown
+        profileTrigger.addEventListener('click', (e) => {
+            e.stopPropagation();
+            profileDropdown.classList.toggle('show');
+        });
+
+        // Close dropdown when clicking outside
+        window.addEventListener('click', () => {
+            if (profileDropdown.classList.contains('show')) {
+                profileDropdown.classList.remove('show');
+            }
+        });
+
         const mainContent = document.querySelector('.main-content');
         const resizeObserver = new ResizeObserver(() => {
             charts.forEach(chart => chart.resize());
         });
         resizeObserver.observe(mainContent);
 
-        // Clock logic
         function updateClock() {
             const now = new Date();
             document.getElementById('liveClock').innerText = now.toLocaleTimeString('en-US', { hour12: false });
@@ -380,15 +459,12 @@ mount(function () {
         setInterval(updateClock, 1000); 
         updateClock();
 
-        // DATA
         const allSessions = [
             { date: '2026-03-14', mentor: "Daniel Dyoco", mentee: "Frian Nabo", time: "09:00 AM", status: "Completed", color: "text-blue-600" },
             { date: '2026-03-14', mentor: "Rhona Shayne Lopez", mentee: "Mark Tuan", time: "10:30 AM", status: "Active", color: "text-green-600" },
             { date: '2026-03-14', mentor: "Chezka Sinco", mentee: "Uno Dos Thirdy", time: "11:00 AM", status: "Active", color: "text-green-600" },
             { date: '2026-03-14', mentor: "Arielle Mae Solis", mentee: "Kevin Hart", time: "01:00 PM", status: "Upcoming", color: "text-orange-500" },
-            { date: '2026-03-14', mentor: "Ax'l Conchada", mentee: "Alice Blue", time: "02:30 PM", status: "Upcoming", color: "text-orange-500" },
-            { date: '2026-03-14', mentor: "Vonn Rosario", mentee: "Hannibal L.", time: "04:00 PM", status: "Upcoming", color: "text-orange-500" },
-            { date: '2026-03-16', mentor: "Uno Dos Thirdy", mentee: "Steve Trevor", time: "10:00 AM", status: "Upcoming", color: "text-orange-500" }
+            { date: '2026-03-14', mentor: "Ax'l Conchada", mentee: "Alice Blue", time: "02:30 PM", status: "Upcoming", color: "text-orange-500" }
         ];
 
         let selectedDateStr = '2026-03-14';
@@ -396,95 +472,63 @@ mount(function () {
         let currentPage = 1;
         const rowsPerPage = 5;
 
-        // CALENDAR LOGIC
         function renderCalendar() {
             const grid = document.getElementById('calendarGrid');
             const monthDisp = document.getElementById('monthDisplay');
             grid.innerHTML = '';
             monthDisp.innerText = viewDate.toLocaleString('default', { month: 'long', year: 'numeric' });
-            
             const lastDay = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 0).getDate();
             const startDay = new Date(viewDate.getFullYear(), viewDate.getMonth(), 1).getDay();
-
             for (let i = 0; i < startDay; i++) grid.innerHTML += '<div></div>';
-
             for (let i = 1; i <= lastDay; i++) {
                 const dateStr = `${viewDate.getFullYear()}-${String(viewDate.getMonth() + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
-                const hasSessions = allSessions.some(s => s.date === dateStr);
-                const isToday = i === 14 && viewDate.getMonth() === 2;
-                const isSelected = dateStr === selectedDateStr;
-
                 const dayEl = document.createElement('div');
-                dayEl.className = `cal-day ${isToday ? 'cal-today' : ''} ${isSelected ? 'cal-selected' : ''}`;
-                dayEl.innerHTML = `<span>${i}</span>${hasSessions ? '<div class="session-dot"></div>' : ''}`;
-                dayEl.onclick = () => {
-                    selectedDateStr = dateStr;
-                    document.getElementById('tableTitle').innerText = dateStr === '2026-03-14' ? "Today's Schedule" : "Daily Schedule";
-                    document.getElementById('tableSubtitle').innerText = new Date(dateStr).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-                    currentPage = 1;
-                    applyFilters();
-                    renderCalendar();
-                };
+                dayEl.className = `cal-day ${i === 14 ? 'cal-today' : ''} ${dateStr === selectedDateStr ? 'cal-selected' : ''}`;
+                dayEl.innerHTML = `<span>${i}</span>`;
+                dayEl.onclick = () => { selectedDateStr = dateStr; applyFilters(); renderCalendar(); };
                 grid.appendChild(dayEl);
             }
         }
 
-        function changeMonth(dir) { viewDate.setMonth(viewDate.getMonth() + dir); renderCalendar(); }
-
-        // TABLE LOGIC
         function applyFilters() {
-            const searchTerm = document.getElementById('liveSearchInput').value.toLowerCase();
-            const statusTerm = document.getElementById('statusFilter').value;
-
-            const filtered = allSessions.filter(item => {
-                const matchesDate = item.date === selectedDateStr;
-                const matchesSearch = item.mentor.toLowerCase().includes(searchTerm) || item.mentee.toLowerCase().includes(searchTerm);
-                const matchesStatus = statusTerm === "All" || item.status === statusTerm;
-                return matchesDate && matchesSearch && matchesStatus;
-            });
-
             const tbody = document.getElementById('tableBody');
-            const start = (currentPage - 1) * rowsPerPage;
-            const paginated = filtered.slice(start, start + rowsPerPage);
-
-            tbody.innerHTML = paginated.length ? paginated.map(row => `
-                <tr class="border-b last:border-0 hover:bg-gray-50 transition">
+            const filtered = allSessions.filter(item => item.date === selectedDateStr);
+            tbody.innerHTML = filtered.map(row => `
+                <tr class="border-b last:border-0">
                     <td class="py-4 font-bold text-slate-700">${row.mentor}</td>
                     <td class="text-slate-600">${row.mentee}</td>
                     <td class="text-slate-500">${row.time}</td>
                     <td><span class="${row.color} font-bold text-[10px] bg-gray-50 px-2 py-1 rounded">${row.status}</span></td>
                 </tr>
-            `).join('') : `<tr><td colspan="4" class="py-12 text-center text-gray-400">No sessions for this date</td></tr>`;
-
-            document.getElementById('pageIndicator').innerText = `Showing ${filtered.length ? start + 1 : 0} to ${Math.min(start + rowsPerPage, filtered.length)} of ${filtered.length}`;
-            document.getElementById('prevBtn').disabled = currentPage === 1;
-            document.getElementById('nextBtn').disabled = start + rowsPerPage >= filtered.length;
+            `).join('');
         }
 
-        // CHARTS
         const ctxOptions = { maintainAspectRatio: false, plugins: { legend: { display: false } } };
-
         charts.push(new Chart(document.getElementById('lineChart'), { type: 'line', data: { labels: ['W1', 'W2', 'W3', 'W4'], datasets: [{ data: [45, 52, 38, 65], borderColor: '#7b1d1d', tension: 0.4 }] }, options: ctxOptions }));
-        
         charts.push(new Chart(document.getElementById('pieChart'), { type: 'pie', data: { labels: ['Daniel D.', 'Sarah J.', 'James W.', 'Others'], datasets: [{ data: [40, 25, 20, 15], backgroundColor: ['#1a3c2f', '#7b1d1d', '#94a3b8', '#cbd5e1'] }] }, options: { ...ctxOptions, plugins: { legend: { position: 'right', labels: { boxWidth: 8, font: { size: 9 } } } } } }));
+        charts.push(new Chart(document.getElementById('doughnutChart'), { type: 'doughnut', data: { labels: ['Excl', 'Good', 'Avg'], datasets: [{ data: [70, 20, 10], backgroundColor: ['#1a3c2f', '#7b1d1d', '#cbd5e1'], borderWidth: 0 }] }, options: { ...ctxOptions, cutout: '75%' } }));        
         
-        charts.push(new Chart(document.getElementById('doughnutChart'), { 
-            type: 'doughnut', 
-            data: { labels: ['Excl', 'Good', 'Avg'], datasets: [{ data: [70, 20, 10], backgroundColor: ['#1a3c2f', '#7b1d1d', '#cbd5e1'], borderWidth: 0 }] }, 
-            options: { ...ctxOptions, cutout: '75%', scales: { x: { display: false }, y: { display: false } }, plugins: { legend: { display: true, position: 'bottom' } } } 
-        }));        
-
+        // Render Active College Bar Chart
         charts.push(new Chart(document.getElementById('activeCollegeChart'), { 
             type: 'bar', 
-            data: { labels: ['CSS', 'CAC', 'CS'], datasets: [{ data: [85, 42, 68], backgroundColor: ['#1a3c2f', '#7b1d1d', '#94a3b8'], borderRadius: 4 }] }, 
-            options: { indexAxis: 'y', maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false }, ticks: { font: { size: 10 } } }, y: { grid: { display: false }, ticks: { font: { size: 10, weight: 'bold' } } } } } 
+            data: { 
+                labels: ['CSS', 'CAC', 'CS', 'CE', 'CB'], 
+                datasets: [{ 
+                    label: 'Active Students',
+                    data: [85, 42, 68, 30, 55], 
+                    backgroundColor: ['#1a3c2f', '#7b1d1d', '#94a3b8', '#475569', '#1e293b'],
+                    borderRadius: 4
+                }] 
+            }, 
+            options: { 
+                indexAxis: 'y', 
+                ...ctxOptions,
+                scales: {
+                    x: { display: true, grid: { display: false }, ticks: { font: { size: 9 } } },
+                    y: { grid: { display: false }, ticks: { font: { size: 9 } } }
+                }
+            } 
         }));
-
-        // INITIALIZE
-        document.getElementById('liveSearchInput').addEventListener('input', applyFilters);
-        document.getElementById('statusFilter').addEventListener('change', applyFilters);
-        document.getElementById('prevBtn').onclick = () => { if(currentPage > 1) { currentPage--; applyFilters(); } };
-        document.getElementById('nextBtn').onclick = () => { if(currentPage * rowsPerPage < allSessions.length) { currentPage++; applyFilters(); } };
 
         renderCalendar();
         applyFilters();
