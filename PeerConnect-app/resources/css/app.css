@@ -7,6 +7,6 @@
         scroll-behavior: smooth;
     }
     body {
-        @apply antialiased font-sans bg-cream text-up-black overflow-x-hidden;
+        @apply antialiased font-body bg-cream text-up-black overflow-x-hidden;
     }
 }
