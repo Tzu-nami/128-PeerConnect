@@ -137,10 +137,11 @@
                     <div class="flex-1 flex flex-col max-w-xs h-[500px] items-center px-10 py-12 border border-up-yellow/25">
                         <div class="font-heading text-6xl text-cream/10 mb-10 mt-5">01</div>
                         <div class="w-14 h-14 bg-up-yellow mb-5"></div>
-                        <div class="text-xs text-up-yellow tracking-[0.2em] font-semibold uppercase mb-2">Step 1 · Access</div>
+                        <div class="text-xs text-up-yellow tracking-[0.2em] font-semibold uppercase mb-2">Step 1</div>
                         <div class="font-heading text-2xl text-cream font-medium tracking-wider mb-3">Login</div>
                         <span class="block w-8 h-px bg-up-yellow/40 mb-4"></span>
-                        <div class="text-sm leading-7 font-light text-cream/60">Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor
+                        <div class="text-sm leading-7 font-light text-cream/60">
+                            Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor
                             incididunt ut labore et dolore magna aliqua.
                         </div>
                     </div>
@@ -152,10 +153,11 @@
                     <div class="flex-1 flex flex-col max-w-xs h-[500px] items-center px-10 py-12 border border-up-yellow/25">
                         <div class="font-heading text-6xl text-cream/10 mb-10 mt-5">02</div>
                         <div class="w-14 h-14 bg-up-yellow mb-5"></div>
-                        <div class="text-xs text-up-yellow tracking-[0.2em] font-semibold uppercase mb-2">Step 2 · Schedule</div>
-                        <div class="font-heading text-2xl text-cream font-medium tracking-wider mb-3">Select</div>
+                        <div class="text-xs text-up-yellow tracking-[0.2em] font-semibold uppercase mb-2">Step 2</div>
+                        <div class="font-heading text-2xl text-cream font-medium tracking-wider mb-3">Schedule</div>
                         <span class="block w-8 h-px bg-up-yellow/40 mb-4"></span>
-                        <div class="text-sm leading-7 font-light text-cream/60">Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor
+                        <div class="text-sm leading-7 font-light text-cream/60">
+                            Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor
                             incididunt ut labore et dolore magna aliqua.
                         </div>
                     </div>
@@ -167,10 +169,11 @@
                     <div class="flex-1 flex flex-col max-w-xs h-[500px] items-center px-10 py-12 border border-up-yellow/25">
                         <div class="font-heading text-6xl text-cream/10 mb-10 mt-5">03</div>
                         <div class="w-14 h-14 bg-up-yellow mb-5"></div>
-                        <div class="text-xs text-up-yellow tracking-[0.2em] font-semibold uppercase mb-2">Step 3 · Connect</div>
+                        <div class="text-xs text-up-yellow tracking-[0.2em] font-semibold uppercase mb-2">Step 3</div>
                         <div class="font-heading text-2xl text-cream font-medium tracking-wider mb-3">Attend</div>
                         <span class="block w-8 h-px bg-up-yellow/40 mb-4"></span>
-                        <div class="text-sm leading-7 font-light text-cream/60">Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor
+                        <div class="text-sm leading-7 font-light text-cream/60">
+                            Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor
                             incididunt ut labore et dolore magna aliqua.
                         </div>
                     </div>
