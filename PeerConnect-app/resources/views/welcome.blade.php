@@ -13,6 +13,7 @@
 
         {{-- Icons --}}
         <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&icon_names=arrow_forward_ios" />
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&icon_names=arrow_forward,arrow_forward_ios" />
 
         {{-- Styles --}}
         @vite(['resources/js/app.js', 'resources/css/app.css'])
@@ -74,16 +75,18 @@
 
             {{-- What We Offer --}}
             <section class="h-auto px-52 py-20 bg-white">
-                <div class="flex flex-col gap-3 mb-12">
-                    <div class="flex items-center gap-3 text-up-yellow text-xs tracking-widest uppercase">
+                {{-- Header --}}
+                <div class="flex flex-col gap-4 mb-12">
+                    <div class="flex items-center gap-3 text-up-yellow text-xs tracking-widest font-medium uppercase">
                         <span class="block w-8 h-px bg-up-yellow"></span>
                         Our Services
                     </div>
-                    <h2 class="font-heading text-up-maroon text-5xl font-semibold tracking-wider">
+                    <h1 class="font-heading text-up-maroon text-5xl font-semibold tracking-wider">
                         What We Offer
-                    </h2>
+                    </h1>
                 </div>
 
+                {{-- Content --}}
                 <div class="grid grid-cols-3">
                     {{-- Column 1 --}}
                     <div class="px-12 py-10 border-r border-cream-dark">
@@ -91,7 +94,8 @@
                         <div class="text-xl text-up-maroon font-medium mb-3">One-on-One Sessions</div>
                         <div class="text-base leading-7 font-light">Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor
                             incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation
-                            ullamco laboris nisi ut aliquip ex ea commodo consequat.</div>
+                            ullamco laboris nisi ut aliquip ex ea commodo consequat.
+                        </div>
                     </div>
 
                     {{-- Column 2 --}}
@@ -100,7 +104,8 @@
                         <div class="text-xl text-up-maroon font-medium mb-3">Group Sessions</div>
                         <div class="text-base leading-7 font-light">Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor
                             incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation
-                            ullamco laboris nisi ut aliquip ex ea commodo consequat.</div>
+                            ullamco laboris nisi ut aliquip ex ea commodo consequat.
+                        </div>
                     </div>
 
                     {{-- Column 3 --}}
@@ -109,14 +114,67 @@
                         <div class="text-xl text-up-maroon font-medium mb-3">Review Classes</div>
                         <div class="text-base leading-7 font-light">Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor
                             incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation
-                            ullamco laboris nisi ut aliquip ex ea commodo consequat.</div>
+                            ullamco laboris nisi ut aliquip ex ea commodo consequat.
+                        </div>
                     </div>
                 </div>
             </section>
 
             {{-- How It Works --}}
-            <section class="h-screen flex items-center justify-center bg-up-green">
-                <h2 class="font-serif text-5xl font-bold text-cream">How It Works</h2>
+            <section class="h-auto px-52 py-20 bg-up-green">
+                {{-- Header --}}
+                <div class="flex flex-col gap-4 mb-12 text-center">
+                    <div class="flex items-center justify-center gap-3 text-up-yellow text-xs tracking-widest font-medium uppercase">
+                        <span class="block w-8 h-px bg-up-yellow"></span>
+                        How It Works
+                        <span class="block w-8 h-px bg-up-yellow"></span>
+                    </div>
+                    <h2 class="font-heading text-cream text-5xl font-semibold tracking-wider">Three Simple Steps</h2>
+                </div>
+
+                {{-- Content --}}
+                <div class="flex items-center justify-center gap-4 text-white">
+                    <div class="flex-1 flex flex-col max-w-xs h-[500px] items-center px-10 py-12 border border-up-yellow/25">
+                        <div class="font-heading text-6xl text-cream/10 mb-10 mt-5">01</div>
+                        <div class="w-14 h-14 bg-up-yellow mb-5"></div>
+                        <div class="text-xs text-up-yellow tracking-[0.2em] font-semibold uppercase mb-2">Step 1 · Access</div>
+                        <div class="font-heading text-2xl text-cream font-medium tracking-wider mb-3">Login</div>
+                        <span class="block w-8 h-px bg-up-yellow/40 mb-4"></span>
+                        <div class="text-sm leading-7 font-light text-cream/60">Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor
+                            incididunt ut labore et dolore magna aliqua.
+                        </div>
+                    </div>
+
+                    {{-- Arrow --}}
+                    <span class="material-symbols-outlined text-up-yellow/40 text-3xl flex-shrink-0">arrow_forward</span>
+
+                    {{-- Step 2 --}}
+                    <div class="flex-1 flex flex-col max-w-xs h-[500px] items-center px-10 py-12 border border-up-yellow/25">
+                        <div class="font-heading text-6xl text-cream/10 mb-10 mt-5">02</div>
+                        <div class="w-14 h-14 bg-up-yellow mb-5"></div>
+                        <div class="text-xs text-up-yellow tracking-[0.2em] font-semibold uppercase mb-2">Step 2 · Schedule</div>
+                        <div class="font-heading text-2xl text-cream font-medium tracking-wider mb-3">Select</div>
+                        <span class="block w-8 h-px bg-up-yellow/40 mb-4"></span>
+                        <div class="text-sm leading-7 font-light text-cream/60">Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor
+                            incididunt ut labore et dolore magna aliqua.
+                        </div>
+                    </div>
+
+                    {{-- Arrow --}}
+                    <span class="material-symbols-outlined text-up-yellow/40 text-3xl flex-shrink-0">arrow_forward</span>
+
+                    {{-- Step 3 --}}
+                    <div class="flex-1 flex flex-col max-w-xs h-[500px] items-center px-10 py-12 border border-up-yellow/25">
+                        <div class="font-heading text-6xl text-cream/10 mb-10 mt-5">03</div>
+                        <div class="w-14 h-14 bg-up-yellow mb-5"></div>
+                        <div class="text-xs text-up-yellow tracking-[0.2em] font-semibold uppercase mb-2">Step 3 · Connect</div>
+                        <div class="font-heading text-2xl text-cream font-medium tracking-wider mb-3">Attend</div>
+                        <span class="block w-8 h-px bg-up-yellow/40 mb-4"></span>
+                        <div class="text-sm leading-7 font-light text-cream/60">Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor
+                            incididunt ut labore et dolore magna aliqua.
+                        </div>
+                    </div>
+                </div>
             </section>
 
             {{-- Activities --}}
