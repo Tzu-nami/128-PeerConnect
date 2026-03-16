@@ -11,6 +11,9 @@
         <link href="https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,200..1000;1,200..1000&display=swap" rel="stylesheet">
         <link href="https://fonts.googleapis.com/css2?family=Marcellus&display=swap" rel="stylesheet">
 
+        {{-- Icons --}}
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&icon_names=arrow_forward_ios" />
+
         {{-- Styles --}}
         @vite(['resources/js/app.js', 'resources/css/app.css'])
     </head>
@@ -36,13 +39,18 @@
                      rgba(78,10,12,0.15) 100%);">
                 </div>
 
+                {{-- Scroll indicator --}}
+                <div class="flex flex-col gap-2 items-center justify-center absolute z-20 left-1/2 -translate-x-1/2 bottom-10 cursor-pointer text-up-yellow">
+                    <p class="text-[12px] tracking-[0.2rem] opacity-90">SCROLL</p>
+                    <span class="material-symbols-outlined rotate-90 leading-none">arrow_forward_ios</span>
+                </div>
+
                 {{-- Content --}}
                 <div class="relative z-10 max-w-[800px]">
                     {{-- Title --}}
-                    <p class="text-[33px] font-heading tracking-[0.15rem] uppercase text-up-yellow mb-6">
+                    <h2 class="text-[33px] font-heading tracking-[0.15rem] uppercase text-up-yellow mb-6">
                         University of the Philippines Baguio
-                    </p>
-
+                    </h2>
                     <h1 class="font-heading text-8xl font-bold text-cream mb-2.5 tracking-wide">
                         Learning<br>Resource<br>Center
                     </h1>
