@@ -5,11 +5,11 @@
         <meta name="viewport"
               content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
         <meta http-equiv="X-UA-Compatible" content="ie=edge">
-        <title>{{ config('app.name'), 'UPB LRC | PeerConnect' }}</title>
+        <title>{{ config('app.name', 'UPB LRC | PeerConnect') }}</title>
 
         {{-- Fonts --}}
-        <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&display=swap" rel="stylesheet">
-        <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,200..1000;1,200..1000&display=swap" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css2?family=Marcellus&display=swap" rel="stylesheet">
 
         {{-- Styles --}}
         @vite(['resources/js/app.js', 'resources/css/app.css'])
@@ -23,19 +23,32 @@
 
         <main>
             {{-- Hero --}}
-            <section class="relative min-h-screen flex flex-col justify-center px-20 pt-[83px] bg-up-maroon">
-                <div class="max-w-[800px]">
+            <section class="relative min-h-screen flex flex-col justify-center px-20 bg-cover bg-top"
+                     style="background-image: url('https://cwpbwqcxlccbittkhasq.supabase.co/storage/v1/object/public/assets/images/lrc-session.png'); background-position: center 83px">
+
+                {{-- Overlay --}}
+                <div class="absolute inset-0 z-0"
+                     style="background: linear-gradient(
+                     100deg,
+                     rgba(78,10,12,0.88) 0%,
+                     rgba(78,10,12,0.75) 45%,
+                     rgba(78,10,12,0.35) 75%,
+                     rgba(78,10,12,0.15) 100%);">
+                </div>
+
+                {{-- Content --}}
+                <div class="relative z-10 max-w-[800px]">
                     {{-- Title --}}
-                    <p class="text-[33px] font-medium tracking-[0.15rem] uppercase text-up-yellow mb-6">
+                    <p class="text-[33px] font-heading tracking-[0.15rem] uppercase text-up-yellow mb-6">
                         University of the Philippines Baguio
                     </p>
 
-                    <h1 class="font-serif text-8xl font-bold text-cream mb-2.5 tracking-wide">
+                    <h1 class="font-heading text-8xl font-bold text-cream mb-2.5 tracking-wide">
                         Learning<br>Resource<br>Center
                     </h1>
 
                     {{-- Description --}}
-                    <p class="font-sans font-light leading-[1.85] text-cream/70 max-w-[480px] mb-12">
+                    <p class="font-light leading-[1.85] text-cream/70 max-w-[480px] mb-12">
                         Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
                         Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
                     </p>
