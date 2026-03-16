@@ -1,27 +1,27 @@
 <nav class="fixed top-0 left-0 right-0 z-50 flex items-center h-[83px] px-7 bg-up-maroon-dark">
 
     {{-- Brand --}}
-    <div class="flex items-center gap-4 w-1/3">
+    <div class="flex items-center gap-4 w-1/4">
         <div class="flex items-center gap-3">
             <img src="https://cwpbwqcxlccbittkhasq.supabase.co/storage/v1/object/public/assets/logos/uplogo.png"
                  alt="UPB Logo"
                  class="w-[60px] h-[60px] object-contain" />
-            <img src="https://cwpbwqcxlccbittkhasq.supabase.co/storage/v1/object/public/assets/logos/LRC_logo.png"
+            <img src="https://cwpbwqcxlccbittkhasq.supabase.co/storage/v1/object/public/assets/logos/logo_white_transparent.png"
                  alt="UPB LRC Logo"
-                 class="w-[60px] h-[60px] object-contain" />
+                 class="w-[70px] h-[70px] object-contain" />
         </div>
         <div class="leading-tight">
-            <span class="block text-[15px] font-medium text-cream/70 tracking-widest uppercase">
+            <span class="block text-[20px] font-medium text-cream/70 tracking-widest uppercase">
                 UPB LRC
             </span>
-            <span class="block text-[20px] font-semibold text-up-yellow-light tracking-wider">
+            <span class="block text-[15px] font-semibold text-up-yellow-light tracking-wider">
                 PeerConnect
             </span>
         </div>
     </div>
 
     {{-- Nav links --}}
-    <ul class="flex gap-10 list-none w-1/3 justify-center">
+    <ul class="flex gap-20 list-none flex-1 justify-center">
         @foreach (
         [
             'Mentors'    => '#',
@@ -41,7 +41,7 @@
     </ul>
 
     {{-- User action --}}
-    <div class="flex items-center justify-end gap-3.5 w-1/3">
+    <div class="flex items-center justify-end gap-3.5 w-1/4">
             <a href="{{ route('login') }}"
                class="bg-up-yellow text-up-maroon-dark px-7 py-2.5 text-[14px]
                       font-semibold tracking-widest uppercase rounded-sm
