@@ -74,7 +74,7 @@
             </section>
 
             {{-- What We Offer --}}
-            <section class="h-auto px-52 py-20 bg-white">
+            <section class="h-auto px-52 py-20 bg-cream">
                 {{-- Header --}}
                 <div class="flex flex-col gap-4 mb-12">
                     <div class="flex items-center gap-3 text-up-yellow text-xs tracking-widest font-medium uppercase">
@@ -178,8 +178,33 @@
             </section>
 
             {{-- Activities --}}
-            <section class="h-screen flex items-center justify-center bg-cream">
-                <h2 class="font-serif text-5xl font-bold text-up-maroon-dark">Activities</h2>
+            <section class="h-auto px-52 py-20 bg-cream">
+                {{-- Header --}}
+                <div class="flex flex-col gap-4 mb-12">
+                    <div class="flex items-center gap-3 text-up-yellow text-xs tracking-widest font-medium pb-5 border-b border-b-cream-dark">
+                        <h1 class="font-heading text-up-maroon text-5xl font-semibold tracking-wider">
+                            Activities
+                        </h1>
+                        <span class="block w-8 h-px bg-up-yellow"></span>
+                    </div>
+                </div>
+
+                {{-- Image carousel --}}
+                <div class="">
+                    <div class="swiper">
+                        <div class="swiper-wrapper">
+                            <div class="swiper-slide"><img src="https://cwpbwqcxlccbittkhasq.supabase.co/storage/v1/object/public/assets/images/placeholder.jpg" alt="Image"></div>
+                            <div class="swiper-slide"><img src="https://cwpbwqcxlccbittkhasq.supabase.co/storage/v1/object/public/assets/images/placeholder.jpg" alt="Image"></div>
+                            <div class="swiper-slide"><img src="https://cwpbwqcxlccbittkhasq.supabase.co/storage/v1/object/public/assets/images/placeholder.jpg" alt="Image"></div>
+                            <div class="swiper-slide"><img src="https://cwpbwqcxlccbittkhasq.supabase.co/storage/v1/object/public/assets/images/placeholder.jpg" alt="Image"></div>
+                            <div class="swiper-slide"><img src="https://cwpbwqcxlccbittkhasq.supabase.co/storage/v1/object/public/assets/images/placeholder.jpg" alt="Image"></div>
+                            <div class="swiper-slide"><img src="https://cwpbwqcxlccbittkhasq.supabase.co/storage/v1/object/public/assets/images/placeholder.jpg" alt="Image"></div>
+                        </div>
+                        <div class="swiper-pagination"></div>
+                        <div class="swiper-button-prev"></div>
+                        <div class="swiper-button-next"></div>
+                    </div>
+                </div>
             </section>
 
             {{-- Footer --}}
