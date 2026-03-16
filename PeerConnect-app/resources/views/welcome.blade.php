@@ -74,7 +74,7 @@
             </section>
 
             {{-- What We Offer --}}
-            <section class="h-auto px-52 py-20 bg-cream">
+            <section class="h-auto px-52 py-20 bg-white">
                 {{-- Header --}}
                 <div class="flex flex-col gap-4 mb-12">
                     <div class="flex items-center gap-3 text-up-yellow text-xs tracking-widest font-medium uppercase">
@@ -178,7 +178,7 @@
             </section>
 
             {{-- Activities --}}
-            <section class="h-auto px-52 py-20 bg-cream">
+            <section class="h-auto px-52 py-20 bg-white1">
                 {{-- Header --}}
                 <div class="flex flex-col gap-4 mb-12">
                     <div class="flex items-center gap-3 text-up-yellow text-xs tracking-widest font-medium pb-5 border-b border-b-cream-dark">
