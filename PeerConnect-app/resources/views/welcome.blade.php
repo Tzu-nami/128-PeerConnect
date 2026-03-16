@@ -39,12 +39,6 @@
                      rgba(78,10,12,0.15) 100%);">
                 </div>
 
-                {{-- Scroll indicator --}}
-                <div class="flex flex-col gap-2 items-center justify-center absolute z-20 left-1/2 -translate-x-1/2 bottom-10 cursor-pointer text-up-yellow">
-                    <p class="text-[12px] tracking-[0.2rem] opacity-90">SCROLL</p>
-                    <span class="material-symbols-outlined rotate-90 leading-none">arrow_forward_ios</span>
-                </div>
-
                 {{-- Content --}}
                 <div class="relative z-10 max-w-[800px]">
                     {{-- Title --}}
@@ -70,11 +64,54 @@
                         Book Now
                     </a>
                 </div>
+
+                {{-- Scroll indicator --}}
+                <div class="flex flex-col gap-2 items-center justify-center absolute z-20 left-1/2 -translate-x-1/2 bottom-10 cursor-pointer text-up-yellow">
+                    <p class="text-[12px] tracking-[0.2rem] opacity-90">SCROLL</p>
+                    <span class="material-symbols-outlined rotate-90 leading-none">arrow_forward_ios</span>
+                </div>
             </section>
 
             {{-- What We Offer --}}
-            <section class="h-screen flex items-center justify-center bg-white">
-                <h2 class="font-serif text-5xl font-bold text-up-maroon-dark">What We Offer</h2>
+            <section class="h-auto px-52 py-20 bg-white">
+                <div class="flex flex-col gap-3 mb-12">
+                    <div class="flex items-center gap-3 text-up-yellow text-xs tracking-widest uppercase">
+                        <span class="block w-8 h-px bg-up-yellow"></span>
+                        Our Services
+                    </div>
+                    <h2 class="font-heading text-up-maroon text-5xl font-semibold tracking-wider">
+                        What We Offer
+                    </h2>
+                </div>
+
+                <div class="grid grid-cols-3">
+                    {{-- Column 1 --}}
+                    <div class="px-12 py-10 border-r border-cream-dark">
+                        <div class="w-full h-48 bg-cream-dark rounded-sm mb-5"></div>
+                        <div class="text-xl text-up-maroon font-medium mb-3">One-on-One Sessions</div>
+                        <div class="text-base leading-7 font-light">Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor
+                            incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation
+                            ullamco laboris nisi ut aliquip ex ea commodo consequat.</div>
+                    </div>
+
+                    {{-- Column 2 --}}
+                    <div class="px-12 py-10 border-r border-cream-dark">
+                        <div class="w-full h-48 bg-cream-dark rounded-sm mb-5"></div>
+                        <div class="text-xl text-up-maroon font-medium mb-3">Group Sessions</div>
+                        <div class="text-base leading-7 font-light">Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor
+                            incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation
+                            ullamco laboris nisi ut aliquip ex ea commodo consequat.</div>
+                    </div>
+
+                    {{-- Column 3 --}}
+                    <div class="px-12 py-10">
+                        <div class="w-full h-48 bg-cream-dark rounded-sm mb-5"></div>
+                        <div class="text-xl text-up-maroon font-medium mb-3">Review Classes</div>
+                        <div class="text-base leading-7 font-light">Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor
+                            incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation
+                            ullamco laboris nisi ut aliquip ex ea commodo consequat.</div>
+                    </div>
+                </div>
             </section>
 
             {{-- How It Works --}}
