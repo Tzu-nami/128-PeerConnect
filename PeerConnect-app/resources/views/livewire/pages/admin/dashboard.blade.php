@@ -63,22 +63,41 @@ mount(function () {
         .logo-content { display: flex; align-items: center; gap: 12px; white-space: nowrap; }
         .logo-text { font-size: 1.1rem; font-weight: 700; }
 
-        .nav-item { 
-            display: flex; align-items: center; gap: 15px; padding: 15px 25px; 
-            color: rgba(255,255,255,0.7); text-decoration: none; transition: background 0.3s; white-space: nowrap;
-            position: relative; text-align: left; background: transparent; border: none; width: 100%;
-        }
-        .nav-item i { width: 30px; text-align: center; flex-shrink: 0; font-size: 20px; }
-        .nav-item:hover, .nav-item.active { background: rgba(255,255,255,0.1); color: white; }
-        .nav-item.active { border-left: 4px solid white; }
+       /* FLAT BLENDING STYLE */
+.nav-item { 
+    display: flex; 
+    align-items: center; 
+    gap: 15px; 
+    padding: 15px 25px; 
+    color: rgba(255,255,255,0.7); 
+    text-decoration: none; 
+    transition: all 0.2s ease; 
+    white-space: nowrap; 
+    position: relative; 
+    background: transparent; 
+    border: none; 
+    width: 100%; 
+    cursor: pointer;
+}
 
-        .nav-item::after {
-            content: attr(data-tooltip);
-            position: absolute; left: 100%; top: 50%; transform: translateY(-50%);
-            margin-left: 10px; background: rgba(0, 0, 0, 0.9); color: white;
-            padding: 5px 12px; border-radius: 4px; font-size: 12px; font-weight: 500;
-            white-space: nowrap; opacity: 0; visibility: hidden; transition: opacity 0.2s;
-            pointer-events: none; z-index: 100;
+.nav-item:hover {
+    color: white;
+    background: rgba(255,255,255,0.05);
+}
+
+/* THE BLEND: Rectangular connection to the main page */
+.nav-item.active { 
+    background: var(--bg-light); 
+    color: var(--header-maroon); 
+    font-weight: 700;
+    /* This ensures it aligns perfectly with the content area */
+    border-radius: 0; 
+    width: calc(100% + 1px); /* Overlaps the sidebar border/edge slightly */
+    z-index: 10;
+}
+.nav-item::after {
+            content: attr(data-tooltip); position: absolute; left: 100%; top: 50%; transform: translateY(-50%);
+            margin-left: 10px; background: rgba(0, 0, 0, 0.9); color: white; padding: 5px 12px; border-radius: 4px; font-size: 12px; opacity: 0; visibility: hidden; transition: opacity 0.2s; pointer-events: none; z-index: 100;
         }
         .sidebar.collapsed .nav-item:hover::after { opacity: 1; visibility: visible; }
         .sidebar.collapsed .logo-content, .sidebar.collapsed .nav-item span { display: none; }
