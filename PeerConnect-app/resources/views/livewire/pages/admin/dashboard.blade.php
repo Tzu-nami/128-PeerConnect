@@ -191,16 +191,18 @@ mount(function () {
                 </div>
             </div>
             <nav class="flex-grow">
-                <a href="#" class="nav-item active" data-tooltip="Dashboard"><i class="fa-solid fa-gauge"></i><span>Dashboard</span></a>
+                <a href="{{ route('admin.dashboard') }}" class="nav-item {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}" data-tooltip="Dashboard">
+                    <i class="fa-solid fa-gauge w-5"></i><span>Dashboard</span>
+                </a>                
                 <a href="{{ route('admin.mentors') }}" class="nav-item {{ request()->routeIs('admin.mentors') ? 'active' : '' }}" data-tooltip="Mentor Management">
                     <i class="fa-solid fa-chalkboard-user w-5"></i><span>Mentor Management</span>
-                </a>                
+                </a>                 
                 <a href="{{ route('admin.sessions') }}" class="nav-item {{ request()->routeIs('admin.sessions') ? 'active' : '' }}" data-tooltip="Session Management">
                     <i class="fa-solid fa-calendar-days w-5"></i><span>Session Management</span>
                 </a>                
                 <a href="{{ route('admin.feedbacks') }}" class="nav-item {{ request()->routeIs('admin.feedbacks') ? 'active' : '' }}" data-tooltip="Student Feedback">
                     <i class="fa-solid fa-comments w-5"></i><span>Student Feedback</span>
-                </a>            
+                </a>              
             </nav>
             <div class="p-4 border-t border-white/10">
                 <form method="POST" action="{{ route('logout') }}">
