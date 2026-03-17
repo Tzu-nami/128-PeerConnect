@@ -332,7 +332,7 @@ body { margin: 0; font-family: 'Inter', sans-serif; background: var(--bg-light);
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
-        <div class="lg:col-span-2">
+        <div class="lg:col-span-2" x-data="{ showConfirmation: false }">
             <div class="bg-[#fffffa] p-6 rounded-lg shadow-sm border-gray-200"
             x-data="{
                     allMentors: @js($this->mentors),
@@ -382,7 +382,17 @@ body { margin: 0; font-family: 'Inter', sans-serif; background: var(--bg-light);
                 <h2 class="text-lg font-semibold text-gray-900 mb-1">Request an Enrichment Session!</h2>
                 <p class="text-gray-500 text-sm mb-6">Please fill out all required fields. Your request will then be reviewed by the peer mentor.</p>
 
-                <form wire:submit.prevent="submitBooking" class="space-y-2">
+                <div x-show="showConfirmation" style="display: none;" x-transition class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+                    <div class="bg-[#fffffa] rounded-xl p-6 max-w-sm w-full mx-4 shadow-2xl" @click.away="showConfirmation = false">
+                        <h3 class="text-lg font-bold text-gray-900 mb-2">Confirm booking</h3>
+                        <p class="text-sm text-gray-600 mb-6">Are you sure all the inputted information is correct?</p>
+                        <div class="flex justify-end gap-3">
+                            <button @click="showConfirmation = false" type="button" class="px-4 py-2 text-base font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">Cancel</button>
+                            <button @click="$wire.submitBooking(); showConfirmation = false" type="button" class="px-4 py-2 text-base font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors">Submit</button>
+                        </div>
+                    </div>
+                </div>
+                <form x-on:submit.prevent="showConfirmation = true" class="space-y-2">
                     <div>
                         <label class="block text-base font-medium text-gray-700 mb-1">Subject<span class="text-red-500">*</span></label>
                         <select wire:model="subject_id" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-black-500 focus:ring-blue-500 text-base px-2 py-1">
@@ -462,6 +472,7 @@ body { margin: 0; font-family: 'Inter', sans-serif; background: var(--bg-light);
                     college: $wire.entangle('college_id'),
                     degree: $wire.entangle('degreeProgram_id'),
                     showSuccess: false,
+                    showConfirmation: false,
                     allDegrees: @js($this->degreePrograms),
                     get filteredDeProgs() {
                         if (!this.college) return [];
@@ -501,7 +512,18 @@ body { margin: 0; font-family: 'Inter', sans-serif; background: var(--bg-light);
                     
                     <div x-show="showSuccess" style="display: none;" x-transition class="mt-3 mb-2 text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2">Profile Updated!</div>
 
-                    <form wire:submit.prevent="saveProfile" class="space-y-4 mt-4">
+                    <div x-show="showConfirmation" style="display: none;" x-transition class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+                        <div class="bg-[#fffffa] rounded-xl p-6 max-w-sm w-full mx-4 shadow-2xl" @click.away="showConfirmation = false">
+                            <h3 class="text-lg font-bold text-gray-900 mb-2">Confirm Profile</h3>
+                            <p class="text-sm text-gray-600 mb-6">Are you sure all the inputted information is correct?</p>
+                            <div class="flex justify-end gap-3">
+                                <button @click="showConfirmation = false" type="button" class="px-4 py-2 text-base font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">Cancel</button>
+                                <button @click="$wire.saveProfile(); showConfirmation = false" type="button" class="px-4 py-2 text-base font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors">Submit</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <form x-on:submit.prevent="showConfirmation = true" class="space-y-4 mt-4">
                         <div>
                             <label class="block text-base font-medium text-gray-700 mb-1">Student Number<span class="text-red-500">*</span></label>
                             <input type="text" wire:model="student_num" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-black-500 focus:ring-blue-500 text-base px-2 py-1" placeholder="e.g 2023-00000" maxlength="10">

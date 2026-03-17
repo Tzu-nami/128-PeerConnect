@@ -9,8 +9,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class MentorProfiles extends Model
 {
     use HasUuids;
-    protected $keyType = 'string';
-    public $incrementing = false;
 
     protected $table = 'mentor_profiles';
 
