@@ -11,299 +11,284 @@ mount(function () {
 ?>
 
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LRC PeerConnect Dashboard</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LRC PeerConnect Dashboard</title>
 
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<script src="https://cdn.tailwindcss.com"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-<style>
-:root { --sidebar-green: #1a3c2f; --header-maroon: #7b1d1d; --bg-light: #f4f7f6; }
-body { margin: 0; font-family: 'Inter', sans-serif; background: var(--bg-light); }
+    <style>
+        :root { 
+            --sidebar-green: #1a3c2f; 
+            --header-maroon: #7b1d1d; 
+            --bg-light: #f4f7f6; 
+            --header-height: 80px; 
+            --sidebar-width: 280px;
+            --sidebar-collapsed-width: 80px;
+        }
+        
+        body { margin: 0; font-family: 'Inter', sans-serif; background: var(--bg-light); overflow: hidden; }
+        .app-wrapper { display: flex; height: 100vh; width: 100vw; overflow: hidden; }
+        
+        /* SIDEBAR */
+        .sidebar { 
+            width: var(--sidebar-width); 
+            background: var(--sidebar-green); 
+            flex-shrink: 0; 
+            display: flex; 
+            flex-direction: column; 
+            color: white; 
+            height: 100vh;
+            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 30;
+            position: relative;
+        }
+        .sidebar.collapsed { width: var(--sidebar-collapsed-width); }
 
-.app-wrapper { display: flex; height: 100vh; overflow: hidden; }
-.sidebar { width: 280px; background: var(--sidebar-green); flex-shrink: 0; display: flex; flex-direction: column; color: white; }
-.main-content { flex-grow: 1; display: flex; flex-direction: column; overflow-y: auto; }
+        .sidebar-logo-container {
+            height: var(--header-height);
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            gap: 15px;
+            flex-shrink: 0;
+            overflow: hidden;
+        }
+        #sidebarToggle {
+            background: transparent; border: none; color: white; font-size: 1.4rem;
+            cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+        }
+        .logo-content { display: flex; align-items: center; gap: 12px; white-space: nowrap; }
+        .logo-text { font-size: 1.1rem; font-weight: 700; }
 
-.nav-item { display: flex; align-items: center; gap: 15px; padding: 15px 25px; color: rgba(255,255,255,0.7); text-decoration: none; transition: 0.3s; }
-.nav-item:hover, .nav-item.active { background: rgba(255,255,255,0.1); color: white; }
-.nav-item.active { border-left: 4px solid white; }
+        .nav-item { 
+            display: flex; align-items: center; gap: 15px; padding: 15px 25px; 
+            color: rgba(255,255,255,0.7); text-decoration: none; transition: background 0.3s; white-space: nowrap;
+            position: relative; text-align: left; background: transparent; border: none; width: 100%;
+        }
+        .nav-item i { width: 30px; text-align: center; flex-shrink: 0; font-size: 20px; }
+        .nav-item:hover, .nav-item.active { background: rgba(255,255,255,0.1); color: white; }
+.nav-item.active { 
+    background: var(--bg-light); 
+    color: var(--header-maroon); 
+    font-weight: 700;
+    /* This ensures it aligns perfectly with the content area */
+    border-radius: 0; 
+    width: calc(100% + 1px); /* Overlaps the sidebar border/edge slightly */
+    z-index: 10;
+}
 
-.top-header { background: var(--header-maroon); height: 80px; padding: 0 40px; display: flex; align-items: center; justify-content: space-between; color: white; flex-shrink: 0; }
+        .nav-item::after {
+            content: attr(data-tooltip);
+            position: absolute; left: 100%; top: 50%; transform: translateY(-50%);
+            margin-left: 10px; background: rgba(0, 0, 0, 0.9); color: white;
+            padding: 5px 12px; border-radius: 4px; font-size: 12px; font-weight: 500;
+            white-space: nowrap; opacity: 0; visibility: hidden; transition: opacity 0.2s;
+            pointer-events: none; z-index: 100;
+        }
+        .sidebar.collapsed .nav-item:hover::after { opacity: 1; visibility: visible; }
+        .sidebar.collapsed .logo-content, .sidebar.collapsed .nav-item span { display: none; }
+        .sidebar.collapsed .sidebar-logo-container, .sidebar.collapsed .nav-item { justify-content: center; padding: 15px 0; }
+        .sidebar.collapsed .nav-item i { margin: 0; width: auto; }
+        .sidebar.collapsed .nav-item.active { border-left: none; }
 
-.stat-card { background: white; padding: 25px; border-radius: 12px; transition: all 0.3s ease; border: 1px solid transparent; }
-.stat-card:hover { transform: translateY(-5px); border-color: var(--header-maroon); box-shadow: 0 10px 20px rgba(0,0,0,0.05); }
+        .main-content { flex: 1; min-width: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        .top-header { background: var(--header-maroon); height: var(--header-height); padding: 0 40px; display: flex; align-items: center; justify-content: space-between; color: white; flex-shrink: 0; }
+        .scroll-container { flex-grow: 1; overflow-y: auto; padding: 32px; width: 100%; }
 
-.stat-card i { font-size: 24px; color: var(--sidebar-green); transition: 0.3s; }
-.stat-card:hover i { transform: scale(1.2); color: var(--header-maroon); }
+        .profile-dropdown {
+            position: absolute; top: 70px; right: 40px; background: white; border-radius: 12px;
+            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.2); width: 220px; display: none;
+            flex-direction: column; z-index: 50; border: 1px solid #e2e8f0; overflow: hidden;
+        }
+        .profile-dropdown.show { display: flex; }
+        .dropdown-item { padding: 12px 20px; font-size: 13px; color: #475569; display: flex; align-items: center; gap: 10px; transition: background 0.2s; }
+        .dropdown-item:hover { background: #f8fafc; color: var(--header-maroon); }
 
-.cal-day { padding: 8px; border-radius: 8px; cursor: pointer; font-size: 13px; }
-.cal-day:hover { background: #f0f0f0; }
-.cal-today { background: var(--header-maroon) !important; color: white !important; font-weight: bold; }
+        .cal-header-day { font-size: 11px; font-weight: 800; color: #94a3b8; text-align: center; padding-bottom: 10px; text-transform: uppercase; }
+        .cal-day { aspect-ratio: 1/1; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; border-radius: 8px; transition: all 0.2s; cursor: pointer; font-size: 13px; font-weight: 500; }
+        .cal-today { background: #fee2e2 !important; color: var(--header-maroon) !important; font-weight: 800; }
+        .cal-selected { border: 2px solid var(--header-maroon); background: #f8fafc; }
 
-.btn-maroon { background: var(--header-maroon); color: white; font-weight: 700; width: 100%; padding: 12px; border-radius: 8px; margin-bottom: 10px; transition: 0.2s; }
-.btn-maroon:hover { filter: brightness(1.2); transform: scale(1.02); }
-</style>
+        .stats-overview-container { background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); border: 1px solid #e5e7eb; width: 100%; }
+        .stats-header { padding: 12px 24px; background: #f8fafc; font-weight: 700; font-size: 0.9rem; color: #1e293b; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; justify-content: space-between; }
+        .stats-body { display: grid; grid-template-columns: repeat(2, 1fr); background: white; width: 100%; }
+        .stats-column { padding: 24px; border-right: 1px solid #f1f5f9; border-bottom: 1px solid #f1f5f9; min-width: 0; }
+        .stats-column:nth-child(2n) { border-right: none; }
+        .stats-column-title { font-weight: 600; margin-bottom: 15px; font-size: 0.8rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.025em; }
+
+        .stat-card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); transition: all 0.3s ease; border: 1px solid transparent; cursor: pointer; }
+        .stat-card:hover { transform: translateY(-5px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); border-color: var(--sidebar-green); }
+        .stat-card i { font-size: 24px; color: var(--sidebar-green); }
+
+        .pagination-btn { padding: 4px 10px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 11px; font-weight: 600; color: #64748b; transition: all 0.2s; }
+        .pagination-btn:hover:not(:disabled) { background: #f1f5f9; color: var(--header-maroon); border-color: var(--header-maroon); }
+        .table-filter-select, .header-filter { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 12px; font-size: 0.75rem; color: #475569; outline: none; cursor: pointer; }
+        .weekly-table{table-layout:fixed;width:100%;}
+        .weekly-table th, .weekly-table td{width:16%;}
+        .schedule-block{
+font-size:9px;
+line-height:1.2;
+padding:2px 4px;
+margin-bottom:2px;
+border-radius:4px;
+background:#d1fae5;
+color:#065f46;
+}
+    </style>
 </head>
 
 <body>
-
-<div class="app-wrapper">
-
-<aside class="sidebar">
-
-<div class="p-8 text-xl font-bold flex items-center gap-3">
-<i class="fa-solid fa-graduation-cap"></i>
-<span>LRC PeerConnect</span>
-</div>
-
-<nav class="flex-grow">
-
-<a href="{{ route('student.dashboard') }}"
-class="nav-item {{ request()->routeIs('student.dashboard') ? 'active' : '' }}">
-<i class="fa-solid fa-gauge w-5"></i>
-Dashboard
-</a>
-
-<a href="{{ route('student.bookings') }}"
-class="nav-item {{ request()->routeIs('student.bookings') ? 'active' : '' }}">
-<i class="fa-solid fa-calendar-check w-5"></i>
-Bookings
-</a>
-
-<a href="{{ route('student.history') }}"
-class="nav-item {{ request()->routeIs('student.history') ? 'active' : '' }}">
-<i class="fa-solid fa-clock-rotate-left w-5"></i>
-History
-</a>
-
-<a href="{{ route('student.mentors') }}"
-class="nav-item {{ request()->routeIs('student.mentors') ? 'active' : '' }}">
-<i class="fa-solid fa-chalkboard-user w-5"></i>
-Mentors
-</a>
-
-<a href="{{ route('student.about') }}"
-class="nav-item {{ request()->routeIs('student.about') ? 'active' : '' }}">
-<i class="fa-solid fa-circle-info w-5"></i>
-About Us
-</a>
-
-</nav>
-
-<div class="p-4 border-t border-white/10">
-
-<form method="POST" action="{{ route('logout') }}">
-@csrf
-
-<button type="submit" class="nav-item w-full text-left">
-<i class="fa-solid fa-right-from-bracket"></i>
-Logout
-</button>
-
-</form>
-
-</div>
-
-</aside>
-
-<div class="main-content">
-
-<header class="top-header">
-
-<div class="text-lg">
-Welcome, <span class="font-bold">{{ auth()->user()->name }}</span>
-</div>
-
-<div class="relative">
-
-<button onclick="toggleProfileMenu()" 
-class="w-10 h-10 bg-white rounded-full flex items-center justify-center text-red-900 font-bold">
-
-{{ strtoupper(substr(auth()->user()->name,0,2)) }}
-
-</button>
-
-<div id="profileMenu"
-class="hidden absolute right-0 mt-3 w-56 bg-white rounded-lg shadow-lg border overflow-hidden">
-
-<div class="px-4 py-3 border-b text-sm text-gray-600">
-<div class="font-semibold">{{ auth()->user()->name }}</div>
-<div class="text-xs text-gray-400">{{ auth()->user()->email }}</div>
-</div>
-
-<form method="POST" action="{{ route('logout') }}">
-@csrf
-
-<button type="submit"
-class="flex items-center gap-2 w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100">
-
-<i class="fa-solid fa-right-from-bracket w-4"></i>
-Logout
-
-</button>
-</form>
-
-</div>
-</div>
-
-</header>
-
-<main class="p-8">
-
-@if(request()->routeIs('student.mentors'))
-<!-- dito kayo mageedit --> 
-            <div class="grid grid-cols-5 gap-4 mb-8">
-                <div class="stat-card flex items-center gap-4">
-                    <i class="fa-solid fa-users"></i>
-                    <div><h3>Total Mentors</h3><p class="text-2xl font-black">40</p></div>
-                </div>
-                <div class="stat-card flex items-center gap-4">
-                    <i class="fa-solid fa-calendar-day"></i>
-                    <div><h3>Sessions Today</h3><p class="text-2xl font-black">18</p></div>
-                </div>
-                <div class="stat-card flex items-center gap-4">
-                    <i class="fa-solid fa-circle-exclamation"></i>
-                    <div><h3>Pending</h3><p class="text-2xl font-black">5</p></div>
-                </div>
-                <div class="stat-card flex items-center gap-4">
-                    <i class="fa-solid fa-star"></i>
-                    <div><h3>Ratings</h3><p class="text-2xl font-black">4.9</p></div>
-                </div>
-                <div class="stat-card flex items-center gap-4">
-                    <i class="fa-solid fa-user-graduate"></i>
-                    <div><h3>Total Mentees</h3><p class="text-2xl font-black">75</p></div>
+    <div class="app-wrapper">
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-logo-container">
+                <button id="sidebarToggle"><i class="fa-solid fa-bars"></i></button>
+                <div class="logo-content">
+                    <i class="fa-solid fa-graduation-cap text-xl"></i>
+                    <span class="logo-text">LRC PeerConnect</span>
                 </div>
             </div>
-
-            <div class="grid grid-cols-3 gap-8">
-                <div class="col-span-2 space-y-8">
-                    <div class="bg-white p-6 rounded-xl shadow-sm">
-                        <div class="flex justify-between items-center mb-6">
-                            <h2 class="text-xl font-bold">Today's Sessions</h2>
-                            <a href="#" class="text-red-800 font-bold text-sm">View All ></a>
-                        </div>
-                        <table class="w-full text-left">
-                            <thead class="text-gray-400 text-xs uppercase border-b">
-                                <tr><th class="pb-4">Mentor</th><th class="pb-4">Student</th><th class="pb-4">Time</th><th class="pb-4">Status</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr class="border-b"><td class="py-4 font-bold">Dyoco, Daniel Joco</td><td>Nabo, Frian Karl</td><td>10:00 AM</td><td><span class="bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full text-xs font-bold">Upcoming</span></td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <div class="bg-white rounded-xl shadow-sm p-6">
-                        <h2 class="text-xl font-bold mb-6">Statistics Overview</h2>
-                        <div class="grid grid-cols-2 gap-8">
-                            <div>
-                                <h3 class="text-gray-500 text-sm font-bold mb-4 uppercase">Sessions Overview</h3>
-                                <canvas id="sessionsChart"></canvas>
-                            </div>
-                            <div>
-                                <h3 class="text-gray-500 text-sm font-bold mb-4 uppercase">Feedback Summary</h3>
-                                <canvas id="feedbackChart"></canvas>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="space-y-6">
-                    <div class="bg-white p-6 rounded-xl shadow-sm">
-                        <div class="flex justify-between items-center mb-4 font-bold">
-                            <button onclick="changeMonth(-1)"><i class="fa-solid fa-chevron-left"></i></button>
-                            <span id="monthDisplay">March 2026</span>
-                            <button onclick="changeMonth(1)"><i class="fa-solid fa-chevron-right"></i></button>
-                        </div>
-                        <div class="grid grid-cols-7 text-center text-xs font-bold text-gray-400 mb-2">
-                            <span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>
-                        </div>
-                        <div id="calendarGrid" class="grid grid-cols-7 text-center text-sm gap-1"></div>
-                        <div class="mt-4 pt-4 border-t text-center font-mono text-gray-400" id="liveClock">00:00:00 PM</div>
-                    </div>
-
-                    <div class="bg-white p-6 rounded-xl shadow-sm">
-                        <h3 class="font-bold mb-4">Quick Actions</h3>
-                        <button class="btn-maroon">Add Mentor</button>
-                        <button class="btn-maroon">Create Session Slot</button>
-                        <button class="btn-maroon">Manage Subjects</button>
-                        <button class="btn-maroon">Generate Report</button>
-                    </div>
-                </div>
+            <nav class="flex-grow">
+                <a href="{{ route('student.dashboard') }}" class="nav-item {{ request()->routeIs('student.dashboard') ? 'active' : '' }}" data-tooltip="Dashboard">
+                    <i class="fa-solid fa-gauge"></i><span>Dashboard</span>
+                </a> 
+                <a href="{{ route('student.bookings') }}" class="nav-item {{ request()->routeIs('student.bookings') ? 'active' : '' }}" data-tooltip="Booking Form">
+                    <i class="fa-solid fa-calendar-check w-5"></i><span>Booking Form</span>
+                </a>                
+                <a href="{{ route('student.history') }}" class="nav-item {{ request()->routeIs('student.history') ? 'active' : '' }}" data-tooltip="Session History">
+                    <i class="fa-solid fa-clock w-5"></i><span>Session History</span>
+                </a>                
+                <a href="{{ route('student.mentors') }}" class="nav-item {{ request()->routeIs('student.mentors') ? 'active' : '' }}" data-tooltip="Peer Mentors">
+                    <i class="fa-solid fa-comment-dots w-5"></i><span>Peer Mentors</span>
+                </a>   
+                <a href="{{ route('student.about') }}" class="nav-item {{ request()->routeIs('student.about') ? 'active' : '' }}" data-tooltip="About Us">
+                    <i class="fa-solid fa-comment-dots w-5"></i><span>About Us</span>
+                </a>   
+            </nav>
+            <div class="p-4 border-t border-white/10">
+                <form method="POST" action="{{ route('logout') }}">
+                    @csrf
+                    <button type="submit" class="nav-item w-full bg-transparent border-none text-left" data-tooltip="Logout">
+                        <i class="fa-solid fa-right-from-bracket"></i><span>Logout</span>
+                    </button>
+                </form>
             </div>
-<!-- hanggang dito kayo mageedit --> 
-@endif
+        </aside>
 
-@yield('tab-content')
+        <div class="main-content">
+            <header class="top-header relative">
+                <div class="text-lg">Welcome, <span class="font-bold">{{ auth()->user()->name }}</span></div>
+                
+                <button id="profileTrigger" class="flex items-center gap-2 px-3 py-1 bg-white rounded-full hover:bg-gray-100 transition shadow-sm border-2 border-white/20 group">
+    <div class="w-8 h-8 bg-red-900 text-white rounded-full flex items-center justify-center text-xs font-bold">
+        {{ strtoupper(substr(auth()->user()->name,0,2)) }}
+    </div>
+    <i class="fa-solid fa-chevron-down text-[10px] text-gray-500 group-hover:text-red-900 transition-transform duration-200" id="dropdownArrow"></i>
+</button>
+                <div id="profileDropdown" class="profile-dropdown">
+                    <div class="p-4 border-b border-gray-100 bg-slate-50">
+                        <p class="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1">Signed in as</p>
+                        <p class="text-sm font-bold text-slate-800 truncate">{{ auth()->user()->name }}</p>
+                        <p class="text-xs text-slate-500 truncate">{{ auth()->user()->email }}</p>
+                    </div>
+                    <form method="POST" action="{{ route('logout') }}" class="m-0">
+                        @csrf
+                        <button type="submit" class="dropdown-item w-full border-t border-gray-50 text-red-600 font-semibold">
+                            <i class="fa-solid fa-right-from-bracket"></i> Logout
+                        </button>
+                    </form>
+                </div>
+            </header>
 
-</main>
+            <main class="scroll-container">
+<div class="space-y-6">
 
+    <div class="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-200">
+        <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-white">
+            <div>
+                <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2">
+                    <i class="fa-solid fa-user-secret text-gray-400"></i> 
+                    Anonymous Student Feedbacks
+                </h2>
+                <p class="text-xs text-gray-500">Student identities are hidden to encourage honest reporting.</p>
+            </div>
+            <div class="flex gap-3">
+                <select class="table-filter-select">
+                    <option>All Ratings</option>
+                    <option>5 Stars</option>
+                    <option>4 Stars</option>
+                    <option>Below 3</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left">
+                <thead class="bg-slate-50 text-gray-400 text-xs uppercase">
+                    <tr>
+                        <th class="px-6 py-4">Participant Ref</th>
+                        <th class="px-6 py-4">Course/Year</th>
+                        <th class="px-6 py-4">Comment</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    <tr class="hover:bg-slate-50 transition">
+                        <td class="px-6 py-4">
+                            <span class="text-xs font-mono bg-gray-100 px-2 py-1 rounded text-gray-600">USR-8821</span>
+                        </td>
+                        <td class="px-6 py-4 text-sm text-slate-700 font-medium">BS Computer Science - 2nd Year</td>
+                        <td class="px-6 py-4">
+                            <p class="feedback-text text-sm text-slate-600 italic">"The peer mentor was very patient with the coding exercises."</p>
+                        </td>
+                    </tr>
+                    <tr class="hover:bg-slate-50 transition">
+                        <td class="px-6 py-4">
+                            <span class="text-xs font-mono bg-gray-100 px-2 py-1 rounded text-gray-600">USR-4509</span>
+                        </td>
+                        <td class="px-6 py-4 text-sm text-slate-700 font-medium">BS Information Tech - 1st Year</td>
+                        <td class="px-6 py-4">
+                            <p class="feedback-text text-sm text-slate-600 italic">"Hard to hear the audio during the session."</p>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="p-4 border-t border-gray-100 flex justify-between items-center bg-slate-50 text-xs text-gray-500">
+            <span></span>
+            <div class="flex gap-2">
+                <button class="pagination-btn">Previous</button>
+                <button class="pagination-btn bg-red-800 text-white border-red-800">1</button>
+                <button class="pagination-btn">Next</button>
+            </div>
+            <span></span>
+        </div>
+        
+    </div>
 </div>
-</div>
+            </main>
+        </div>
+    </div>
 
 <script>
+        const sidebar = document.getElementById('sidebar');
+        const profileTrigger = document.getElementById('profileTrigger');
+        const profileDropdown = document.getElementById('profileDropdown');
 
-let date = new Date();
+        // Dashboard Interactivity
+        document.getElementById('sidebarToggle').addEventListener('click', () => {
+            sidebar.classList.toggle('collapsed');
+            setTimeout(() => { charts.forEach(c => c.resize()); }, 310);
+        });
 
-function renderCalendar(){
+        profileTrigger.addEventListener('click', (e) => {
+            e.stopPropagation();
+            profileDropdown.classList.toggle('show');
+        });
 
-const grid = document.getElementById('calendarGrid');
-const monthDisp = document.getElementById('monthDisplay');
-
-grid.innerHTML='';
-
-monthDisp.innerText = date.toLocaleString('default',{month:'long',year:'numeric'});
-
-const lastDay = new Date(date.getFullYear(),date.getMonth()+1,0).getDate();
-const startDay = new Date(date.getFullYear(),date.getMonth(),1).getDay();
-
-for(let i=0;i<startDay;i++) grid.innerHTML += '<div></div>';
-
-for(let i=1;i<=lastDay;i++){
-
-const isToday = i===new Date().getDate() && date.getMonth()===new Date().getMonth();
-
-grid.innerHTML += `<div class="cal-day ${isToday?'cal-today':''}">${i}</div>`;
-
-}
-
-}
-
-function changeMonth(dir){ date.setMonth(date.getMonth()+dir); renderCalendar(); }
-
-function updateClock(){ document.getElementById('liveClock').innerText=new Date().toLocaleTimeString(); }
-
-setInterval(updateClock,1000);
-
-renderCalendar();
-
-new Chart(document.getElementById('sessionsChart'),{
-type:'line',
-data:{labels:['Mon','Tue','Wed','Thu','Fri'],datasets:[{label:'Sessions',data:[12,19,15,25,18],borderColor:'#7b1d1d',tension:0.4}]}
-});
-
-new Chart(document.getElementById('feedbackChart'),{
-type:'doughnut',
-data:{labels:['Excellent','Good','Average'],datasets:[{data:[60,30,10],backgroundColor:['#1a3c2f','#7b1d1d','#ccc']}]}
-});
-
-function toggleProfileMenu(){
-document.getElementById("profileMenu").classList.toggle("hidden");
-}
-
-window.addEventListener('click',function(e){
-
-const menu=document.getElementById("profileMenu");
-const button=e.target.closest("button");
-
-if(!button && !e.target.closest("#profileMenu")){
-menu.classList.add("hidden");
-}
-
-});
-
+        window.addEventListener('click', () => {
+            if (profileDropdown.classList.contains('show')) profileDropdown.classList.remove('show');
+        });
 </script>
-
 </body>
