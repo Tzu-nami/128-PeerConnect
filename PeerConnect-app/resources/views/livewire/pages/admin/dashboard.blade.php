@@ -85,14 +85,12 @@ mount(function () {
     background: rgba(255,255,255,0.05);
 }
 
-/* THE BLEND: Rectangular connection to the main page */
 .nav-item.active { 
     background: var(--bg-light); 
     color: var(--header-maroon); 
     font-weight: 700;
-    /* This ensures it aligns perfectly with the content area */
     border-radius: 0; 
-    width: calc(100% + 1px); /* Overlaps the sidebar border/edge slightly */
+    width: calc(100% + 1px); 
     z-index: 10;
 }
 .nav-item::after {
@@ -137,7 +135,49 @@ mount(function () {
         .pagination-btn { padding: 4px 10px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 11px; font-weight: 600; color: #64748b; transition: all 0.2s; }
         .pagination-btn:hover:not(:disabled) { background: #f1f5f9; color: var(--header-maroon); border-color: var(--header-maroon); }
         .table-filter-select, .header-filter { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 12px; font-size: 0.75rem; color: #475569; outline: none; cursor: pointer; }
+    
+    /* MAIN CONTENT SEARCH BAR */
+.main-search-container {
+    background: white;
+    padding: 15px 25px;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    border: 1px solid #eef2f3;
+}
+
+.main-search-wrapper {
+    position: relative;
+    flex: 1;
+}
+
+.main-search-wrapper i {
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #94a3b8;
+    font-size: 0.9rem;
+}
+
+.main-search-input {
+    width: 100%;
+    padding: 12px 20px 12px 45px;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    font-size: 0.85rem;
+    outline: none;
+    transition: all 0.2s;
+}
+
+.main-search-input:focus {
+    border-color: var(--header-maroon);
+    box-shadow: 0 0 0 3px rgba(123, 29, 29, 0.05);
+}
     </style>
+
 </head>
 
 <body>
@@ -175,7 +215,6 @@ mount(function () {
         <div class="main-content">
             <header class="top-header relative">
                 <div class="text-lg">Welcome, <span class="font-bold">{{ auth()->user()->name }}</span></div>
-                
                 <button id="profileTrigger" class="flex items-center gap-2 px-3 py-1 bg-white rounded-full hover:bg-gray-100 transition shadow-sm border-2 border-white/20 group">
     <div class="w-8 h-8 bg-red-900 text-white rounded-full flex items-center justify-center text-xs font-bold">
         {{ strtoupper(substr(auth()->user()->name,0,2)) }}
@@ -199,6 +238,18 @@ mount(function () {
             </header>
 
             <main class="scroll-container">
+                <div class="main-search-container mb-8">
+            <div class="main-search-wrapper flex-1">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" id="mainDashboardSearch" placeholder="Search for mentors, students, or specific session dates..." class="main-search-input">
+            </div>
+            <div class="ml-4 flex gap-2">
+                <button class="px-4 py-2 bg-white text-gray-600 rounded-lg text-xs font-bold hover:bg-gray-50 border border-gray-200 transition-all">
+                    <i class="fa-solid fa-filter mr-2"></i>Advanced Filter
+                </button>
+            </div>
+        </div>
+
                 <div class="grid grid-cols-5 gap-4 mb-8">
                     <div class="stat-card flex items-center gap-4"><i class="fa-solid fa-users"></i><div><h3 class="text-xs font-bold text-gray-400 uppercase">Total Mentors</h3><p class="text-2xl font-black">40</p></div></div>
                     <div class="stat-card flex items-center gap-4"><i class="fa-solid fa-calendar-day"></i><div><h3 class="text-xs font-bold text-gray-400 uppercase">Sessions Today</h3><p class="text-2xl font-black">18</p></div></div>
@@ -215,6 +266,7 @@ mount(function () {
     <h2 class="text-lg font-bold text-slate-800" id="tableTitle">Today's Schedule</h2>
     <p class="text-xs text-gray-400" id="tableSubtitle"></p>
 </div>
+
 
 <script>
 function updateDate() {
