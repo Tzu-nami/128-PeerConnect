@@ -193,9 +193,28 @@ mount(function () {
                         <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 min-h-[460px] flex flex-col">
                             <div class="flex justify-between items-center mb-6">
                                 <div>
-                                    <h2 class="text-lg font-bold text-slate-800" id="tableTitle">Today's Schedule</h2>
-                                    <p class="text-xs text-gray-400" id="tableSubtitle">March 14, 2026</p>
-                                </div>
+    <h2 class="text-lg font-bold text-slate-800" id="tableTitle">Today's Schedule</h2>
+    <p class="text-xs text-gray-400" id="tableSubtitle"></p>
+</div>
+
+<script>
+function updateDate() {
+    const today = new Date();
+
+    const options = { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+    };
+
+    const formattedDate = today.toLocaleDateString('en-US', options);
+
+    document.getElementById("tableSubtitle").textContent = formattedDate;
+}
+
+// run when page loads
+updateDate();
+</script>
                                 <div class="flex gap-2">
                                     <div class="relative w-48">
                                         <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-300 text-xs"></i>
