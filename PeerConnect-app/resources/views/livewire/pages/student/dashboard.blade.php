@@ -4,7 +4,7 @@ use function Livewire\Volt\{layout, state, mount};
 
 layout('layouts.app');
 
-mount(function () {
+mount(function () {  
     abort_if(!auth()->user()->isStudent(), 403, 'Unauthorized Access');
 });
 
