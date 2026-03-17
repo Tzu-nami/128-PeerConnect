@@ -20,26 +20,26 @@ mount(function () {
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
-        :root { 
-            --sidebar-green: #1a3c2f; 
-            --header-maroon: #7b1d1d; 
-            --bg-light: #f4f7f6; 
-            --header-height: 80px; 
+        :root {
+            --sidebar-green: #1a3c2f;
+            --header-maroon: #7b1d1d;
+            --bg-light: #f4f7f6;
+            --header-height: 80px;
             --sidebar-width: 280px;
             --sidebar-collapsed-width: 80px;
         }
-        
+
         body { margin: 0; font-family: 'Inter', sans-serif; background: var(--bg-light); overflow: hidden; }
         .app-wrapper { display: flex; height: 100vh; width: 100vw; overflow: hidden; }
-        
+
         /* SIDEBAR */
-        .sidebar { 
-            width: var(--sidebar-width); 
-            background: var(--sidebar-green); 
-            flex-shrink: 0; 
-            display: flex; 
-            flex-direction: column; 
-            color: white; 
+        .sidebar {
+            width: var(--sidebar-width);
+            background: var(--sidebar-green);
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            color: white;
             height: 100vh;
             transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             z-index: 30;
@@ -64,19 +64,19 @@ mount(function () {
         .logo-text { font-size: 1.1rem; font-weight: 700; }
 
        /* FLAT BLENDING STYLE */
-.nav-item { 
-    display: flex; 
-    align-items: center; 
-    gap: 15px; 
-    padding: 15px 25px; 
-    color: rgba(255,255,255,0.7); 
-    text-decoration: none; 
-    transition: all 0.2s ease; 
-    white-space: nowrap; 
-    position: relative; 
-    background: transparent; 
-    border: none; 
-    width: 100%; 
+.nav-item {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 15px 25px;
+    color: rgba(255,255,255,0.7);
+    text-decoration: none;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    position: relative;
+    background: transparent;
+    border: none;
+    width: 100%;
     cursor: pointer;
 }
 
@@ -86,12 +86,12 @@ mount(function () {
 }
 
 /* THE BLEND: Rectangular connection to the main page */
-.nav-item.active { 
-    background: var(--bg-light); 
-    color: var(--header-maroon); 
+.nav-item.active {
+    background: var(--bg-light);
+    color: var(--header-maroon);
     font-weight: 700;
     /* This ensures it aligns perfectly with the content area */
-    border-radius: 0; 
+    border-radius: 0;
     width: calc(100% + 1px); /* Overlaps the sidebar border/edge slightly */
     z-index: 10;
 }
@@ -154,13 +154,13 @@ mount(function () {
                 <a href="#" class="nav-item active" data-tooltip="Dashboard"><i class="fa-solid fa-gauge"></i><span>Dashboard</span></a>
                 <a href="{{ route('admin.mentors') }}" class="nav-item {{ request()->routeIs('admin.mentors') ? 'active' : '' }}" data-tooltip="Mentor Management">
                     <i class="fa-solid fa-chalkboard-user w-5"></i><span>Mentor Management</span>
-                </a>                
+                </a>
                 <a href="{{ route('admin.sessions') }}" class="nav-item {{ request()->routeIs('admin.sessions') ? 'active' : '' }}" data-tooltip="Session Management">
                     <i class="fa-solid fa-calendar-days w-5"></i><span>Session Management</span>
-                </a>                
+                </a>
                 <a href="{{ route('admin.feedbacks') }}" class="nav-item {{ request()->routeIs('admin.feedbacks') ? 'active' : '' }}" data-tooltip="Student Feedback">
                     <i class="fa-solid fa-comments w-5"></i><span>Student Feedback</span>
-                </a>            
+                </a>
             </nav>
             <div class="p-4 border-t border-white/10">
                 <form method="POST" action="{{ route('logout') }}">
@@ -175,7 +175,7 @@ mount(function () {
         <div class="main-content">
             <header class="top-header relative">
                 <div class="text-lg">Welcome, <span class="font-bold">{{ auth()->user()->name }}</span></div>
-                
+
                 <button id="profileTrigger" class="flex items-center gap-2 px-3 py-1 bg-white rounded-full hover:bg-gray-100 transition shadow-sm border-2 border-white/20 group">
     <div class="w-8 h-8 bg-red-900 text-white rounded-full flex items-center justify-center text-xs font-bold">
         {{ strtoupper(substr(auth()->user()->name,0,2)) }}
@@ -220,10 +220,10 @@ mount(function () {
 function updateDate() {
     const today = new Date();
 
-    const options = { 
-        year: 'numeric', 
-        month: 'long', 
-        day: 'numeric' 
+    const options = {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
     };
 
     const formattedDate = today.toLocaleDateString('en-US', options);
@@ -390,7 +390,7 @@ updateDate();
         const profileDropdown = document.getElementById('profileDropdown');
         const searchInput = document.getElementById('liveSearchInput');
         const statusFilter = document.getElementById('statusFilter');
-        const charts = []; 
+        const charts = [];
 
         // Dashboard Interactivity
         document.getElementById('sidebarToggle').addEventListener('click', () => {
@@ -412,7 +412,7 @@ updateDate();
             document.getElementById('liveClock').innerText = now.toLocaleTimeString('en-US', { hour12: false });
             document.getElementById('liveDate').innerText = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
         }
-        setInterval(updateClock, 1000); 
+        setInterval(updateClock, 1000);
 
         // Local State
         const allSessions = [
@@ -432,48 +432,48 @@ updateDate();
         function initCharts() {
             // Line Chart
             charts.push(new Chart(document.getElementById('lineChart'), { type: 'line', data: { labels: ['W1', 'W2', 'W3', 'W4'], datasets: [{ data: [45, 52, 38, 65], borderColor: '#7b1d1d', tension: 0.4 }] }, options: linearOptions }));
-            
+
             // Pie Chart (Top Mentors)
             charts.push(new Chart(document.getElementById('pieChart'), { type: 'pie', data: { labels: ['Daniel D.', 'Sarah J.', 'James W.', 'Others'], datasets: [{ data: [40, 25, 20, 15], backgroundColor: ['#1a3c2f', '#7b1d1d', '#94a3b8', '#cbd5e1'] }] }, options: { maintainAspectRatio: false, plugins: { legend: { display: true, position: 'right', labels: { boxWidth: 8, font: { size: 9 } } } } } }));
-            
+
             // Doughnut Chart (Satisfaction Rate)
-            charts.push(new Chart(document.getElementById('doughnutChart'), { 
-                type: 'doughnut', 
-                data: { 
-                    labels: ['Excl', 'Good', 'Avg'], 
-                    datasets: [{ data: [70, 20, 10], backgroundColor: ['#1a3c2f', '#7b1d1d', '#cbd5e1'], borderWidth: 0 }] 
-                }, 
-                options: { 
-                    maintainAspectRatio: false, 
-                    plugins: { 
-                        legend: { display: true, position: 'bottom', labels: { boxWidth: 10, font: { size: 9 } } } 
+            charts.push(new Chart(document.getElementById('doughnutChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['Excl', 'Good', 'Avg'],
+                    datasets: [{ data: [70, 20, 10], backgroundColor: ['#1a3c2f', '#7b1d1d', '#cbd5e1'], borderWidth: 0 }]
+                },
+                options: {
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: true, position: 'bottom', labels: { boxWidth: 10, font: { size: 9 } } }
                     },
-                    cutout: '70%' 
-                } 
-            }));        
+                    cutout: '70%'
+                }
+            }));
 
             // Bar Chart (Most Active Colleges - CS, CSS, CAC)
-            charts.push(new Chart(document.getElementById('activeCollegeChart'), { 
-                type: 'bar', 
-                data: { 
-                    labels: ['CS', 'CSS', 'CAC'], 
-                    datasets: [{ 
-                        label: 'Active Students', 
-                        data: [68, 85, 42], 
-                        backgroundColor: ['#94a3b8', '#1a3c2f', '#7b1d1d'], 
+            charts.push(new Chart(document.getElementById('activeCollegeChart'), {
+                type: 'bar',
+                data: {
+                    labels: ['CS', 'CSS', 'CAC'],
+                    datasets: [{
+                        label: 'Active Students',
+                        data: [68, 85, 42],
+                        backgroundColor: ['#94a3b8', '#1a3c2f', '#7b1d1d'],
                         borderRadius: 4,
                         barThickness: 20
-                    }] 
-                }, 
-                options: { 
-                    indexAxis: 'y', 
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
                     maintainAspectRatio: false,
                     plugins: { legend: { display: false } },
-                    scales: { 
-                        x: { beginAtZero: true, grid: { display: false }, ticks: { font: { size: 9 } } }, 
-                        y: { grid: { display: false }, ticks: { font: { size: 9 } } } 
-                    } 
-                } 
+                    scales: {
+                        x: { beginAtZero: true, grid: { display: false }, ticks: { font: { size: 9 } } },
+                        y: { grid: { display: false }, ticks: { font: { size: 9 } } }
+                    }
+                }
             }));
         }
 
@@ -485,7 +485,7 @@ updateDate();
 
             const filtered = allSessions.filter(item => {
                 const matchesDate = item.date === selectedDateStr;
-                const matchesSearch = item.mentor.toLowerCase().includes(searchTerm) || 
+                const matchesSearch = item.mentor.toLowerCase().includes(searchTerm) ||
                                       item.mentee.toLowerCase().includes(searchTerm);
                 const matchesStatus = selectedStatus === 'All' || item.status === selectedStatus;
                 return matchesDate && matchesSearch && matchesStatus;
