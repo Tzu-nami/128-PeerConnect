@@ -32,7 +32,7 @@
         ] as $label => $href)
             <li>
                 <a href="{{ $href }}"
-                   class="text-[15px] font-medium text-cream/75 tracking-widest uppercase
+                   class="whitespace-nowrap text-[15px] font-medium text-cream/75 tracking-widest uppercase
                           transition-colors duration-200 hover:text-up-yellow-light no-underline">
                     {{ $label }}
                 </a>
