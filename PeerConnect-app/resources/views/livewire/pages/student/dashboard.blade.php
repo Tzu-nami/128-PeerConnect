@@ -1,45 +1,217 @@
 <?php
 
-use function Livewire\Volt\{layout, state, mount};
+use App\Models\Bookings;
+use App\Models\MentorProfiles;
+use App\Models\Subjects;
+use App\Models\TutorialMode;
+use App\Models\StudentProfiles;
+use App\Models\Colleges;
+use App\Models\DegreePrograms;
+use App\Models\YearLevels;
+use App\Models\MentorSubjects;
+use App\Models\MentorAvailabilities;
+use Illuminate\Validation\Rule;
+use function Livewire\Volt\{layout, state, mount, action, computed, updated};
 
 layout('layouts.app');
 
 mount(function () {
     abort_if(!auth()->user()->isStudent(), 403, 'Unauthorized Access');
+
+    // For pre-filled information
+    $profile = StudentProfiles::where('user_id', auth()->id())->first();
+
+    if($profile) {
+        $this->student_num = $profile->student_num;
+        $this->college_id = $profile->college_id;
+        $this->degreeProgram_id = $profile->degreeProgram_id;
+        $this->yearLevel_id = $profile->yearLevel_id;
+        $this->toggleProfileOpen = false;
+    }
+});
+
+// For booking forms inputs
+state([
+    'mentor_id' => '',
+    'subject_id' => '',
+    'topic' => '',
+    'tutorialMode_id' => '',
+    'date' => '',
+    'schedule_start' => '',
+    'schedule_end' => '',
+    'successMessage' => false,
+]);
+
+$mentors = computed(function () {
+    return MentorProfiles::with('user') -> get() -> sortBy(fn($lName) => $lName->user->lastName)
+        -> values()
+        -> map(fn($mentorProfiles) => [
+            'id' => $mentorProfiles->user->id,
+            'profile_id' => $mentorProfiles->id,
+            'name' => strtoupper($mentorProfiles->user->lastName). ', ' . $mentorProfiles->user->firstName,
+        ]) -> toArray();
+});
+
+$mentorAvailabilities = computed(function () {
+    return MentorAvailabilities::all() -> map(fn($avail)=> [
+        'mentorProfile_id' => $avail->mentor_id,
+        'day_of_week' => $avail->day_of_week,
+        'start_time' => $avail->start_time,
+        'end_time' => $avail->end_time,
+    ]) -> values() -> toArray();
+});
+
+$mentorSubjects = computed(function () {
+    return MentorSubjects::all() -> map(fn($subs) => [
+        'mentorProfile_id' => $subs->mentor_id,
+        'subject_id' => $subs->subject_id,
+    ]) -> values() -> toArray();
+});
+
+$subjects = computed(function () {
+    return Subjects::orderBy('code')->get();
+});
+
+$tutorialModes = computed(function () {
+    return TutorialMode::orderBy('id')->get();
+});
+
+$studentBookings = computed(function () {
+    $profile = StudentProfiles::where('user_id', auth()->id())->first();
+    if(!$profile) {return collect();}
+    return Bookings::with(['mentor', 'subject', 'tutorialMode'])
+        ->where('student_id', $profile->id)
+        ->latest()
+        ->take(3)
+        ->get();
+});
+
+// For student profile inputs
+state([
+    'toggleProfileOpen' => true,
+    'profileSaved' => false,
+    'student_num' => '',
+    'college_id' => '',
+    'degreeProgram_id' => '',
+    'yearLevel_id' => '',
+]);
+
+$colleges = computed(function () {
+    return Colleges::orderBy('name')->get();
+});
+
+$degreePrograms = computed(function() {
+    return DegreePrograms::orderBy('name')->get();
+});
+
+$yearLevels = computed(function () {
+    return YearLevels::orderBy('name')->get();
+});
+
+$toggleProfile = action(function () {
+    $this->toggleProfileOpen = !$this->toggleProfileOpen;
+});
+
+$saveProfile = action(function () {
+    abort_if(!auth()->user()->isStudent(), 403, 'Unauthorized Access');
+
+    $validated = $this->validate([
+        'student_num' => ['required', 'string', 'max:10', 'regex:/-/'],
+        'college_id' => ['required', 'exists:colleges,id'],
+        'degreeProgram_id' => ['required', 'exists:degree_programs,id'],
+        'yearLevel_id' => ['required', 'exists:year_levels,id'],
+    ],  messages: [
+        'student_num.regex' => 'The student number must include a hyphen (-)',
+    ],  attributes: [
+        'student_num' => 'student number',
+        'college_id' => 'college',
+        'degreeProgram_id' => 'degree program',
+        'yearLevel_id' => 'year level',
+    ]);
+
+    StudentProfiles::updateOrCreate(
+        ['user_id' => auth()->id()],
+        $validated
+    );
+
+    $this->profileSaved = true;
+    $this->toggleProfileOpen = false;
+
+    $this->dispatch('profile-updated');
+});
+
+// Submit form
+$submitBooking = action(function () {
+    abort_if(!auth()->user()->isStudent(), 403, 'Unauthorized Access');
+
+    abort_if(!auth()->user()->studentProfile, 422);
+
+    $validated = $this->validate([
+        'mentor_id' => ['required', 'exists:mentor_profiles,id'],
+        'subject_id' => ['required', 'exists:subjects,id'],
+        'topic' => ['required', 'string', 'max:255'],
+        'tutorialMode_id' => ['required', 'exists:tutorial_modes,id'],
+        'date' => ['required', 'date', 'after:today', function($attribute, $value, $fail) {
+            $sessionDate = \Carbon\Carbon::parse($value)->format('l, F j, Y');
+            if ($sessionDate === 'Sunday') {
+                $fail('The session cannot be on a Sunday. Please select another date.');
+            }
+        }],
+        'schedule_start' => ['required', 'date_format:H:i'],
+        'schedule_end' => ['required', 'date_format:H:i', 'after:schedule_start'],
+    ],  attributes: [
+        'mentor_id' => 'mentor',
+        'subject_id' => 'subject',
+        'topic' => 'topic',
+        'tutorialMode_id' => 'mode of tutorial',
+        'date' => 'date',
+        'schedule_start' => 'start time',
+        'schedule_end' => 'end time',
+    ]);
+
+    $profile = StudentProfiles::where('user_id', auth()->id())->first();
+    Bookings::create([
+        ...$validated,
+        'student_id' => $profile->id,
+        'booking_status' => 'pending',
+    ]);
+
+    $this->reset([
+        'mentor_id', 'subject_id', 'topic', 'tutorialMode_id', 'date', 'schedule_start', 'schedule_end',
+    ]);
+
+    $this->successMessage = true;
+});
+
+$dismissSuccessMessage = action(function () {
+    $this->successMessage = false;
 });
 
 ?>
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LRC PeerConnect Dashboard</title>
-
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<div>
 
     <style>
-        :root {
-            --sidebar-green: #1a3c2f;
-            --header-maroon: #7b1d1d;
-            --bg-light: #f4f7f6;
-            --header-height: 80px;
+        :root { 
+            --sidebar-green: #1a3c2f; 
+            --header-maroon: #7b1d1d; 
+            --bg-light: #f4f7f6; 
+            --header-height: 80px; 
             --sidebar-width: 280px;
             --sidebar-collapsed-width: 80px;
         }
-
+        
         body { margin: 0; font-family: 'Inter', sans-serif; background: var(--bg-light); overflow: hidden; }
         .app-wrapper { display: flex; height: 100vh; width: 100vw; overflow: hidden; }
-
+        
         /* SIDEBAR */
-        .sidebar {
-            width: var(--sidebar-width);
-            background: var(--sidebar-green);
-            flex-shrink: 0;
-            display: flex;
-            flex-direction: column;
-            color: white;
+        .sidebar { 
+            width: var(--sidebar-width); 
+            background: var(--sidebar-green); 
+            flex-shrink: 0; 
+            display: flex; 
+            flex-direction: column; 
+            color: white; 
             height: 100vh;
             transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             z-index: 30;
@@ -63,41 +235,30 @@ mount(function () {
         .logo-content { display: flex; align-items: center; gap: 12px; white-space: nowrap; }
         .logo-text { font-size: 1.1rem; font-weight: 700; }
 
-        /* FLAT BLENDING STYLE */
-        .nav-item {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            padding: 15px 25px;
-            color: rgba(255,255,255,0.7);
-            text-decoration: none;
-            transition: all 0.2s ease;
-            white-space: nowrap;
-            position: relative;
-            background: transparent;
-            border: none;
-            width: 100%;
-            cursor: pointer;
+        .nav-item { 
+            display: flex; align-items: center; gap: 15px; padding: 15px 25px; 
+            color: rgba(255,255,255,0.7); text-decoration: none; transition: background 0.3s; white-space: nowrap;
+            position: relative; text-align: left; background: transparent; border: none; width: 100%;
         }
+        .nav-item i { width: 30px; text-align: center; flex-shrink: 0; font-size: 20px; }
+        .nav-item:hover, .nav-item.active { background: rgba(255,255,255,0.1); color: white; }
+.nav-item.active { 
+    background: var(--bg-light); 
+    color: var(--header-maroon); 
+    font-weight: 700;
+    /* This ensures it aligns perfectly with the content area */
+    border-radius: 0; 
+    width: calc(100% + 1px); /* Overlaps the sidebar border/edge slightly */
+    z-index: 10;
+}
 
-        .nav-item:hover {
-            color: white;
-            background: rgba(255,255,255,0.05);
-        }
-
-        /* THE BLEND: Rectangular connection to the main page */
-        .nav-item.active {
-            background: var(--bg-light);
-            color: var(--header-maroon);
-            font-weight: 700;
-            /* This ensures it aligns perfectly with the content area */
-            border-radius: 0;
-            width: calc(100% + 1px); /* Overlaps the sidebar border/edge slightly */
-            z-index: 10;
-        }
         .nav-item::after {
-            content: attr(data-tooltip); position: absolute; left: 100%; top: 50%; transform: translateY(-50%);
-            margin-left: 10px; background: rgba(0, 0, 0, 0.9); color: white; padding: 5px 12px; border-radius: 4px; font-size: 12px; opacity: 0; visibility: hidden; transition: opacity 0.2s; pointer-events: none; z-index: 100;
+            content: attr(data-tooltip);
+            position: absolute; left: 100%; top: 50%; transform: translateY(-50%);
+            margin-left: 10px; background: rgba(0, 0, 0, 0.9); color: white;
+            padding: 5px 12px; border-radius: 4px; font-size: 12px; font-weight: 500;
+            white-space: nowrap; opacity: 0; visibility: hidden; transition: opacity 0.2s;
+            pointer-events: none; z-index: 100;
         }
         .sidebar.collapsed .nav-item:hover::after { opacity: 1; visibility: visible; }
         .sidebar.collapsed .logo-content, .sidebar.collapsed .nav-item span { display: none; }
@@ -137,10 +298,29 @@ mount(function () {
         .pagination-btn { padding: 4px 10px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 11px; font-weight: 600; color: #64748b; transition: all 0.2s; }
         .pagination-btn:hover:not(:disabled) { background: #f1f5f9; color: var(--header-maroon); border-color: var(--header-maroon); }
         .table-filter-select, .header-filter { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 12px; font-size: 0.75rem; color: #475569; outline: none; cursor: pointer; }
-    </style>
-</head>
+        .weekly-table{table-layout:fixed;width:100%;}
+        .weekly-table th, .weekly-table td{width:16%;}
+        .schedule-block{
+font-size:9px;
+line-height:1.2;
+padding:2px 4px;
+margin-bottom:2px;
+border-radius:4px;
+background:#d1fae5;
+color:#065f46;
+}
 
-<body>
+.notif-dot {
+    width: 6px;
+    height: 6px;
+    background: #3b82f6; /* blue */
+    border-radius: 50%;
+    position: top;
+    bottom: 6px;
+}
+    </style>
+
+
     <div class="app-wrapper">
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-logo-container">
@@ -207,184 +387,268 @@ mount(function () {
             </header>
 
             <main class="scroll-container">
-                <div class="grid grid-cols-5 gap-4 mb-8">
-                    <div class="stat-card flex items-center gap-4"><i class="fa-solid fa-users"></i><div><h3 class="text-xs font-bold text-gray-400 uppercase">Total Mentors</h3><p class="text-2xl font-black">40</p></div></div>
-                    <div class="stat-card flex items-center gap-4"><i class="fa-solid fa-calendar-day"></i><div><h3 class="text-xs font-bold text-gray-400 uppercase">Sessions Today</h3><p class="text-2xl font-black">18</p></div></div>
-                    <div class="stat-card flex items-center gap-4"><i class="fa-solid fa-clock"></i><div><h3 class="text-xs font-bold text-gray-400 uppercase">Pending</h3><p class="text-2xl font-black">5</p></div></div>
-                    <div class="stat-card flex items-center gap-4"><i class="fa-solid fa-star"></i><div><h3 class="text-xs font-bold text-gray-400 uppercase">Ratings</h3><p class="text-2xl font-black">4.9</p></div></div>
-                    <div class="stat-card flex items-center gap-4"><i class="fa-solid fa-user-graduate"></i><div><h3 class="text-xs font-bold text-gray-400 uppercase">Total Mentees</h3><p class="text-2xl font-black">75</p></div></div>
-                </div>
+                @if($successMessage)
+                    <div class="mb-6 flex items-center justify-between bg-green-100 border border-green-400 text-green-800 px-4 py-3 rounded">
+                        <span>Your session has been booked and is now <strong>pending</strong> approval.</span>
+                        <button wire:click="dismissSuccessMessage" class="text-green-600 hover:text-green-800 font-bold ml-4">X</button>
+                    </div>
+                @endif
 
-                <div class="grid grid-cols-3 gap-8">
-                    <div class="col-span-2 space-y-8">
-                        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 min-h-[460px] flex flex-col">
-                            <div class="flex justify-between items-center mb-6">
-                                <div>
-                                    <h2 class="text-lg font-bold text-slate-800" id="tableTitle">Today's Schedule</h2>
-                                    <p class="text-xs text-gray-400" id="tableSubtitle"></p>
-                                </div>
+                @if(!auth()->user()->studentProfile)
+                    <div class="mb-6 bg-yellow-100 border border-yellow-400 text-black-800 px-4 py-3 rounded">
+                        Please complete your <strong>Student Profile</strong> before booking a session.
+                    </div>
+                @endif
 
-                                <script>
-                                    function updateDate() {
-                                        const today = new Date();
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
-                                        const options = {
-                                            year: 'numeric',
-                                            month: 'long',
-                                            day: 'numeric'
-                                        };
+                    <div class="lg:col-span-2">
+                        <div class="bg-[#fffffa] p-6 rounded-lg shadow-sm border-gray-200"
+                             x-data="{
+                                allMentors: @js($this->mentors),
+                                allSubjects: @js($this->mentorSubjects),
+                                allAvailabilities: @js($this->mentorAvailabilities),
 
-                                        const formattedDate = today.toLocaleDateString('en-US', options);
+                                getDayOfWeek(dateStr) {
+                                const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+                                const d = new Date(dateStr + 'T00:00:00');
+                                return days[d.getDay()];
+                                },
 
-                                        document.getElementById("tableSubtitle").textContent = formattedDate;
+                                get filteredMentors() {
+                                    let choices = this.allMentors;
+
+                                    if($wire.subject_id) {
+                                        const validIds = this.allSubjects
+                                            .filter(s => s.subject_id == $wire.subject_id)
+                                            .map(s => s.mentorProfile_id);
+                                        choices = choices.filter(m => validIds.includes(m.profile_id));
                                     }
 
-                                    // run when page loads
-                                    updateDate();
-                                </script>
-                                <div class="flex gap-2">
-                                    <div class="relative w-48">
-                                        <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-300 text-xs"></i>
-                                        <input type="text" id="liveSearchInput" placeholder="Search names..." class="w-full pl-9 pr-3 py-2 text-xs border border-gray-200 rounded-lg outline-none focus:ring-1 focus:ring-red-800">
-                                    </div>
-                                    <select id="statusFilter" class="table-filter-select">
-                                        <option value="All">All Status</option>
-                                        <option value="Active">Active</option>
-                                        <option value="Upcoming">Upcoming</option>
-                                        <option value="Completed">Completed</option>
+                                    if($wire.date) {
+                                        const dayChosen = this.getDayOfWeek($wire.date);
+
+                                        choices = choices.filter(m => {
+                                            const avails = this.allAvailabilities.filter(a => a.mentorProfile_id == m.profile_id && a.day_of_week === dayChosen);
+
+                                            if(avails.length === 0) return false;
+
+                                            if($wire.schedule_start && $wire.schedule_end) {
+                                                return avails.some(a => {
+                                                    let start = a.start_time.substring(0, 5);
+                                                    let end = a.end_time.substring(0, 5);
+                                                    let startChosen = $wire.schedule_start.substring(0, 5);
+                                                    let endChosen = $wire.schedule_end.substring(0, 5);
+
+                                                    return start <= startChosen && end >= endChosen;
+                                                    });
+                                                }
+                                            return true;
+                                        });
+                                    }
+                                    return choices;
+                                }
+                            }">
+                            <h2 class="text-lg font-semibold text-gray-900 mb-1">Request an Enrichment Session!</h2>
+                            <p class="text-gray-500 text-sm mb-6">Please fill out all required fields. Your request will then be reviewed by the peer mentor.</p>
+
+                            <form wire:submit.prevent="submitBooking" class="space-y-2">
+                                <div>
+                                    <label class="block text-base font-medium text-gray-700 mb-1">Subject<span class="text-red-500">*</span></label>
+                                    <select wire:model="subject_id" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-black-500 focus:ring-blue-500 text-base px-2 py-1">
+                                        <option value="">--- Select a Subject ---</option>
+                                        @foreach($this->subjects as $subject)
+                                            <option value="{{ $subject['id'] }}">{{ $subject['code'] }} - {{$subject['name']}}</option>
+                                        @endforeach
                                     </select>
+                                    @error('subject_id') <span class="mt-1 text-xs text-red-600">{{ $message }}</span> @enderror
                                 </div>
-                            </div>
 
-                            <div class="flex-grow">
-                                <table class="w-full text-left text-sm">
-                                    <thead class="text-gray-400 border-b">
-                                    <tr>
-                                        <th class="pb-3 font-semibold uppercase text-[10px] tracking-wider">Mentor</th>
-                                        <th class="pb-3 font-semibold uppercase text-[10px] tracking-wider">Mentee</th>
-                                        <th class="pb-3 font-semibold uppercase text-[10px] tracking-wider">Time</th>
-                                        <th class="pb-3 font-semibold uppercase text-[10px] tracking-wider">Status</th>
-                                    </tr>
-                                    </thead>
-                                    <tbody id="tableBody"></tbody>
-                                </table>
-                            </div>
-
-                            <div class="mt-6 pt-4 border-t border-gray-50 flex items-center justify-between">
-                                <div class="text-[11px] text-gray-400 font-medium" id="pageIndicator">Showing 0 results</div>
-                                <div class="flex gap-2">
-                                    <button id="prevBtn" class="pagination-btn"><i class="fa-solid fa-chevron-left"></i></button>
-                                    <button id="nextBtn" class="pagination-btn"><i class="fa-solid fa-chevron-right"></i></button>
+                                <div>
+                                    <label class="block text-base font-medium text-gray-700 mb-1">Topic<span class="text-red-500">*</span></label>
+                                    <input type="text" wire:model="topic" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-black-500 focus:ring-blue-500 text-base px-2 py-1" placeholder="e.g. Integration by Parts." maxlength="255">
+                                    @error('topic') <span class="mt-1 text-xs text-red-600">{{ $message }}</span> @enderror
                                 </div>
-                            </div>
-                        </div>
 
-                        <div class="stats-overview-container">
-                            <div class="stats-header">
-                                <div class="flex items-center gap-2">
-                                    <i class="fa-solid fa-chart-line text-maroon-800"></i>
-                                    <span>LRC Performance Analytics</span>
+                                <div>
+                                    <label class="block text-base font-medium text-gray-700 mb-1">Tutorial Mode<span class="text-red-500">*</span></label>
+                                    <select wire:model="tutorialMode_id" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-black-500 focus:ring-blue-500 text-base px-2 py-1">
+                                        <option value="">--- Select Mode of Tutoring ---</option>
+                                        @foreach($this->tutorialModes as $mode)
+                                            <option value="{{ $mode['id'] }}">{{ $mode['mode'] }}</option>
+                                        @endforeach
+                                    </select>
+                                    @error('tutorialMode_id') <span class="mt-1 text-xs text-red-600">{{ $message }}</span> @enderror
                                 </div>
-                            </div>
-                            <div class="stats-body">
-                                <div class="stats-column"><div class="stats-column-title">Monthly Session Trends</div><div class="h-44"><canvas id="lineChart"></canvas></div></div>
-                                <div class="stats-column"><div class="stats-column-title">Top Mentors</div><div class="h-44"><canvas id="pieChart"></canvas></div></div>
-                                <div class="stats-column"><div class="stats-column-title">Satisfaction Rate</div><div class="h-44 flex justify-center"><canvas id="doughnutChart"></canvas></div></div>
-                                <div class="stats-column"><div class="stats-column-title">Most Active Colleges (CS, CSS, CAC)</div><div class="h-44"><canvas id="activeCollegeChart"></canvas></div></div>
-                            </div>
+
+                                <div>
+                                    <label class="block text-base font-medium text-gray-700 mb-1">Preferred Day<span class="text-red-500">*</span></label>
+                                    <input type="date" wire:model="date" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-black-500 focus:ring-blue-500 text-base px-2 py-1" min="{{ \Carbon\Carbon::tomorrow()->format('Y-m-d') }}">
+                                    @error('date') <span class="mt-1 text-xs text-red-600">{{ $message }}</span> @enderror
+                                </div>
+
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-base font-medium text-gray-700 mb-1">Start Time<span class="text-red-500">*</span></label>
+                                        <input type="time" wire:model="schedule_start" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-black-500 focus:ring-blue-500 text-base px-2 py-1">
+                                        @error('schedule_start') <span class="mt-1 text-xs text-red-600">{{ $message }}</span> @enderror
+                                    </div>
+                                    <div>
+                                        <label class="block text-base font-medium text-gray-700 mb-1">End Time<span class="text-red-500">*</span></label>
+                                        <input type="time" wire:model="schedule_end" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-black-500 focus:ring-blue-500 text-base px-2 py-1">
+                                        @error('schedule_end') <span class="mt-1 text-xs text-red-600">{{ $message }}</span> @enderror
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label class="block text-base font-medium text-gray-700 mb-1">Preferred Mentor<span class="text-red-500">*</span></label>
+                                    <select wire:model="mentor_id" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-black-500 focus:ring-blue-500 text-base px-2 py-1">
+                                        <option value="" x-text="filteredMentors.length === 0 ? '--- No mentors available. Please select a different date or timeframe. ---' : '--- Select a mentor ---'">
+                                        </option>
+                                        <template x-for="mentor in filteredMentors" :key="mentor.profile_id">
+                                            <option :value="mentor.profile_id" x-text="mentor.name"></option>
+                                        </template>
+                                    </select>
+                                    @error('mentor_id') <span class="mt-1 text-xs text-red-600">{{ $message }}</span> @enderror
+                                </div>
+
+                                <div class="pt-4">
+                                    <button type="submit" @if(!auth()->user()->studentProfile) disabled @endif class="w-full bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium py-2 px-4 rounded-lg text-sm transition-colors" wire:loading.attr="disabled" wire:loading.class="opacity-60 cursor-not-allowed" wire:target="submitBooking">
+                                        <span wire:loading.remove wire:target="submitBooking">Submit Booking Request</span>
+                                        <span wire:loading wire:target="submitBooking">Submitting...</span>
+                                    </button>
+                                </div>
+                            </form>
                         </div>
                     </div>
 
-                    <div class="flex flex-col gap-6">
-                        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                            <div class="flex justify-between items-center mb-6">
-                                <div class="flex gap-4">
-                                    <button onclick="changeMonth(-1)" class="text-gray-400 hover:text-maroon-800"><i class="fa-solid fa-chevron-left text-xs"></i></button>
-                                    <span id="monthDisplay" class="text-sm font-bold w-24 text-center"></span>
-                                    <button onclick="changeMonth(1)" class="text-gray-400 hover:text-maroon-800"><i class="fa-solid fa-chevron-right text-xs"></i></button>
-                                </div>
-                            </div>
-                            <div class="grid grid-cols-7 gap-1 mb-2">
-                                <div class="cal-header-day">S</div><div class="cal-header-day">M</div><div class="cal-header-day">T</div>
-                                <div class="cal-header-day">W</div><div class="cal-header-day">T</div><div class="cal-header-day">F</div><div class="cal-header-day">S</div>
-                            </div>
-                            <div id="calendarGrid" class="grid grid-cols-7 gap-1"></div>
+                    <div class="lg:col-span-1 space-y-6">
+                        <div class="bg-[#fffffa] rounded-xl shadow-sm border-gray-200 overflow-hidden p-6"
+                             x-data="{
+                                open: $wire.entangle('toggleProfileOpen'),
+                                college: $wire.entangle('college_id'),
+                                degree: $wire.entangle('degreeProgram_id'),
+                                showSuccess: false,
+                                allDegrees: @js($this->degreePrograms),
+                                get filteredDeProgs() {
+                                    if (!this.college) return [];
+                                    return this.allDegrees.filter(deprog => deprog.college_id == this.college);
+                                }
+                            }"
+                                         @profile-updated.window="showSuccess = true; setTimeout(() => showSuccess = false, 10000)"
+                                         x-init="
+                                $watch('college', (val, oldVal) => {
+                                    if (oldVal !== undefined && oldVal !== '') {
+                                        degree = '';
+                                    }
+                                });
+                                $nextTick(() => {
+                                    let savedDegree = degree;
+                                    degree = '';
+                                    degree = savedDegree;
+                                });
+                            ">
 
-                            <div class="mt-6 pt-6 border-t border-gray-50">
-                                <div class="bg-slate-900 rounded-xl p-4 shadow-inner">
-                                    <div id="liveClock" class="text-3xl font-mono font-black text-white tracking-widest text-center">00:00:00</div>
-                                    <div id="liveDate" class="text-[10px] font-medium text-slate-400 text-center mt-1 uppercase">Saturday, March 14</div>
+                            <button @click="open = !open" type="button" class="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-gray-50 transition-colors">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-base font-semibold text-gray-900">Student Profile</span>
+                                    @if(auth()->user()->studentProfile)
+                                        <span class="text-xs bg-green-200 px-2 py-1 rounded-full text-green-800 font-bold">Saved</span>
+                                    @else
+                                        <span class="text-xs bg-yellow-100 px-2 py-1 rounded-full text-yellow-800 font-bold">Required</span>
+                                    @endif
                                 </div>
+
+                                <svg class="w-4 h-4 text-gray-400 transition-transform duration-200" :class="{ 'rotate-180': open }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                            </button>
+
+                            <div x-show="open" style="display: none;" x-transition class="px-5 pb-5 border-t border-gray-100">
+
+                                <div x-show="showSuccess" style="display: none;" x-transition class="mt-3 mb-2 text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2">Profile Updated!</div>
+
+                                <form wire:submit.prevent="saveProfile" class="space-y-4 mt-4">
+                                    <div>
+                                        <label class="block text-base font-medium text-gray-700 mb-1">Student Number<span class="text-red-500">*</span></label>
+                                        <input type="text" wire:model="student_num" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-black-500 focus:ring-blue-500 text-base px-2 py-1" placeholder="e.g 2023-00000" maxlength="10">
+                                        @error('student_num') <span class="mt-1 text-xs text-red-600">{{ $message }}</span> @enderror
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-base font-medium text-gray-700 mb-1">College<span class="text-red-500">*</span></label>
+                                        <select x-model="college" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-black-500 focus:ring-blue-500 text-base px-2 py-1">
+                                            <option value="">--- College ---</option>
+                                            @foreach($this->colleges as $c)
+                                                <option value="{{ $c['id'] }}">{{ $c['name'] }}</option>
+                                            @endforeach
+                                        </select>
+                                        @error('college_id') <span class="mt-1 text-xs text-red-600">{{ $message }}</span> @enderror
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-base font-medium text-gray-700 mb-1">Degree Program<span class="text-red-500">*</span></label>
+                                        <select x-model="degree" x-bind:disabled="!college" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-black-500 focus:ring-blue-500 text-base px-2 py-1 disabled:bg-gray-100">
+                                            <option value="">--- Degree Program ---</option>
+                                            <template x-for="deprog in filteredDeProgs" :key="deprog.id">
+                                                <option :value="deprog.id" x-text="deprog.name"></option>
+                                            </template>
+                                        </select>
+                                        @error('degreeProgram_id') <span class="mt-1 text-xs text-red-600">{{ $message }}</span> @enderror
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-base font-medium text-gray-700 mb-1">Year Level<span class="text-red-500">*</span></label>
+                                        <select wire:model="yearLevel_id" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-black-500 focus:ring-blue-500 text-base px-2 py-1">
+                                            <option value="">--- Year Level ---</option>
+                                            @foreach($this->yearLevels as $level)
+                                                <option value="{{ $level['id'] }}">{{ $level['name'] }}</option>
+                                            @endforeach
+                                        </select>
+                                        @error('yearLevel_id') <span class="mt-1 text-xs text-red-600">{{ $message }}</span> @enderror
+                                    </div>
+
+                                    <button type="submit" class="w-full bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium py-2 px-4 rounded-lg text-sm transition-colors" wire:loading.attr="disabled" wire:loading.class="opacity-60 cursor-not-allowed" wire:target="saveProfile">
+                                        <span wire:loading.remove wire:target="saveProfile">{{ auth()->user()->studentProfile ? 'Update Profile' : 'Save Profile' }}</span>
+                                        <span wire:loading wire:target="saveProfile">Saving...</span>
+                                    </button>
+                                </form>
                             </div>
                         </div>
 
-                        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                            <h3 class="font-bold mb-4 text-slate-800 text-sm tracking-tight">Quick Actions</h3>
-                            <div class="flex flex-col gap-2">
-                                <button class="w-full bg-slate-800 text-white p-3 rounded-lg text-xs font-bold hover:bg-black transition flex items-center justify-center gap-2">
-                                    <i class="fa-solid fa-user-plus"></i> Add Mentor
-                                </button>
-                                <button class="w-full border border-slate-300 p-3 rounded-lg text-xs font-bold hover:bg-gray-50 transition flex items-center justify-center gap-2">
-                                    <i class="fa-solid fa-calendar-plus"></i> Create Session
-                                </button>
-                                <button class="w-full border border-slate-300 p-3 rounded-lg text-xs font-bold hover:bg-gray-50 transition flex items-center justify-center gap-2">
-                                    <i class="fa-solid fa-book-open"></i> Manage Subjects
-                                </button>
-                                <button class="w-full border border-slate-300 p-3 rounded-lg text-xs font-bold hover:bg-gray-50 transition flex items-center justify-center gap-2">
-                                    <i class="fa-solid fa-file-invoice"></i> Generate Report
-                                </button>
-                            </div>
+                        <div class="bg-[#fffffa] rounded-xl shadow-sm border-gray-200 overflow-hidden p-6">
+                            <h3 class="text-base font-semibold text-gray-900 mb-4">Recent Bookings</h3>
+                            @forelse($this->studentBookings as $booking)
+                                <div class="mb-4 pb-4 border-b border-gray-100 last:border-0 last:mb-0 last:pb-0">
+                                    <div class="flex items-start justify-between gap-2">
+                                        <div>
+                                            <p class="text-sm font-medium text-gray-800">{{ $booking->subject->code }}</p>
+                                            <p class="text-xs font-medium text-gray-800">{{ $booking->topic }}</p>
+                                            <p class="text-xs font-medium text-gray-800">{{ strtoupper($booking->mentor->user->lastName ?? 'UNKNOWN') }}, {{ $booking->mentor->user->firstName ?? 'Mentor' }}</p>
+                                        </div>
+                                        @php
+                                            $statusColors = match($booking->booking_status) {
+                                                'pending' => 'bg-yellow-100 text-yellow-800',
+                                                'approved' => 'bg-green-100 text-green-800',
+                                                'rejected' => 'bg-red-100 text-red-800',
+                                                'completed' => 'bg-blue-100 text-blue-800',
+                                                'no-show' => 'bg-red-100 text-red-800',
+                                                default => 'bg-gray-100 text-gray-800',
+                                            };
+                                        @endphp
+                                        <span class="text-xs font-medium px-2 py-1 rounded-full capitalize {{ $statusColors }}">
+                                {{ str_replace('_', ' ', $booking->booking_status) }}
+                            </span>
+                                    </div>
+                                    <p class="text-xs text-gray-400 mt-1">{{ \Carbon\Carbon::parse($booking->date)->format('l, F j, Y') }},
+                                        {{ \Carbon\Carbon::parse($booking->schedule_start)->format('g:i A') }} - {{ \Carbon\Carbon::parse($booking->schedule_end)->format('g:i A') }}
+                                    </p>
+                                </div>
+                            @empty
+                                <p class="text-sm text-gray-500 text-center py-4">No recent bookings.</p>
+                            @endforelse
                         </div>
 
-                        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                            <div class="flex justify-between items-center mb-4">
-                                <h3 class="font-bold text-slate-800 text-sm tracking-tight">Pending Approvals</h3>
-                                <span class="bg-red-100 text-red-700 text-[10px] font-bold px-2 py-0.5 rounded-full">4 New</span>
-                            </div>
-                            <div class="flex flex-col gap-4">
-                                <div class="flex items-center justify-between group">
-                                    <div class="flex items-center gap-3">
-                                        <div class="w-8 h-8 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-[10px] font-bold">JD</div>
-                                        <div><p class="text-[11px] font-bold text-slate-700">John Doe</p><p class="text-[9px] text-gray-400 font-medium">Mentor Applicant</p></div>
-                                    </div>
-                                    <div class="flex gap-1">
-                                        <button class="w-6 h-6 rounded-md bg-gray-50 hover:bg-red-50 hover:text-red-600 flex items-center justify-center"><i class="fa-solid fa-xmark text-[10px]"></i></button>
-                                        <button class="w-6 h-6 rounded-md bg-gray-50 hover:bg-emerald-50 hover:text-emerald-600 flex items-center justify-center"><i class="fa-solid fa-check text-[10px]"></i></button>
-                                    </div>
-                                </div>
-                                <div class="flex items-center justify-between group">
-                                    <div class="flex items-center gap-3">
-                                        <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-[10px] font-bold">SM</div>
-                                        <div><p class="text-[11px] font-bold text-slate-700">Sarah Miller</p><p class="text-[9px] text-gray-400 font-medium">Session Change</p></div>
-                                    </div>
-                                    <div class="flex gap-1">
-                                        <button class="w-6 h-6 rounded-md bg-gray-50 hover:bg-red-50 hover:text-red-600 flex items-center justify-center"><i class="fa-solid fa-xmark text-[10px]"></i></button>
-                                        <button class="w-6 h-6 rounded-md bg-gray-50 hover:bg-emerald-50 hover:text-emerald-600 flex items-center justify-center"><i class="fa-solid fa-check text-[10px]"></i></button>
-                                    </div>
-                                </div>
-                                <div class="flex items-center justify-between group">
-                                    <div class="flex items-center gap-3">
-                                        <div class="w-8 h-8 rounded-full bg-orange-100 text-orange-700 flex items-center justify-center text-[10px] font-bold">AL</div>
-                                        <div><p class="text-[11px] font-bold text-slate-700">Amy Lee</p><p class="text-[9px] text-gray-400 font-medium">Subject Add</p></div>
-                                    </div>
-                                    <div class="flex gap-1">
-                                        <button class="w-6 h-6 rounded-md bg-gray-50 hover:bg-red-50 hover:text-red-600 flex items-center justify-center"><i class="fa-solid fa-xmark text-[10px]"></i></button>
-                                        <button class="w-6 h-6 rounded-md bg-gray-50 hover:bg-emerald-50 hover:text-emerald-600 flex items-center justify-center"><i class="fa-solid fa-check text-[10px]"></i></button>
-                                    </div>
-                                </div>
-                                <div class="flex items-center justify-between group">
-                                    <div class="flex items-center gap-3">
-                                        <div class="w-8 h-8 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center text-[10px] font-bold">TC</div>
-                                        <div><p class="text-[11px] font-bold text-slate-700">Tom Chen</p><p class="text-[9px] text-gray-400 font-medium">Profile Edit</p></div>
-                                    </div>
-                                    <div class="flex gap-1">
-                                        <button class="w-6 h-6 rounded-md bg-gray-50 hover:bg-red-50 hover:text-red-600 flex items-center justify-center"><i class="fa-solid fa-xmark text-[10px]"></i></button>
-                                        <button class="w-6 h-6 rounded-md bg-gray-50 hover:bg-emerald-50 hover:text-emerald-600 flex items-center justify-center"><i class="fa-solid fa-check text-[10px]"></i></button>
-                                    </div>
-                                </div>
-                            </div>
-                            <button class="w-full mt-4 py-2 text-[10px] font-bold text-slate-400 hover:text-slate-600 border-t border-gray-50 transition text-center">View All Requests</button>
-                        </div>
                     </div>
                 </div>
             </main>
@@ -414,138 +678,5 @@ mount(function () {
         window.addEventListener('click', () => {
             if (profileDropdown.classList.contains('show')) profileDropdown.classList.remove('show');
         });
-
-        function updateClock() {
-            const now = new Date();
-            document.getElementById('liveClock').innerText = now.toLocaleTimeString('en-US', { hour12: false });
-            document.getElementById('liveDate').innerText = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
-        }
-        setInterval(updateClock, 1000);
-
-        // Local State
-        const allSessions = [
-            { date: '2026-03-14', mentor: "Daniel Dyoco", mentee: "Frian Nabo", time: "09:00 AM", status: "Completed", color: "text-blue-600" },
-            { date: '2026-03-14', mentor: "Rhona Shayne Lopez", mentee: "Mark Tuan", time: "10:30 AM", status: "Active", color: "text-green-600" },
-            { date: '2026-03-14', mentor: "Chezka Sinco", mentee: "Uno Dos Thirdy", time: "11:00 AM", status: "Active", color: "text-green-600" },
-            { date: '2026-03-14', mentor: "Arielle Mae Solis", mentee: "Kevin Hart", time: "01:00 PM", status: "Upcoming", color: "text-orange-500" },
-            { date: '2026-03-14', mentor: "Ax'l Conchada", mentee: "Alice Blue", time: "02:30 PM", status: "Upcoming", color: "text-orange-500" }
-        ];
-
-        let selectedDateStr = '2026-03-14';
-        let viewDate = new Date(2026, 2, 1);
-
-        // Chart Configs
-        const linearOptions = { maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false }, ticks: { font: { size: 9 } } }, y: { beginAtZero: true, grid: { display: false }, ticks: { font: { size: 9 } } } } };
-
-        function initCharts() {
-            // Line Chart
-            charts.push(new Chart(document.getElementById('lineChart'), { type: 'line', data: { labels: ['W1', 'W2', 'W3', 'W4'], datasets: [{ data: [45, 52, 38, 65], borderColor: '#7b1d1d', tension: 0.4 }] }, options: linearOptions }));
-
-            // Pie Chart (Top Mentors)
-            charts.push(new Chart(document.getElementById('pieChart'), { type: 'pie', data: { labels: ['Daniel D.', 'Sarah J.', 'James W.', 'Others'], datasets: [{ data: [40, 25, 20, 15], backgroundColor: ['#1a3c2f', '#7b1d1d', '#94a3b8', '#cbd5e1'] }] }, options: { maintainAspectRatio: false, plugins: { legend: { display: true, position: 'right', labels: { boxWidth: 8, font: { size: 9 } } } } } }));
-
-            // Doughnut Chart (Satisfaction Rate)
-            charts.push(new Chart(document.getElementById('doughnutChart'), {
-                type: 'doughnut',
-                data: {
-                    labels: ['Excl', 'Good', 'Avg'],
-                    datasets: [{ data: [70, 20, 10], backgroundColor: ['#1a3c2f', '#7b1d1d', '#cbd5e1'], borderWidth: 0 }]
-                },
-                options: {
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: true, position: 'bottom', labels: { boxWidth: 10, font: { size: 9 } } }
-                    },
-                    cutout: '70%'
-                }
-            }));
-
-            // Bar Chart (Most Active Colleges - CS, CSS, CAC)
-            charts.push(new Chart(document.getElementById('activeCollegeChart'), {
-                type: 'bar',
-                data: {
-                    labels: ['CS', 'CSS', 'CAC'],
-                    datasets: [{
-                        label: 'Active Students',
-                        data: [68, 85, 42],
-                        backgroundColor: ['#94a3b8', '#1a3c2f', '#7b1d1d'],
-                        borderRadius: 4,
-                        barThickness: 20
-                    }]
-                },
-                options: {
-                    indexAxis: 'y',
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: {
-                        x: { beginAtZero: true, grid: { display: false }, ticks: { font: { size: 9 } } },
-                        y: { grid: { display: false }, ticks: { font: { size: 9 } } }
-                    }
-                }
-            }));
-        }
-
-        // Table Logic
-        function applyFilters() {
-            const tbody = document.getElementById('tableBody');
-            const searchTerm = searchInput.value.toLowerCase();
-            const selectedStatus = statusFilter.value;
-
-            const filtered = allSessions.filter(item => {
-                const matchesDate = item.date === selectedDateStr;
-                const matchesSearch = item.mentor.toLowerCase().includes(searchTerm) ||
-                    item.mentee.toLowerCase().includes(searchTerm);
-                const matchesStatus = selectedStatus === 'All' || item.status === selectedStatus;
-                return matchesDate && matchesSearch && matchesStatus;
-            });
-
-            if (filtered.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="4" class="py-12 text-center text-gray-400 italic">No matching sessions found.</td></tr>`;
-            } else {
-                tbody.innerHTML = filtered.map(row => `
-                    <tr class="border-b last:border-0 hover:bg-slate-50 transition">
-                        <td class="py-4 font-bold text-slate-700">${row.mentor}</td>
-                        <td class="text-slate-600">${row.mentee}</td>
-                        <td class="text-slate-500">${row.time}</td>
-                        <td><span class="${row.color} font-bold text-[10px] bg-gray-50 px-2 py-1 rounded border border-current opacity-80">${row.status}</span></td>
-                    </tr>
-                `).join('');
-            }
-            document.getElementById('pageIndicator').innerText = `Showing ${filtered.length} results`;
-        }
-
-        // Calendar Logic
-        function renderCalendar() {
-            const grid = document.getElementById('calendarGrid');
-            const monthDisp = document.getElementById('monthDisplay');
-            grid.innerHTML = '';
-            monthDisp.innerText = viewDate.toLocaleString('default', { month: 'long', year: 'numeric' });
-            const lastDay = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 0).getDate();
-            const startDay = new Date(viewDate.getFullYear(), viewDate.getMonth(), 1).getDay();
-            for (let i = 0; i < startDay; i++) grid.innerHTML += '<div></div>';
-            for (let i = 1; i <= lastDay; i++) {
-                const dateStr = `${viewDate.getFullYear()}-${String(viewDate.getMonth() + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
-                const dayEl = document.createElement('div');
-                dayEl.className = `cal-day ${i === 14 ? 'cal-today' : ''} ${dateStr === selectedDateStr ? 'cal-selected' : ''}`;
-                dayEl.innerHTML = `<span>${i}</span>`;
-                dayEl.onclick = () => { selectedDateStr = dateStr; applyFilters(); renderCalendar(); };
-                grid.appendChild(dayEl);
-            }
-        }
-
-        function changeMonth(dir) {
-            viewDate.setMonth(viewDate.getMonth() + dir);
-            renderCalendar();
-        }
-
-        // Listeners
-        searchInput.addEventListener('input', applyFilters);
-        statusFilter.addEventListener('change', applyFilters);
-
-        // Bootstrap
-        initCharts();
-        renderCalendar();
-        applyFilters();
-        updateClock();
     </script>
-</body>
+</div>
