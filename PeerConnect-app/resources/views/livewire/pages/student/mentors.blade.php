@@ -163,6 +163,12 @@ mount(function () {
                             <option value="Phys 102">Phys 102</option>
                         </select>
                     </div>
+                    <form method="POST" action="{{ route('logout') }}" class="m-0">
+                        @csrf
+                        <button type="submit" class="dropdown-item w-full border-t border-gray-50 text-red-600 font-semibold">
+                            <i class="fa-solid fa-right-from-bracket"></i> Logout
+                        </button>
+                    </form>
                 </div>
 
                 <p class="text-xs text-gray-400 mb-4 font-medium" id="mentorCount">8 mentors found</p>

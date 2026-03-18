@@ -38,29 +38,13 @@ $sortBy = function ($field) {
     $this->sortField = $field;
 };
 
-mount(function () { 
-    abort_if(!auth()->user()->isAdmin(), 403, 'Unauthorized Access'); 
+mount(function () {
+    abort_if(!auth()->user()->isAdmin(), 403, 'Unauthorized Access');
 });
+
 ?>
 
-<div class="app-wrapper" x-data="{ sidebarCollapsed: false, profileOpen: false }">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdn.tailwindcss.com"></script>
-
-    <style>
-        :root { 
-            --sidebar-green: #1a3c2f; 
-            --header-maroon: #7b1d1d; 
-            --bg-light: #f4f7f6; 
-            --header-height: 80px; 
-            --sidebar-width: 280px;
-            --sidebar-collapsed-width: 80px;
-        }
-        
-        body { margin: 0; font-family: 'Inter', sans-serif; background: var(--bg-light); overflow: hidden; }
-        .app-wrapper { display: flex; height: 100vh; width: 100vw; overflow: hidden; }
-        
-        <head>
+<head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LRC PeerConnect Dashboard</title>
@@ -201,16 +185,18 @@ mount(function () {
                 </div>
             </div>
             <nav class="flex-grow">
-                <a href="#" class="nav-item" data-tooltip="Dashboard"><i class="fa-solid fa-gauge"></i><span>Dashboard</span></a>
+                <a href="{{ route('admin.dashboard') }}" class="nav-item {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}" data-tooltip="Dashboard">
+                    <i class="fa-solid fa-gauge w-5"></i><span>Dashboard</span>
+                </a>                
                 <a href="{{ route('admin.mentors') }}" class="nav-item {{ request()->routeIs('admin.mentors') ? 'active' : '' }}" data-tooltip="Mentor Management">
                     <i class="fa-solid fa-chalkboard-user w-5"></i><span>Mentor Management</span>
-                </a>                
+                </a>                 
                 <a href="{{ route('admin.sessions') }}" class="nav-item {{ request()->routeIs('admin.sessions') ? 'active' : '' }}" data-tooltip="Session Management">
                     <i class="fa-solid fa-calendar-days w-5"></i><span>Session Management</span>
                 </a>                
                 <a href="{{ route('admin.feedbacks') }}" class="nav-item {{ request()->routeIs('admin.feedbacks') ? 'active' : '' }}" data-tooltip="Student Feedback">
                     <i class="fa-solid fa-comments w-5"></i><span>Student Feedback</span>
-                </a>            
+                </a>              
             </nav>
             <div class="p-4 border-t border-white/10">
                 <form method="POST" action="{{ route('logout') }}">
@@ -248,7 +234,7 @@ mount(function () {
                 </div>
             </header>
 
-        <main class="scroll-container">
+<main class="scroll-container">
             <div class="max-w-7xl mx-auto space-y-6">
                 
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -346,6 +332,28 @@ mount(function () {
                     </div>
                 </div>
             </div>
-        </main>
+</main>
+        </div>
     </div>
-</div>
+
+    <script>
+        const sidebar = document.getElementById('sidebar');
+        const profileTrigger = document.getElementById('profileTrigger');
+        const profileDropdown = document.getElementById('profileDropdown');
+
+        // Dashboard Interactivity
+        document.getElementById('sidebarToggle').addEventListener('click', () => {
+            sidebar.classList.toggle('collapsed');
+            setTimeout(() => { charts.forEach(c => c.resize()); }, 310);
+        });
+
+        profileTrigger.addEventListener('click', (e) => {
+            e.stopPropagation();
+            profileDropdown.classList.toggle('show');
+        });
+
+        window.addEventListener('click', () => {
+            if (profileDropdown.classList.contains('show')) profileDropdown.classList.remove('show');
+        });
+    </script>
+</body>

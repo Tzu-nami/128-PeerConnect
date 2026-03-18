@@ -63,7 +63,8 @@ mount(function () {
         .logo-content { display: flex; align-items: center; gap: 12px; white-space: nowrap; }
         .logo-text { font-size: 1.1rem; font-weight: 700; }
 
-        .nav-item { 
+       /* FLAT BLENDING STYLE */
+.nav-item { 
     display: flex; 
     align-items: center; 
     gap: 15px; 
@@ -78,7 +79,8 @@ mount(function () {
     width: 100%; 
     cursor: pointer;
 }
-       .nav-item:hover {
+
+.nav-item:hover {
     color: white;
     background: rgba(255,255,255,0.05);
 }
@@ -103,38 +105,38 @@ mount(function () {
         .sidebar.collapsed .nav-item i { margin: 0; width: auto; }
         .sidebar.collapsed .nav-item.active { border-left: none; }
 
-        /* CONTENT AREA */
         .main-content { flex: 1; min-width: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
         .top-header { background: var(--header-maroon); height: var(--header-height); padding: 0 40px; display: flex; align-items: center; justify-content: space-between; color: white; flex-shrink: 0; }
         .scroll-container { flex-grow: 1; overflow-y: auto; padding: 32px; width: 100%; }
 
-        /* DROPDOWN */
         .profile-dropdown {
             position: absolute; top: 70px; right: 40px; background: white; border-radius: 12px;
             box-shadow: 0 10px 25px -5px rgba(0,0,0,0.2); width: 220px; display: none;
             flex-direction: column; z-index: 50; border: 1px solid #e2e8f0; overflow: hidden;
         }
         .profile-dropdown.show { display: flex; }
-        .dropdown-item { padding: 12px 20px; font-size: 13px; color: #475569; display: flex; align-items: center; gap: 10px; transition: background 0.2s; text-decoration: none; }
+        .dropdown-item { padding: 12px 20px; font-size: 13px; color: #475569; display: flex; align-items: center; gap: 10px; transition: background 0.2s; }
         .dropdown-item:hover { background: #f8fafc; color: var(--header-maroon); }
 
-        /* CALENDAR STYLES */
+        .cal-header-day { font-size: 11px; font-weight: 800; color: #94a3b8; text-align: center; padding-bottom: 10px; text-transform: uppercase; }
         .cal-day { aspect-ratio: 1/1; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; border-radius: 8px; transition: all 0.2s; cursor: pointer; font-size: 13px; font-weight: 500; }
         .cal-today { background: #fee2e2 !important; color: var(--header-maroon) !important; font-weight: 800; }
+        .cal-selected { border: 2px solid var(--header-maroon); background: #f8fafc; }
 
-        /* STAT CARDS */
+        .stats-overview-container { background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); border: 1px solid #e5e7eb; width: 100%; }
+        .stats-header { padding: 12px 24px; background: #f8fafc; font-weight: 700; font-size: 0.9rem; color: #1e293b; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; justify-content: space-between; }
+        .stats-body { display: grid; grid-template-columns: repeat(2, 1fr); background: white; width: 100%; }
+        .stats-column { padding: 24px; border-right: 1px solid #f1f5f9; border-bottom: 1px solid #f1f5f9; min-width: 0; }
+        .stats-column:nth-child(2n) { border-right: none; }
+        .stats-column-title { font-weight: 600; margin-bottom: 15px; font-size: 0.8rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.025em; }
+
         .stat-card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); transition: all 0.3s ease; border: 1px solid transparent; cursor: pointer; }
         .stat-card:hover { transform: translateY(-5px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); border-color: var(--sidebar-green); }
         .stat-card i { font-size: 24px; color: var(--sidebar-green); }
 
-        /* FEEDBACK SPECIFIC */
-        .feedback-text { max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .btn-maroon { width: 100%; padding: 10px; background: var(--header-maroon); color: white; border-radius: 8px; font-weight: 600; font-size: 0.85rem; margin-bottom: 8px; transition: opacity 0.2s; }
-        .btn-maroon:hover { opacity: 0.9; }
-        
         .pagination-btn { padding: 4px 10px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 11px; font-weight: 600; color: #64748b; transition: all 0.2s; }
         .pagination-btn:hover:not(:disabled) { background: #f1f5f9; color: var(--header-maroon); border-color: var(--header-maroon); }
-        .table-filter-select { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 12px; font-size: 0.75rem; color: #475569; outline: none; cursor: pointer; }
+        .table-filter-select, .header-filter { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 12px; font-size: 0.75rem; color: #475569; outline: none; cursor: pointer; }
     </style>
 </head>
 
@@ -150,17 +152,17 @@ mount(function () {
             </div>
             <nav class="flex-grow">
                 <a href="{{ route('admin.dashboard') }}" class="nav-item {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}" data-tooltip="Dashboard">
-                    <i class="fa-solid fa-gauge"></i><span>Dashboard</span>
-                </a>
-                <a href="{{ route('admin.mentors') }}" class="nav-item {{ request()->routeIs('admin.mentors') ? 'active' : '' }}" data-tooltip="Mentor Management">
-                    <i class="fa-solid fa-chalkboard-user"></i><span>Mentor Management</span>
+                    <i class="fa-solid fa-gauge w-5"></i><span>Dashboard</span>
                 </a>                
+                <a href="{{ route('admin.mentors') }}" class="nav-item {{ request()->routeIs('admin.mentors') ? 'active' : '' }}" data-tooltip="Mentor Management">
+                    <i class="fa-solid fa-chalkboard-user w-5"></i><span>Mentor Management</span>
+                </a>                 
                 <a href="{{ route('admin.sessions') }}" class="nav-item {{ request()->routeIs('admin.sessions') ? 'active' : '' }}" data-tooltip="Session Management">
-                    <i class="fa-solid fa-calendar-days"></i><span>Session Management</span>
+                    <i class="fa-solid fa-calendar-days w-5"></i><span>Session Management</span>
                 </a>                
                 <a href="{{ route('admin.feedbacks') }}" class="nav-item {{ request()->routeIs('admin.feedbacks') ? 'active' : '' }}" data-tooltip="Student Feedback">
-                    <i class="fa-solid fa-comments"></i><span>Student Feedback</span>
-                </a>            
+                    <i class="fa-solid fa-comments w-5"></i><span>Student Feedback</span>
+                </a>              
             </nav>
             <div class="p-4 border-t border-white/10">
                 <form method="POST" action="{{ route('logout') }}">
@@ -177,12 +179,11 @@ mount(function () {
                 <div class="text-lg">Welcome, <span class="font-bold">{{ auth()->user()->name }}</span></div>
                 
                 <button id="profileTrigger" class="flex items-center gap-2 px-3 py-1 bg-white rounded-full hover:bg-gray-100 transition shadow-sm border-2 border-white/20 group">
-                    <div class="w-8 h-8 bg-red-900 text-white rounded-full flex items-center justify-center text-xs font-bold">
-                        {{ strtoupper(substr(auth()->user()->name, 0, 2)) }}
-                    </div>
-                    <i class="fa-solid fa-chevron-down text-[10px] text-gray-500 group-hover:text-red-900 transition-transform duration-200" id="dropdownArrow"></i>
-                </button>
-
+    <div class="w-8 h-8 bg-red-900 text-white rounded-full flex items-center justify-center text-xs font-bold">
+        {{ strtoupper(substr(auth()->user()->name,0,2)) }}
+    </div>
+    <i class="fa-solid fa-chevron-down text-[10px] text-gray-500 group-hover:text-red-900 transition-transform duration-200" id="dropdownArrow"></i>
+</button>
                 <div id="profileDropdown" class="profile-dropdown">
                     <div class="p-4 border-b border-gray-100 bg-slate-50">
                         <p class="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1">Signed in as</p>
@@ -199,84 +200,8 @@ mount(function () {
                 </div>
             </header>
 
-            <main class="scroll-container">
-                
-                @if(request()->routeIs('admin.dashboard'))
-                <div class="grid grid-cols-5 gap-4 mb-8">
-                    <div class="stat-card flex items-center gap-4">
-                        <i class="fa-solid fa-users"></i>
-                        <div><h3>Total Mentors</h3><p class="text-2xl font-black">40</p></div>
-                    </div>
-                    <div class="stat-card flex items-center gap-4">
-                        <i class="fa-solid fa-calendar-day"></i>
-                        <div><h3>Sessions Today</h3><p class="text-2xl font-black">18</p></div>
-                    </div>
-                    <div class="stat-card flex items-center gap-4">
-                        <i class="fa-solid fa-circle-exclamation"></i>
-                        <div><h3>Pending</h3><p class="text-2xl font-black">5</p></div>
-                    </div>
-                    <div class="stat-card flex items-center gap-4">
-                        <i class="fa-solid fa-star"></i>
-                        <div><h3>Ratings</h3><p class="text-2xl font-black">4.9</p></div>
-                    </div>
-                    <div class="stat-card flex items-center gap-4">
-                        <i class="fa-solid fa-user-graduate"></i>
-                        <div><h3>Total Mentees</h3><p class="text-2xl font-black">75</p></div>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-3 gap-8">
-                    <div class="col-span-2 space-y-8">
-                        <div class="bg-white p-6 rounded-xl shadow-sm">
-                            <div class="flex justify-between items-center mb-6">
-                                <h2 class="text-xl font-bold">Today's Sessions</h2>
-                                <a href="#" class="text-red-800 font-bold text-sm">View All ></a>
-                            </div>
-                            <table class="w-full text-left">
-                                <thead class="text-gray-400 text-xs uppercase border-b">
-                                    <tr><th class="pb-4">Mentor</th><th class="pb-4">Student</th><th class="pb-4">Time</th><th class="pb-4">Status</th></tr>
-                                </thead>
-                                <tbody>
-                                    <tr class="border-b"><td class="py-4 font-bold">Dyoco, Daniel Joco</td><td>Nabo, Frian Karl</td><td>10:00 AM</td><td><span class="bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full text-xs font-bold">Upcoming</span></td></tr>
-                                </tbody>
-                            </table>
-                        </div>
-
-                        <div class="bg-white rounded-xl shadow-sm p-6">
-                            <h2 class="text-xl font-bold mb-6">Statistics Overview</h2>
-                            <div class="grid grid-cols-2 gap-8">
-                                <div><canvas id="sessionsChart"></canvas></div>
-                                <div><canvas id="feedbackChart"></canvas></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="space-y-6">
-                        <div class="bg-white p-6 rounded-xl shadow-sm">
-                            <div class="flex justify-between items-center mb-4 font-bold">
-                                <button onclick="changeMonth(-1)"><i class="fa-solid fa-chevron-left"></i></button>
-                                <span id="monthDisplay"></span>
-                                <button onclick="changeMonth(1)"><i class="fa-solid fa-chevron-right"></i></button>
-                            </div>
-                            <div class="grid grid-cols-7 text-center text-xs font-bold text-gray-400 mb-2">
-                                <span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>
-                            </div>
-                            <div id="calendarGrid" class="grid grid-cols-7 text-center text-sm gap-1"></div>
-                            <div class="mt-4 pt-4 border-t text-center font-mono text-gray-400" id="liveClock">00:00:00 PM</div>
-                        </div>
-                        <div class="bg-white p-6 rounded-xl shadow-sm">
-                            <h3 class="font-bold mb-4">Quick Actions</h3>
-                            <button class="btn-maroon">Add Mentor</button>
-                            <button class="btn-maroon">Create Session Slot</button>
-                            <button class="btn-maroon">Manage Subjects</button>
-                            <button class="btn-maroon">Generate Report</button>
-                        </div>
-                    </div>
-                </div>
-                @endif
-
-           @if(request()->routeIs('admin.feedbacks'))
-<div class="space-y-6">
+<main class="scroll-container">
+    <div class="space-y-6">
     <div class="grid grid-cols-4 gap-4">
         <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-green-600">
             <p class="text-xs font-bold text-gray-400 uppercase">Average Rating</p>
@@ -380,81 +305,31 @@ mount(function () {
                 <button class="pagination-btn">Next</button>
             </div>
         </div>
+        
     </div>
-</div>
-@endif
-
-                @yield('tab-content')
-
-            </main>
+    </div>
+</main>
         </div>
     </div>
 
     <script>
-        // Sidebar Toggle
         const sidebar = document.getElementById('sidebar');
-        const toggleBtn = document.getElementById('sidebarToggle');
-        toggleBtn.addEventListener('click', () => {
-            sidebar.classList.toggle('collapsed');
-        });
-
-        // Profile Dropdown
         const profileTrigger = document.getElementById('profileTrigger');
         const profileDropdown = document.getElementById('profileDropdown');
-        const dropdownArrow = document.getElementById('dropdownArrow');
+
+        // Dashboard Interactivity
+        document.getElementById('sidebarToggle').addEventListener('click', () => {
+            sidebar.classList.toggle('collapsed');
+            setTimeout(() => { charts.forEach(c => c.resize()); }, 310);
+        });
 
         profileTrigger.addEventListener('click', (e) => {
             e.stopPropagation();
             profileDropdown.classList.toggle('show');
-            dropdownArrow.style.transform = profileDropdown.classList.contains('show') ? 'rotate(180deg)' : 'rotate(0deg)';
         });
 
         window.addEventListener('click', () => {
-            profileDropdown.classList.remove('show');
-            dropdownArrow.style.transform = 'rotate(0deg)';
+            if (profileDropdown.classList.contains('show')) profileDropdown.classList.remove('show');
         });
-
-        // Calendar Logic
-        let date = new Date();
-        function renderCalendar(){
-            const grid = document.getElementById('calendarGrid');
-            const monthDisp = document.getElementById('monthDisplay');
-            if(!grid) return;
-            grid.innerHTML='';
-            monthDisp.innerText = date.toLocaleString('default',{month:'long',year:'numeric'});
-            const lastDay = new Date(date.getFullYear(),date.getMonth()+1,0).getDate();
-            const startDay = new Date(date.getFullYear(),date.getMonth(),1).getDay();
-            for(let i=0;i<startDay;i++) grid.innerHTML += '<div></div>';
-            for(let i=1;i<=lastDay;i++){
-                const isToday = i===new Date().getDate() && date.getMonth()===new Date().getMonth();
-                grid.innerHTML += `<div class="cal-day ${isToday?'cal-today':''}">${i}</div>`;
-            }
-        }
-
-        function changeMonth(dir){ date.setMonth(date.getMonth()+dir); renderCalendar(); }
-        function updateClock(){ 
-            const clockEl = document.getElementById('liveClock');
-            if(clockEl) clockEl.innerText=new Date().toLocaleTimeString(); 
-        }
-
-        setInterval(updateClock,1000);
-        renderCalendar();
-
-        // Charts (Only if on Dashboard)
-        const sessCtx = document.getElementById('sessionsChart');
-        if(sessCtx) {
-            new Chart(sessCtx,{
-                type:'line',
-                data:{labels:['Mon','Tue','Wed','Thu','Fri'],datasets:[{label:'Sessions',data:[12,19,15,25,18],borderColor:'#7b1d1d',tension:0.4}]}
-            });
-        }
-
-        const feedCtx = document.getElementById('feedbackChart');
-        if(feedCtx) {
-            new Chart(feedCtx,{
-                type:'doughnut',
-                data:{labels:['Excellent','Good','Average'],datasets:[{data:[60,30,10],backgroundColor:['#1a3c2f','#7b1d1d','#ccc']}]}
-            });
-        }
     </script>
 </body>
