@@ -137,6 +137,15 @@ border-radius:4px;
 background:#d1fae5;
 color:#065f46;
 }
+
+.notif-dot {
+    width: 6px;
+    height: 6px;
+    background: #3b82f6; /* blue */
+    border-radius: 50%;
+    position: top;
+    bottom: 6px;
+}
     </style>
 </head>
 
@@ -535,7 +544,14 @@ const pendingRequests = [
 { id:101, date:'2026-03-16', mentor:"You", mentee:"Lance Talavera", subject:"CMSC 143", start:"15:00", end:"16:00" },
 { id:102, date:'2026-03-16', mentor:"You", mentee:"Paolo Lapid", subject:"Math 59", start:"10:30", end:"11:30" }, 
 { id:103, date:'2026-03-17', mentor:"You", mentee:"Anna Cruz", subject:"Physics", start:"13:00", end:"14:30" },
-{ id:104, date:'2026-03-17', mentor:"You", mentee:"Anna Lyn", subject:"Physics", start:"13:00", end:"14:30" }
+{ id:104, date:'2026-03-17', mentor:"You", mentee:"Anna Lyn", subject:"Physics", start:"13:00", end:"15:30" },
+{ id:105, date:'2026-03-17', mentor:"You", mentee:"Anna Lyn", subject:"Physics", start:"13:00", end:"16:20" },
+{ id:106, date:'2026-03-17', mentor:"You", mentee:"Anna Lyn", subject:"Physics", start:"13:00", end:"14:30" },
+{ id:107, date:'2026-03-17', mentor:"You", mentee:"Anna Lyn", subject:"Physics", start:"13:00", end:"14:30" },
+{ id:108, date:'2026-03-17', mentor:"You", mentee:"Anna Lyn", subject:"Physics", start:"13:00", end:"14:30" },
+{ id:109, date:'2026-03-17', mentor:"You", mentee:"Anna Lyn", subject:"Physics", start:"13:00", end:"14:30" },
+{ id:110, date:'2026-03-17', mentor:"You", mentee:"Anna Lyn", subject:"Physics", start:"13:00", end:"14:30" }
+
 
 ];
 
@@ -723,6 +739,16 @@ return 'text-gray-500 bg-gray-100 border-gray-200';
 
 }
         // Calendar Logic
+function hasUpcomingOnDate(dateStr) {
+    const todayStr = new Date().toISOString().split("T")[0];
+
+    return allSessions.some(s => 
+        s.date === dateStr &&
+        s.status === "Upcoming" &&
+        s.date >= todayStr
+    );
+}
+
 function renderCalendar() {
 
     const grid = document.getElementById('calendarGrid');
@@ -770,7 +796,12 @@ function renderCalendar() {
         }
 
         /* DAY NUMBER */
-        dayEl.innerHTML = `<span>${i}</span>`;
+const hasUpcoming = hasUpcomingOnDate(dateStr);
+
+dayEl.innerHTML = `
+    <span>${i}</span>
+    ${hasUpcoming ? `<div class="notif-dot"></div>` : ``}
+`;
 
         /* RESTORE CLICK FUNCTIONALITY */
         dayEl.onclick = () => {
