@@ -189,14 +189,7 @@ $dismissSuccessMessage = action(function () {
 
 ?>
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LRC PeerConnect Dashboard</title>
-
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<div>
 
     <style>
         :root {
@@ -317,9 +310,8 @@ $dismissSuccessMessage = action(function () {
         .pagination-btn:hover:not(:disabled) { background: #f1f5f9; color: var(--header-maroon); border-color: var(--header-maroon); }
         .table-filter-select, .header-filter { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 12px; font-size: 0.75rem; color: #475569; outline: none; cursor: pointer; }
     </style>
-</head>
 
-<body>
+
     <div class="app-wrapper">
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-logo-container">
@@ -376,7 +368,6 @@ $dismissSuccessMessage = action(function () {
                         <p class="text-sm font-bold text-slate-800 truncate">{{ auth()->user()->name }}</p>
                         <p class="text-xs text-slate-500 truncate">{{ auth()->user()->email }}</p>
                     </div>
-                    <a href="#" class="dropdown-item"><i class="fa-solid fa-user-gear"></i> Account Settings</a>
                     <form method="POST" action="{{ route('logout') }}" class="m-0">
                         @csrf
                         <button type="submit" class="dropdown-item w-full border-t border-gray-50 text-red-600 font-semibold">
@@ -679,4 +670,4 @@ $dismissSuccessMessage = action(function () {
             if (profileDropdown.classList.contains('show')) profileDropdown.classList.remove('show');
         });
     </script>
-</body>
+</div>

@@ -130,7 +130,7 @@ mount(function () {
                         <p class="text-sm font-bold text-slate-800 truncate">{{ auth()->user()->name }}</p>
                         <p class="text-xs text-slate-500 truncate">{{ auth()->user()->email }}</p>
                     </div>
-                    <a href="#" class="dropdown-item"><i class="fa-solid fa-user-gear"></i> Account Settings</a>
+    
                     <form method="POST" action="{{ route('logout') }}" class="m-0">
                         @csrf
                         <button type="submit" class="dropdown-item w-full border-t border-gray-50 text-red-600 font-semibold">
@@ -152,7 +152,7 @@ mount(function () {
                             <input id="mentorSearch" type="text" placeholder="Search mentors..."
                                    class="pl-8 pr-3 py-2 text-xs border border-gray-200 rounded-lg bg-white outline-none focus:ring-1 focus:ring-red-800 w-48">
                         </div>
-                        <select id="subjectFilter" class="bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs text-slate-600 outline-none cursor-pointer">
+                        <select id="subjectFilter" class="bg-white border border-gray-200 rounded-lg px-8 py-2 text-xs text-slate-600 outline-none cursor-pointer">
                             <option value="">All Subjects</option>
                             <option value="CMSC 11">CMSC 11</option>
                             <option value="CMSC 123">CMSC 123</option>
@@ -163,12 +163,7 @@ mount(function () {
                             <option value="Phys 102">Phys 102</option>
                         </select>
                     </div>
-                    <form method="POST" action="{{ route('logout') }}" class="m-0">
-                        @csrf
-                        <button type="submit" class="dropdown-item w-full border-t border-gray-50 text-red-600 font-semibold">
-                            <i class="fa-solid fa-right-from-bracket"></i> Logout
-                        </button>
-                    </form>
+
                 </div>
 
                 <p class="text-xs text-gray-400 mb-4 font-medium" id="mentorCount">8 mentors found</p>

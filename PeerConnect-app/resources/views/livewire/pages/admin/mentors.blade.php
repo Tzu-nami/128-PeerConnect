@@ -212,7 +212,6 @@ mount(function () {
                         <p class="text-[11px] font-bold text-gray-400 uppercase mb-1">Signed in as</p>
                         <p class="text-sm font-bold truncate">{{ auth()->user()->name }}</p>
                     </div>
-                    <a href="#" class="dropdown-item"><i class="fa-solid fa-user-gear"></i> Account Settings</a>
                     <form method="POST" action="{{ route('logout') }}" class="m-0 border-t border-gray-50">
                         @csrf
                         <button type="submit" class="dropdown-item w-full text-red-600 font-semibold bg-transparent border-none cursor-pointer">

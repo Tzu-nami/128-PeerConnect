@@ -232,7 +232,7 @@ mount(function () {
                         <p class="text-sm font-bold text-slate-800 truncate">{{ auth()->user()->name }}</p>
                         <p class="text-xs text-slate-500 truncate">{{ auth()->user()->email }}</p>
                     </div>
-                    <a href="#" class="dropdown-item"><i class="fa-solid fa-user-gear"></i> Account Settings</a>
+
                     <form method="POST" action="{{ route('logout') }}" class="m-0">
                         @csrf
                         <button type="submit" class="dropdown-item w-full border-t border-gray-50 text-red-600 font-semibold">
