@@ -174,7 +174,7 @@ mount(function () {
                             <div class="w-12 h-12 rounded-xl bg-emerald-800 text-white flex items-center justify-center text-sm font-black flex-shrink-0">DD</div>
                             <div class="min-w-0">
                                 <p class="font-bold text-slate-800 text-sm truncate">Daniel Dyoco</p>
-                                <p class="text-[11px] text-gray-400 truncate">d.dyoco@up.edu.ph</p>
+                                <p class="text-[11px] text-gray-400 truncate">ddyoco@up.edu.ph</p>
                             </div>
                         </div>
                         <div class="px-5 pt-4">
@@ -201,7 +201,7 @@ mount(function () {
                             <div class="w-12 h-12 rounded-xl bg-teal-800 text-white flex items-center justify-center text-sm font-black flex-shrink-0">RL</div>
                             <div class="min-w-0">
                                 <p class="font-bold text-slate-800 text-sm truncate">Rhona Shayne Lopez</p>
-                                <p class="text-[11px] text-gray-400 truncate">rs.lopez@up.edu.ph</p>
+                                <p class="text-[11px] text-gray-400 truncate">rslopez@up.edu.ph</p>
                             </div>
                         </div>
                         <div class="px-5 pt-4">
@@ -225,10 +225,10 @@ mount(function () {
 
                     <div class="mentor-card" data-name="chezka sinco" data-subjects="CMSC 123 CMSC 128 Phys 101">
                         <div class="p-5 flex items-center gap-4 border-b border-gray-50">
-                            <div class="w-12 h-12 rounded-xl bg-cyan-800 text-white flex items-center justify-center text-sm font-black flex-shrink-0">CMSC</div>
+                            <div class="w-12 h-12 rounded-xl bg-cyan-800 text-white flex items-center justify-center text-sm font-black flex-shrink-0">CS</div>
                             <div class="min-w-0">
                                 <p class="font-bold text-slate-800 text-sm truncate">Chezka Sinco</p>
-                                <p class="text-[11px] text-gray-400 truncate">c.sinco@up.edu.ph</p>
+                                <p class="text-[11px] text-gray-400 truncate">csinco@up.edu.ph</p>
                             </div>
                         </div>
                         <div class="px-5 pt-4">
@@ -255,7 +255,7 @@ mount(function () {
                             <div class="w-12 h-12 rounded-xl bg-indigo-800 text-white flex items-center justify-center text-sm font-black flex-shrink-0">AS</div>
                             <div class="min-w-0">
                                 <p class="font-bold text-slate-800 text-sm truncate">Arielle Mae Solis</p>
-                                <p class="text-[11px] text-gray-400 truncate">am.solis@up.edu.ph</p>
+                                <p class="text-[11px] text-gray-400 truncate">amsolis@up.edu.ph</p>
                             </div>
                         </div>
                         <div class="px-5 pt-4">
@@ -282,7 +282,7 @@ mount(function () {
                             <div class="w-12 h-12 rounded-xl bg-violet-800 text-white flex items-center justify-center text-sm font-black flex-shrink-0">AC</div>
                             <div class="min-w-0">
                                 <p class="font-bold text-slate-800 text-sm truncate">Ax'l Conchada</p>
-                                <p class="text-[11px] text-gray-400 truncate">a.conchada@up.edu.ph</p>
+                                <p class="text-[11px] text-gray-400 truncate">aconchada@up.edu.ph</p>
                             </div>
                         </div>
                         <div class="px-5 pt-4">
@@ -308,7 +308,7 @@ mount(function () {
                             <div class="w-12 h-12 rounded-xl bg-rose-800 text-white flex items-center justify-center text-sm font-black flex-shrink-0">JD</div>
                             <div class="min-w-0">
                                 <p class="font-bold text-slate-800 text-sm truncate">Juan Dela Cruz</p>
-                                <p class="text-[11px] text-gray-400 truncate">j.delacruz@up.edu.ph</p>
+                                <p class="text-[11px] text-gray-400 truncate">jdelacruz@up.edu.ph</p>
                             </div>
                         </div>
                         <div class="px-5 pt-4">
@@ -334,7 +334,7 @@ mount(function () {
                             <div class="w-12 h-12 rounded-xl bg-emerald-700 text-white flex items-center justify-center text-sm font-black flex-shrink-0">MS</div>
                             <div class="min-w-0">
                                 <p class="font-bold text-slate-800 text-sm truncate">Maria Santos</p>
-                                <p class="text-[11px] text-gray-400 truncate">m.santos@up.edu.ph</p>
+                                <p class="text-[11px] text-gray-400 truncate">msantos@up.edu.ph</p>
                             </div>
                         </div>
                         <div class="px-5 pt-4">
@@ -360,7 +360,7 @@ mount(function () {
                             <div class="w-12 h-12 rounded-xl bg-teal-700 text-white flex items-center justify-center text-sm font-black flex-shrink-0">KR</div>
                             <div class="min-w-0">
                                 <p class="font-bold text-slate-800 text-sm truncate">Kevin Reyes</p>
-                                <p class="text-[11px] text-gray-400 truncate">k.reyes@up.edu.ph</p>
+                                <p class="text-[11px] text-gray-400 truncate">kreyes@up.edu.ph</p>
                             </div>
                         </div>
                         <div class="px-5 pt-4">
