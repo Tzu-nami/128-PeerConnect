@@ -29,8 +29,8 @@ mount(function () {
             --sidebar-collapsed-width: 80px;
         }
 
-        body { margin: 0; font-family: 'Inter', sans-serif; background: var(--bg-light); overflow: hidden; }
-        .app-wrapper { display: flex; height: 100vh; width: 100vw; overflow: hidden; }
+        body { margin: 0; font-family: 'Inter', sans-serif; background: var(--bg-light); }
+        .app-wrapper { display: flex; height: 100vh; width: 100vw; }
 
         /* SIDEBAR */
         .sidebar {
@@ -285,19 +285,57 @@ mount(function () {
             </div>
         </div>
 
-                <div class="grid grid-cols-5 gap-4 mb-8">
-  <div class="stat-card flex items-center gap-4 border-2 border-green-600 p-4 rounded-lg bg-white">
-    <i class="fa-solid fa-users text-green-600"></i>
+ <div class="grid grid-cols-5 gap-4 mb-8">
+  <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-green-600 flex items-center gap-4">
+    <div class="text-2xl">
+      <i class="fa-solid fa-users text-green-600"></i>
+    </div>
     <div>
-      <h3 class="text-xs font-bold text-gray-400 uppercase">Total Mentors</h3>
+      <h3 class="text-xs font-bold text-gray-400 uppercase leading-none">Total Mentors</h3>
       <p class="text-2xl font-black">40</p>
     </div>
   </div>
-                    <div class="stat-card flex items-center gap-4"><i class="fa-solid fa-calendar-day"></i><div><h3 class="text-xs font-bold text-gray-400 uppercase">Sessions Today</h3><p class="text-2xl font-black">18</p></div></div>
-                    <div class="stat-card flex items-center gap-4"><i class="fa-solid fa-clock"></i><div><h3 class="text-xs font-bold text-gray-400 uppercase">Pending</h3><p class="text-2xl font-black">5</p></div></div>
-                    <div class="stat-card flex items-center gap-4"><i class="fa-solid fa-star"></i><div><h3 class="text-xs font-bold text-gray-400 uppercase">Ratings</h3><p class="text-2xl font-black">4.9</p></div></div>
-                    <div class="stat-card flex items-center gap-4"><i class="fa-solid fa-user-graduate"></i><div><h3 class="text-xs font-bold text-gray-400 uppercase">Total Mentees</h3><p class="text-2xl font-black">75</p></div></div>
-                </div>
+
+  <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-blue-600 flex items-center gap-4">
+    <div class="text-2xl">
+      <i class="fa-solid fa-calendar-day text-blue-600"></i>
+    </div>
+    <div>
+      <h3 class="text-xs font-bold text-gray-400 uppercase leading-none">Sessions Today</h3>
+      <p class="text-2xl font-black">18</p>
+    </div>
+  </div>
+
+  <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-yellow-500 flex items-center gap-4">
+    <div class="text-2xl">
+      <i class="fa-solid fa-clock text-yellow-500"></i>
+    </div>
+    <div>
+      <h3 class="text-xs font-bold text-gray-400 uppercase leading-none">Pending</h3>
+      <p class="text-2xl font-black">5</p>
+    </div>
+  </div>
+
+  <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-red-600 flex items-center gap-4">
+    <div class="text-2xl">
+      <i class="fa-solid fa-star text-red-600"></i>
+    </div>
+    <div>
+      <h3 class="text-xs font-bold text-gray-400 uppercase leading-none">Ratings</h3>
+      <p class="text-2xl font-black">4.9</p>
+    </div>
+  </div>
+
+  <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-pink-600 flex items-center gap-4">
+    <div class="text-2xl">
+      <i class="fa-solid fa-user-graduate text-pink-600"></i>
+    </div>
+    <div>
+      <h3 class="text-xs font-bold text-gray-400 uppercase leading-none">Total Mentees</h3>
+      <p class="text-2xl font-black">75</p>
+    </div>
+  </div>
+</div>
 
                 <div class="grid grid-cols-3 gap-8">
                     <div class="col-span-2 space-y-8">
