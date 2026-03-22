@@ -136,6 +136,12 @@ mount(function () {
         .pagination-btn { padding: 4px 10px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 11px; font-weight: 600; color: #64748b; transition: all 0.2s; }
         .pagination-btn:hover:not(:disabled) { background: #f1f5f9; color: var(--header-maroon); border-color: var(--header-maroon); }
         .table-filter-select, .header-filter { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 12px; font-size: 0.75rem; color: #475569; outline: none; cursor: pointer; }
+        .pagination-btn:disabled {
+    background-color: #f3f4f6; /* Light gray */
+    color: #9ca3af;            /* Faded icon color */
+    cursor: not-allowed;       /* Shows a "prohibited" cursor */
+    border-color: #e5e7eb;
+}
     
     /* MAIN CONTENT SEARCH BAR */
 .main-search-container {
@@ -396,8 +402,9 @@ updateDate();
                             <div class="mt-6 pt-4 border-t border-gray-50 flex items-center justify-between">
                                 <div class="text-[11px] text-gray-400 font-medium" id="pageIndicator">Showing 0 results</div>
                                 <div class="flex gap-2">
-                                    <button id="prevBtn" class="pagination-btn"><i class="fa-solid fa-chevron-left"></i></button>
-                                    <button id="nextBtn" class="pagination-btn"><i class="fa-solid fa-chevron-right"></i></button>
+<button id="prevBtn" class="pagination-btn" disabled>
+    <i class="fa-solid fa-chevron-left"></i>
+</button>                                    <button id="nextBtn" class="pagination-btn"><i class="fa-solid fa-chevron-right"></i></button>
                                 </div>
                             </div>
                         </div>
@@ -670,5 +677,16 @@ updateDate();
         renderCalendar();
         applyFilters();
         updateClock();
+
+        function updatePaginationUI() {
+    const prevBtn = document.getElementById('prevBtn');
+    
+    if (currentPage === 1) {
+        prevBtn.disabled = true;
+    } else {
+        prevBtn.disabled = false;
+    }
+    nextBtn.disabled = (currentPage === totalPages);
+}
     </script>
 </body>

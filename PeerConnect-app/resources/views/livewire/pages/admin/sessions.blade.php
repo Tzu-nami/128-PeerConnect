@@ -237,27 +237,56 @@ mount(function () {
             <div class="max-w-7xl mx-auto space-y-6">
                 
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    @php
-                        $stats = [
-                            ['label' => 'Total Sessions', 'val' => count($this->sessions), 'icon' => 'fa-layer-group', 'color' => 'blue'],
-                            ['label' => 'Pending Approval', 'val' => $this->sessions->where('status', 'Pending')->count(), 'icon' => 'fa-clock', 'color' => 'amber'],
-                            ['label' => 'Confirmed Today', 'val' => $this->sessions->where('status', 'Confirmed')->count(), 'icon' => 'fa-check-circle', 'color' => 'emerald'],
-                            ['label' => 'Completion Rate', 'val' => '85%', 'icon' => 'fa-chart-line', 'color' => 'maroon'],
-                        ];
-                    @endphp
-                    @foreach($stats as $stat)
-                        <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex items-center gap-4">
-                            <div class="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center text-lg text-slate-600">
-                                <i class="fa-solid {{ $stat['icon'] }}"></i>
-                            </div>
-                            <div>
-                                <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">{{ $stat['label'] }}</p>
-                                <p class="text-xl font-black text-slate-800">{{ $stat['val'] }}</p>
-                            </div>
-                        </div>
-                    @endforeach
-                </div>
+    @php
+        $stats = [
+            [
+                'label' => 'Total Sessions', 
+                'val' => count($this->sessions), 
+                'icon' => 'fa-layer-group', 
+                'border' => 'border-green-600', 
+                'text' => 'text-green-600'
+            ],
+            [
+                'label' => 'Pending Approval', 
+                'val' => $this->sessions->where('status', 'Pending')->count(), 
+                'icon' => 'fa-clock', 
+                'border' => 'border-blue-500', 
+                'text' => 'text-blue-500'
+            ],
+            [
+                'label' => 'Confirmed Today', 
+                'val' => $this->sessions->where('status', 'Confirmed')->count(), 
+                'icon' => 'fa-check-circle', 
+                'border' => 'border-yellow-600', 
+                'text' => 'text-yellow-600'
+            ],
+            [
+                'label' => 'Completion Rate', 
+                'val' => '85%', 
+                'icon' => 'fa-chart-line', 
+                'border' => 'border-red-600',
+                'text' => 'text-red-600'
+            ],
+        ];
+    @endphp
 
+    @foreach($stats as $stat)
+        <div class="bg-white p-5 rounded-2xl shadow-sm border-l-4 {{ $stat['border'] }} flex items-center gap-4">
+            <div class="text-2xl {{ $stat['text'] }}">
+                <i class="fa-solid {{ $stat['icon'] }}"></i>
+            </div>
+            
+            <div>
+                <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider leading-none mb-1">
+                    {{ $stat['label'] }}
+                </p>
+                <p class="text-xl font-black text-slate-800">
+                    {{ $stat['val'] }}
+                </p>
+            </div>
+        </div>
+    @endforeach
+</div>
                 <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
                     <div class="p-6 border-b border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4">
                         <div class="flex bg-slate-100 p-1 rounded-xl">
@@ -294,10 +323,13 @@ mount(function () {
                                             <div class="text-sm font-bold text-slate-800">{{ $session['mentee'] }}</div>
                                             <div class="text-[11px] text-slate-400 font-medium">{{ $session['email'] }}</div>
                                         </td>
-                                        <td class="px-6 py-4">
-                                            <div class="text-xs font-bold text-red-900 bg-red-50 px-2 py-1 rounded inline-block">{{ $session['subject'] }}</div>
-                                            <div class="text-[11px] text-slate-500 mt-1">{{ $session['course'] }}</div>
-                                        </td>
+<td class="px-6 py-4">
+    <div class="flex flex-wrap gap-1">
+        <span class="bg-red-50 text-red-700 px-2 py-0.5 rounded text-[10px] font-bold border border-red-100">
+            {{ $session['subject'] }}
+        </span>
+    </div>
+    </td>
                                         <td class="px-6 py-4 text-sm text-slate-600">
                                             <div class="flex items-center gap-2">
                                                 <span class="w-6 h-6 rounded bg-emerald-100 text-emerald-700 text-[10px] flex items-center justify-center font-bold">{{ $session['mentor_init'] }}</span>
