@@ -253,12 +253,11 @@ mount(function () {
                         <tbody class="divide-y divide-gray-50">
                             @foreach($this->filteredMentors as $mentor)
                             <tr class="hover:bg-gray-50 transition" wire:key="{{ $mentor['id'] }}">
-                                <td class="px-6 py-5">
-                                    <div class="flex items-center gap-3">
-                                        <div class="w-8 h-8 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center font-bold text-[10px]">{{ $mentor['init'] }}</div>
-                                        <span class="font-bold text-slate-700 text-sm">{{ $mentor['name'] }}</span>
-                                    </div>
-                                </td>
+<td class="px-6 py-5">
+    <div class="flex items-center">
+        <span class="font-bold text-slate-700 text-sm">{{ $mentor['name'] }}</span>
+    </div>
+</td>
                                 <td class="px-6 py-5 text-slate-600 text-sm">{{ $mentor['student_no'] }}</td>
                                 <td class="px-6 py-5 text-slate-500 text-sm">{{ $mentor['email'] }}</td>
                                 <td class="px-6 py-5">
