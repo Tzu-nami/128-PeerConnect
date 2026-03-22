@@ -85,7 +85,6 @@ mount(function () {
     background: rgba(255,255,255,0.05);
 }
 
-/* THE BLEND: Rectangular connection to the main page */
 .nav-item.active {
     background: var(--bg-light);
     color: var(--header-maroon);
@@ -217,30 +216,61 @@ mount(function () {
         </aside>
 
         <div class="main-content">
-            <header class="top-header relative">
-                <div class="text-lg">Welcome, <span class="font-bold">{{ auth()->user()->name }}</span></div>
+            <header class="top-header relative flex items-center justify-between px-6 py-4">
+    <div class="text-lg">Welcome, <span class="font-bold">{{ auth()->user()->name }}</span></div>
 
-                <button id="profileTrigger" class="flex items-center gap-2 px-3 py-1 bg-white rounded-full hover:bg-gray-100 transition shadow-sm border-2 border-white/20 group">
-    <div class="w-8 h-8 bg-red-900 text-white rounded-full flex items-center justify-center text-xs font-bold">
-        {{ strtoupper(substr(auth()->user()->name,0,2)) }}
-    </div>
-    <i class="fa-solid fa-chevron-down text-[10px] text-gray-500 group-hover:text-red-900 transition-transform duration-200" id="dropdownArrow"></i>
+    <div class="flex items-center gap-3">
+        
+        <div class="relative">
+            <button id="notificationTrigger" class="relative p-2 rounded-full text-gray-400 hover:bg-red-900 hover:text-white transition-all duration-200 focus:outline-none group">
+    <i class="fa-solid fa-bell text-xl"></i>
+    
+    <span class="absolute top-2 right-2 flex h-2.5 w-2.5">
+        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75 group-hover:hidden"></span>
+        <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-600 border border-white"></span>
+    </span>
 </button>
-                <div id="profileDropdown" class="profile-dropdown">
-                    <div class="p-4 border-b border-gray-100 bg-slate-50">
-                        <p class="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1">Signed in as</p>
-                        <p class="text-sm font-bold text-slate-800 truncate">{{ auth()->user()->name }}</p>
-                        <p class="text-xs text-slate-500 truncate">{{ auth()->user()->email }}</p>
-                    </div>
 
-                    <form method="POST" action="{{ route('logout') }}" class="m-0">
-                        @csrf
-                        <button type="submit" class="dropdown-item w-full border-t border-gray-50 text-red-600 font-semibold">
-                            <i class="fa-solid fa-right-from-bracket"></i> Logout
-                        </button>
-                    </form>
+            <div id="notificationDropdown" class="hidden absolute right-0 mt-2 w-72 bg-white rounded-xl shadow-xl border border-gray-100 z-50 overflow-hidden">
+                <div class="p-3 border-b border-gray-100 bg-slate-50">
+                    <p class="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Notifications</p>
                 </div>
-            </header>
+                <div class="max-h-64 overflow-y-auto">
+                    <div class="p-4 border-b border-gray-50 hover:bg-gray-50 transition cursor-pointer">
+                        <p class="text-xs text-gray-800">Your report has been approved.</p>
+                        <p class="text-[10px] text-gray-400 mt-1">2 minutes ago</p>
+                    </div>
+                </div>
+                <a href="#" class="block p-3 text-center text-xs font-bold text-red-900 hover:bg-gray-50">View All</a>
+            </div>
+        </div>
+
+        <div class="relative">
+            <button id="profileTrigger" class="flex items-center gap-2 px-3 py-1 bg-white rounded-full hover:bg-gray-100 transition shadow-sm border-2 border-white/20 group">
+                <div class="w-8 h-8 bg-red-900 text-white rounded-full flex items-center justify-center text-xs font-bold">
+                    {{ strtoupper(substr(auth()->user()->name, 0, 2)) }}
+                </div>
+                <i class="fa-solid fa-chevron-down text-[10px] text-gray-500 group-hover:text-red-900 transition-transform duration-200" id="dropdownArrow"></i>
+            </button>
+
+            <div id="profileDropdown" class="profile-dropdown absolute right-0 mt-2 hidden">
+                <div class="p-4 border-b border-gray-100 bg-slate-50">
+                    <p class="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1">Signed in as</p>
+                    <p class="text-sm font-bold text-slate-800 truncate">{{ auth()->user()->name }}</p>
+                    <p class="text-xs text-slate-500 truncate">{{ auth()->user()->email }}</p>
+                </div>
+
+                <form method="POST" action="{{ route('logout') }}" class="m-0">
+                    @csrf
+                    <button type="submit" class="dropdown-item w-full border-t border-gray-50 text-red-600 font-semibold p-3 hover:bg-gray-50 flex items-center gap-2">
+                        <i class="fa-solid fa-right-from-bracket"></i> Logout
+                    </button>
+                </form>
+            </div>
+        </div>
+
+    </div>
+</header>
 
             <main class="scroll-container">
                 <div class="main-search-container mb-8">
@@ -256,7 +286,13 @@ mount(function () {
         </div>
 
                 <div class="grid grid-cols-5 gap-4 mb-8">
-                    <div class="stat-card flex items-center gap-4"><i class="fa-solid fa-users"></i><div><h3 class="text-xs font-bold text-gray-400 uppercase">Total Mentors</h3><p class="text-2xl font-black">40</p></div></div>
+  <div class="stat-card flex items-center gap-4 border-2 border-green-600 p-4 rounded-lg bg-white">
+    <i class="fa-solid fa-users text-green-600"></i>
+    <div>
+      <h3 class="text-xs font-bold text-gray-400 uppercase">Total Mentors</h3>
+      <p class="text-2xl font-black">40</p>
+    </div>
+  </div>
                     <div class="stat-card flex items-center gap-4"><i class="fa-solid fa-calendar-day"></i><div><h3 class="text-xs font-bold text-gray-400 uppercase">Sessions Today</h3><p class="text-2xl font-black">18</p></div></div>
                     <div class="stat-card flex items-center gap-4"><i class="fa-solid fa-clock"></i><div><h3 class="text-xs font-bold text-gray-400 uppercase">Pending</h3><p class="text-2xl font-black">5</p></div></div>
                     <div class="stat-card flex items-center gap-4"><i class="fa-solid fa-star"></i><div><h3 class="text-xs font-bold text-gray-400 uppercase">Ratings</h3><p class="text-2xl font-black">4.9</p></div></div>
