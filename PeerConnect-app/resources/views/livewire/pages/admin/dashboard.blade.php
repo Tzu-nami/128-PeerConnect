@@ -1,11 +1,26 @@
 <?php
 
 use function Livewire\Volt\{layout, state, mount};
+use App\Models\MentorProfiles;
+use App\Models\StudentProfiles;
+use App\Models\Bookings;
+use Carbon\Carbon;
 
 layout('layouts.app');
 
+state([
+    'totalMentors' => 0,
+    'sessionsToday' => 0,
+    'pendingBookings' => 0,
+    'totalStudents' => 0,
+]);
+
 mount(function () {
     abort_if(!auth()->user()->isAdmin(), 403, 'Unauthorized Access');
+    $this->totalMentors = MentorProfiles::count();
+    $this->sessionsToday = Bookings::whereDate('date', Carbon::today()) -> count();
+    $this->pendingBookings = Bookings::where('booking_status', 'pending') -> count();
+    $this->totalStudents = StudentProfiles::count();
 });
 
 ?>
@@ -298,7 +313,7 @@ mount(function () {
     </div>
     <div>
       <h3 class="text-xs font-bold text-gray-400 uppercase leading-none">Total Mentors</h3>
-      <p class="text-2xl font-black">40</p>
+      <p class="text-2xl font-black">{{ $totalMentors }}</p>
     </div>
   </div>
 
@@ -308,7 +323,7 @@ mount(function () {
     </div>
     <div>
       <h3 class="text-xs font-bold text-gray-400 uppercase leading-none">Sessions Today</h3>
-      <p class="text-2xl font-black">18</p>
+      <p class="text-2xl font-black">{{ $sessionsToday }}</p>
     </div>
   </div>
 
@@ -318,7 +333,7 @@ mount(function () {
     </div>
     <div>
       <h3 class="text-xs font-bold text-gray-400 uppercase leading-none">Pending</h3>
-      <p class="text-2xl font-black">5</p>
+      <p class="text-2xl font-black">{{ $pendingBookings }}</p>
     </div>
   </div>
 
@@ -338,7 +353,7 @@ mount(function () {
     </div>
     <div>
       <h3 class="text-xs font-bold text-gray-400 uppercase leading-none">Total Mentees</h3>
-      <p class="text-2xl font-black">75</p>
+      <p class="text-2xl font-black">{{ $totalStudents }}</p>
     </div>
   </div>
 </div>
