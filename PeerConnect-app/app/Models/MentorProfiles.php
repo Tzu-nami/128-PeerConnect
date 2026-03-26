@@ -20,4 +20,14 @@ class MentorProfiles extends Model
     {
         return $this->belongsTo(User::class, 'user_id');
     }
+
+    public function subjects()
+    {
+        return $this->belongsToMany(
+            Subjects::class,
+            'mentor_subjects',
+            'mentor_id',
+            'subject_id',
+        );
+    }
 }

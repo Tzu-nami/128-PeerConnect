@@ -1,65 +1,224 @@
 <?php
 
-use function Livewire\Volt\{layout, state, mount, computed};
+use function Livewire\Volt\{layout, state, mount, computed, action};
+use App\Models\MentorProfiles;
+use App\Models\MentorAvailabilities;
+use App\Models\MentorSubjects;
+use App\Models\Subjects;
+use App\Models\User;
 
 layout('layouts.app');
 
 state([
-    'showModal' => false,
     'search' => '',
-    // Form States
-    'surname' => '',
-    'first_name' => '',
-    'middle_name' => '',
+    // Form states
+    'showModal' => false,
+    'showSubjectModal' => false,
+
+    'showConfirm' => false,
+    'showSubjectConfirm' => false,
+
     'up_mail' => '',
-    'student_number' => '',
-    'subjects' => '',
-    // Initial Dummy Data
-    'mentors' => [
-        ['id' => 1, 'name' => 'Sarmiento, Clara M.', 'student_no' => '2021-04512', 'email' => 'cmsarmiento@up.edu.ph', 'subjects' => 'CMSC 11, MATH 53', 'init' => 'SC'],
-        ['id' => 2, 'name' => 'Rizal, Jose P.', 'student_no' => '2020-12345', 'email' => 'jprizal@up.edu.ph', 'subjects' => 'HIST 1, PI 10', 'init' => 'JR'],
-        ['id' => 3, 'name' => 'Luna, Manuel G.', 'student_no' => '2022-98765', 'email' => 'mgluna@up.edu.ph', 'subjects' => 'PHYS 21', 'init' => 'ML'],
-    ]
+    'newMentor' => null,
+    'emailError' => '',
+    'selectedSubjects' => [],
+
+    'availabilities' => [
+        ['day_of_week' => '', 'start_time' => '', 'end_time' => '']
+    ],
+
+    'newSubjectCode' => '',
+    'newSubjectName' => '',
 ]);
 
 // Live Search logic - Optimized with Filtered computed property
 $filteredMentors = computed(function () {
-    if (empty($this->search)) {
-        return $this->mentors;
-    }
+    $query = MentorProfiles::with(['user.studentProfile', 'subjects']);
 
-    $searchLower = strtolower($this->search);
-    
-    return array_filter($this->mentors, function ($mentor) use ($searchLower) {
-        return str_contains(strtolower($mentor['name']), $searchLower) ||
-               str_contains(strtolower($mentor['student_no']), $searchLower) ||
-               str_contains(strtolower($mentor['subjects']), $searchLower);
-    });
+    if (!empty($this->search)) {
+        $searchWord = '%' . $this->search . '%';
+        $query->whereHas('user', function ($word) use ($searchWord) {
+            //ilike for case insensitive searches
+            $word->where('lastName', 'ilike', $searchWord)
+            ->orWhere('firstName', 'ilike', $searchWord)
+            ->orWhere('email', 'ilike', $searchWord)
+            ->orWhereHas('studentProfile', function ($sWord) use ($searchWord) {
+                $sWord->where('student_num', 'ilike', $searchWord);
+            });
+        })->orWhereHas('subjects', function ($word) use ($searchWord) {
+            $word->where('code', 'ilike', $searchWord);
+        });
+    }
+    return $query->get()->map(function ($mentor) {
+        return [
+            'id' => $mentor->id,
+            'name' => $mentor->user->lastName . ', ' . $mentor->user->firstName,
+            'student_num' => $mentor->user->studentProfile->student_num,
+            'email' => $mentor->user->email,
+            'subjects' => $mentor->subjects->pluck('code')->join(', '),
+        ];
+    })->toArray();
 });
 
-$saveMentor = function () {
+// Display all subjects available
+$allSubjects = computed(function () {
+    return Subjects::orderBy('code')->get()
+    ->map(fn($subs) => ['id' => $subs->id, 'code' => $subs->code, 'name' => $subs->name])
+    ->toArray();
+});
+
+// For add new mentors
+$openModal = action(function () {
+    $this->reset([
+        'up_mail',
+        'newMentor',
+        'emailError',
+        'selectedSubjects',
+        'availabilities',
+        'showConfirm'
+    ]);
+    $this->availabilities = [['day_of_week' => '', 'start_time' => '', 'end_time' => '']];
+    $this->showModal = true;
+});
+
+$closeModal = action(function () {
+    $this->showModal = false;
+    $this->showConfirm = false;
+});
+
+// For add new subjects
+$openSubjectModal = action(function () {
+    $this->reset([
+        'newSubjectCode',
+        'newSubjectName',
+        'showSubjectConfirm'
+    ]);
+    $this->showSubjectModal = true;
+});
+
+$closeSubjectModal = action(function () {
+    $this->showSubjectModal = false;
+    $this->showSubjectConfirm = false;
+});
+
+// Find student email to give mentor access
+$checkEmail = action(function () {
+    $this->emailError = '';
+    $this->newMentor = null;
+
+    $this->validate(['up_mail' => ['required', 'email']]);
+    $userEmail = User::where('email', $this->up_mail) -> first();
+
+    if (!$userEmail) {
+        $this->emailError = 'The student with this email does not exist.';
+        return;
+    }
+
+    if ($userEmail->isMentor()) {
+        $this->emailError = 'This student is already a peer mentor';
+        return;
+    }
+
+    $this->newMentor = [
+        'id' => $userEmail->id,
+        'name' => $userEmail->name,
+        'email' => $userEmail->email,
+    ];
+});
+
+// Expand new mentor form for multiple availabilities
+$toggleAvailabilityOn = action(function () {
+    $this->availabilities[] = ['day_of_week' => '', 'start_time' => '', 'end_time' => ''];
+});
+
+$toggleAvailabilityOff = action(function (int $index) {
+    array_splice($this->availabilities, $index, 1);
+    $this->availabilities = array_values($this->availabilities);
+});
+
+// Confirmation dialogs
+$confirmMentor = action(function () {
+    if (!$this->newMentor) {
+        $this->emailError = 'Please input a valid student email.';
+        return;
+    }
+
+    // Check if inputs are valid
     $this->validate([
-        'surname' => 'required',
-        'first_name' => 'required',
-        'up_mail' => 'required|email|ends_with:up.edu.ph',
-        'student_number' => 'required|regex:/^\d{4}-\d{5}$/',
-        'subjects' => 'required',
+        'selectedSubjects' => ['required', 'array', 'min:1'],
+        'selectedSubjects.*' => ['exists:subjects,id'],
+        'availabilities' => ['required', 'array', 'min:1'],
+        'availabilities.*.day_of_week' => ['required', 'in:monday,tuesday,wednesday,thursday,friday,saturday'],
+        'availabilities.*.start_time' => ['required', 'date_format:H:i'],
+        'availabilities.*.end_time' => ['required', 'date_format:H:i'],
+    ], [], [
+        'selectedSubjects' => 'subjects',
+        'availabilities' => 'availabilities',
     ]);
 
-    $fullName = $this->surname . ', ' . $this->first_name . ' ' . ($this->middle_name ? $this->middle_name[0] . '.' : '');
-    
-    // Push new mentor to list
-    $this->mentors[] = [
-        'id' => count($this->mentors) + 1,
-        'name' => $fullName,
-        'student_no' => $this->student_number,
-        'email' => $this->up_mail,
-        'subjects' => $this->subjects,
-        'init' => strtoupper(substr($this->first_name, 0, 1) . substr($this->surname, 0, 1))
-    ];
+    foreach ($this->availabilities as $i => $row) {
+        // Start should be earlier than end
+        if ($row['end_time'] <= $row['start_time']) {
+            $this->addError("availabilities.{$i}.end_time", 'Start time should be earlier than end time.');
+            return;
+        }
+    }
+    $this->showConfirm = true;
+});
 
-    $this->reset(['surname', 'first_name', 'middle_name', 'up_mail', 'student_number', 'subjects', 'showModal']);
-};
+// Save new mentor information
+$saveMentor = action(function () {
+    if (!$this->newMentor) return;
+
+    // Update student role to mentor role
+    $userMentor = User::findOrFail($this->newMentor['id']);
+    $userMentor->update(['user_roles' => 'mentor']);
+
+    $mentorProf = MentorProfiles::create(['user_id' => $userMentor->id]);
+
+    foreach ($this->selectedSubjects as $subjectId) {
+        MentorSubjects::create([
+            'mentor_id'  => $mentorProf->id,
+            'subject_id' => $subjectId,
+        ]);
+    }
+
+    foreach ($this->availabilities as $sched) {
+        MentorAvailabilities::create([
+            'mentor_id' => $mentorProf->id,
+            'day_of_week' => $sched['day_of_week'],
+            'start_time' => $sched['start_time'],
+            'end_time' => $sched['end_time'],
+        ]);
+    }
+
+    $this->showModal = false;
+    $this->showConfirm = false;
+    session()->flash('successMessage', "{$userMentor->name} has been registered as a mentor.");
+});
+
+$confirmSubject = action(function () {
+    $this->validate([
+        'newSubjectCode' => ['required', 'string', 'max:20', 'unique:subjects,code'],
+        'newSubjectName' => ['required', 'string', 'max:255'],
+    ], [], [
+        'newSubjectCode' => 'subject_code',
+        'newSubjectName' => 'subject_name',
+    ]);
+
+    $this->showSubjectConfirm = true;
+});
+
+$saveSubject = action(function () {
+    Subjects::create([
+        'code' => trim($this->newSubjectCode),
+        'name' => trim($this->newSubjectName),
+    ]);
+
+    $this->showSubjectModal = false;
+    $this->showSubjectConfirm = false;
+    session()->flash('successMessage', "{$this->newSubjectCode} has been added.");
+});
 
 mount(function () {
     abort_if(!auth()->user()->isAdmin(), 403, 'Unauthorized Access');
@@ -222,6 +381,13 @@ mount(function () {
             </header>
 
             <main class="scroll-container">
+                {{-- Success Message --}}
+                @if(session('successMessage'))
+                    <div class="mb-6 bg-green-100 border border-green-400 text-green-800 px-4 py-3 rounded-xl">
+                        {{ session('successMessage') }}
+                    </div>
+                @endif
+
                 <div class="flex justify-between items-end mb-8">
                     <div>
                         <h1 class="text-2xl font-black text-slate-800">Mentor Management</h1>
@@ -233,7 +399,10 @@ mount(function () {
                             <input type="text" wire:model.live.debounce.300ms="search" placeholder="Search mentors..." 
                                    class="pl-11 pr-6 py-3 bg-white border border-gray-200 rounded-xl text-xs font-medium w-64 focus:outline-none focus:border-red-800 transition shadow-sm">
                         </div>
-                        <button wire:click="$set('showModal', true)" class="bg-slate-800 text-white px-6 py-3 rounded-xl text-xs font-bold flex items-center gap-2 hover:bg-black transition shadow-lg">
+                        <button wire:click="openSubjectModal" class="bg-slate-800 text-white px-6 py-3 rounded-xl text-xs font-bold flex items-center gap-2 hover:bg-black transition shadow-lg">
+                            <i class="fa-solid fa-book"></i> Add New Subject
+                        </button>
+                        <button wire:click="openModal" class="bg-slate-800 text-white px-6 py-3 rounded-xl text-xs font-bold flex items-center gap-2 hover:bg-black transition shadow-lg">
                             <i class="fa-solid fa-user-plus"></i> Add New Mentor
                         </button>
                     </div>
@@ -258,7 +427,7 @@ mount(function () {
         <span class="font-bold text-slate-700 text-sm">{{ $mentor['name'] }}</span>
     </div>
 </td>
-                                <td class="px-6 py-5 text-slate-600 text-sm">{{ $mentor['student_no'] }}</td>
+                                <td class="px-6 py-5 text-slate-600 text-sm">{{ $mentor['student_num'] }}</td>
                                 <td class="px-6 py-5 text-slate-500 text-sm">{{ $mentor['email'] }}</td>
                                 <td class="px-6 py-5">
                                     <div class="flex flex-wrap gap-1">
@@ -283,30 +452,275 @@ mount(function () {
         </div>
     </div>
 
+    {{-- Add new mentor modal form --}}
     @if($showModal)
-    <div class="modal-overlay">
-        <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden">
-            <div class="px-8 py-6 bg-gray-50 border-b flex justify-between items-center text-slate-800">
-                <h2 class="text-xl font-black">Register Mentor</h2>
-                <button wire:click="$set('showModal', false)" class="text-gray-400 hover:text-red-600"><i class="fa-solid fa-xmark text-xl"></i></button>
+    <div class="modal-overlay" wire:click.self="closeModal">
+        <div class="bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col" style="max-height: 90vh;">
+
+            {{-- Header --}}
+            <div class="px-8 py-6 bg-gray-50 border-b flex justify-between items-center flex-shrink-0">
+                <div>
+                    <h2 class="text-xl font-black text-slate-800">Register Mentor</h2>
+                    <p class="text-sm text-gray-400 mt-0.5">Add their email, assign their subjects, then set their availabilities.</p>
+                </div>
+                <button wire:click="closeModal" class="text-gray-400 hover:text-red-600 transition">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
             </div>
-            <form wire:submit="saveMentor" class="p-8 space-y-4">
-                <div class="grid grid-cols-2 gap-4">
-                    <div><label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Surname</label><input type="text" wire:model="surname" class="form-input"></div>
-                    <div><label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">First Name</label><input type="text" wire:model="first_name" class="form-input"></div>
+
+            <div class="px-8 py-6 space-y-5 overflow-y-auto">
+                
+                {{-- Student Email --}}
+                <div>
+                    <div class="flex items-center gap-2 mb-3">
+                        <span class="flex items-center justify-center w-5 h-5 bg-slate-800 text-white rounded-full text-[10px] font-bold shrink-0">1</span>
+                        <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest m-0">Student Email</h3>
+                    </div>
+                    
+                    <div>
+                        <div class="flex gap-2">
+                            <div class="flex-1">
+                                <input type="email" wire:model="up_mail" placeholder="student@up.edu.ph" class="form-input" wire:keydown.enter.prevent="checkEmail" />
+                                @error('up_mail') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                                @if($emailError) <p class="mt-1 text-xs text-red-600">{{ $emailError }}</p> @endif
+                            </div>
+                            <button wire:click="checkEmail" type="button" class="px-4 py-2 bg-slate-800 text-white text-xs font-bold rounded-lg hover:bg-black transition flex-shrink-0" wire:loading.attr="disabled" wire:target="checkEmail">
+                                <span wire:loading.remove wire:target="checkEmail">Find Email</span>
+                                <span wire:loading wire:target="checkEmail">...</span>
+                            </button>
+                        </div>
+
+                        @if($newMentor)
+                            <div class="mt-3 flex items-center gap-3 bg-green-50 border border-green-200 rounded-lg px-4 py-3">
+                                <div class="w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">{{ substr($newMentor['name'], 0, 2) }}</div>
+                                <div>
+                                    <p class="text-sm font-bold text-slate-800">{{ $newMentor['name'] }}</p>
+                                    <p class="text-xs text-gray-500">{{ $newMentor['email'] }}</p>
+                                </div>
+                                <i class="fa-solid fa-circle-check text-green-500 ml-auto text-lg"></i>
+                            </div>
+                        @endif
+                    </div>
                 </div>
-                <div><label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">UP Mail</label><input type="email" wire:model="up_mail" class="form-input" placeholder="name@up.edu.ph"></div>
-                <div><label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Student No.</label><input type="text" wire:model="student_number" class="form-input" placeholder="20XX-XXXXX"></div>
-                <div><label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Subjects (Comma separated)</label><input type="text" wire:model="subjects" class="form-input"></div>
-                <div class="flex gap-2 pt-4">
-                    <button type="button" wire:click="$set('showModal', false)" class="flex-1 py-3 text-xs font-bold text-gray-500 hover:bg-gray-100 rounded-xl">Cancel</button>
-                    <button type="submit" class="flex-1 bg-red-900 text-white py-3 rounded-xl text-xs font-bold shadow-lg">Save Profile</button>
+
+                {{-- Subjects --}}
+                <div>
+                    <div class="flex items-center gap-2 mb-3">
+                        <span class="flex items-center justify-center w-5 h-5 bg-slate-800 text-white rounded-full text-[10px] font-bold shrink-0">2</span>
+                        <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest m-0">Teachable Subjects</h3>
+                    </div>
+
+                    <div>
+                        <div class="border border-gray-200 rounded-xl overflow-hidden">
+                            <div class="max-h-44 overflow-y-auto divide-y divide-gray-50 bg-white">
+                                @forelse($this->allSubjects as $subject)
+                                    <div class="flex items-center px-4 hover:bg-gray-50" wire:key="sub-{{ $subject['id'] }}">
+                                        
+                                        <input 
+                                            type="checkbox" 
+                                            id="subject-{{ $subject['id'] }}"
+                                            wire:model="selectedSubjects" 
+                                            value="{{ $subject['id'] }}" 
+                                            class="rounded border-gray-300 text-slate-800 focus:ring-slate-800 w-4 h-4 cursor-pointer flex-shrink-0" 
+                                        />
+                                        
+                                        <label for="subject-{{ $subject['id'] }}" class="flex items-center gap-3 ml-3 py-2.5 cursor-pointer flex-1">
+                                            <span class="text-xs font-bold text-slate-700 w-16">{{ $subject['code'] }}</span>
+                                            <span class="text-xs text-gray-400">{{ $subject['name'] }}</span>
+                                        </label>
+                                        
+                                    </div>
+                                @empty
+                                    <p class="text-xs text-gray-400 text-center py-4">No subjects yet. Please add the subject first.</p>
+                                @endforelse
+                            </div>
+                        </div>
+                        @error('selectedSubjects') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                    </div>
                 </div>
-            </form>
+
+                {{-- Availabilities --}}
+                <div>
+                    <div class="flex items-center gap-2 mb-3">
+                        <span class="flex items-center justify-center w-5 h-5 bg-slate-800 text-white rounded-full text-[10px] font-bold shrink-0">3</span>
+                        <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest m-0">Availability Schedule</h3>
+                    </div>
+                    
+                    <div>
+                        <div class="grid grid-cols-[1fr_1fr_1fr_auto] gap-2 px-1 mb-1">
+                            <label class="text-[10px] font-bold text-slate-500 uppercase">Day</label>
+                            <label class="text-[10px] font-bold text-slate-500 uppercase">Start Time</label>
+                            <label class="text-[10px] font-bold text-slate-500 uppercase">End Time</label>
+                            <div class="w-8"></div> </div>
+
+                        <div class="space-y-2">
+                            @foreach($availabilities as $i => $row)
+                                <div class="grid grid-cols-[1fr_1fr_1fr_auto] gap-2 items-center" wire:key="avail-{{ $i }}">
+                                    
+                                    <div>
+                                        <select wire:model="availabilities.{{ $i }}.day_of_week" class="form-input text-xs h-10 w-full">
+                                            <option value="">- Day -</option>
+                                            @foreach(['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as $day)
+                                                <option value="{{ $day }}">{{ ucfirst($day) }}</option>
+                                            @endforeach
+                                        </select>
+                                        @error("availabilities.{$i}.day_of_week") <p class="mt-0.5 text-[10px] text-red-600">{{ $message }}</p> @enderror
+                                    </div>
+
+                                    <div>
+                                        <input type="time" wire:model="availabilities.{{ $i }}.start_time" class="form-input text-xs h-10 w-full" />
+                                        @error("availabilities.{$i}.start_time") <p class="mt-0.5 text-[10px] text-red-600">{{ $message }}</p> @enderror
+                                    </div>
+
+                                    <div>
+                                        <input type="time" wire:model="availabilities.{{ $i }}.end_time" class="form-input text-xs h-10 w-full" />
+                                        @error("availabilities.{$i}.end_time") <p class="mt-0.5 text-[10px] text-red-600">{{ $message }}</p> @enderror
+                                    </div>
+
+                                    <div class="flex items-center justify-center">
+                                        @if(count($availabilities) > 1)
+                                            <button type="button" wire:click="toggleAvailabilityOff({{ $i }})" class="w-8 h-8 flex items-center justify-center rounded-lg bg-red-50 text-red-400 hover:bg-red-100 hover:text-red-600 transition">
+                                                <i class="fa-solid fa-xmark text-xs"></i>
+                                            </button>
+                                        @else
+                                            <div class="w-8"></div>
+                                        @endif
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+
+                        <button wire:click="toggleAvailabilityOn" type="button" class="mt-3 flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-800 transition">
+                            <i class="fa-solid fa-plus text-[10px]"></i> Add more days or time slots
+                        </button>
+                        @error('availabilities') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                    </div>
+                </div>
+
+            </div> {{-- Save Button --}}
+            <div class="px-8 py-5 bg-gray-50 border-t flex-shrink-0">
+                @if(!$showConfirm)
+                    <div class="flex gap-3">
+                        <button type="button" wire:click="closeModal" class="flex-1 py-3 text-xs font-bold text-gray-500 hover:bg-gray-100 rounded-xl transition">
+                            Cancel
+                        </button>
+                        <button type="button" wire:click="confirmMentor" class="flex-1 bg-red-900 text-white py-3 rounded-xl text-xs font-bold shadow-lg hover:bg-red-800 transition">
+                            Register Mentor
+                        </button>
+                    </div>
+                @else
+                    <div class="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                        <div class="flex items-start gap-3 mb-4">
+                            <i class="fa-solid fa-triangle-exclamation text-amber-500 text-lg flex-shrink-0 mt-0.5"></i>
+                            <div>
+                                <p class="text-sm font-bold text-slate-800">Confirm Mentor Registration</p>
+                                <p class="text-xs text-gray-500 mt-1">This will change their account role.</p>
+                            </div>
+                        </div>
+                        <div class="flex gap-2">
+                            <button type="button" wire:click="$set('showConfirm', false)" class="flex-1 py-2.5 text-xs font-bold text-gray-500 hover:bg-amber-100 rounded-lg transition">
+                                Cancel
+                            </button>
+                            <button type="button" wire:click="saveMentor" class="flex-1 bg-red-900 text-white py-2.5 rounded-lg text-xs font-bold hover:bg-red-800 transition" wire:loading.attr="disabled" wire:loading.class="opacity-60" wire:target="saveMentor">
+                                <span wire:loading.remove wire:target="saveMentor">Save</span>
+                                <span wire:loading wire:target="saveMentor">Saving...</span>
+                            </button>
+                        </div>
+                    </div>
+                @endif
+            </div>
+
         </div>
     </div>
     @endif
 
+    {{-- Subject Modal --}}
+    @if($showSubjectModal)
+    <div class="modal-overlay" wire:click.self="closeSubjectModal">
+        <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden">
+
+            {{-- Header --}}
+            <div class="px-8 py-5 bg-gray-50 border-b flex justify-between items-center">
+                <div>
+                    <h2 class="text-lg font-black text-slate-800">Add New Subject</h2>
+                    <p class="text-xs text-gray-400 mt-0.5">This subject will become available for mentor assignments.</p>
+                </div>
+                <button wire:click="closeSubjectModal" class="text-gray-400 hover:text-red-600 transition">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+
+            {{-- Body --}}
+            <div class="px-8 py-6 space-y-4">
+                <div>
+                    <label class="form-label">Subject Code</label>
+                    <input type="text" wire:model="newSubjectCode"
+                        placeholder="e.g. Math 54"
+                        class="form-input" />
+                    @error('newSubjectCode')
+                        <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
+                <div>
+                    <label class="form-label">Subject Name</label>
+                    <input type="text" wire:model="newSubjectName"
+                        placeholder="e.g. Elementary Analysis II"
+                        class="form-input" />
+                    @error('newSubjectName')
+                        <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
+            </div>
+
+            {{-- Save button --}}
+            <div class="px-8 py-5 bg-gray-50 border-t">
+
+                @if(!$showSubjectConfirm)
+                    <div class="flex gap-3">
+                        <button type="button" wire:click="closeSubjectModal"
+                                class="flex-1 py-3 text-xs font-bold text-gray-500 hover:bg-gray-100 rounded-xl transition">
+                            Cancel
+                        </button>
+                        <button type="button" wire:click="confirmSubject"
+                                class="flex-1 bg-red-900 text-white py-3 rounded-xl text-xs font-bold shadow-lg hover:bg-red-800 transition"
+                                wire:loading.attr="disabled" wire:loading.class="opacity-60"
+                                wire:target="confirmSubject">
+                            <span wire:loading.remove wire:target="confirmSubject">Add Subject</span>
+                            <span wire:loading wire:target="confirmSubject">Saving...</span>
+                        </button>
+                    </div>
+                @else
+                    <div class="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                        <div class="flex items-start gap-3 mb-4">
+                            <i class="fa-solid fa-triangle-exclamation text-amber-500 text-lg flex-shrink-0 mt-0.5"></i>
+                            <div>
+                                <p class="text-sm font-bold text-slate-800">Confirm New Subject</p>
+                                <p class="text-xs text-gray-500 mt-1">
+                                    This will be added to the list of available subjects.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="flex gap-2">
+                            <button type="button"
+                                    wire:click="$set('showSubjectConfirm', false)"
+                                    class="flex-1 py-2.5 text-xs font-bold text-gray-500 hover:bg-amber-100 rounded-lg transition">
+                                Cancel
+                            </button>
+                            <button type="button" wire:click="saveSubject"
+                                    class="flex-1 bg-red-900 text-white py-2.5 rounded-lg text-xs font-bold hover:bg-red-800 transition"
+                                    wire:loading.attr="disabled" wire:loading.class="opacity-60"
+                                    wire:target="saveSubject">
+                                <span wire:loading.remove wire:target="saveSubject">Save</span>
+                                <span wire:loading wire:target="saveSubject">Saving...</span>
+                            </button>
+                        </div>
+                    </div>
+                @endif
+
+            </div>
+        </div>
+    </div>
+    @endif
     @script
     <script>
         const sidebar = document.getElementById('sidebar');
