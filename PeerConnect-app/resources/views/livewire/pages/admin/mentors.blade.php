@@ -57,7 +57,7 @@ $filteredMentors = computed(function () {
             'email' => $mentor->user->email,
             'subjects' => $mentor->subjects->pluck('code')->join(', '),
         ];
-    })->toArray();
+    })->sortBy('name')->values()->toArray();
 });
 
 // Display all subjects available
@@ -73,10 +73,10 @@ $openModal = action(function () {
         'up_mail',
         'newMentor',
         'emailError',
-        'selectedSubjects',
         'availabilities',
         'showConfirm'
     ]);
+    $this->selectedSubjects = [];
     $this->availabilities = [['day_of_week' => '', 'start_time' => '', 'end_time' => '']];
     $this->showModal = true;
 });
@@ -107,10 +107,15 @@ $checkEmail = action(function () {
     $this->newMentor = null;
 
     $this->validate(['up_mail' => ['required', 'email']]);
-    $userEmail = User::where('email', $this->up_mail) -> first();
+    $userEmail = User::with('studentProfile')->where('email', $this->up_mail) -> first();
 
     if (!$userEmail) {
         $this->emailError = 'The student with this email does not exist.';
+        return;
+    }
+
+    if(!$userEmail->studentProfile || empty($userEmail->studentProfile->student_num)) {
+        $this->emailError = 'The student must complete their student profile first. Please tell the student to login to the system, then go to the booking forms to complete their student profile.';
         return;
     }
 
@@ -235,6 +240,8 @@ mount(function () {
             --sidebar-green: #1a3c2f; --header-maroon: #7b1d1d; --bg-light: #f4f7f6; 
             --header-height: 80px; --sidebar-width: 280px; --sidebar-collapsed-width: 80px;
         }
+
+        [x-cloak] { display: none !important; }
         
         body { margin: 0; font-family: 'Inter', sans-serif; background: var(--bg-light); overflow: hidden; }
         .app-wrapper { display: flex; height: 100vh; width: 100vw; overflow: hidden; }
@@ -399,18 +406,19 @@ mount(function () {
                             <input type="text" wire:model.live.debounce.300ms="search" placeholder="Search mentors..." 
                                    class="pl-11 pr-6 py-3 bg-white border border-gray-200 rounded-xl text-xs font-medium w-64 focus:outline-none focus:border-red-800 transition shadow-sm">
                         </div>
-                        <button wire:click="openSubjectModal" class="bg-slate-800 text-white px-6 py-3 rounded-xl text-xs font-bold flex items-center gap-2 hover:bg-black transition shadow-lg">
+                        
+                        <button wire:click="openSubjectModal" @click="$wire.showSubjectModal = true" class="bg-slate-800 text-white px-6 py-3 rounded-xl text-xs font-bold flex items-center gap-2 hover:bg-black transition shadow-lg">
                             <i class="fa-solid fa-book"></i> Add New Subject
                         </button>
-                        <button wire:click="openModal" class="bg-slate-800 text-white px-6 py-3 rounded-xl text-xs font-bold flex items-center gap-2 hover:bg-black transition shadow-lg">
+                        <button wire:click="openModal" @click="$wire.showModal = true" class="bg-slate-800 text-white px-6 py-3 rounded-xl text-xs font-bold flex items-center gap-2 hover:bg-black transition shadow-lg">
                             <i class="fa-solid fa-user-plus"></i> Add New Mentor
                         </button>
                     </div>
                 </div>
 
-                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                <div class="bg-[#fffffa] rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
                     <table class="w-full text-left">
-                        <thead class="bg-white border-b uppercase text-[10px] font-bold text-gray-400 tracking-widest">
+                        <thead class="bg-[#fffffa] border-b uppercase text-[10px] font-bold text-gray-400 tracking-widest">
                             <tr>
                                 <th class="px-6 py-5">Mentor Name</th>
                                 <th class="px-6 py-5">Student Number</th>
@@ -453,8 +461,7 @@ mount(function () {
     </div>
 
     {{-- Add new mentor modal form --}}
-    @if($showModal)
-    <div class="modal-overlay" wire:click.self="closeModal">
+    <div x-show="$wire.showModal" x-cloak class="modal-overlay" wire:click.self="closeModal" @click.self="$wire.showModal = false">
         <div class="bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col" style="max-height: 90vh;">
 
             {{-- Header --}}
@@ -463,7 +470,7 @@ mount(function () {
                     <h2 class="text-xl font-black text-slate-800">Register Mentor</h2>
                     <p class="text-sm text-gray-400 mt-0.5">Add their email, assign their subjects, then set their availabilities.</p>
                 </div>
-                <button wire:click="closeModal" class="text-gray-400 hover:text-red-600 transition">
+                <button wire:click="closeModal" @click="$wire.showModal = false" class="text-gray-400 hover:text-red-600 transition">
                     <i class="fa-solid fa-xmark text-xl"></i>
                 </button>
             </div>
@@ -486,7 +493,7 @@ mount(function () {
                             </div>
                             <button wire:click="checkEmail" type="button" class="px-4 py-2 bg-slate-800 text-white text-xs font-bold rounded-lg hover:bg-black transition flex-shrink-0" wire:loading.attr="disabled" wire:target="checkEmail">
                                 <span wire:loading.remove wire:target="checkEmail">Find Email</span>
-                                <span wire:loading wire:target="checkEmail">...</span>
+                                <span wire:loading wire:target="checkEmail">Verifying...</span>
                             </button>
                         </div>
 
@@ -597,46 +604,48 @@ mount(function () {
                     </div>
                 </div>
 
-            </div> {{-- Save Button --}}
+            </div> 
+            
+            {{-- Save Button --}}
             <div class="px-8 py-5 bg-gray-50 border-t flex-shrink-0">
-                @if(!$showConfirm)
-                    <div class="flex gap-3">
-                        <button type="button" wire:click="closeModal" class="flex-1 py-3 text-xs font-bold text-gray-500 hover:bg-gray-100 rounded-xl transition">
-                            Cancel
-                        </button>
-                        <button type="button" wire:click="confirmMentor" class="flex-1 bg-red-900 text-white py-3 rounded-xl text-xs font-bold shadow-lg hover:bg-red-800 transition">
-                            Register Mentor
-                        </button>
-                    </div>
-                @else
-                    <div class="bg-amber-50 border border-amber-200 rounded-xl p-4">
-                        <div class="flex items-start gap-3 mb-4">
-                            <i class="fa-solid fa-triangle-exclamation text-amber-500 text-lg flex-shrink-0 mt-0.5"></i>
-                            <div>
-                                <p class="text-sm font-bold text-slate-800">Confirm Mentor Registration</p>
-                                <p class="text-xs text-gray-500 mt-1">This will change their account role.</p>
-                            </div>
-                        </div>
-                        <div class="flex gap-2">
-                            <button type="button" wire:click="$set('showConfirm', false)" class="flex-1 py-2.5 text-xs font-bold text-gray-500 hover:bg-amber-100 rounded-lg transition">
-                                Cancel
-                            </button>
-                            <button type="button" wire:click="saveMentor" class="flex-1 bg-red-900 text-white py-2.5 rounded-lg text-xs font-bold hover:bg-red-800 transition" wire:loading.attr="disabled" wire:loading.class="opacity-60" wire:target="saveMentor">
-                                <span wire:loading.remove wire:target="saveMentor">Save</span>
-                                <span wire:loading wire:target="saveMentor">Saving...</span>
-                            </button>
-                        </div>
-                    </div>
-                @endif
+                <div class="flex gap-3">
+                    <button type="button" wire:click="closeModal" @click="$wire.showModal = false" class="flex-1 py-3 text-xs font-bold text-gray-800 bg-gray-200 hover:bg-gray-300 rounded-xl transition">
+                        Cancel
+                    </button>
+                    <button type="button" wire:click="confirmMentor" class="flex-1 bg-red-900 text-white py-3 rounded-xl text-xs font-bold shadow-lg hover:bg-red-800 transition">
+                        <span wire:loading.remove wire:target="confirmMentor">Register Mentor</span>
+                        <span wire:loading wire:target="confirmMentor">Validating...</span>
+                    </button>
+                </div>
             </div>
-
         </div>
     </div>
-    @endif
+
+    <div x-show="$wire.showConfirm" x-cloak class="modal-overlay flex items-center justify-center" style="z-index: 1100;" wire:click.self="$set('showConfirm', false)">
+        <div class="bg-white w-full max-w-sm rounded-2xl shadow-2xl p-8 text-center m-4">
+            <div class="w-16 h-16 bg-amber-100 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-5">
+                <i class="fa-solid fa-user-plus text-3xl"></i>
+            </div>
+            <h3 class="text-xl font-black text-slate-800">
+                Confirm Mentor Registration
+            </h3>
+            <p class="text-sm text-gray-500 mt-2 mb-8">
+                This will register the student as a peer mentor and will allow them access to the mentor module.
+            </p>
+            <div class="flex gap-3">
+                <button type="button" wire:click.self="$set('showConfirm', false)" class="flex-1 py-3 text-xs font-bold text-gray-800 bg-gray-200 hover:bg-gray-300 rounded-xl transition">
+                    Cancel
+                </button>
+                <button type="button" wire:click="saveMentor" class="flex-1 bg-red-900 text-white py-3 rounded-xl text-xs font-bold shadow-lg hover:bg-red-800 transition" wire:loading.attr="disabled" wire:target="saveMentor">
+                    <span wire:loading.remove wire:target="saveMentor">Save</span>
+                    <span wire:loading wire:target="saveMentor">Saving...</span>
+                </button>
+            </div>
+        </div>
+    </div>
 
     {{-- Subject Modal --}}
-    @if($showSubjectModal)
-    <div class="modal-overlay" wire:click.self="closeSubjectModal">
+    <div x-show="$wire.showSubjectModal" x-cloak class="modal-overlay" wire:click.self="closeSubjectModal" @click.self="$wire.showSubjectModal = false">
         <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden">
 
             {{-- Header --}}
@@ -645,7 +654,7 @@ mount(function () {
                     <h2 class="text-lg font-black text-slate-800">Add New Subject</h2>
                     <p class="text-xs text-gray-400 mt-0.5">This subject will become available for mentor assignments.</p>
                 </div>
-                <button wire:click="closeSubjectModal" class="text-gray-400 hover:text-red-600 transition">
+                <button wire:click="closeSubjectModal" class="text-gray-400 hover:text-red-600 transition" @click="$wire.showSubjectModal = false">
                     <i class="fa-solid fa-xmark text-xl"></i>
                 </button>
             </div>
@@ -674,53 +683,41 @@ mount(function () {
 
             {{-- Save button --}}
             <div class="px-8 py-5 bg-gray-50 border-t">
-
-                @if(!$showSubjectConfirm)
-                    <div class="flex gap-3">
-                        <button type="button" wire:click="closeSubjectModal"
-                                class="flex-1 py-3 text-xs font-bold text-gray-500 hover:bg-gray-100 rounded-xl transition">
-                            Cancel
-                        </button>
-                        <button type="button" wire:click="confirmSubject"
-                                class="flex-1 bg-red-900 text-white py-3 rounded-xl text-xs font-bold shadow-lg hover:bg-red-800 transition"
-                                wire:loading.attr="disabled" wire:loading.class="opacity-60"
-                                wire:target="confirmSubject">
-                            <span wire:loading.remove wire:target="confirmSubject">Add Subject</span>
-                            <span wire:loading wire:target="confirmSubject">Saving...</span>
-                        </button>
-                    </div>
-                @else
-                    <div class="bg-amber-50 border border-amber-200 rounded-xl p-4">
-                        <div class="flex items-start gap-3 mb-4">
-                            <i class="fa-solid fa-triangle-exclamation text-amber-500 text-lg flex-shrink-0 mt-0.5"></i>
-                            <div>
-                                <p class="text-sm font-bold text-slate-800">Confirm New Subject</p>
-                                <p class="text-xs text-gray-500 mt-1">
-                                    This will be added to the list of available subjects.
-                                </p>
-                            </div>
-                        </div>
-                        <div class="flex gap-2">
-                            <button type="button"
-                                    wire:click="$set('showSubjectConfirm', false)"
-                                    class="flex-1 py-2.5 text-xs font-bold text-gray-500 hover:bg-amber-100 rounded-lg transition">
-                                Cancel
-                            </button>
-                            <button type="button" wire:click="saveSubject"
-                                    class="flex-1 bg-red-900 text-white py-2.5 rounded-lg text-xs font-bold hover:bg-red-800 transition"
-                                    wire:loading.attr="disabled" wire:loading.class="opacity-60"
-                                    wire:target="saveSubject">
-                                <span wire:loading.remove wire:target="saveSubject">Save</span>
-                                <span wire:loading wire:target="saveSubject">Saving...</span>
-                            </button>
-                        </div>
-                    </div>
-                @endif
-
+                <div class="flex gap-3">
+                    <button type="button" wire:click="closeSubjectModal" @click="$wire.showSubjectModal = false" class="flex-1 py-3 text-xs font-bold text-gray-800 bg-gray-200 hover:bg-gray-300 rounded-xl transition">
+                        Cancel
+                    </button>
+                    <button type="button" wire:click="confirmSubject" class="flex-1 bg-red-900 text-white py-3 rounded-xl text-xs font-bold shadow-lg hover:bg-red-800 transition" wire:loading.attr="disabled" wire:loading.class="opacity-60" wire:target="confirmSubject">
+                        <span wire:loading.remove wire:target="confirmSubject">Add Subject</span>
+                        <span wire:loading wire:target="confirmSubject">Validating...</span>
+                    </button>
+                </div>
             </div>
         </div>
     </div>
-    @endif
+
+    <div x-show="$wire.showSubjectConfirm" x-cloak class="modal-overlay flex items-center justify-center" style="z-index: 1100;" wire:click.self="$set('showSubjectConfirm', false)">
+        <div class="bg-white w-full max-w-sm rounded-2xl shadow-2xl p-8 text-center m-4">
+            <div class="w-16 h-16 bg-amber-100 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-5">
+                <i class="fa-solid fa-book text-3xl"></i>
+            </div>
+            <h3 class="text-xl font-black text-slate-800">
+                Confirm New Subject
+            </h3>
+            <p class="text-sm text-gray-500 mt-2 mb-8">
+                This will be added to the list of available subjects.
+            </p>
+            <div class="flex gap-3">
+                <button type="button" wire:click.self="$set('showSubjectConfirm', false)" class="flex-1 py-3 text-xs font-bold text-gray-800 bg-gray-200 hover:bg-gray-100 rounded-xl transition">
+                    Cancel
+                </button>
+                <button type="button" wire:click="saveSubject" class="flex-1 bg-red-900 text-white py-3 rounded-xl text-xs font-bold shadow-lg hover:bg-red-800 transition" wire:loading.attr="disabled" wire:target="saveSubject">
+                    <span wire:loading.remove wire:target="saveSubject">Save</span>
+                    <span wire:loading wire:target="saveSubject">Saving...</span>
+                </button>
+            </div>
+        </div>
+    </div>
     @script
     <script>
         const sidebar = document.getElementById('sidebar');

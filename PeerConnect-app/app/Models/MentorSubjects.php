@@ -9,6 +9,7 @@ class MentorSubjects extends Model
 {
     use HasUuids;
     
+    public $timestamps = false;
     protected $table = 'mentor_subjects';
     protected $fillable = [
         'mentor_id',
