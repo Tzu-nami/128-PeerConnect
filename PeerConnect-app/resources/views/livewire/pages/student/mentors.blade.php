@@ -1,8 +1,63 @@
 <?php
 
-use function Livewire\Volt\{layout, mount};
+use function Livewire\Volt\{layout, mount, computed, uses};
+use App\Models\MentorProfiles;
+use App\Models\Subjects;
+use App\Services\Avatar;
 
 layout('layouts.app');
+
+// Filter and search mentors
+$allMentors = computed(function () {
+    $query = MentorProfiles::with([
+        'user.studentProfile.college',
+        'user.studentProfile.degreeProgram',
+        'user.studentProfile.yearLevel',
+        'subjects',
+        'availabilities',
+    ]);
+
+    return $query->get()->map(function ($mp) {
+        // Check days avaialble
+        $dayOrder = ['monday' => 1, 'tuesday' => 2, 'wednesday' => 3, 'thursday' => 4, 'friday' => 5, 'saturday' => 6];
+        $activeDays = $mp->availabilities->pluck('day_of_week')->unique()->sortBy(fn($day) => $dayOrder[strtolower($day)] ?? 99)->map(fn($day) => ucfirst(substr($day, 0, 3)))->values()->toArray();
+        // Group schedules by day
+        $schedule = $mp->availabilities
+            ->groupBy(fn($item) => strtolower($item->day_of_week))
+            ->map(fn($slots, $day) => [
+                'slots' => $slots->sortBy(fn($time)=> \Carbon\Carbon::parse($time->start_time)->timestamp)->map(fn($time) => [
+                    'start' => \Carbon\Carbon::parse($time->start_time)->format('g:i A'),
+                    'end'   => \Carbon\Carbon::parse($time->end_time)->format('g:i A'),
+                ])->values()->toArray(),
+            ])->toArray();
+
+        if (empty($schedule)) {
+            $schedule = new \stdClass();
+        }
+
+        return [
+            'id' => $mp->id,
+            'user_id' => $mp->user_id,
+            'lastName' => strtoupper($mp->user->lastName),
+            'firstName' => $mp->user->firstName,
+            'middleInitial' => $mp->user->middleInitial ? $mp->user->middleInitial . '.' : '',
+            'email' => $mp->user->email,
+            'avatar' => $mp->user->avatar ?? app(Avatar::class)->placeholder($mp->user->firstName . ' ' . $mp->user->lastName),
+            'subjects' => $mp->subjects->map(fn($s) => ['id' => $s->id, 'code' => $s->code, 'name' => $s->name])->toArray(),
+            'days' => $activeDays,
+            'schedule' => $schedule,
+            'yearLevel' => $mp->user->studentProfile->yearLevel->name,
+            'degreeProgram' => $mp->user->studentProfile->degreeProgram->name,
+            'college' => $mp->user->studentProfile->college->name,
+            'bookingUrl' => route('student.bookings', ['mentor' => $mp->user_id]),
+        ];
+    })->sortBy('lastName')->values();
+});
+
+// Get all subjects for filter
+$subjects = computed(function () {
+    return Subjects::orderBy('code')->get();
+});
 
 mount(function () {
     abort_if(!auth()->user()->isStudent(), 403, 'Unauthorized Access');
@@ -10,12 +65,8 @@ mount(function () {
 
 ?>
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LRC PeerConnect | Mentors</title>
+<div>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdn.tailwindcss.com"></script>
     <style>
         :root { 
             --sidebar-green: #1a3c2f; 
@@ -24,6 +75,10 @@ mount(function () {
             --header-height: 80px; 
             --sidebar-width: 280px;
             --sidebar-collapsed-width: 80px;
+        }
+
+        [x-cloak] {
+            display: none !important;
         }
         
         body { margin: 0; font-family: 'Inter', sans-serif; background: var(--bg-light); overflow: hidden; }
@@ -93,7 +148,7 @@ mount(function () {
 
         .main-content { flex: 1; min-width: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
         .top-header { background: var(--header-maroon); height: var(--header-height); padding: 0 40px; display: flex; align-items: center; justify-content: space-between; color: white; flex-shrink: 0; }
-        .scroll-container { flex-grow: 1; overflow-y: auto; padding: 32px; width: 100%; }
+        .scroll-container { flex-grow: 1; overflow-y: scroll; padding: 32px; width: 100%; }
 
         .profile-dropdown {
             position: absolute; top: 70px; right: 40px; background: white; border-radius: 12px;
@@ -143,10 +198,81 @@ color:#065f46;
     position: top;
     bottom: 6px;
 }
-    </style>
-</head>
 
-<body>
+.mentor-card {
+    background: #fffffa;
+    border: 1.5px solid #e5e7eb;
+    border-radius: 16px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+
+.mentor-card:hover {
+    border-color: #1a3c2f;
+    box-shadow: 0 8px 24px #1e313d;
+    transform: translateY(-3px);
+}
+
+.day-pill {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 700;
+    background: #f1f5f9;
+    color: #475569;
+}
+
+.modal-overlay {
+    position: fixed; 
+    inset: 0; 
+    background: #00000080; 
+    backdrop-filter: blur(4px); 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    z-index: 1000; 
+    padding: 24px;
+    backdrop-filter: blur(4px);
+}
+
+.avail-grid { 
+    display: grid; 
+    grid-template-columns: repeat(6, 1fr); 
+    gap: 4px; 
+}
+.avail-day-header { 
+    font-size: 9px; 
+    font-weight: 800; 
+    text-align: center; 
+    color: #94a3b8; 
+    text-transform: uppercase; 
+    padding-bottom: 4px; 
+}
+.avail-day-col { 
+    display: flex; 
+    flex-direction: column; 
+    gap: 3px; 
+}
+.avail-slot { 
+    background: #d1fae5; 
+    color: #065f46; 
+    font-size: 9px; 
+    font-weight: 700; 
+    padding: 3px 4px; 
+    border-radius: 4px; 
+    text-align: center; 
+    line-height: 1.3; 
+}
+.avail-empty { 
+    background: #f8fafc; 
+    border: 1px dashed #e2e8f0; 
+    border-radius: 4px; 
+    height: 28px; 
+}
+    </style>
     <div class="app-wrapper">
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-logo-container">
@@ -208,7 +334,7 @@ color:#065f46;
                 </div>
             </header>
 
-            <main class="scroll-container">
+            <main class="scroll-container" x-data="mentorDirectory(@js($this->allMentors))">
                 <div class="mb-6 flex flex-wrap items-start justify-between gap-4">
                     <div>
                         <h1 class="text-2xl font-black text-slate-800">Our Peer Mentors</h1>
@@ -217,248 +343,189 @@ color:#065f46;
                     <div class="flex gap-2 flex-wrap">
                         <div class="relative">
                             <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-300 text-xs"></i>
-                            <input id="mentorSearch" type="text" placeholder="Search mentors..."
-                                   class="pl-8 pr-3 py-2 text-xs border border-gray-200 rounded-lg bg-white outline-none focus:ring-1 focus:ring-red-800 w-48">
+                            <input type="text" x-model="searchQuery" @input="currentPage = 1"  placeholder="Search mentors..."
+                                   class="pl-8 pr-3 py-2 text-xs border border-gray-200 rounded-lg bg-[#fffffa] outline-none focus:ring-1 focus:ring-red-800 w-64">
                         </div>
-                        <select id="subjectFilter" class="bg-white border border-gray-200 rounded-lg px-8 py-2 text-xs text-slate-600 outline-none cursor-pointer">
+                        <select x-model="selectedDay" @change="currentPage = 1" class="border border-gray-200 rounded-lg px-8 py-2 text-xs text-slate-600 outline-none cursor-pointer focus:ring-1 focus:ring-red-800 bg-[#fffffa]">
+                            <option value="">Any Day</option>
+                            <option value="Mon">Monday</option>
+                            <option value="Tue">Tuesday</option>
+                            <option value="Wed">Wednesday</option>
+                            <option value="Thu">Thursday</option>
+                            <option value="Fri">Friday</option>
+                            <option value="Sat">Saturday</option>
+                        </select>
+                        <select x-model="selectedSubject" @change="currentPage = 1" class="border border-gray-200 rounded-lg px-8 py-2 text-xs text-slate-600 outline-none cursor-pointer focus:ring-1 focus:ring-red-800 bg-[#fffffa]">
                             <option value="">All Subjects</option>
-                            <option value="CMSC 11">CMSC 11</option>
-                            <option value="CMSC 123">CMSC 123</option>
-                            <option value="CMSC 128">CMSC 128</option>
-                            <option value="Math 54">Math 54</option>
-                            <option value="Math 53">Math 53</option>
-                            <option value="Phys 101">Phys 101</option>
-                            <option value="Phys 102">Phys 102</option>
+                            @foreach($this->subjects as $subject)
+                            <option value="{{ $subject->id }}">{{ $subject->code }}</option>
+                            @endforeach
                         </select>
                     </div>
-
                 </div>
 
-                <p class="text-xs text-gray-400 mb-4 font-medium" id="mentorCount">8 mentors found</p>
+                <p class="text-xs text-gray-400 mb-4 font-medium" x-text="filteredMentors.length + ' mentor' + (filteredMentors.length !==1 ? 's' : '') + ' found'"></p>
 
-                <div id="mentorGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-
-                    <div class="mentor-card" data-name="daniel dyoco" data-subjects="CMSC 11 CMSC 123 Math 53">
-                        <div class="p-5 flex items-center gap-4 border-b border-gray-50">
-                            <div class="w-12 h-12 rounded-xl bg-emerald-800 text-white flex items-center justify-center text-sm font-black flex-shrink-0">DD</div>
-                            <div class="min-w-0">
-                                <p class="font-bold text-slate-800 text-sm truncate">Daniel Dyoco</p>
-                                <p class="text-[11px] text-gray-400 truncate">d.dyoco@up.edu.ph</p>
-                            </div>
-                        </div>
-                        <div class="px-5 pt-4">
-                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Subjects</p>
-                            <div class="flex flex-wrap gap-1.5">
-                                <span class="subject-pill">CMSC 11</span>
-                                <span class="subject-pill">CMSC 123</span>
-                                <span class="subject-pill">Math 53</span>
-                            </div>
-                        </div>
-                        <div class="px-5 py-4">
-                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Available Days</p>
-                            <div class="flex flex-wrap gap-1">
-                                <span class="day-pill">Mon</span><span class="day-pill">Wed</span><span class="day-pill">Fri</span>
-                            </div>
-                        </div>
-                        <div class="px-5 pb-5">
-                            <a href="{{ route('student.bookings') }}" class="block w-full text-center bg-[#1a3c2f] hover:bg-[#122b21] text-white text-xs font-bold py-2.5 rounded-lg transition">Book a Session</a>
-                        </div>
-                    </div>
-
-                    <div class="mentor-card" data-name="rhona shayne lopez" data-subjects="Math 54 Math 53 CMSC 11">
-                        <div class="p-5 flex items-center gap-4 border-b border-gray-50">
-                            <div class="w-12 h-12 rounded-xl bg-teal-800 text-white flex items-center justify-center text-sm font-black flex-shrink-0">RL</div>
-                            <div class="min-w-0">
-                                <p class="font-bold text-slate-800 text-sm truncate">Rhona Shayne Lopez</p>
-                                <p class="text-[11px] text-gray-400 truncate">rs.lopez@up.edu.ph</p>
-                            </div>
-                        </div>
-                        <div class="px-5 pt-4">
-                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Subjects</p>
-                            <div class="flex flex-wrap gap-1.5">
-                                <span class="subject-pill">Math 54</span>
-                                <span class="subject-pill">Math 53</span>
-                                <span class="subject-pill">CMSC 11</span>
-                            </div>
-                        </div>
-                        <div class="px-5 py-4">
-                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Available Days</p>
-                            <div class="flex flex-wrap gap-1">
-                                <span class="day-pill">Tue</span><span class="day-pill">Thu</span>
-                            </div>
-                        </div>
-                        <div class="px-5 pb-5">
-                            <a href="{{ route('student.bookings') }}" class="block w-full text-center bg-[#1a3c2f] hover:bg-[#122b21] text-white text-xs font-bold py-2.5 rounded-lg transition">Book a Session</a>
-                        </div>
-                    </div>
-
-                    <div class="mentor-card" data-name="chezka sinco" data-subjects="CMSC 123 CMSC 128 Phys 101">
-                        <div class="p-5 flex items-center gap-4 border-b border-gray-50">
-                            <div class="w-12 h-12 rounded-xl bg-cyan-800 text-white flex items-center justify-center text-sm font-black flex-shrink-0">CMSC</div>
-                            <div class="min-w-0">
-                                <p class="font-bold text-slate-800 text-sm truncate">Chezka Sinco</p>
-                                <p class="text-[11px] text-gray-400 truncate">c.sinco@up.edu.ph</p>
-                            </div>
-                        </div>
-                        <div class="px-5 pt-4">
-                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Subjects</p>
-                            <div class="flex flex-wrap gap-1.5">
-                                <span class="subject-pill">CMSC 123</span>
-                                <span class="subject-pill">CMSC 128</span>
-                                <span class="subject-pill">Phys 101</span>
-                            </div>
-                        </div>
-                        <div class="px-5 py-4">
-                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Available Days</p>
-                            <div class="flex flex-wrap gap-1">
-                                <span class="day-pill">Mon</span><span class="day-pill">Wed</span><span class="day-pill">Sat</span>
-                            </div>
-                        </div>
-                        <div class="px-5 pb-5">
-                            <a href="{{ route('student.bookings') }}" class="block w-full text-center bg-[#1a3c2f] hover:bg-[#122b21] text-white text-xs font-bold py-2.5 rounded-lg transition">Book a Session</a>
-                        </div>
-                    </div>
-
-                    <div class="mentor-card" data-name="arielle mae solis" data-subjects="Phys 101 Phys 102 Math 54">
-                        <div class="p-5 flex items-center gap-4 border-b border-gray-50">
-                            <div class="w-12 h-12 rounded-xl bg-indigo-800 text-white flex items-center justify-center text-sm font-black flex-shrink-0">AS</div>
-                            <div class="min-w-0">
-                                <p class="font-bold text-slate-800 text-sm truncate">Arielle Mae Solis</p>
-                                <p class="text-[11px] text-gray-400 truncate">am.solis@up.edu.ph</p>
-                            </div>
-                        </div>
-                        <div class="px-5 pt-4">
-                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Subjects</p>
-                            <div class="flex flex-wrap gap-1.5">
-                                <span class="subject-pill">Phys 101</span>
-                                <span class="subject-pill">Phys 102</span>
-                                <span class="subject-pill">Math 54</span>
-                            </div>
-                        </div>
-                        <div class="px-5 py-4">
-                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Available Days</p>
-                            <div class="flex flex-wrap gap-1">
-                                <span class="day-pill">Tue</span><span class="day-pill">Thu</span><span class="day-pill">Fri</span>
-                            </div>
-                        </div>
-                        <div class="px-5 pb-5">
-                            <a href="{{ route('student.bookings') }}" class="block w-full text-center bg-[#1a3c2f] hover:bg-[#122b21] text-white text-xs font-bold py-2.5 rounded-lg transition">Book a Session</a>
-                        </div>
-                    </div>
-
-                    <div class="mentor-card" data-name="axl conchada" data-subjects="CMSC 128 CMSC 123">
-                        <div class="p-5 flex items-center gap-4 border-b border-gray-50">
-                            <div class="w-12 h-12 rounded-xl bg-violet-800 text-white flex items-center justify-center text-sm font-black flex-shrink-0">AC</div>
-                            <div class="min-w-0">
-                                <p class="font-bold text-slate-800 text-sm truncate">Ax'l Conchada</p>
-                                <p class="text-[11px] text-gray-400 truncate">a.conchada@up.edu.ph</p>
-                            </div>
-                        </div>
-                        <div class="px-5 pt-4">
-                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Subjects</p>
-                            <div class="flex flex-wrap gap-1.5">
-                                <span class="subject-pill">CMSC 128</span>
-                                <span class="subject-pill">CMSC 123</span>
-                            </div>
-                        </div>
-                        <div class="px-5 py-4">
-                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Available Days</p>
-                            <div class="flex flex-wrap gap-1">
-                                <span class="day-pill">Mon</span><span class="day-pill">Fri</span>
-                            </div>
-                        </div>
-                        <div class="px-5 pb-5">
-                            <a href="{{ route('student.bookings') }}" class="block w-full text-center bg-[#1a3c2f] hover:bg-[#122b21] text-white text-xs font-bold py-2.5 rounded-lg transition">Book a Session</a>
-                        </div>
-                    </div>
-
-                    <div class="mentor-card" data-name="juan dela cruz" data-subjects="Math 54 Phys 102">
-                        <div class="p-5 flex items-center gap-4 border-b border-gray-50">
-                            <div class="w-12 h-12 rounded-xl bg-rose-800 text-white flex items-center justify-center text-sm font-black flex-shrink-0">JD</div>
-                            <div class="min-w-0">
-                                <p class="font-bold text-slate-800 text-sm truncate">Juan Dela Cruz</p>
-                                <p class="text-[11px] text-gray-400 truncate">j.delacruz@up.edu.ph</p>
-                            </div>
-                        </div>
-                        <div class="px-5 pt-4">
-                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Subjects</p>
-                            <div class="flex flex-wrap gap-1.5">
-                                <span class="subject-pill">Math 54</span>
-                                <span class="subject-pill">Phys 102</span>
-                            </div>
-                        </div>
-                        <div class="px-5 py-4">
-                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Available Days</p>
-                            <div class="flex flex-wrap gap-1">
-                                <span class="day-pill">Wed</span><span class="day-pill">Thu</span>
-                            </div>
-                        </div>
-                        <div class="px-5 pb-5">
-                            <a href="{{ route('student.bookings') }}" class="block w-full text-center bg-[#1a3c2f] hover:bg-[#122b21] text-white text-xs font-bold py-2.5 rounded-lg transition">Book a Session</a>
-                        </div>
-                    </div>
-
-                    <div class="mentor-card" data-name="maria santos" data-subjects="CMSC 11 Phys 101">
-                        <div class="p-5 flex items-center gap-4 border-b border-gray-50">
-                            <div class="w-12 h-12 rounded-xl bg-emerald-700 text-white flex items-center justify-center text-sm font-black flex-shrink-0">MS</div>
-                            <div class="min-w-0">
-                                <p class="font-bold text-slate-800 text-sm truncate">Maria Santos</p>
-                                <p class="text-[11px] text-gray-400 truncate">m.santos@up.edu.ph</p>
-                            </div>
-                        </div>
-                        <div class="px-5 pt-4">
-                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Subjects</p>
-                            <div class="flex flex-wrap gap-1.5">
-                                <span class="subject-pill">CMSC 11</span>
-                                <span class="subject-pill">Phys 101</span>
-                            </div>
-                        </div>
-                        <div class="px-5 py-4">
-                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Available Days</p>
-                            <div class="flex flex-wrap gap-1">
-                                <span class="day-pill">Mon</span><span class="day-pill">Tue</span><span class="day-pill">Thu</span>
-                            </div>
-                        </div>
-                        <div class="px-5 pb-5">
-                            <a href="{{ route('student.bookings') }}" class="block w-full text-center bg-[#1a3c2f] hover:bg-[#122b21] text-white text-xs font-bold py-2.5 rounded-lg transition">Book a Session</a>
-                        </div>
-                    </div>
-
-                    <div class="mentor-card" data-name="kevin reyes" data-subjects="CMSC 128 Math 53 CMSC 11">
-                        <div class="p-5 flex items-center gap-4 border-b border-gray-50">
-                            <div class="w-12 h-12 rounded-xl bg-teal-700 text-white flex items-center justify-center text-sm font-black flex-shrink-0">KR</div>
-                            <div class="min-w-0">
-                                <p class="font-bold text-slate-800 text-sm truncate">Kevin Reyes</p>
-                                <p class="text-[11px] text-gray-400 truncate">k.reyes@up.edu.ph</p>
-                            </div>
-                        </div>
-                        <div class="px-5 pt-4">
-                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Subjects</p>
-                            <div class="flex flex-wrap gap-1.5">
-                                <span class="subject-pill">CMSC 128</span>
-                                <span class="subject-pill">Math 53</span>
-                                <span class="subject-pill">CMSC 11</span>
-                            </div>
-                        </div>
-                        <div class="px-5 py-4">
-                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Available Days</p>
-                            <div class="flex flex-wrap gap-1">
-                                <span class="day-pill">Tue</span><span class="day-pill">Wed</span><span class="day-pill">Fri</span>
-                            </div>
-                        </div>
-                        <div class="px-5 pb-5">
-                            <a href="{{ route('student.bookings') }}" class="block w-full text-center bg-[#1a3c2f] hover:bg-[#122b21] text-white text-xs font-bold py-2.5 rounded-lg transition">Book a Session</a>
-                        </div>
-                    </div>
-
+                <div x-show="filteredMentors.length === 0" x-cloak class="bg-[#fffffa] rounded-xl border border-gray-100 py-20 text-center shadow-sm">
+                    <i class="fa-solid fa-chalkboard-user text-4xl mb-4 block"></i>
+                    <p class="font-medium">No mentors found.</p>
+                    <p class="text-xs mt-1">Try adjusting your search or filter.</p>
                 </div>
 
-                <div id="mentorEmpty" class="hidden bg-white rounded-xl border border-gray-100 py-20 text-center">
-                    <i class="fa-solid fa-chalkboard-user text-4xl text-gray-200 mb-4 block"></i>
-                    <p class="text-gray-400 font-medium">No mentors found.</p>
-                    <p class="text-gray-300 text-xs mt-1">Try adjusting your search or filter.</p>
+                {{-- Display the mentors --}}
+                <div x-show="filteredMentors.length > 0" x-cloak class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6 max-w-7xl mx-auto">
+                    <template x-for="mentor in paginatedMentors" :key="mentor.id">
+
+                        <div class="mentor-card group flex flex-col h-full" @click="openModal(mentor)">
+
+                            <div class="p-5 flex gap-5 border-b border-gray-100 bg-[#fffffa]">
+                                <div class="w-28 h-28 aspect-square rounded-2xl overflow-hidden flex-shrink-0 bg-gray-100 border border-gray-200 shadow-inner">
+                                    <img :src="mentor.avatar" :alt="mentor.lastName" class="w-full h-full object-cover bg-white" />
+                                </div>
+                                <div class="flex-1 flex flex-col min-w-0 pr-1">
+                                    <p class="font-black text-slate-800 text-2xl sm:text-3xl leading-none uppercase tracking-tighter truncate" x-text="mentor.lastName"></p>
+                                    <p class="font-bold text-slate-600 text-l leading-tight mt-0.5 truncate" x-text="mentor.firstName + ' ' + mentor.middleInitial"></p>
+                                    <p class="font-bold text-slate-400 text-xs leading-tight mt-1 truncate" x-text="mentor.email"></p>
+                                    <template x-if="mentor.yearLevel && mentor.degreeProgram">
+                                        <p class="text-gray-400 text-[10px] mt-2 leading-tight line-clamp-3" x-html="mentor.yearLevel + '<br>' + mentor.degreeProgram"></p>
+                                    </template>
+                                </div>
+                            </div>
+
+                            {{-- Subjects taught --}}
+                            <div class="px-5 pb-2 pt-2 flex-1">
+                                <p class="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Subjects</p>
+                                <div class="flex flex-wrap gap-1">
+                                    <template x-for="subject in mentor.subjects.slice(0, 6)" :key="subject.id">
+                                        <span class="bg-red-50 text-red-700 border border-red-100 px-2 py-0.5 rounded text-[10px] font-bold" x-text="subject.code"></span>
+                                    </template>
+                                    <template x-if="mentor.subjects.length > 6">
+                                        <span class="bg-red-50 text-gray-500 border border-red-100 px-2 py-0.5 rounded text-[10px] font-bold" x-text="'+' + (mentor.subjects.length - 6)"></span>
+                                    </template>
+                                </div>
+                            </div>
+
+                            {{-- Days and view more --}}
+                            <div class="px-5 pb-2 pt-2 pb-6 mt-auto flex justify-between items-end border-t border-gray-50 bg-white group-hover:bg-gray-50/50 transition-colors duration-300">
+                                <div class="flex-1 pr-3">
+                                    <p class="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Available Days</p>
+                                    <div class="flex flex-wrap gap-1.5">
+                                        <template x-for="day in mentor.days">
+                                            <span class="day-pill" x-text="day"></span>
+                                        </template>
+                                        <template x-if="mentor.days.length === 0">
+                                            <span class="text-[10px] text-gray-400 italic">None</span>
+                                        </template>
+                                    </div>
+                                </div>
+
+                                <div class="flex-shrink-0 mb-0.5">
+                                    <span class="text-[12px] font-bold text-slate-400 group-hover:text-[#1a3c2f] transition-colors duration-300 flex items-center gap-1 tracking-widest whitespace-nowrap">View Profile <i class="fa-solid fa-chevron-right text-[10px] transition-transform duration-300 group-hover:translate-x-1"></i></span>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
                 </div>
-            </main>
+
+                {{-- Pagination --}}
+                <div class="mt-8 flex justify-center items-center gap-2" x-show="totalPages > 1" x-cloak>
+                    <button @click="currentPage--" :disabled="currentPage === 1" class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-slate-500 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition">
+                        <i class="fa-solid fa-chevron-left text-[10px]"></i>
+                    </button>
+                    <template x-for="page in pages" :key="page">
+                        <button @click="currentPage = page" :class="currentPage === page ? 'bg-[#1a3c2f] text-white shadow-sm' : 'bg-white border border-gray-200 text-slate-500 hover:bg-gray-100'" class="w-8 h-8 text-xs font-bold rounded-lg transition" x-text="page"></button>
+                    </template>
+                    <button @click="currentPage++" :disabled="currentPage === totalPages" class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-slate-500 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition">
+                        <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                    </button>
+                </div>
+
+                <template x-teleport="body">
+                    <div class="modal-overlay" x-show="showModal" @click.self="showModal = false" x-cloak>
+                        <div class="bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col" style="max-height: 90vh;">
+
+                            <template x-if="selectedMentor">
+                                <div class="contents">
+                                    {{-- Modal Header --}}
+                                    <div class="flex-shrink-0 flex items-start gap-5 p-6 bg-[#1a3c2f]">
+                                        <div class="w-36 h-36 rounded-2xl overflow-hidden flex-shrink-0 border-2 border-white/20 shadow-lg bg-gray-200">
+                                            <img :src="selectedMentor.avatar" alt="selectedMentor.lastName" class="w-full h-full object-cover bg-white" />
+                                        </div>
+
+                                    <div class="flex-1 min-w-0 pt-1">
+                                    <p class="text-white font-black text-2xl leading-tight tracking-tight" x-text="selectedMentor.lastName + ', ' + selectedMentor.firstName + ' ' + selectedMentor.middleInitial">
+                                    </p>
+
+                                    <template x-if="selectedMentor.yearLevel && selectedMentor.degreeProgram">
+                                        <p class="text-white/60 text-xs mt-1" x-text="selectedMentor.yearLevel + ' &mdash; ' + selectedMentor.degreeProgram"></p>
+                                    </template>
+                                    <template x-if="selectedMentor.college">
+                                        <p class="text-white/60 text-xs mt-1" x-text="selectedMentor.college"></p>
+                                    </template>
+                                        <p class="text-white/60 text-xs mt-1" x-text="selectedMentor.email"></p>
+                                </div>
+
+                                <button @click="showModal = false" class="text-white/50 hover:text-white transition flex-shrink-0 mt-1">
+                                    <i class="fa-solid fa-xmark text-xl"></i>
+                                </button>
+                            </div>
+
+                            {{-- Modal Body --}}
+                            <div class="overflow-y-auto flex-1 p-6 space-y-6 bg-[#fffffa]">
+                                <div>
+                                    <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Teachable Subjects</p>
+                                    <div class="flex flex-wrap gap-2">
+                                        <template x-for="subject in selectedMentor.subjects" :key="subject.id">
+                                            <div class="flex flex-col items-start">
+                                                <span class="bg-red-50 text-red-700 border border-red-100 text-xs px-3 py-1 rounded font-bold" x-text="subject.code"></span>
+                                            </div>
+                                        </template>
+                                        <template x-if="selectedMentor.subjects.length === 0">
+                                            <p class="text-xs text-gray-400">No subjects listed.</p>
+                                        </template>
+                                    </div>
+                                </div>
+
+                                {{-- Availability Calendar --}}
+                                <div>
+                                    <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Weekly Availability</p>
+
+                                    <div class="avail-grid">
+                                        <template x-for="day in weekDays" :key="day">
+                                            <div>
+                                                <div class="avail-day-header" x-text="day.charAt(0).toUpperCase() + day.slice(1,3)"></div>
+                                                <div class="avail-day-col">
+                                                    <template x-if="selectedMentor.schedule[day]">
+                                                        <template x-for="(slot, index) in selectedMentor.schedule[day].slots" :key="index">                                                            <div class="avail-slot" x-html="slot.start + '<br>' + slot.end"></div>
+                                                        </template>
+                                                    </template>
+                                                    <template x-if="!selectedMentor.schedule[day]">
+                                                        <div class="avail-empty"></div>
+                                                    </template>
+                                                </div>
+                                            </div>
+                                        </template>
+                                    </div>
+
+                                    <p class="text-[12px] mt-3 flex items-center justify-center gap-4">
+                                        <span><span class="inline-block w-3 h-3 rounded bg-[#d1fae5] mr-1 align-middle"></span> Available</span>
+                                        <span><span class="inline-block w-3 h-3 rounded border border-dashed border-gray-200 bg-[#f8fafc] mr-1 align-middle"></span> Unavailable</span>
+                                    </p>
+                                </div>
+
+                            </div>
+
+                            <div class="flex-shrink-0 px-6 py-4 bg-gray-50 border-t border-gray-100">
+                                <a :href="selectedMentor.bookingUrl" class="block w-full text-center bg-[#1a3c2f] hover:bg-[#2d5c47] text-white text-sm font-bold py-3 rounded-xl transition shadow-sm">
+                                    <i class="fa-solid fa-calendar-check mr-2"></i> Book a Session
+                                </a>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </template>
+        </main>
         </div>
     </div>
 
@@ -470,28 +537,52 @@ color:#065f46;
         profileTrigger.addEventListener('click', (e) => { e.stopPropagation(); profileDropdown.classList.toggle('show'); });
         window.addEventListener('click', () => profileDropdown.classList.remove('show'));
 
-        function filterMentors() {
-            const search = document.getElementById('mentorSearch').value.toLowerCase();
-            const subject = document.getElementById('subjectFilter').value;
-            const cards = document.querySelectorAll('.mentor-card');
-            let visible = 0;
+        // Data handling script
+        document.addEventListener('alpine:init', () => {
+            Alpine.data('mentorDirectory', (initialMentors) => ({
+                mentors: initialMentors,
+                searchQuery: '',
+                selectedSubject: '',
+                selectedDay: '',
+                currentPage: 1,
+                perPage: 6,
+                showModal: false,
+                selectedMentor: null,
+                weekDays: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'],
 
-            cards.forEach(card => {
-                const name = card.dataset.name || '';
-                const subjects = card.dataset.subjects || '';
-                const matchSearch = !search || name.includes(search);
-                const matchSubject = !subject || subjects.includes(subject);
-                const show = matchSearch && matchSubject;
-                card.style.display = show ? '' : 'none';
-                if (show) visible++;
-            });
+                get filteredMentors() {
+                    return this.mentors.filter(mentor => {
+                        const searchString = this.searchQuery.toLowerCase();
+                        const fullName = (mentor.firstName + ' ' + mentor.lastName).toLowerCase();
+                        const matchesSearch = searchString === '' || fullName.includes(searchString);
+                        const matchesSub = this.selectedSubject === '' || mentor.subjects.some(sub=> sub.id == this.selectedSubject);
+                        const matchesDay = this.selectedDay === '' || mentor.days.includes(this.selectedDay);
 
-            document.getElementById('mentorCount').innerText = `${visible} mentor${visible !== 1 ? 's' : ''} found`;
-            document.getElementById('mentorEmpty').classList.toggle('hidden', visible > 0);
-            document.getElementById('mentorGrid').classList.toggle('hidden', visible === 0);
-        }
+                        return matchesSearch && matchesSub && matchesDay;
+                    });
+                },
 
-        document.getElementById('mentorSearch').addEventListener('input', filterMentors);
-        document.getElementById('subjectFilter').addEventListener('change', filterMentors);
+                get paginatedMentors() {
+                    const start = (this.currentPage - 1) * this.perPage;
+                    const end = start + this.perPage;
+                    return this.filteredMentors.slice(start, end);
+                },
+
+                get totalPages() {
+                    return Math.ceil(this.filteredMentors.length / this.perPage);
+                },
+
+                get pages() {
+                    return Array.from({
+                        length: this.totalPages
+                    }, (_, i) => i + 1);
+                },
+
+                openModal(mentor) {
+                    this.selectedMentor = mentor;
+                    this.showModal = true;
+                }
+            }));
+        });
     </script>
-</body>
+</div>

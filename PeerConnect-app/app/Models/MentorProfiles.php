@@ -30,4 +30,9 @@ class MentorProfiles extends Model
             'subject_id',
         );
     }
+
+    public function availabilities()
+    {
+        return $this->hasMany(MentorAvailabilities::class, 'mentor_id');
+    }
 }
