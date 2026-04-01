@@ -35,4 +35,10 @@ return [
         ],
     ],
 
+    'supabase' => [
+        'url' => env('SUPABASE_URL'),
+        'key' => env('SUPABASE_KEY'),
+        'storage_url' => env('SUPABASE_STORAGE_URL'),
+    ]
+
 ];
