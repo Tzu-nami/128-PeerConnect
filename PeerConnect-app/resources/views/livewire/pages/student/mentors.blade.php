@@ -43,7 +43,7 @@ $allMentors = computed(function () {
             'middleInitial' => $mp->user->middleInitial ? $mp->user->middleInitial . '.' : '',
             'email' => $mp->user->email,
             'avatar' => $mp->user->avatar ?? app(Avatar::class)->placeholder($mp->user->firstName . ' ' . $mp->user->lastName),
-            'subjects' => $mp->subjects->map(fn($s) => ['id' => $s->id, 'code' => $s->code, 'name' => $s->name])->toArray(),
+            'subjects' => $mp->subjects->unique('id')->map(fn($s) => ['id' => $s->id, 'code' => $s->code, 'name' => $s->name])->sortBy('code')->values()->toArray(),
             'days' => $activeDays,
             'schedule' => $schedule,
             'yearLevel' => $mp->user->studentProfile->yearLevel->name,
@@ -396,7 +396,7 @@ color:#065f46;
                             <div class="px-5 pb-2 pt-2 flex-1">
                                 <p class="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Subjects</p>
                                 <div class="flex flex-wrap gap-1">
-                                    <template x-for="subject in mentor.subjects.slice(0, 6)" :key="subject.id">
+                                    <template x-for="(subject, index) in mentor.subjects.slice(0, 6)" :key="index">
                                         <span class="bg-red-50 text-red-700 border border-red-100 px-2 py-0.5 rounded text-[10px] font-bold" x-text="subject.code"></span>
                                     </template>
                                     <template x-if="mentor.subjects.length > 6">
@@ -475,7 +475,7 @@ color:#065f46;
                                 <div>
                                     <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Teachable Subjects</p>
                                     <div class="flex flex-wrap gap-2">
-                                        <template x-for="subject in selectedMentor.subjects" :key="subject.id">
+                                        <template x-for="(subject, index) in selectedMentor.subjects" :key="index">
                                             <div class="flex flex-col items-start">
                                                 <span class="bg-red-50 text-red-700 border border-red-100 text-xs px-3 py-1 rounded font-bold" x-text="subject.code"></span>
                                             </div>
