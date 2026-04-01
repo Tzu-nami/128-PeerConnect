@@ -406,7 +406,7 @@ color:#065f46;
                             </div>
 
                             {{-- Days and view more --}}
-                            <div class="px-5 pb-2 pt-2 pb-6 mt-auto flex justify-between items-end border-t border-gray-50 bg-white group-hover:bg-gray-50/50 transition-colors duration-300">
+                            <div class="px-5 pb-2 pt-2 pb-6 mt-auto flex justify-between items-end border-t border-gray-50 bg-[#fffffa] group-hover:bg-gray-50/50 transition-colors duration-300">
                                 <div class="flex-1 pr-3">
                                     <p class="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Available Days</p>
                                     <div class="flex flex-wrap gap-1.5">
