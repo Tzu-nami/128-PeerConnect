@@ -603,9 +603,9 @@ mount(function () {
                     </div>
                 </div>
 
-                <div class="bg-[#fffffa] rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                    <table class="w-full text-left table-fixed">
-                        <thead class="bg-[#fffffa] border-b uppercase text-[10px] font-bold text-gray-400 tracking-widest">
+<div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+    <table class="w-full text-left table-fixed">
+        <thead class="bg-white border-b uppercase text-[10px] font-bold text-gray-400 tracking-widest">
                             <tr>
                                 <th class="px-6 py-5">Mentor Name</th>
                                 <th class="px-6 py-5">Student Number</th>

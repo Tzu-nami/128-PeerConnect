@@ -294,17 +294,21 @@ mount(function () {
 </header>
 
             <main class="scroll-container">
-                <div class="main-search-container mb-8">
-            <div class="main-search-wrapper flex-1">
-                <i class="fa-solid fa-magnifying-glass"></i>
-                <input type="text" id="mainDashboardSearch" placeholder="Search for mentors, students, or specific session dates..." class="main-search-input">
-            </div>
-            <div class="ml-4 flex gap-2">
-                <button class="px-4 py-2 bg-white text-gray-600 rounded-lg text-xs font-bold hover:bg-gray-50 border border-gray-200 transition-all">
-                    <i class="fa-solid fa-filter mr-2"></i>Advanced Filter
-                </button>
-            </div>
-        </div>
+<div class="main-search-container mb-8" style="position: relative;">
+    <div class="main-search-wrapper flex-1" style="position: relative;">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <input type="text" id="mainDashboardSearch" placeholder="Search mentors, sessions, subjects, status..." class="main-search-input" autocomplete="off">
+    </div>
+    <div class="ml-4 flex gap-2">
+        <button class="px-4 py-2 bg-white text-gray-600 rounded-lg text-xs font-bold hover:bg-gray-50 border border-gray-200 transition-all">
+            <i class="fa-solid fa-filter mr-2"></i>Advanced Filter
+        </button>
+    </div>
+
+    {{-- Global Search Results Dropdown --}}
+    <div id="globalSearchResults" class="hidden absolute left-0 right-0 bg-white rounded-xl shadow-xl border border-gray-100 z-50 overflow-hidden" style="top: calc(100% + 6px);">
+    </div>
+</div>
 
  <div class="grid grid-cols-5 gap-4 mb-8">
   <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-green-600 flex items-center gap-4">
@@ -631,33 +635,38 @@ updateDate();
         }
 
         // Table Logic
-        function applyFilters() {
-            const tbody = document.getElementById('tableBody');
-            const searchTerm = searchInput.value.toLowerCase();
-            const selectedStatus = statusFilter.value;
+function applyFilters() {
+    const tbody = document.getElementById('tableBody');
+    const searchTerm = searchInput.value.toLowerCase();
+    const selectedStatus = statusFilter.value;
+    const isSearching = searchTerm.length > 0;
 
-            const filtered = allSessions.filter(item => {
-                const matchesDate = item.date === selectedDateStr;
-                const matchesSearch = item.mentor.toLowerCase().includes(searchTerm) ||
-                                      item.mentee.toLowerCase().includes(searchTerm);
-                const matchesStatus = selectedStatus === 'All' || item.status === selectedStatus;
-                return matchesDate && matchesSearch && matchesStatus;
-            });
+    const filtered = allSessions.filter(item => {
+        // If there's a search term, search across ALL dates
+        // Otherwise, filter by selected calendar date as usual
+        const matchesDate = isSearching ? true : item.date === selectedDateStr;
+        const matchesSearch = item.mentor.toLowerCase().includes(searchTerm) ||
+                              item.mentee.toLowerCase().includes(searchTerm) ||
+                              item.date.includes(searchTerm) ||
+                              item.status.toLowerCase().includes(searchTerm);
+        const matchesStatus = selectedStatus === 'All' || item.status === selectedStatus;
+        return matchesDate && matchesSearch && matchesStatus;
+    });
 
-            if (filtered.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="4" class="py-12 text-center text-gray-400 italic">No matching sessions found.</td></tr>`;
-            } else {
-                tbody.innerHTML = filtered.map(row => `
-                    <tr class="border-b last:border-0 hover:bg-slate-50 transition">
-                        <td class="py-4 font-bold text-slate-700">${row.mentor}</td>
-                        <td class="text-slate-600">${row.mentee}</td>
-                        <td class="text-slate-500">${row.time}</td>
-                        <td><span class="${row.color} font-bold text-[10px] bg-gray-50 px-2 py-1 rounded border border-current opacity-80">${row.status}</span></td>
-                    </tr>
-                `).join('');
-            }
-            document.getElementById('pageIndicator').innerText = `Showing ${filtered.length} results`;
-        }
+    if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" class="py-12 text-center text-gray-400 italic">No matching sessions found.</td></tr>`;
+    } else {
+        tbody.innerHTML = filtered.map(row => `
+            <tr class="border-b last:border-0 hover:bg-slate-50 transition">
+                <td class="py-4 font-bold text-slate-700">${row.mentor}</td>
+                <td class="text-slate-600">${row.mentee}</td>
+                <td class="text-slate-500">${row.time}</td>
+                <td><span class="${row.color} font-bold text-[10px] bg-gray-50 px-2 py-1 rounded border border-current opacity-80">${row.status}</span></td>
+            </tr>
+        `).join('');
+    }
+    document.getElementById('pageIndicator').innerText = `Showing ${filtered.length} result${filtered.length !== 1 ? 's' : ''}`;
+}
 
         // Calendar Logic
         function renderCalendar() {
@@ -704,4 +713,79 @@ updateDate();
     nextBtn.disabled = (currentPage === totalPages);
 }
     </script>
+
+<script>
+(function () {
+    const searchIndex = [
+        { group: 'Sessions', badge: 'session', title: 'Daniel Dyoco → Frian Nabo',        sub: '09:00 AM · Completed', keywords: ['daniel dyoco','frian nabo','completed','session','09:00'] },
+        { group: 'Sessions', badge: 'session', title: 'Rhona Shayne Lopez → Mark Tuan',   sub: '10:30 AM · Active',    keywords: ['rhona','lopez','mark tuan','active','session','10:30'] },
+        { group: 'Sessions', badge: 'session', title: 'Chezka Sinco → Uno Dos Thirdy',    sub: '11:00 AM · Active',    keywords: ['chezka sinco','uno dos thirdy','active','session','11:00'] },
+        { group: 'Sessions', badge: 'session', title: 'Arielle Mae Solis → Kevin Hart',   sub: '01:00 PM · Pending',   keywords: ['arielle','solis','kevin hart','pending','session','01:00'] },
+        { group: 'Sessions', badge: 'session', title: "Ax'l Conchada → Alice Blue",       sub: '02:30 PM · Upcoming',  keywords: ["ax'l",'conchada','alice blue','upcoming','session','02:30'] },
+        { group: 'Pending Approvals', badge: 'approval', title: 'John Doe',    sub: 'Mentor Applicant', keywords: ['john doe','mentor applicant','pending','approval'] },
+        { group: 'Pending Approvals', badge: 'approval', title: 'Sarah Miller', sub: 'Session Change',   keywords: ['sarah miller','session change','pending','approval'] },
+        { group: 'Pending Approvals', badge: 'approval', title: 'Amy Lee',      sub: 'Subject Add',      keywords: ['amy lee','subject add','pending','approval'] },
+        { group: 'Pending Approvals', badge: 'approval', title: 'Tom Chen',     sub: 'Profile Edit',     keywords: ['tom chen','profile edit','pending','approval'] },
+        { group: 'Stats', badge: 'stat', title: 'Total Mentors',    sub: '{{ $totalMentors }}',   keywords: ['total mentors','mentors','count'] },
+        { group: 'Stats', badge: 'stat', title: 'Sessions Today',   sub: '{{ $sessionsToday }}',  keywords: ['sessions today','today','sessions'] },
+        { group: 'Stats', badge: 'stat', title: 'Pending Bookings', sub: '{{ $pendingBookings }}', keywords: ['pending bookings','pending'] },
+        { group: 'Stats', badge: 'stat', title: 'Total Mentees',    sub: '{{ $totalStudents }}',  keywords: ['total mentees','mentees','students'] },
+    ];
+
+    const badgeStyles = {
+        session:  'background:#dbeafe;color:#1e40af;',
+        approval: 'background:#fef3c7;color:#92400e;',
+        stat:     'background:#f1f5f9;color:#475569;',
+    };
+
+    function highlight(text, q) {
+        if (!q) return text;
+        const re = new RegExp('(' + q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+        return text.replace(re, '<mark style="background:#fef08a;border-radius:2px;padding:0 1px;">$1</mark>');
+    }
+
+    const input   = document.getElementById('mainDashboardSearch');
+    const results = document.getElementById('globalSearchResults');
+
+    input.addEventListener('input', function () {
+        const q = this.value.trim().toLowerCase();
+        if (!q) { results.classList.add('hidden'); return; }
+
+        const matches = searchIndex.filter(d =>
+            d.title.toLowerCase().includes(q) ||
+            d.sub.toLowerCase().includes(q) ||
+            d.keywords.some(k => k.includes(q))
+        );
+
+        if (!matches.length) {
+            results.innerHTML = `<div class="px-4 py-5 text-center text-sm text-gray-400 italic">No results for "${this.value}"</div>`;
+            results.classList.remove('hidden');
+            return;
+        }
+
+        const groups = {};
+        matches.forEach(m => { if (!groups[m.group]) groups[m.group] = []; groups[m.group].push(m); });
+
+        let html = '';
+        for (const [grp, items] of Object.entries(groups)) {
+            html += `<div class="px-4 pt-3 pb-1 text-[10px] font-bold text-gray-400 uppercase tracking-widest">${grp}</div>`;
+            items.forEach(item => {
+                html += `
+                <div class="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 cursor-pointer border-b border-gray-50 last:border-0 transition">
+                    <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;white-space:nowrap;${badgeStyles[item.badge]}">${grp === 'Pending Approvals' ? 'Approval' : grp.replace('s','')}</span>
+                    <span class="text-sm font-semibold text-slate-700 flex-1">${highlight(item.title, this.value.trim())}</span>
+                    <span class="text-xs text-gray-400 ml-auto whitespace-nowrap">${highlight(item.sub, this.value.trim())}</span>
+                </div>`;
+            });
+        }
+
+        results.innerHTML = html;
+        results.classList.remove('hidden');
+    });
+
+    document.addEventListener('click', function (e) {
+        if (!e.target.closest('.main-search-container')) results.classList.add('hidden');
+    });
+})();
+</script>
 </body>
