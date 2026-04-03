@@ -71,6 +71,26 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Volt::route('/dashboard', 'pages.mentor.dashboard')
             ->name('mentor.dashboard');
 
+        Route::post('/dashboard/update', function () {
+            $mentorProfile = \App\Models\MentorProfiles::where('user_id', auth()->id())->first();
+
+        if ($mentorProfile) {
+            $booking = \App\Models\Bookings::where('id', request('id'))
+            ->where('mentor_id', $mentorProfile->id)
+            ->first();
+
+            if ($booking) {
+            $booking->booking_status = request('status');
+            if (request('status') === 'completed') {
+                $booking->completed_at = now();
+            }
+            $booking->save();
+            }
+            }
+
+        return response()->json(['success' => true]);
+        })->name('mentor.dashboard.update');
+
         Volt::route('/bookings', 'pages.mentor.bookings')
             ->name('mentor.bookings');
 
@@ -79,6 +99,29 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         Volt::route('/feedbacks', 'pages.mentor.feedbacks')
             ->name('mentor.feedbacks');
+
+        Route::post('/sessions/update', function () {
+
+        $mentorProfile = \App\Models\MentorProfiles::where('user_id', auth()->id())->first();
+
+        if ($mentorProfile) {
+            $booking = \App\Models\Bookings::where('id', request('booking_id'))
+                ->where('mentor_id', $mentorProfile->id)
+                ->first();
+
+            if ($booking) {
+                $booking->booking_status = strtolower(request('booking_status'));
+
+                if ($booking->booking_status === 'completed') {
+                    $booking->completed_at = now();
+                }
+
+                $booking->save();
+            }
+        }
+
+        return redirect()->route('mentor.sessions');
+        })->name('mentor.sessions.update');
 
     });
 
