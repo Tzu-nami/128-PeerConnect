@@ -265,6 +265,60 @@
 
             .notif-dot {width: 6px;height: 6px;background: #3b82f6;border-radius: 50%;position: top;bottom: 6px;}
             @keyframes slideDown {from { opacity: 0; transform: translateY(-6px); }to   { opacity: 1; transform: translateY(0); }}
+            #confirmMeta {max-height: 200px;overflow-y: auto;}
+            .topic-text {
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    white-space: normal;
+}
+
+.topic-text.line-clamp-1 {
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.topic-text.line-clamp-none {
+    display: block;
+    overflow: visible;
+}
+
+#statusToast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 600;
+    color: white;
+    background: #1e293b;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+    opacity: 0;
+    transform: translateY(12px);
+    transition: opacity 0.2s, transform 0.2s;
+    pointer-events: none;
+    min-width: 200px;
+}
+#statusToast.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+#statusToast .toast-spinner {
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    flex-shrink: 0;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
         </style>
     </head>
 
@@ -377,14 +431,30 @@
 
                                 <div class="flex-grow">
                                     <table class="w-full text-left text-sm table-fixed">
-                                        <thead class="text-gray-400 border-b">
-                                            <tr>
-<th class="pb-3 font-semibold uppercase text-[10px] tracking-wider" style="width:35%">Student</th>
-<th class="pb-3 font-semibold uppercase text-[10px] tracking-wider" style="width:25%">Time</th>
-<th class="pb-3 font-semibold uppercase text-[10px] tracking-wider" style="width:20%">Subject</th>
-<th class="pb-3 font-semibold uppercase text-[10px] tracking-wider" style="width:20%">Status</th>
-                                            </tr>
-                                        </thead>
+<thead class="text-gray-400 border-b">
+    <tr>
+        <th class="pb-3 text-[10px] tracking-wider" style="width:35%">
+            <button id="sortHead-student" onclick="toggleSort('student')" class="flex items-center gap-1 font-semibold uppercase hover:text-red-800 transition-colors" style="color:#94a3b8;">
+                Student <span class="sort-icon"><i class="fa-solid fa-arrow-up-arrow-down" style="font-size:8px;opacity:0.4;"></i></span>
+            </button>
+        </th>
+        <th class="pb-3 text-[10px] tracking-wider" style="width:25%">
+            <button id="sortHead-start" onclick="toggleSort('start')" class="flex items-center gap-1 font-semibold uppercase hover:text-red-800 transition-colors" style="color:#7b1d1d;">
+                Time <span class="sort-icon"><i class="fa-solid fa-arrow-up" style="font-size:8px;"></i></span>
+            </button>
+        </th>
+        <th class="pb-3 text-[10px] tracking-wider" style="width:20%">
+            <button id="sortHead-subject" onclick="toggleSort('subject')" class="flex items-center gap-1 font-semibold uppercase hover:text-red-800 transition-colors" style="color:#94a3b8;">
+                Subject <span class="sort-icon"><i class="fa-solid fa-arrow-up-arrow-down" style="font-size:8px;opacity:0.4;"></i></span>
+            </button>
+        </th>
+        <th class="pb-3 text-[10px] tracking-wider" style="width:20%">
+            <button id="sortHead-status" onclick="toggleSort('status')" class="flex items-center gap-1 font-semibold uppercase hover:text-red-800 transition-colors" style="color:#94a3b8;">
+                Status <span class="sort-icon"><i class="fa-solid fa-arrow-up-arrow-down" style="font-size:8px;opacity:0.4;"></i></span>
+            </button>
+        </th>
+    </tr>
+</thead>
                                         <tbody id="tableBody"></tbody>
                                     </table>
                                 </div>
@@ -510,7 +580,12 @@
                         </button>
                     </div>
 
-                </div>
+</div>
+            </div>
+
+            <div id="statusToast">
+                <div class="toast-spinner"></div>
+                <span id="statusToastMsg">Updating status...</span>
             </div>
 
         </div>
@@ -716,16 +791,36 @@ const TABLE_PER_PAGE = 5;
 document.getElementById('prevBtn').addEventListener('click', () => { tablePage--; applyFilters(); });
 document.getElementById('nextBtn').addEventListener('click', () => { tablePage++; applyFilters(); });
 
+let sortColumn = 'start'; // default sort by time
+let sortDirection = 'asc'; // default ascending
+
 function applyFilters() {
     const tbody          = document.getElementById('tableBody');
     const searchTerm     = searchInput.value.toLowerCase();
     const selectedStatus = statusFilter.value;
 
-    const filtered = allSessions.filter(item => {
+    let filtered = allSessions.filter(item => {
         const matchesDate   = item.date === selectedDateStr;
         const matchesSearch = item.student.toLowerCase().includes(searchTerm);
         const matchesStatus = selectedStatus === '' || item.status === selectedStatus;
         return matchesDate && matchesSearch && matchesStatus;
+    });
+
+    // ── SORT ──
+    filtered.sort((a, b) => {
+        let aVal, bVal;
+        if (sortColumn === 'start') {
+            aVal = a.start; bVal = b.start;
+        } else if (sortColumn === 'student') {
+            aVal = a.student.toLowerCase(); bVal = b.student.toLowerCase();
+        } else if (sortColumn === 'subject') {
+            aVal = a.subject.toLowerCase(); bVal = b.subject.toLowerCase();
+        } else if (sortColumn === 'status') {
+            aVal = a.status; bVal = b.status;
+        }
+        if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
+        if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+        return 0;
     });
 
     const total   = filtered.length;
@@ -738,7 +833,7 @@ function applyFilters() {
     if (!total) {
         tbody.innerHTML = `<tr><td colspan="4" class="py-12 text-center text-gray-400 italic">No matching sessions found.</td></tr>`;
     } else {
-tbody.innerHTML = visible.map(row => `
+        tbody.innerHTML = visible.map(row => `
             <tr class="border-b last:border-0 hover:bg-slate-50 transition">
                 <td class="py-4 font-bold text-slate-700" style="width:35%">
                     <div style="max-width:260px;">
@@ -755,17 +850,32 @@ tbody.innerHTML = visible.map(row => `
                 </td>
             </tr>
         `).join('');
-    // Check which names overflow and show toggle button
-    visible.forEach(row => {
-        const nameEl = document.getElementById('name-' + row.id);
-        const toggleEl = document.getElementById('toggle-' + row.id);
-        if (nameEl && toggleEl && nameEl.scrollWidth > nameEl.clientWidth) {
-            toggleEl.style.display = 'block';
-        }
-    });
+
+        visible.forEach(row => {
+            const nameEl   = document.getElementById('name-' + row.id);
+            const toggleEl = document.getElementById('toggle-' + row.id);
+            if (nameEl && toggleEl && nameEl.scrollWidth > nameEl.clientWidth) {
+                toggleEl.style.display = 'block';
+            }
+        });
     }
 
-    // Update indicator and pagination buttons
+    // Update sort header indicators
+    ['student','start','subject','status'].forEach(col => {
+        const el = document.getElementById('sortHead-' + col);
+        if (!el) return;
+        const icon = el.querySelector('.sort-icon');
+        if (sortColumn === col) {
+            el.style.color = '#7b1d1d';
+            icon.innerHTML = sortDirection === 'asc'
+                ? '<i class="fa-solid fa-arrow-up" style="font-size:8px;"></i>'
+                : '<i class="fa-solid fa-arrow-down" style="font-size:8px;"></i>';
+        } else {
+            el.style.color = '#94a3b8';
+            icon.innerHTML = '<i class="fa-solid fa-arrow-up-arrow-down" style="font-size:8px;opacity:0.4;"></i>';
+        }
+    });
+
     document.getElementById('pageIndicator').innerText =
         total ? `Showing ${start + 1}–${Math.min(start + TABLE_PER_PAGE, total)} of ${total}` : 'Showing 0 results';
 
@@ -775,6 +885,17 @@ tbody.innerHTML = visible.map(row => `
     nextBtn.disabled = tablePage >= maxPage;
     prevBtn.classList.toggle('opacity-30', tablePage === 0);
     nextBtn.classList.toggle('opacity-30', tablePage >= maxPage);
+}
+
+function toggleSort(col) {
+    if (sortColumn === col) {
+        sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+    } else {
+        sortColumn = col;
+        sortDirection = 'asc';
+    }
+    tablePage = 0;
+    applyFilters();
 }
 
     function formatTimeTo12Hour(timeStr) {
@@ -1041,7 +1162,75 @@ cell.innerHTML = sessions.map(s => {
 
 const csrfToken = '{{ csrf_token() }}';
 
+function truncateText(text, maxLength = 25) {
+    if (!text) return '—';
+    return text.length > maxLength
+        ? text.substring(0, maxLength) + '...'
+        : text;
+}
+
+function toggleModalText(id) {
+    const textEl = document.getElementById(`modal-text-${id}`);
+    const moreBtn = document.getElementById(`modal-more-${id}`);
+    const lessBtn = document.getElementById(`modal-less-${id}`);
+
+    const isCollapsed = textEl.classList.contains('line-clamp-1');
+
+    if (isCollapsed) {
+        textEl.classList.remove('line-clamp-1');
+        textEl.classList.add('line-clamp-none');
+
+        if (moreBtn) moreBtn.style.display = 'none';
+        if (lessBtn) lessBtn.style.display = 'inline';
+    } else {
+        textEl.classList.add('line-clamp-1');
+        textEl.classList.remove('line-clamp-none');
+
+        if (lessBtn) lessBtn.style.display = 'none';
+        if (moreBtn) moreBtn.style.display = 'inline';
+    }
+}
+
+function showStatusToast(message, duration = 0) {
+    const toast = document.getElementById('statusToast');
+    const msg   = document.getElementById('statusToastMsg');
+    msg.textContent = message;
+
+    const hasSpinner = toast.querySelector('.toast-spinner');
+
+    if (duration === 0) {
+        // Persistent with spinner (while loading)
+        if (!hasSpinner) {
+            const spinner = document.createElement('div');
+            spinner.className = 'toast-spinner';
+            toast.insertBefore(spinner, msg);
+        }
+    } else {
+        // Auto-dismiss (success/info)
+        if (hasSpinner) hasSpinner.remove();
+    }
+
+    toast.classList.add('show');
+    if (duration > 0) {
+        clearTimeout(toast._timer);
+        toast._timer = setTimeout(() => toast.classList.remove('show'), duration);
+    }
+}
+
+function hideStatusToast() {
+    document.getElementById('statusToast').classList.remove('show');
+}
+
 function updateStatus(id, status) {
+    const statusLabels = {
+        accepted: 'Accepting booking...',
+        rejected: 'Rejecting booking...',
+        completed: 'Marking as completed...',
+        cancelled: 'Cancelling session...',
+        no_show: 'Marking as no-show...',
+    };
+    showStatusToast(statusLabels[status] || 'Updating status...');
+
     fetch('{{ route("mentor.dashboard.update") }}', {
         method: 'POST',
         headers: {
@@ -1053,21 +1242,20 @@ function updateStatus(id, status) {
     })
     .then(res => res.json())
     .then(data => {
+        hideStatusToast();
+
         if (data.success) {
             const target = allSessions.find(s => s.id === id);
             if (target) {
                 target.status = status;
 
-                // ✅ If a booking was just accepted, auto-reject all conflicting pending requests
                 if (status === 'accepted') {
                     const conflictingIds = getConflictingPendingIds(target);
 
                     conflictingIds.forEach(conflictId => {
-                        // Optimistically update local state first
                         const conflictSession = allSessions.find(s => s.id === conflictId);
                         if (conflictSession) conflictSession.status = 'rejected';
 
-                        // Persist rejection to server
                         fetch('{{ route("mentor.dashboard.update") }}', {
                             method: 'POST',
                             headers: {
@@ -1081,15 +1269,66 @@ function updateStatus(id, status) {
 
                     if (conflictingIds.length > 0) {
                         showAutoRejectBanner(conflictingIds.length);
+                        showAutoRejectBannerQA(conflictingIds.length); // ✅ also in Quick Actions
                     }
                 }
             }
 
             refreshLocalState();
             refreshSchedules();
+        } else {
+            showStatusToast('Update failed. Please try again.', 4000);
         }
     })
-    .catch(err => console.error(err));
+    .catch(err => {
+        hideStatusToast();
+        showStatusToast('Network error. Please retry.', 4000);
+        console.error(err);
+    });
+}
+
+function showAutoRejectBannerQA(count) {
+    const container = document.getElementById('quickActionsList');
+    if (!container) return;
+
+    let banner = document.getElementById('autoRejectBannerQA');
+    if (!banner) {
+        banner = document.createElement('div');
+        banner.id = 'autoRejectBannerQA';
+        banner.style.cssText = `
+            margin-bottom: 10px;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid #fcd34d;
+            background: #fffbeb;
+            font-size: 11px;
+            animation: slideDown 0.2s ease;
+        `;
+        container.insertBefore(banner, container.firstChild);
+    }
+
+    banner.innerHTML = `
+        <div style="display:flex; align-items:flex-start; gap:8px; padding:10px 12px;">
+            <div style="flex-shrink:0; margin-top:1px;">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                    <path d="M8 1.5L14.5 13H1.5L8 1.5Z" stroke="#d97706" stroke-width="1" stroke-linejoin="round"/>
+                    <path d="M8 6v3.5" stroke="#d97706" stroke-width="1.5" stroke-linecap="round"/>
+                    <circle cx="8" cy="11.5" r="0.75" fill="#d97706"/>
+                </svg>
+            </div>
+            <div style="flex:1; color:#92400e; line-height:1.5;">
+                <span style="font-weight:600;">${count} conflicting ${count === 1 ? 'request' : 'requests'} auto-rejected</span>
+                — overlapping bookings were declined automatically.
+            </div>
+            <button onclick="document.getElementById('autoRejectBannerQA').remove()"
+                style="flex-shrink:0; background:none; border:none; cursor:pointer; color:#92400e; font-size:14px; line-height:1; padding:0; margin-top:-1px;">
+                &times;
+            </button>
+        </div>
+    `;
+
+    clearTimeout(banner._timer);
+    banner._timer = setTimeout(() => banner.remove(), 6000);
 }
 
 function refreshLocalState(){
@@ -1306,24 +1545,86 @@ function iconInfo(color) {
 
 function buildMetaHtml(req) {
     return `
-        <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+        <!-- STUDENT -->
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;gap:8px;">
             <span style="color:#9ca3af;">Student</span>
-            <span style="font-weight:600;color:#374151;">${req.student}</span>
+
+            <div style="display:flex;flex-direction:column;align-items:flex-end;max-width:160px;">
+                <span id="modal-text-student-${req.id}"
+                    class="topic-text line-clamp-1"
+                    style="font-weight:600;color:#374151;text-align:right;">
+                    ${req.student}
+                </span>
+
+                ${req.student.length > 25 ? `
+                    <button onclick="toggleModalText('student-${req.id}')"
+                        id="modal-more-student-${req.id}"
+                        style="font-size:10px;color:#9ca3af;background:none;border:none;cursor:pointer;">
+                        see more
+                    </button>
+
+                    <button onclick="toggleModalText('student-${req.id}')"
+                        id="modal-less-student-${req.id}"
+                        style="display:none;font-size:10px;color:#9ca3af;background:none;border:none;cursor:pointer;">
+                        view less
+                    </button>
+                ` : ''}
+            </div>
         </div>
-        <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+
+        <!-- SUBJECT -->
+        <div style="display:flex;justify-content:space-between;margin-bottom:6px;gap:8px;">
             <span style="color:#9ca3af;">Subject</span>
-            <span style="font-weight:600;color:#374151;">${req.subject}</span>
+            <span style="font-weight:600;color:#374151;text-align:right;max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                ${req.subject}
+            </span>
         </div>
-        <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+
+        <!-- TOPIC -->
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;gap:8px;">
+            <span style="color:#9ca3af;">Topic</span>
+
+            <div style="display:flex;flex-direction:column;align-items:flex-end;max-width:180px;">
+                <span id="modal-text-topic-${req.id}"
+                    class="topic-text line-clamp-1"
+                    style="font-weight:600;color:#374151;text-align:right;">
+                    ${req.topic || 'No topic provided'}
+                </span>
+
+                ${(req.topic && req.topic.length > 40) ? `
+                    <button onclick="toggleModalText('topic-${req.id}')"
+                        id="modal-more-topic-${req.id}"
+                        style="font-size:10px;color:#9ca3af;background:none;border:none;cursor:pointer;">
+                        see more
+                    </button>
+
+                    <button onclick="toggleModalText('topic-${req.id}')"
+                        id="modal-less-topic-${req.id}"
+                        style="display:none;font-size:10px;color:#9ca3af;background:none;border:none;cursor:pointer;">
+                        view less
+                    </button>
+                ` : ''}
+            </div>
+        </div>
+
+        <!-- DATE -->
+        <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
             <span style="color:#9ca3af;">Date</span>
-            <span style="font-weight:600;color:#374151;">${new Date(req.date).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</span>
+            <span style="font-weight:600;color:#374151;">
+                ${new Date(req.date).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}
+            </span>
         </div>
+
+        <!-- TIME -->
         <div style="display:flex;justify-content:space-between;">
             <span style="color:#9ca3af;">Time</span>
-            <span style="font-weight:600;color:#374151;">${formatTimeTo12Hour(req.start)} – ${formatTimeTo12Hour(req.end)}</span>
+            <span style="font-weight:600;color:#374151;">
+                ${formatTimeTo12Hour(req.start)} – ${formatTimeTo12Hour(req.end)}
+            </span>
         </div>
     `;
 }
+
 
 function approveRequest(id) {
     const req = allSessions.find(s => s.id == id);
