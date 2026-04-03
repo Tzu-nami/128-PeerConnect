@@ -395,12 +395,12 @@ color:#065f46;
                             {{-- Subjects taught --}}
                             <div class="px-5 pb-2 pt-2 flex-1">
                                 <p class="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Subjects</p>
-                                <div class="flex flex-wrap gap-1">
-                                    <template x-for="(subject, index) in mentor.subjects.slice(0, 6)" :key="index">
-                                        <span class="bg-red-50 text-red-700 border border-red-100 px-2 py-0.5 rounded text-[10px] font-bold" x-text="subject.code"></span>
+                                <div class="flex flex-nowrap overflow-hidden gap-1">
+                                    <template x-for="(subject, index) in mentor.subjects.slice(0, 5)" :key="index">
+                                        <span class="bg-red-50 text-red-700 border border-red-100 px-2 py-0.5 rounded text-[10px] font-bold whitespace-nowrap" x-text="subject.code"></span>
                                     </template>
-                                    <template x-if="mentor.subjects.length > 6">
-                                        <span class="bg-red-50 text-gray-500 border border-red-100 px-2 py-0.5 rounded text-[10px] font-bold" x-text="'+' + (mentor.subjects.length - 6)"></span>
+                                    <template x-if="mentor.subjects.length > 5">
+                                        <span class="bg-slate-100 text-slate-600 px-2 py-0.5 rounded text-[10px] font-bold border border-slate-200 whitespace-nowrap" x-text="'+' + (mentor.subjects.length - 5)"></span>
                                     </template>
                                 </div>
                             </div>
