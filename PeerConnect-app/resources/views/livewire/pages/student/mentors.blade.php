@@ -380,7 +380,7 @@ color:#065f46;
 
                             <div class="p-5 flex gap-5 border-b border-gray-100 bg-[#fffffa]">
                                 <div class="w-28 h-28 aspect-square rounded-2xl overflow-hidden flex-shrink-0 bg-gray-100 border border-gray-200 shadow-inner">
-                                    <img :src="mentor.avatar" :alt="mentor.lastName" class="w-full h-full object-cover bg-white" />
+                                    <img :src="mentor.avatar" :alt="mentor.lastName" class="w-full h-full object-cover bg-[#fffffa]" />
                                 </div>
                                 <div class="flex-1 flex flex-col min-w-0 pr-1">
                                     <p class="font-black text-slate-800 text-2xl sm:text-3xl leading-none uppercase tracking-tighter truncate" x-text="mentor.lastName"></p>
@@ -429,27 +429,27 @@ color:#065f46;
 
                 {{-- Pagination --}}
                 <div class="mt-8 flex justify-center items-center gap-2" x-show="totalPages > 1" x-cloak>
-                    <button @click="currentPage--" :disabled="currentPage === 1" class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-slate-500 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition">
+                    <button @click="currentPage--" :disabled="currentPage === 1" class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 bg-[#fffffa] text-slate-500 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition">
                         <i class="fa-solid fa-chevron-left text-[10px]"></i>
                     </button>
                     <template x-for="page in pages" :key="page">
-                        <button @click="currentPage = page" :class="currentPage === page ? 'bg-[#1a3c2f] text-white shadow-sm' : 'bg-white border border-gray-200 text-slate-500 hover:bg-gray-100'" class="w-8 h-8 text-xs font-bold rounded-lg transition" x-text="page"></button>
+                        <button @click="currentPage = page" :class="currentPage === page ? 'bg-[#1a3c2f] text-white shadow-sm' : 'bg-[#fffffa] border border-gray-200 text-slate-500 hover:bg-gray-100'" class="w-8 h-8 text-xs font-bold rounded-lg transition" x-text="page"></button>
                     </template>
-                    <button @click="currentPage++" :disabled="currentPage === totalPages" class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-slate-500 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition">
+                    <button @click="currentPage++" :disabled="currentPage === totalPages" class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 bg-[#fffffa] text-slate-500 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition">
                         <i class="fa-solid fa-chevron-right text-[10px]"></i>
                     </button>
                 </div>
 
                 <template x-teleport="body">
                     <div class="modal-overlay" x-show="showModal" @click.self="showModal = false" x-cloak>
-                        <div class="bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col" style="max-height: 90vh;">
+                        <div class="bg-[#fffffa] w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col" style="max-height: 90vh;">
 
                             <template x-if="selectedMentor">
                                 <div class="contents">
                                     {{-- Modal Header --}}
                                     <div class="flex-shrink-0 flex items-start gap-5 p-6 bg-[#1a3c2f]">
                                         <div class="w-36 h-36 rounded-2xl overflow-hidden flex-shrink-0 border-2 border-white/20 shadow-lg bg-gray-200">
-                                            <img :src="selectedMentor.avatar" alt="selectedMentor.lastName" class="w-full h-full object-cover bg-white" />
+                                            <img :src="selectedMentor.avatar" alt="selectedMentor.lastName" class="w-full h-full object-cover bg-[#fffffa]" />
                                         </div>
 
                                     <div class="flex-1 min-w-0 pt-1">
@@ -538,8 +538,8 @@ color:#065f46;
         window.addEventListener('click', () => profileDropdown.classList.remove('show'));
 
         // Data handling script
-        document.addEventListener('alpine:init', () => {
-            Alpine.data('mentorDirectory', (initialMentors) => ({
+        function mentorDirectory(initialMentors) {
+            return {
                 mentors: initialMentors,
                 searchQuery: '',
                 selectedSubject: '',
@@ -582,7 +582,7 @@ color:#065f46;
                     this.selectedMentor = mentor;
                     this.showModal = true;
                 }
-            }));
-        });
+            };
+        };
     </script>
 </div>
