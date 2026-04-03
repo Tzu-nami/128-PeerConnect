@@ -43,13 +43,17 @@ state([
 ]);
 
 $mentors = computed(function () {
-    return MentorProfiles::with('user') -> get() -> sortBy(fn($lName) => $lName->user->lastName) 
-        -> values()
-        -> map(fn($mentorProfiles) => [
+    return MentorProfiles::with('user')
+        ->get()
+        ->filter(fn($mentorProfiles) => $mentorProfiles->user->id !== auth()->id()) // 🚫 exclude self
+        ->sortBy(fn($lName) => $lName->user->lastName)
+        ->values()
+        ->map(fn($mentorProfiles) => [
             'id' => $mentorProfiles->user->id,
             'profile_id' => $mentorProfiles->id,
             'name' => strtoupper($mentorProfiles->user->lastName). ', ' . $mentorProfiles->user->firstName,
-        ]) -> toArray();
+        ])
+        ->toArray();
 });
 
 $mentorAvailabilities = computed(function () {
@@ -169,7 +173,16 @@ $submitBooking = action(function () {
         'schedule_end' => 'end time',
     ]);
 
-    $profile = StudentProfiles::where('user_id', auth()->id())->first();
+$profile = StudentProfiles::where('user_id', auth()->id())->first();
+
+// Get the selected mentor profile
+$selectedMentor = MentorProfiles::find($validated['mentor_id']);
+
+// 🚫 Prevent mentor from booking themselves
+if ($selectedMentor && $selectedMentor->user_id === auth()->id()) {
+    $this->addError('mentor_id', 'You cannot book yourself as a mentor.');
+    return;
+}
     Bookings::create([
         ...$validated,
         'student_id' => $profile->id,
@@ -192,79 +205,144 @@ $dismissSuccessMessage = action(function () {
 <div>
 
     <style>
-        :root { 
-            --sidebar-green: #1a3c2f; 
-            --header-maroon: #7b1d1d; 
-            --bg-light: #f4f7f6; 
-            --header-height: 80px; 
-            --sidebar-width: 280px;
-            --sidebar-collapsed-width: 80px;
+        :root {
+            --sidebar-green: #1a3c2f;
+            --header-maroon: #7b1d1d;
+            --bg-light: #f4f7f6;
+            --header-height: 80px;
+            --sidebar-width: 260px;
+            --sidebar-collapsed-width: 72px;
         }
-        
+
+        * { box-sizing: border-box; }
+
         body { margin: 0; font-family: 'Inter', sans-serif; background: var(--bg-light); overflow: hidden; }
         .app-wrapper { display: flex; height: 100vh; width: 100vw; overflow: hidden; }
-        
-        /* SIDEBAR */
-        .sidebar { 
-            width: var(--sidebar-width); 
-            background: var(--sidebar-green); 
-            flex-shrink: 0; 
-            display: flex; 
-            flex-direction: column; 
-            color: white; 
+
+        /* ── SIDEBAR ── */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: var(--sidebar-green);
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            color: white;
             height: 100vh;
             transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             z-index: 30;
             position: relative;
+            overflow: visible;
         }
         .sidebar.collapsed { width: var(--sidebar-collapsed-width); }
 
+        /* ── Logo row ── */
         .sidebar-logo-container {
             height: var(--header-height);
             display: flex;
             align-items: center;
-            padding: 0 24px;
-            gap: 15px;
+            justify-content: center;
+            padding: 0 20px;
+            gap: 12px;
             flex-shrink: 0;
             overflow: hidden;
+            transition: padding 0.3s, justify-content 0.3s;
         }
-        #sidebarToggle {
-            background: transparent; border: none; color: white; font-size: 1.4rem;
-            cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-        }
-        .logo-content { display: flex; align-items: center; gap: 12px; white-space: nowrap; }
-        .logo-text { font-size: 1.1rem; font-weight: 700; }
+        .sidebar:not(.collapsed) .sidebar-logo-container { justify-content: flex-start; }
 
-        .nav-item { 
-            display: flex; align-items: center; gap: 15px; padding: 15px 25px; 
-            color: rgba(255,255,255,0.7); text-decoration: none; transition: background 0.3s; white-space: nowrap;
-            position: relative; text-align: left; background: transparent; border: none; width: 100%;
+        .logo-icon { flex-shrink: 0; font-size: 1.25rem; width: 32px; text-align: center; }
+
+        .logo-text {
+            font-size: 1rem;
+            font-weight: 700;
+            white-space: nowrap;
+            overflow: hidden;
+            opacity: 1;
+            max-width: 200px;
+            transition: opacity 0.2s, max-width 0.3s;
         }
-        .nav-item i { width: 30px; text-align: center; flex-shrink: 0; font-size: 20px; }
+        .sidebar.collapsed .logo-text { opacity: 0; max-width: 0; pointer-events: none; }
+
+        /* ── Nav items ── */
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 14px 20px;
+            color: rgba(255,255,255,0.7);
+            text-decoration: none;
+            transition: background 0.2s, color 0.2s, padding 0.3s, justify-content 0.3s;
+            white-space: nowrap;
+            position: relative;
+            text-align: left;
+            background: transparent;
+            border: none;
+            width: 100%;
+            cursor: pointer;
+            font-size: 0.875rem;
+            justify-content: flex-start;
+        }
+        .sidebar.collapsed .nav-item { justify-content: center; padding: 14px 0; }
+
+        .nav-item i { width: 32px; text-align: center; flex-shrink: 0; font-size: 18px; transition: width 0.3s; }
+        .sidebar.collapsed .nav-item i { width: 32px; margin: 0; }
+
+        .nav-item span {
+            overflow: hidden; opacity: 1; max-width: 200px;
+            transition: opacity 0.2s, max-width 0.3s;
+        }
+        .sidebar.collapsed .nav-item span { opacity: 0; max-width: 0; pointer-events: none; }
+
         .nav-item:hover, .nav-item.active { background: rgba(255,255,255,0.1); color: white; }
-.nav-item.active { 
-    background: var(--bg-light); 
-    color: var(--header-maroon); 
-    font-weight: 700;
-    /* This ensures it aligns perfectly with the content area */
-    border-radius: 0; 
-    width: calc(100% + 1px); /* Overlaps the sidebar border/edge slightly */
-    z-index: 10;
-}
+        .nav-item.active {
+            background: var(--bg-light);
+            color: var(--header-maroon);
+            font-weight: 700;
+            border-radius: 0;
+            width: calc(100% + 1px);
+            z-index: 10;
+        }
 
+        /* Tooltips */
         .nav-item::after {
             content: attr(data-tooltip);
             position: absolute; left: 100%; top: 50%; transform: translateY(-50%);
-            margin-left: 10px; background: rgba(0, 0, 0, 0.9); color: white;
+            margin-left: 14px; background: rgba(0,0,0,0.85); color: white;
             padding: 5px 12px; border-radius: 4px; font-size: 12px; font-weight: 500;
             white-space: nowrap; opacity: 0; visibility: hidden; transition: opacity 0.2s;
             pointer-events: none; z-index: 100;
         }
         .sidebar.collapsed .nav-item:hover::after { opacity: 1; visibility: visible; }
-        .sidebar.collapsed .logo-content, .sidebar.collapsed .nav-item span { display: none; }
-        .sidebar.collapsed .sidebar-logo-container, .sidebar.collapsed .nav-item { justify-content: center; padding: 15px 0; }
-        .sidebar.collapsed .nav-item i { margin: 0; width: auto; }
-        .sidebar.collapsed .nav-item.active { border-left: none; }
+
+        /* Logout section */
+        .sidebar-footer { padding: 12px 0; border-top: 1px solid rgba(255,255,255,0.1); }
+
+        /* ── TOGGLE BUTTON ── */
+            .sidebar-toggle-btn {
+                position: absolute;
+                right: -16px;
+                top: 3%;
+                width: 32px;
+                height: 32px;
+                border-radius: 50%;
+                background: #ffffff;
+                border: none;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: #7b1d1d;
+                font-size: 13px;
+                z-index: 50;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+                transition: background 0.2s;
+                flex-shrink: 0;
+            }
+        .sidebar-toggle-btn:hover { background: #dfcece; }
+        .sidebar-toggle-btn .toggle-icon {
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex; align-items: center; justify-content: center;
+        }
+        .sidebar:not(.collapsed) .sidebar-toggle-btn .toggle-icon { transform: rotate(180deg); }
 
         .main-content { flex: 1; min-width: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
         .top-header { background: var(--header-maroon); height: var(--header-height); padding: 0 40px; display: flex; align-items: center; justify-content: space-between; color: white; flex-shrink: 0; }
@@ -279,65 +357,46 @@ $dismissSuccessMessage = action(function () {
         .dropdown-item { padding: 12px 20px; font-size: 13px; color: #475569; display: flex; align-items: center; gap: 10px; transition: background 0.2s; }
         .dropdown-item:hover { background: #f8fafc; color: var(--header-maroon); }
 
-        .cal-header-day { font-size: 11px; font-weight: 800; color: #94a3b8; text-align: center; padding-bottom: 10px; text-transform: uppercase; }
-        .cal-day { aspect-ratio: 1/1; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; border-radius: 8px; transition: all 0.2s; cursor: pointer; font-size: 13px; font-weight: 500; }
-        .cal-today { background: #fee2e2 !important; color: var(--header-maroon) !important; font-weight: 800; }
-        .cal-selected { border: 2px solid var(--header-maroon); background: #f8fafc; }
-
-        .stats-overview-container { background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); border: 1px solid #e5e7eb; width: 100%; }
-        .stats-header { padding: 12px 24px; background: #f8fafc; font-weight: 700; font-size: 0.9rem; color: #1e293b; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; justify-content: space-between; }
-        .stats-body { display: grid; grid-template-columns: repeat(2, 1fr); background: white; width: 100%; }
-        .stats-column { padding: 24px; border-right: 1px solid #f1f5f9; border-bottom: 1px solid #f1f5f9; min-width: 0; }
-        .stats-column:nth-child(2n) { border-right: none; }
-        .stats-column-title { font-weight: 600; margin-bottom: 15px; font-size: 0.8rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.025em; }
-
-        .stat-card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); transition: all 0.3s ease; border: 1px solid transparent; cursor: pointer; }
-        .stat-card:hover { transform: translateY(-5px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); border-color: var(--sidebar-green); }
-        .stat-card i { font-size: 24px; color: var(--sidebar-green); }
-
         .pagination-btn { padding: 4px 10px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 11px; font-weight: 600; color: #64748b; transition: all 0.2s; }
         .pagination-btn:hover:not(:disabled) { background: #f1f5f9; color: var(--header-maroon); border-color: var(--header-maroon); }
         .table-filter-select, .header-filter { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 12px; font-size: 0.75rem; color: #475569; outline: none; cursor: pointer; }
         .weekly-table{table-layout:fixed;width:100%;}
         .weekly-table th, .weekly-table td{width:16%;}
-        .schedule-block{
-font-size:9px;
-line-height:1.2;
-padding:2px 4px;
-margin-bottom:2px;
-border-radius:4px;
-background:#d1fae5;
-color:#065f46;
-}
+        .schedule-block{font-size:9px;line-height:1.2;padding:2px 4px;margin-bottom:2px;border-radius:4px;background:#d1fae5;color:#065f46;}
     </style>
 
     <div class="app-wrapper">
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-logo-container">
-                <button id="sidebarToggle"><i class="fa-solid fa-bars"></i></button>
-                <div class="logo-content">
-                    <i class="fa-solid fa-graduation-cap text-xl"></i>
-                    <span class="logo-text">LRC PeerConnect</span>
-                </div>
+                <i class="fa-solid fa-graduation-cap logo-icon"></i>
+                <span class="logo-text">LRC PeerConnect</span>
             </div>
+
+            <button class="sidebar-toggle-btn" id="sidebarToggle" aria-label="Toggle sidebar">
+                <span class="toggle-icon">
+                    <i class="fa-solid fa-chevron-right"></i>
+                </span>
+            </button>
+
             <nav class="flex-grow">
-                <a href="{{ route('mentor.dashboard') }}" class="nav-item {{ request()->routeIs('mentor.dashboard') ? 'active' : '' }}" data-tooltip="Dashboard">
+                <a href="{{ route('mentor.dashboard') }}" class="nav-item" data-tooltip="Dashboard">
                     <i class="fa-solid fa-gauge"></i><span>Dashboard</span>
-                </a> 
-                <a href="{{ route('mentor.bookings') }}" class="nav-item {{ request()->routeIs('mentor.bookings') ? 'active' : '' }}" data-tooltip="Booking Form">
-                    <i class="fa-solid fa-calendar-check w-5"></i><span>Booking Form</span>
-                </a>                
-                <a href="{{ route('mentor.sessions') }}" class="nav-item {{ request()->routeIs('mentor.sessions') ? 'active' : '' }}" data-tooltip="Tutorial Sessions">
-                    <i class="fa-solid fa-clock w-5"></i><span>Tutorial Sessions</span>
-                </a>                
-                <a href="{{ route('mentor.feedbacks') }}" class="nav-item {{ request()->routeIs('mentor.feedbacks') ? 'active' : '' }}" data-tooltip="Student Feedbacks">
-                    <i class="fa-solid fa-comment-dots w-5"></i><span>Student Feedbacks</span>
-                </a>   
+                </a>
+                <a href="{{ route('mentor.bookings') }}" class="nav-item active" data-tooltip="Booking Form">
+                    <i class="fa-solid fa-calendar-check"></i><span>Booking Form</span>
+                </a>
+                <a href="{{ route('mentor.sessions') }}" class="nav-item" data-tooltip="Tutorial Sessions">
+                    <i class="fa-solid fa-clock"></i><span>Tutorial Sessions</span>
+                </a>
+                <a href="{{ route('mentor.feedbacks') }}" class="nav-item" data-tooltip="Student Feedbacks">
+                    <i class="fa-solid fa-comment-dots"></i><span>Student Feedbacks</span>
+                </a>
             </nav>
-            <div class="p-4 border-t border-white/10">
+
+            <div class="sidebar-footer">
                 <form method="POST" action="{{ route('logout') }}">
                     @csrf
-                    <button type="submit" class="nav-item w-full bg-transparent border-none text-left" data-tooltip="Logout">
+                    <button type="submit" class="nav-item" data-tooltip="Logout">
                         <i class="fa-solid fa-right-from-bracket"></i><span>Logout</span>
                     </button>
                 </form>
@@ -349,11 +408,11 @@ color:#065f46;
                 <div class="text-lg">Welcome, <span class="font-bold">{{ auth()->user()->name }}</span></div>
                 
                 <button id="profileTrigger" class="flex items-center gap-2 px-3 py-1 bg-white rounded-full hover:bg-gray-100 transition shadow-sm border-2 border-white/20 group">
-    <div class="w-8 h-8 bg-red-900 text-white rounded-full flex items-center justify-center text-xs font-bold">
-        {{ strtoupper(substr(auth()->user()->name,0,2)) }}
-    </div>
-    <i class="fa-solid fa-chevron-down text-[10px] text-gray-500 group-hover:text-red-900 transition-transform duration-200" id="dropdownArrow"></i>
-</button>
+                    <div class="w-8 h-8 bg-red-900 text-white rounded-full flex items-center justify-center text-xs font-bold">
+                        {{ strtoupper(substr(auth()->user()->name,0,2)) }}
+                    </div>
+                    <i class="fa-solid fa-chevron-down text-[10px] text-gray-500 group-hover:text-red-900 transition-transform duration-200" id="dropdownArrow"></i>
+                </button>
                 <div id="profileDropdown" class="profile-dropdown">
                     <div class="p-4 border-b border-gray-100 bg-slate-50">
                         <p class="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1">Signed in as</p>
@@ -437,7 +496,7 @@ color:#065f46;
                 <h2 class="text-lg font-semibold text-gray-900 mb-1">Request an Enrichment Session!</h2>
                 <p class="text-gray-500 text-sm mb-6">Please fill out all required fields. Your request will then be reviewed by the peer mentor.</p>
 
-                <form wire:submit.prevent="submitBooking" class="space-y-2">
+                <form id="bookingForm" wire:submit.prevent="submitBooking" class="space-y-2">
                     <div>
                         <label class="block text-base font-medium text-gray-700 mb-1">Subject<span class="text-red-500">*</span></label>
                         <select wire:model="subject_id" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-black-500 focus:ring-blue-500 text-base px-2 py-1">
@@ -499,7 +558,14 @@ color:#065f46;
 
 
                     <div class="pt-4">
-                        <button type="submit" @if(!auth()->user()->studentProfile) disabled @endif class="w-full bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium py-2 px-4 rounded-lg text-sm transition-colors" wire:loading.attr="disabled" wire:loading.class="opacity-60 cursor-not-allowed" wire:target="submitBooking"> 
+                        <button
+                            type="button"
+                            id="bookingSubmitBtn"
+                            @if(!auth()->user()->studentProfile) disabled @endif
+                            class="w-full bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium py-2 px-4 rounded-lg text-sm transition-colors"
+                            wire:loading.attr="disabled"
+                            wire:loading.class="opacity-60 cursor-not-allowed"
+                            wire:target="submitBooking">
                             <span wire:loading.remove wire:target="submitBooking">Submit Booking Request</span>
                             <span wire:loading wire:target="submitBooking">Submitting...</span>
                         </button>
@@ -643,24 +709,178 @@ color:#065f46;
         </div>
     </div>
 
+<!-- CONFIRMATION MODAL — inside app-wrapper for Livewire single-root compliance -->
+        <div id="confirmModal" style="display:none;" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+            <div class="bg-[#fffffa] rounded-xl p-6 max-w-sm w-full mx-4 shadow-2xl" id="confirmModalBox">
+
+                <div class="flex items-center gap-3 mb-3">
+                    <div id="confirmIconWrap" class="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0"></div>
+                    <h3 id="confirmTitle" class="text-base font-bold text-gray-900"></h3>
+                </div>
+
+                <p id="confirmBody" class="text-sm text-gray-600 mb-1 leading-relaxed"></p>
+
+                <div id="confirmMeta" class="mt-3 mb-5 bg-gray-50 border border-gray-100 rounded-lg px-4 py-3 text-xs text-gray-600 space-y-1"></div>
+
+                <div class="flex justify-end gap-3">
+                    <button id="confirmCancelBtn"
+                        class="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">
+                        Cancel
+                    </button>
+                    <button id="confirmOkBtn"
+                        class="px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors">
+                        Confirm
+                    </button>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+
 <script>
-        const sidebar = document.getElementById('sidebar');
+        const sidebar        = document.getElementById('sidebar');
         const profileTrigger = document.getElementById('profileTrigger');
         const profileDropdown = document.getElementById('profileDropdown');
 
-        // Dashboard Interactivity
         document.getElementById('sidebarToggle').addEventListener('click', () => {
             sidebar.classList.toggle('collapsed');
-            setTimeout(() => { charts.forEach(c => c.resize()); }, 310);
         });
-
         profileTrigger.addEventListener('click', (e) => {
             e.stopPropagation();
             profileDropdown.classList.toggle('show');
         });
-
         window.addEventListener('click', () => {
             if (profileDropdown.classList.contains('show')) profileDropdown.classList.remove('show');
+        });
+
+        /* =========================
+           CONFIRMATION MODAL
+           ========================= */
+        const confirmModal     = document.getElementById('confirmModal');
+        const confirmModalBox  = document.getElementById('confirmModalBox');
+        const confirmTitle     = document.getElementById('confirmTitle');
+        const confirmBody      = document.getElementById('confirmBody');
+        const confirmMeta      = document.getElementById('confirmMeta');
+        const confirmOkBtn     = document.getElementById('confirmOkBtn');
+        const confirmCancelBtn = document.getElementById('confirmCancelBtn');
+        const confirmIconWrap  = document.getElementById('confirmIconWrap');
+
+        confirmModal.addEventListener('click', (e) => {
+            if (!confirmModalBox.contains(e.target)) closeConfirmModal();
+        });
+        confirmCancelBtn.addEventListener('click', closeConfirmModal);
+
+        function closeConfirmModal() {
+            confirmModal.style.display = 'none';
+            confirmOkBtn.onclick = null;
+        }
+
+        function openConfirmModal({ title, body, meta, variant, onConfirm }) {
+            const variants = {
+                accept:  { iconHtml: iconCheck('#059669'), iconBg: '#d1fae5', btnClass: 'bg-emerald-600 hover:bg-emerald-700', label: 'Confirm' },
+                reject:  { iconHtml: iconX('#dc2626'),     iconBg: '#fee2e2', btnClass: 'bg-red-600 hover:bg-red-700',         label: 'Reject'  },
+                neutral: { iconHtml: iconInfo('#64748b'),  iconBg: '#f1f5f9', btnClass: 'bg-gray-700 hover:bg-gray-800',       label: 'Confirm' },
+            };
+            const v = variants[variant] || variants.neutral;
+
+            confirmIconWrap.style.background = v.iconBg;
+            confirmIconWrap.innerHTML        = v.iconHtml;
+            confirmTitle.textContent         = title;
+            confirmBody.innerHTML            = body;
+            confirmMeta.innerHTML            = meta || '';
+            confirmMeta.style.display        = meta ? 'block' : 'none';
+
+            confirmOkBtn.className   = `px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors ${v.btnClass}`;
+            confirmOkBtn.textContent = v.label;
+            confirmOkBtn.onclick     = () => { closeConfirmModal(); onConfirm(); };
+
+            confirmModal.style.display = 'flex';
+        }
+
+        function iconCheck(color) {
+            return `<svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+                <path d="M4 10l4.5 4.5L16 6" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>`;
+        }
+        function iconX(color) {
+            return `<svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+                <path d="M5 5l10 10M15 5L5 15" stroke="${color}" stroke-width="2" stroke-linecap="round"/>
+            </svg>`;
+        }
+        function iconInfo(color) {
+            return `<svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+                <circle cx="10" cy="10" r="8.5" stroke="${color}" stroke-width="1.5"/>
+                <path d="M10 9v5" stroke="${color}" stroke-width="1.5" stroke-linecap="round"/>
+                <circle cx="10" cy="6.5" r="0.8" fill="${color}"/>
+            </svg>`;
+        }
+
+        /* =========================
+           BOOKING SUBMIT INTERCEPT
+           ========================= */
+        document.getElementById('bookingSubmitBtn').addEventListener('click', function () {
+
+            // Read current Livewire state from the DOM for the summary card
+            const subjectEl  = document.querySelector('[wire\\:model="subject_id"]');
+            const topicEl    = document.querySelector('[wire\\:model="topic"]');
+            const dateEl     = document.querySelector('[wire\\:model="date"]');
+            const startEl    = document.querySelector('[wire\\:model="schedule_start"]');
+            const endEl      = document.querySelector('[wire\\:model="schedule_end"]');
+            const mentorEl   = document.querySelector('[wire\\:model="mentor_id"]');
+
+            const subjectText = subjectEl?.options[subjectEl.selectedIndex]?.text  || '—';
+            const topicText   = topicEl?.value  || '—';
+            const dateText    = dateEl?.value
+                ? new Date(dateEl.value + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
+                : '—';
+            const startText   = formatTime(startEl?.value) || '—';
+            const endText     = formatTime(endEl?.value)   || '—';
+            const mentorText  = mentorEl?.options[mentorEl.selectedIndex]?.text || '—';
+
+            function formatTime(t) {
+                if (!t) return '';
+                const [h, m] = t.split(':').map(Number);
+                const ampm = h >= 12 ? 'PM' : 'AM';
+                const hr   = h % 12 || 12;
+                return `${hr}:${String(m).padStart(2,'0')} ${ampm}`;
+            }
+
+            const metaHtml = `
+                <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+                    <span style="color:#9ca3af;">Subject</span>
+                    <span style="font-weight:600;color:#374151;text-align:right;max-width:60%;">${subjectText}</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+                    <span style="color:#9ca3af;">Topic</span>
+                    <span style="font-weight:600;color:#374151;text-align:right;max-width:60%;">${topicText}</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+                    <span style="color:#9ca3af;">Mentor</span>
+                    <span style="font-weight:600;color:#374151;text-align:right;max-width:60%;">${mentorText}</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+                    <span style="color:#9ca3af;">Date</span>
+                    <span style="font-weight:600;color:#374151;text-align:right;max-width:60%;">${dateText}</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;">
+                    <span style="color:#9ca3af;">Time</span>
+                    <span style="font-weight:600;color:#374151;">${startText} – ${endText}</span>
+                </div>
+            `;
+
+            openConfirmModal({
+                title:     'Confirm booking request?',
+                body:      'Please review your session details before submitting. Your request will be reviewed by the peer mentor.',
+                meta:      metaHtml,
+                variant:   'accept',
+                onConfirm: () => {
+                    // Trigger actual Livewire form submission
+                    document.getElementById('bookingForm').dispatchEvent(
+                        new Event('submit', { bubbles: true, cancelable: true })
+                    );
+                },
+            });
         });
 </script>
 
