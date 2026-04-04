@@ -27,6 +27,32 @@ mount(function () {
         $this->degreeProgram_id = $profile->degreeProgram_id;
         $this->yearLevel_id = $profile->yearLevel_id;
         $this->toggleProfileOpen = false;
+
+        // Load student sessions (bookings) for dashboard
+        $this->sessions = Bookings::with(['mentor.user', 'subject'])
+            ->where('student_id', $profile->id)
+            ->get()
+            ->map(function ($b) {
+                $start = \Carbon\Carbon::parse($b->schedule_start);
+                $end   = \Carbon\Carbon::parse($b->schedule_end);
+
+                return [
+                    'id'      => $b->id,
+                    'mentor'  => optional(optional($b->mentor)->user)->firstName
+                        ? $b->mentor->user->firstName . ' ' . $b->mentor->user->lastName
+                        : 'Unknown',
+                    'subject' => optional($b->subject)->code ?? 'N/A',
+                    'topic'   => $b->topic ?? '',
+                    'date'    => $b->date
+                        ? \Carbon\Carbon::parse($b->date)->format('Y-m-d')
+                        : null,
+                    'start'  => $start->format('H:i'),
+                    'end'    => $end->format('H:i'),
+                    'status' => $b->booking_status,
+                ];
+            })
+            ->values()
+            ->toArray();
     }
 });
 
@@ -40,6 +66,7 @@ state([
     'schedule_start' => '',
     'schedule_end' => '',
     'successMessage' => false,
+    'sessions' => [],
 ]);
 
 $mentors = computed(function () {
@@ -143,7 +170,6 @@ $saveProfile = action(function () {
 // Submit form
 $submitBooking = action(function () {
     abort_if(!auth()->user()->isStudent(), 403, 'Unauthorized Access');
-
     abort_if(!auth()->user()->studentProfile, 422);
 
     $validated = $this->validate([
@@ -189,33 +215,42 @@ $dismissSuccessMessage = action(function () {
 
 ?>
 
-<div>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LRC PeerConnect – Student Dashboard</title>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
 
     <style>
-        :root { 
-            --sidebar-green: #1a3c2f; 
-            --header-maroon: #7b1d1d; 
-            --bg-light: #f4f7f6; 
-            --header-height: 80px; 
-            --sidebar-width: 280px;
-            --sidebar-collapsed-width: 80px;
+        :root {
+            --sidebar-green: #1a3c2f;
+            --header-maroon: #7b1d1d;
+            --bg-light: #f4f7f6;
+            --header-height: 80px;
+            --sidebar-width: 260px;
+            --sidebar-collapsed-width: 72px;
         }
-        
+
+        * { box-sizing: border-box; }
+
         body { margin: 0; font-family: 'Inter', sans-serif; background: var(--bg-light); overflow: hidden; }
         .app-wrapper { display: flex; height: 100vh; width: 100vw; overflow: hidden; }
-        
-        /* SIDEBAR */
-        .sidebar { 
-            width: var(--sidebar-width); 
-            background: var(--sidebar-green); 
-            flex-shrink: 0; 
-            display: flex; 
-            flex-direction: column; 
-            color: white; 
+
+        /* ── SIDEBAR ── */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: var(--sidebar-green);
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            color: white;
             height: 100vh;
             transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             z-index: 30;
             position: relative;
+            overflow: visible;
         }
         .sidebar.collapsed { width: var(--sidebar-collapsed-width); }
 
@@ -223,48 +258,63 @@ $dismissSuccessMessage = action(function () {
             height: var(--header-height);
             display: flex;
             align-items: center;
-            padding: 0 24px;
-            gap: 15px;
+            justify-content: center;
+            padding: 0 20px;
+            gap: 12px;
             flex-shrink: 0;
             overflow: hidden;
+            transition: padding 0.3s, justify-content 0.3s;
         }
-        #sidebarToggle {
-            background: transparent; border: none; color: white; font-size: 1.4rem;
-            cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-        }
-        .logo-content { display: flex; align-items: center; gap: 12px; white-space: nowrap; }
-        .logo-text { font-size: 1.1rem; font-weight: 700; }
+        .sidebar:not(.collapsed) .sidebar-logo-container { justify-content: flex-start; }
 
-        .nav-item { 
-            display: flex; align-items: center; gap: 15px; padding: 15px 25px; 
-            color: rgba(255,255,255,0.7); text-decoration: none; transition: background 0.3s; white-space: nowrap;
-            position: relative; text-align: left; background: transparent; border: none; width: 100%;
+        .logo-icon { flex-shrink: 0; font-size: 1.25rem; width: 32px; text-align: center; }
+        .logo-text {
+            font-size: 1rem; font-weight: 700; white-space: nowrap; overflow: hidden;
+            opacity: 1; max-width: 200px; transition: opacity 0.2s, max-width 0.3s;
         }
-        .nav-item i { width: 30px; text-align: center; flex-shrink: 0; font-size: 20px; }
+        .sidebar.collapsed .logo-text { opacity: 0; max-width: 0; pointer-events: none; }
+
+        .nav-item {
+            display: flex; align-items: center; gap: 14px; padding: 14px 20px;
+            color: rgba(255,255,255,0.7); text-decoration: none;
+            transition: background 0.2s, color 0.2s, padding 0.3s, justify-content 0.3s;
+            white-space: nowrap; position: relative; text-align: left;
+            background: transparent; border: none; width: 100%;
+            cursor: pointer; font-size: 0.875rem; justify-content: flex-start;
+        }
+        .sidebar.collapsed .nav-item { justify-content: center; padding: 14px 0; }
+        .nav-item i { width: 32px; text-align: center; flex-shrink: 0; font-size: 18px; }
+        .nav-item span { overflow: hidden; opacity: 1; max-width: 200px; transition: opacity 0.2s, max-width 0.3s; }
+        .sidebar.collapsed .nav-item span { opacity: 0; max-width: 0; pointer-events: none; }
         .nav-item:hover, .nav-item.active { background: rgba(255,255,255,0.1); color: white; }
-.nav-item.active { 
-    background: var(--bg-light); 
-    color: var(--header-maroon); 
-    font-weight: 700;
-    /* This ensures it aligns perfectly with the content area */
-    border-radius: 0; 
-    width: calc(100% + 1px); /* Overlaps the sidebar border/edge slightly */
-    z-index: 10;
-}
-
+        .nav-item.active {
+            background: var(--bg-light); color: var(--header-maroon); font-weight: 700;
+            border-radius: 0; width: calc(100% + 1px); z-index: 10;
+        }
         .nav-item::after {
-            content: attr(data-tooltip);
-            position: absolute; left: 100%; top: 50%; transform: translateY(-50%);
-            margin-left: 10px; background: rgba(0, 0, 0, 0.9); color: white;
-            padding: 5px 12px; border-radius: 4px; font-size: 12px; font-weight: 500;
-            white-space: nowrap; opacity: 0; visibility: hidden; transition: opacity 0.2s;
-            pointer-events: none; z-index: 100;
+            content: attr(data-tooltip); position: absolute; left: 100%; top: 50%;
+            transform: translateY(-50%); margin-left: 14px; background: rgba(0,0,0,0.85);
+            color: white; padding: 5px 12px; border-radius: 4px; font-size: 12px;
+            font-weight: 500; white-space: nowrap; opacity: 0; visibility: hidden;
+            transition: opacity 0.2s; pointer-events: none; z-index: 100;
         }
         .sidebar.collapsed .nav-item:hover::after { opacity: 1; visibility: visible; }
-        .sidebar.collapsed .logo-content, .sidebar.collapsed .nav-item span { display: none; }
-        .sidebar.collapsed .sidebar-logo-container, .sidebar.collapsed .nav-item { justify-content: center; padding: 15px 0; }
-        .sidebar.collapsed .nav-item i { margin: 0; width: auto; }
-        .sidebar.collapsed .nav-item.active { border-left: none; }
+
+        .sidebar-footer { padding: 12px 0; border-top: 1px solid rgba(255,255,255,0.1); }
+
+        .sidebar-toggle-btn {
+            position: absolute; right: -16px; top: 3%; width: 32px; height: 32px;
+            border-radius: 50%; background: #ffffff; border: none; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            color: #7b1d1d; font-size: 13px; z-index: 50;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.25); transition: background 0.2s; flex-shrink: 0;
+        }
+        .sidebar-toggle-btn:hover { background: #dfcece; }
+        .sidebar-toggle-btn .toggle-icon {
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex; align-items: center; justify-content: center;
+        }
+        .sidebar:not(.collapsed) .sidebar-toggle-btn .toggle-icon { transform: rotate(180deg); }
 
         .main-content { flex: 1; min-width: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
         .top-header { background: var(--header-maroon); height: var(--header-height); padding: 0 40px; display: flex; align-items: center; justify-content: space-between; color: white; flex-shrink: 0; }
@@ -284,399 +334,851 @@ $dismissSuccessMessage = action(function () {
         .cal-today { background: #fee2e2 !important; color: var(--header-maroon) !important; font-weight: 800; }
         .cal-selected { border: 2px solid var(--header-maroon); background: #f8fafc; }
 
-        .stats-overview-container { background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); border: 1px solid #e5e7eb; width: 100%; }
-        .stats-header { padding: 12px 24px; background: #f8fafc; font-weight: 700; font-size: 0.9rem; color: #1e293b; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; justify-content: space-between; }
-        .stats-body { display: grid; grid-template-columns: repeat(2, 1fr); background: white; width: 100%; }
-        .stats-column { padding: 24px; border-right: 1px solid #f1f5f9; border-bottom: 1px solid #f1f5f9; min-width: 0; }
-        .stats-column:nth-child(2n) { border-right: none; }
-        .stats-column-title { font-weight: 600; margin-bottom: 15px; font-size: 0.8rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.025em; }
-
-        .stat-card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); transition: all 0.3s ease; border: 1px solid transparent; cursor: pointer; }
-        .stat-card:hover { transform: translateY(-5px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); border-color: var(--sidebar-green); }
-        .stat-card i { font-size: 24px; color: var(--sidebar-green); }
-
         .pagination-btn { padding: 4px 10px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 11px; font-weight: 600; color: #64748b; transition: all 0.2s; }
         .pagination-btn:hover:not(:disabled) { background: #f1f5f9; color: var(--header-maroon); border-color: var(--header-maroon); }
-        .table-filter-select, .header-filter { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 12px; font-size: 0.75rem; color: #475569; outline: none; cursor: pointer; }
-        .weekly-table{table-layout:fixed;width:100%;}
-        .weekly-table th, .weekly-table td{width:16%;}
-        .schedule-block{
-font-size:9px;
-line-height:1.2;
-padding:2px 4px;
-margin-bottom:2px;
-border-radius:4px;
-background:#d1fae5;
-color:#065f46;
-}
+        .table-filter-select { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 12px; font-size: 0.75rem; color: #475569; outline: none; cursor: pointer; }
+        .weekly-table { table-layout: fixed; width: 100%; }
+        .weekly-table th, .weekly-table td { width: 16%; }
+        .schedule-block { font-size: 9px; line-height: 1.2; padding: 2px 4px; margin-bottom: 2px; border-radius: 4px; background: #d1fae5; color: #065f46; }
+        .notif-dot { width: 6px; height: 6px; background: #3b82f6; border-radius: 50%; }
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
 
-.notif-dot {
-    width: 6px;
-    height: 6px;
-    background: #3b82f6; /* blue */
-    border-radius: 50%;
-    position: top;
-    bottom: 6px;
-}
+        .topic-text { word-break: break-word; overflow-wrap: anywhere; white-space: normal; }
+        .topic-text.line-clamp-1 { display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
+        .topic-text.line-clamp-none { display: block; overflow: visible; }
+
+        #statusToast {
+            position: fixed; bottom: 24px; right: 24px; z-index: 9999;
+            display: flex; align-items: center; gap: 10px; padding: 10px 16px;
+            border-radius: 10px; font-size: 12px; font-weight: 600; color: white;
+            background: #1e293b; box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+            opacity: 0; transform: translateY(12px); transition: opacity 0.2s, transform 0.2s;
+            pointer-events: none; min-width: 200px;
+        }
+        #statusToast.show { opacity: 1; transform: translateY(0); }
+        @keyframes spin { to { transform: rotate(360deg); } }
     </style>
+</head>
 
+<body>
+<div class="app-wrapper">
 
-    <div class="app-wrapper">
-        <aside class="sidebar" id="sidebar">
-            <div class="sidebar-logo-container">
-                <button id="sidebarToggle"><i class="fa-solid fa-bars"></i></button>
-                <div class="logo-content">
-                    <i class="fa-solid fa-graduation-cap text-xl"></i>
-                    <span class="logo-text">LRC PeerConnect</span>
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-logo-container">
+            <i class="fa-solid fa-graduation-cap logo-icon"></i>
+            <span class="logo-text">LRC PeerConnect</span>
+        </div>
+
+        <button class="sidebar-toggle-btn" id="sidebarToggle" aria-label="Toggle sidebar">
+            <span class="toggle-icon"><i class="fa-solid fa-chevron-right"></i></span>
+        </button>
+
+        <nav class="flex-grow">
+            <a href="{{ route('student.dashboard') }}" class="nav-item active" data-tooltip="Dashboard">
+                <i class="fa-solid fa-gauge"></i><span>Dashboard</span>
+            </a>
+            <a href="{{ route('student.mentors') }}" class="nav-item" data-tooltip="Mentors">
+                <i class="fa-solid fa-chalkboard-user"></i><span>Mentors</span>
+            </a>
+            <a href="{{ route('student.bookings') }}" class="nav-item" data-tooltip="Bookings">
+                <i class="fa-solid fa-calendar-check"></i><span>Bookings</span>
+            </a>
+            <a href="{{ route('student.history') }}" class="nav-item" data-tooltip="History">
+                <i class="fa-solid fa-clock-rotate-left"></i><span>History</span>
+            </a>
+            <a href="{{ route('student.about') }}" class="nav-item" data-tooltip="About Us">
+                <i class="fa-solid fa-circle-info"></i><span>About Us</span>
+            </a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <form method="POST" action="{{ route('logout') }}">
+                @csrf
+                <button type="submit" class="nav-item" data-tooltip="Logout">
+                    <i class="fa-solid fa-right-from-bracket"></i><span>Logout</span>
+                </button>
+            </form>
+        </div>
+    </aside>
+
+    <!-- MAIN -->
+    <div class="main-content">
+        <header class="top-header relative">
+            <div class="text-lg">Welcome, <span class="font-bold">{{ auth()->user()->name }}</span></div>
+
+            <button id="profileTrigger" class="flex items-center gap-2 px-3 py-1 bg-white rounded-full hover:bg-gray-100 transition shadow-sm border-2 border-white/20 group">
+                <div class="w-8 h-8 bg-red-900 text-white rounded-full flex items-center justify-center text-xs font-bold">
+                    {{ strtoupper(substr(auth()->user()->name, 0, 2)) }}
                 </div>
-            </div>
-            <nav class="flex-grow">
-                <a href="{{ route('student.dashboard') }}" class="nav-item {{ request()->routeIs('student.dashboard') ? 'active' : '' }}" data-tooltip="Dashboard">
-                    <i class="fa-solid fa-gauge w-5"></i><span>Dashboard</span>
-                </a>
-
-                <a href="{{ route('student.bookings') }}" class="nav-item {{ request()->routeIs('student.bookings') ? 'active' : '' }}" data-tooltip="Bookings">
-                    <i class="fa-solid fa-calendar-check w-5"></i><span>Bookings</span>
-                </a>
-
-                <a href="{{ route('student.history') }}" class="nav-item {{ request()->routeIs('student.history') ? 'active' : '' }}" data-tooltip="History">
-                    <i class="fa-solid fa-clock-rotate-left w-5"></i><span>History</span>
-                </a>
-
-                <a href="{{ route('student.mentors') }}" class="nav-item {{ request()->routeIs('student.mentors') ? 'active' : '' }}" data-tooltip="Mentors">
-                    <i class="fa-solid fa-chalkboard-user w-5"></i><span>Mentors</span>
-                </a>
-
-                <a href="{{ route('student.about') }}" class="nav-item {{ request()->routeIs('student.about') ? 'active' : '' }}" data-tooltip="About Us">
-                    <i class="fa-solid fa-circle-info w-5"></i><span>About Us</span>
-                </a>
-            </nav>
-            <div class="p-4 border-t border-white/10">
-                <form method="POST" action="{{ route('logout') }}">
+                <i class="fa-solid fa-chevron-down text-[10px] text-gray-500 group-hover:text-red-900 transition-transform duration-200" id="dropdownArrow"></i>
+            </button>
+            <div id="profileDropdown" class="profile-dropdown">
+                <div class="p-4 border-b border-gray-100 bg-slate-50">
+                    <p class="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1">Signed in as</p>
+                    <p class="text-sm font-bold text-slate-800 truncate">{{ auth()->user()->name }}</p>
+                    <p class="text-xs text-slate-500 truncate">{{ auth()->user()->email }}</p>
+                </div>
+                <form method="POST" action="{{ route('logout') }}" class="m-0">
                     @csrf
-                    <button type="submit" class="nav-item w-full bg-transparent border-none text-left" data-tooltip="Logout">
-                        <i class="fa-solid fa-right-from-bracket"></i><span>Logout</span>
+                    <button type="submit" class="dropdown-item w-full border-t border-gray-50 text-red-600 font-semibold">
+                        <i class="fa-solid fa-right-from-bracket"></i> Logout
                     </button>
                 </form>
             </div>
-        </aside>
+        </header>
 
-        <div class="main-content">
-            <header class="top-header relative">
-                <div class="text-lg">Welcome, <span class="font-bold">{{ auth()->user()->name }}</span></div>
+        <main class="scroll-container">
 
-                <button id="profileTrigger" class="flex items-center gap-2 px-3 py-1 bg-white rounded-full hover:bg-gray-100 transition shadow-sm border-2 border-white/20 group">
-                    <div class="w-8 h-8 bg-red-900 text-white rounded-full flex items-center justify-center text-xs font-bold">
-                        {{ strtoupper(substr(auth()->user()->name,0,2)) }}
-                    </div>
-                    <i class="fa-solid fa-chevron-down text-[10px] text-gray-500 group-hover:text-red-900 transition-transform duration-200" id="dropdownArrow"></i>
-                </button>
-                <div id="profileDropdown" class="profile-dropdown">
-                    <div class="p-4 border-b border-gray-100 bg-slate-50">
-                        <p class="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1">Signed in as</p>
-                        <p class="text-sm font-bold text-slate-800 truncate">{{ auth()->user()->name }}</p>
-                        <p class="text-xs text-slate-500 truncate">{{ auth()->user()->email }}</p>
-                    </div>
-                    <form method="POST" action="{{ route('logout') }}" class="m-0">
-                        @csrf
-                        <button type="submit" class="dropdown-item w-full border-t border-gray-50 text-red-600 font-semibold">
-                            <i class="fa-solid fa-right-from-bracket"></i> Logout
-                        </button>
-                    </form>
+            <!-- GLOBAL SEARCH -->
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-6 relative">
+                <div class="relative">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-300 text-xs"></i>
+                    <input
+                        type="text"
+                        id="globalSearchInput"
+                        placeholder="Search ALL sessions (mentor, subject, date, status)..."
+                        class="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:ring-1 focus:ring-red-800"
+                    >
                 </div>
-            </header>
+                <div id="globalSearchResults"
+                    class="absolute left-0 right-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg max-h-72 overflow-y-auto z-50 hidden">
+                </div>
+            </div>
 
-            <main class="scroll-container">
-                @if($successMessage)
-                    <div class="mb-6 flex items-center justify-between bg-green-100 border border-green-400 text-green-800 px-4 py-3 rounded">
-                        <span>Your session has been booked and is now <strong>pending</strong> approval.</span>
-                        <button wire:click="dismissSuccessMessage" class="text-green-600 hover:text-green-800 font-bold ml-4">X</button>
-                    </div>
-                @endif
+            <div class="grid grid-cols-3 gap-8">
 
-                @if(!auth()->user()->studentProfile)
-                    <div class="mb-6 bg-yellow-100 border border-yellow-400 text-black-800 px-4 py-3 rounded">
-                        Please complete your <strong>Student Profile</strong> before booking a session.
-                    </div>
-                @endif
+                <!-- LEFT COLUMN (col-span-2) -->
+                <div class="col-span-2 space-y-8">
 
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-
-                    <div class="lg:col-span-2">
-                        <div class="bg-[#fffffa] p-6 rounded-lg shadow-sm border-gray-200"
-                             x-data="{
-                                allMentors: @js($this->mentors),
-                                allSubjects: @js($this->mentorSubjects),
-                                allAvailabilities: @js($this->mentorAvailabilities),
-
-                                getDayOfWeek(dateStr) {
-                                const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-                                const d = new Date(dateStr + 'T00:00:00');
-                                return days[d.getDay()];
-                                },
-
-                                get filteredMentors() {
-                                    let choices = this.allMentors;
-
-                                    if($wire.subject_id) {
-                                        const validIds = this.allSubjects
-                                            .filter(s => s.subject_id == $wire.subject_id)
-                                            .map(s => s.mentorProfile_id);
-                                        choices = choices.filter(m => validIds.includes(m.profile_id));
-                                    }
-
-                                    if($wire.date) {
-                                        const dayChosen = this.getDayOfWeek($wire.date);
-
-                                        choices = choices.filter(m => {
-                                            const avails = this.allAvailabilities.filter(a => a.mentorProfile_id == m.profile_id && a.day_of_week === dayChosen);
-
-                                            if(avails.length === 0) return false;
-
-                                            if($wire.schedule_start && $wire.schedule_end) {
-                                                return avails.some(a => {
-                                                    let start = a.start_time.substring(0, 5);
-                                                    let end = a.end_time.substring(0, 5);
-                                                    let startChosen = $wire.schedule_start.substring(0, 5);
-                                                    let endChosen = $wire.schedule_end.substring(0, 5);
-
-                                                    return start <= startChosen && end >= endChosen;
-                                                    });
-                                                }
-                                            return true;
-                                        });
-                                    }
-                                    return choices;
-                                }
-                            }">
-                            <h2 class="text-lg font-semibold text-gray-900 mb-1">Request an Enrichment Session!</h2>
-                            <p class="text-gray-500 text-sm mb-6">Please fill out all required fields. Your request will then be reviewed by the peer mentor.</p>
-
-                            <form wire:submit.prevent="submitBooking" class="space-y-2">
-                                <div>
-                                    <label class="block text-base font-medium text-gray-700 mb-1">Subject<span class="text-red-500">*</span></label>
-                                    <select wire:model="subject_id" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-black-500 focus:ring-blue-500 text-base px-2 py-1">
-                                        <option value="">--- Select a Subject ---</option>
-                                        @foreach($this->subjects as $subject)
-                                            <option value="{{ $subject['id'] }}">{{ $subject['code'] }} - {{$subject['name']}}</option>
-                                        @endforeach
-                                    </select>
-                                    @error('subject_id') <span class="mt-1 text-xs text-red-600">{{ $message }}</span> @enderror
+                    <!-- TODAY'S SESSIONS TABLE -->
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 min-h-[460px] flex flex-col">
+                        <div class="flex justify-between items-center mb-6">
+                            <div>
+                                <h2 class="text-lg font-bold text-slate-800" id="tableTitle">Today's Schedule</h2>
+                                <p class="text-s text-gray-500" id="tableSubtitle"></p>
+                            </div>
+                            <div class="flex gap-2">
+                                <div class="relative w-48">
+                                    <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-300 text-xs"></i>
+                                    <input type="text" id="liveSearchInput" placeholder="Search mentors..." class="w-full pl-9 pr-3 py-2 text-xs border border-gray-200 rounded-lg outline-none focus:ring-1 focus:ring-red-800">
                                 </div>
-
-                                <div>
-                                    <label class="block text-base font-medium text-gray-700 mb-1">Topic<span class="text-red-500">*</span></label>
-                                    <input type="text" wire:model="topic" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-black-500 focus:ring-blue-500 text-base px-2 py-1" placeholder="e.g. Integration by Parts." maxlength="255">
-                                    @error('topic') <span class="mt-1 text-xs text-red-600">{{ $message }}</span> @enderror
-                                </div>
-
-                                <div>
-                                    <label class="block text-base font-medium text-gray-700 mb-1">Tutorial Mode<span class="text-red-500">*</span></label>
-                                    <select wire:model="tutorialMode_id" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-black-500 focus:ring-blue-500 text-base px-2 py-1">
-                                        <option value="">--- Select Mode of Tutoring ---</option>
-                                        @foreach($this->tutorialModes as $mode)
-                                            <option value="{{ $mode['id'] }}">{{ $mode['mode'] }}</option>
-                                        @endforeach
-                                    </select>
-                                    @error('tutorialMode_id') <span class="mt-1 text-xs text-red-600">{{ $message }}</span> @enderror
-                                </div>
-
-                                <div>
-                                    <label class="block text-base font-medium text-gray-700 mb-1">Preferred Day<span class="text-red-500">*</span></label>
-                                    <input type="date" wire:model="date" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-black-500 focus:ring-blue-500 text-base px-2 py-1" min="{{ \Carbon\Carbon::tomorrow()->format('Y-m-d') }}">
-                                    @error('date') <span class="mt-1 text-xs text-red-600">{{ $message }}</span> @enderror
-                                </div>
-
-                                <div class="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label class="block text-base font-medium text-gray-700 mb-1">Start Time<span class="text-red-500">*</span></label>
-                                        <input type="time" wire:model="schedule_start" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-black-500 focus:ring-blue-500 text-base px-2 py-1">
-                                        @error('schedule_start') <span class="mt-1 text-xs text-red-600">{{ $message }}</span> @enderror
-                                    </div>
-                                    <div>
-                                        <label class="block text-base font-medium text-gray-700 mb-1">End Time<span class="text-red-500">*</span></label>
-                                        <input type="time" wire:model="schedule_end" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-black-500 focus:ring-blue-500 text-base px-2 py-1">
-                                        @error('schedule_end') <span class="mt-1 text-xs text-red-600">{{ $message }}</span> @enderror
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <label class="block text-base font-medium text-gray-700 mb-1">Preferred Mentor<span class="text-red-500">*</span></label>
-                                    <select wire:model="mentor_id" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-black-500 focus:ring-blue-500 text-base px-2 py-1">
-                                        <option value="" x-text="filteredMentors.length === 0 ? '--- No mentors available. Please select a different date or timeframe. ---' : '--- Select a mentor ---'">
-                                        </option>
-                                        <template x-for="mentor in filteredMentors" :key="mentor.profile_id">
-                                            <option :value="mentor.profile_id" x-text="mentor.name"></option>
-                                        </template>
-                                    </select>
-                                    @error('mentor_id') <span class="mt-1 text-xs text-red-600">{{ $message }}</span> @enderror
-                                </div>
-
-                                <div class="pt-4">
-                                    <button type="submit" @if(!auth()->user()->studentProfile) disabled @endif class="w-full bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium py-2 px-4 rounded-lg text-sm transition-colors" wire:loading.attr="disabled" wire:loading.class="opacity-60 cursor-not-allowed" wire:target="submitBooking">
-                                        <span wire:loading.remove wire:target="submitBooking">Submit Booking Request</span>
-                                        <span wire:loading wire:target="submitBooking">Submitting...</span>
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-
-                    <div class="lg:col-span-1 space-y-6">
-                        <div class="bg-[#fffffa] rounded-xl shadow-sm border-gray-200 overflow-hidden p-6"
-                             x-data="{
-                                open: $wire.entangle('toggleProfileOpen'),
-                                college: $wire.entangle('college_id'),
-                                degree: $wire.entangle('degreeProgram_id'),
-                                showSuccess: false,
-                                allDegrees: @js($this->degreePrograms),
-                                get filteredDeProgs() {
-                                    if (!this.college) return [];
-                                    return this.allDegrees.filter(deprog => deprog.college_id == this.college);
-                                }
-                            }"
-                                         @profile-updated.window="showSuccess = true; setTimeout(() => showSuccess = false, 10000)"
-                                         x-init="
-                                $watch('college', (val, oldVal) => {
-                                    if (oldVal !== undefined && oldVal !== '') {
-                                        degree = '';
-                                    }
-                                });
-                                $nextTick(() => {
-                                    let savedDegree = degree;
-                                    degree = '';
-                                    degree = savedDegree;
-                                });
-                            ">
-
-                            <button @click="open = !open" type="button" class="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-gray-50 transition-colors">
-                                <div class="flex items-center gap-2">
-                                    <span class="text-base font-semibold text-gray-900">Student Profile</span>
-                                    @if(auth()->user()->studentProfile)
-                                        <span class="text-xs bg-green-200 px-2 py-1 rounded-full text-green-800 font-bold">Saved</span>
-                                    @else
-                                        <span class="text-xs bg-yellow-100 px-2 py-1 rounded-full text-yellow-800 font-bold">Required</span>
-                                    @endif
-                                </div>
-
-                                <svg class="w-4 h-4 text-gray-400 transition-transform duration-200" :class="{ 'rotate-180': open }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                                </svg>
-                            </button>
-
-                            <div x-show="open" style="display: none;" x-transition class="px-5 pb-5 border-t border-gray-100">
-
-                                <div x-show="showSuccess" style="display: none;" x-transition class="mt-3 mb-2 text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2">Profile Updated!</div>
-
-                                <form wire:submit.prevent="saveProfile" class="space-y-4 mt-4">
-                                    <div>
-                                        <label class="block text-base font-medium text-gray-700 mb-1">Student Number<span class="text-red-500">*</span></label>
-                                        <input type="text" wire:model="student_num" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-black-500 focus:ring-blue-500 text-base px-2 py-1" placeholder="e.g 2023-00000" maxlength="10">
-                                        @error('student_num') <span class="mt-1 text-xs text-red-600">{{ $message }}</span> @enderror
-                                    </div>
-
-                                    <div>
-                                        <label class="block text-base font-medium text-gray-700 mb-1">College<span class="text-red-500">*</span></label>
-                                        <select x-model="college" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-black-500 focus:ring-blue-500 text-base px-2 py-1">
-                                            <option value="">--- College ---</option>
-                                            @foreach($this->colleges as $c)
-                                                <option value="{{ $c['id'] }}">{{ $c['name'] }}</option>
-                                            @endforeach
-                                        </select>
-                                        @error('college_id') <span class="mt-1 text-xs text-red-600">{{ $message }}</span> @enderror
-                                    </div>
-
-                                    <div>
-                                        <label class="block text-base font-medium text-gray-700 mb-1">Degree Program<span class="text-red-500">*</span></label>
-                                        <select x-model="degree" x-bind:disabled="!college" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-black-500 focus:ring-blue-500 text-base px-2 py-1 disabled:bg-gray-100">
-                                            <option value="">--- Degree Program ---</option>
-                                            <template x-for="deprog in filteredDeProgs" :key="deprog.id">
-                                                <option :value="deprog.id" x-text="deprog.name"></option>
-                                            </template>
-                                        </select>
-                                        @error('degreeProgram_id') <span class="mt-1 text-xs text-red-600">{{ $message }}</span> @enderror
-                                    </div>
-
-                                    <div>
-                                        <label class="block text-base font-medium text-gray-700 mb-1">Year Level<span class="text-red-500">*</span></label>
-                                        <select wire:model="yearLevel_id" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-black-500 focus:ring-blue-500 text-base px-2 py-1">
-                                            <option value="">--- Year Level ---</option>
-                                            @foreach($this->yearLevels as $level)
-                                                <option value="{{ $level['id'] }}">{{ $level['name'] }}</option>
-                                            @endforeach
-                                        </select>
-                                        @error('yearLevel_id') <span class="mt-1 text-xs text-red-600">{{ $message }}</span> @enderror
-                                    </div>
-
-                                    <button type="submit" class="w-full bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium py-2 px-4 rounded-lg text-sm transition-colors" wire:loading.attr="disabled" wire:loading.class="opacity-60 cursor-not-allowed" wire:target="saveProfile">
-                                        <span wire:loading.remove wire:target="saveProfile">{{ auth()->user()->studentProfile ? 'Update Profile' : 'Save Profile' }}</span>
-                                        <span wire:loading wire:target="saveProfile">Saving...</span>
-                                    </button>
-                                </form>
+                                <select id="statusFilter" class="table-filter-select">
+                                    <option value="">All Status</option>
+                                    <option value="pending">Pending</option>
+                                    <option value="accepted">Accepted</option>
+                                    <option value="completed">Completed</option>
+                                    <option value="cancelled">Cancelled</option>
+                                    <option value="rejected">Rejected</option>
+                                </select>
                             </div>
                         </div>
 
-                        <div class="bg-[#fffffa] rounded-xl shadow-sm border-gray-200 overflow-hidden p-6">
-                            <h3 class="text-base font-semibold text-gray-900 mb-4">Recent Bookings</h3>
-                            @forelse($this->studentBookings as $booking)
-                                <div class="mb-4 pb-4 border-b border-gray-100 last:border-0 last:mb-0 last:pb-0">
-                                    <div class="flex items-start justify-between gap-2">
-                                        <div>
-                                            <p class="text-sm font-medium text-gray-800">{{ $booking->subject->code }}</p>
-                                            <p class="text-xs font-medium text-gray-800">{{ $booking->topic }}</p>
-                                            <p class="text-xs font-medium text-gray-800">{{ strtoupper($booking->mentor->user->lastName ?? 'UNKNOWN') }}, {{ $booking->mentor->user->firstName ?? 'Mentor' }}</p>
-                                        </div>
-                                        @php
-                                            $statusColors = match($booking->booking_status) {
-                                                'pending' => 'bg-yellow-100 text-yellow-800',
-                                                'approved' => 'bg-green-100 text-green-800',
-                                                'rejected' => 'bg-red-100 text-red-800',
-                                                'completed' => 'bg-blue-100 text-blue-800',
-                                                'no-show' => 'bg-red-100 text-red-800',
-                                                default => 'bg-gray-100 text-gray-800',
-                                            };
-                                        @endphp
-                                        <span class="text-xs font-medium px-2 py-1 rounded-full capitalize {{ $statusColors }}">
-                                {{ str_replace('_', ' ', $booking->booking_status) }}
-                            </span>
-                                    </div>
-                                    <p class="text-xs text-gray-400 mt-1">{{ \Carbon\Carbon::parse($booking->date)->format('l, F j, Y') }},
-                                        {{ \Carbon\Carbon::parse($booking->schedule_start)->format('g:i A') }} - {{ \Carbon\Carbon::parse($booking->schedule_end)->format('g:i A') }}
-                                    </p>
-                                </div>
-                            @empty
-                                <p class="text-sm text-gray-500 text-center py-4">No recent bookings.</p>
-                            @endforelse
+                        <div class="flex-grow">
+                            <table class="w-full text-left text-sm table-fixed">
+                                <thead class="text-gray-400 border-b">
+                                    <tr>
+                                        <th class="pb-3 text-[10px] tracking-wider" style="width:35%">
+                                            <button id="sortHead-mentor" onclick="toggleSort('mentor')" class="flex items-center gap-1 font-semibold uppercase hover:text-red-800 transition-colors" style="color:#94a3b8;">
+                                                Mentor <span class="sort-icon"><i class="fa-solid fa-arrow-up-arrow-down" style="font-size:8px;opacity:0.4;"></i></span>
+                                            </button>
+                                        </th>
+                                        <th class="pb-3 text-[10px] tracking-wider" style="width:25%">
+                                            <button id="sortHead-start" onclick="toggleSort('start')" class="flex items-center gap-1 font-semibold uppercase hover:text-red-800 transition-colors" style="color:#7b1d1d;">
+                                                Time <span class="sort-icon"><i class="fa-solid fa-arrow-up" style="font-size:8px;"></i></span>
+                                            </button>
+                                        </th>
+                                        <th class="pb-3 text-[10px] tracking-wider" style="width:20%">
+                                            <button id="sortHead-subject" onclick="toggleSort('subject')" class="flex items-center gap-1 font-semibold uppercase hover:text-red-800 transition-colors" style="color:#94a3b8;">
+                                                Subject <span class="sort-icon"><i class="fa-solid fa-arrow-up-arrow-down" style="font-size:8px;opacity:0.4;"></i></span>
+                                            </button>
+                                        </th>
+                                        <th class="pb-3 text-[10px] tracking-wider" style="width:20%">
+                                            <button id="sortHead-status" onclick="toggleSort('status')" class="flex items-center gap-1 font-semibold uppercase hover:text-red-800 transition-colors" style="color:#94a3b8;">
+                                                Status <span class="sort-icon"><i class="fa-solid fa-arrow-up-arrow-down" style="font-size:8px;opacity:0.4;"></i></span>
+                                            </button>
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tableBody"></tbody>
+                            </table>
                         </div>
 
+                        <div class="mt-6 pt-4 border-t border-gray-50 flex items-center justify-between">
+                            <div class="text-[11px] text-gray-400 font-medium" id="pageIndicator">Showing 0 results</div>
+                            <div class="flex gap-2">
+                                <button id="prevBtn" class="pagination-btn"><i class="fa-solid fa-chevron-left"></i></button>
+                                <button id="nextBtn" class="pagination-btn"><i class="fa-solid fa-chevron-right"></i></button>
+                            </div>
+                        </div>
                     </div>
-                </div>
-            </main>
-        </div>
+
+                    <!-- WEEKLY SCHEDULE -->
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="text-lg font-bold text-slate-800">Weekly Schedule</h2>
+                            <span class="text-xs text-gray-400" id="weeklyScheduleRange">8:00 AM – 6:00 PM</span>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="weekly-table text-xs text-center border">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="p-2 border">Time</th>
+                                        <th class="p-2 border" id="monHead"></th>
+                                        <th class="p-2 border" id="tueHead"></th>
+                                        <th class="p-2 border" id="wedHead"></th>
+                                        <th class="p-2 border" id="thuHead"></th>
+                                        <th class="p-2 border" id="friHead"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="weeklyScheduleBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                </div><!-- end col-span-2 -->
+
+                <!-- RIGHT COLUMN -->
+                <div class="flex flex-col gap-6">
+
+                    <!-- CALENDAR + CLOCK -->
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                        <div class="flex justify-between items-center mb-6">
+                            <div class="flex gap-4">
+                                <button onclick="changeMonth(-1)" class="text-gray-400 hover:text-maroon-800"><i class="fa-solid fa-chevron-left text-xs"></i></button>
+                                <span id="monthDisplay" class="text-sm font-bold w-24 text-center"></span>
+                                <button onclick="changeMonth(1)" class="text-gray-400 hover:text-maroon-800"><i class="fa-solid fa-chevron-right text-xs"></i></button>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-7 gap-1 mb-2">
+                            <div class="cal-header-day">S</div><div class="cal-header-day">M</div><div class="cal-header-day">T</div>
+                            <div class="cal-header-day">W</div><div class="cal-header-day">T</div><div class="cal-header-day">F</div><div class="cal-header-day">S</div>
+                        </div>
+                        <div id="calendarGrid" class="grid grid-cols-7 gap-1"></div>
+
+                        <div class="mt-6 pt-6 border-t border-gray-50">
+                            <div class="bg-slate-900 rounded-xl p-4 shadow-inner">
+                                <div id="liveClock" class="text-3xl font-mono font-black text-white tracking-widest text-center">00:00:00</div>
+                                <div id="liveDate" class="text-[10px] font-medium text-slate-400 text-center mt-1 uppercase">Saturday, March 14</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- MY UPCOMING SESSIONS (replaces Pending Requests + Quick Actions) -->
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="font-bold text-slate-800 text-sm tracking-tight">My Upcoming Sessions</h3>
+                            <span id="upcomingBadge" class="bg-blue-100 text-blue-700 text-[10px] font-bold px-2 py-0.5 rounded-full"></span>
+                        </div>
+
+                        <div class="flex flex-col gap-4">
+                            <div id="upcomingSessionsList" class="flex flex-col gap-4"></div>
+                        </div>
+
+                        <div id="upcomingPagination" class="hidden mt-3 flex items-center justify-between px-1 border-t border-gray-50 pt-3">
+                            <span id="upcomingPageInfo" class="text-[10px] text-gray-400"></span>
+                            <div class="flex gap-1">
+                                <button id="upcomingPrevBtn" class="pagination-btn opacity-30 cursor-not-allowed" disabled>
+                                    <i class="fa-solid fa-chevron-left text-[10px]"></i>
+                                </button>
+                                <button id="upcomingNextBtn" class="pagination-btn">
+                                    <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <a href="{{ route('student.bookings') }}" class="block w-full mt-4 py-2 text-[10px] font-bold text-slate-400 hover:text-slate-600 border-t border-gray-50 transition text-center">
+                            Book a New Session →
+                        </a>
+                    </div>
+
+                </div><!-- end right column -->
+            </div><!-- end grid -->
+
+        </main>
     </div>
 
-    <script>
-        // DOM Elements
-        const sidebar = document.getElementById('sidebar');
-        const profileTrigger = document.getElementById('profileTrigger');
-        const profileDropdown = document.getElementById('profileDropdown');
-        const searchInput = document.getElementById('liveSearchInput');
-        const statusFilter = document.getElementById('statusFilter');
-        const charts = [];
+    <div id="statusToast">
+        <span id="statusToastMsg">Loading...</span>
+    </div>
 
-        // Dashboard Interactivity
-        document.getElementById('sidebarToggle').addEventListener('click', () => {
-            sidebar.classList.toggle('collapsed');
-            setTimeout(() => { charts.forEach(c => c.resize()); }, 310);
+</div><!-- end app-wrapper -->
+
+<script>
+// ─── DATA FROM SERVER ───────────────────────────────────────────────────────
+const allSessions = @json($this->sessions);
+
+// ─── STATE ──────────────────────────────────────────────────────────────────
+const today = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Manila" }));
+let selectedDateStr = today.toISOString().split("T")[0];
+let viewDate = new Date(today.getFullYear(), today.getMonth(), 1);
+
+let tablePage = 0;
+const TABLE_PER_PAGE = 5;
+let sortColumn = 'start';
+let sortDirection = 'asc';
+let upcomingPage = 0;
+const UPCOMING_PER_PAGE = 5;
+
+// ─── DOM ELEMENTS ───────────────────────────────────────────────────────────
+const sidebar          = document.getElementById('sidebar');
+const profileTrigger   = document.getElementById('profileTrigger');
+const profileDropdown  = document.getElementById('profileDropdown');
+const searchInput      = document.getElementById('liveSearchInput');
+const statusFilter     = document.getElementById('statusFilter');
+const globalSearchInput   = document.getElementById('globalSearchInput');
+const globalSearchResults = document.getElementById('globalSearchResults');
+
+// ─── SIDEBAR TOGGLE ─────────────────────────────────────────────────────────
+document.getElementById('sidebarToggle').addEventListener('click', () => {
+    sidebar.classList.toggle('collapsed');
+});
+
+profileTrigger.addEventListener('click', (e) => {
+    e.stopPropagation();
+    profileDropdown.classList.toggle('show');
+});
+window.addEventListener('click', () => {
+    if (profileDropdown.classList.contains('show')) profileDropdown.classList.remove('show');
+    if (!globalSearchInput.contains(event.target)) globalSearchResults.classList.add('hidden');
+});
+
+// ─── CLOCK ──────────────────────────────────────────────────────────────────
+function updateClock() {
+    const now = new Date();
+    document.getElementById('liveClock').innerText = now.toLocaleTimeString('en-US', { hour12: false });
+    document.getElementById('liveDate').innerText  = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+}
+setInterval(updateClock, 1000);
+
+// ─── HELPERS ────────────────────────────────────────────────────────────────
+function formatTimeTo12Hour(timeStr) {
+    const [hour, minute] = timeStr.split(':');
+    let h = parseInt(hour);
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12;
+    return `${h}:${minute} ${ampm}`;
+}
+
+function getStatusColor(status) {
+    switch (status) {
+        case 'accepted':  return 'text-blue-700 bg-blue-100 border-blue-300';
+        case 'completed': return 'text-gray-600 bg-gray-100 border-gray-300';
+        case 'pending':   return 'text-yellow-700 bg-yellow-100 border-yellow-300';
+        case 'rejected':  return 'text-red-700 bg-red-100 border-red-300';
+        case 'cancelled': return 'text-red-700 bg-red-100 border-red-300';
+        case 'no_show':   return 'text-orange-700 bg-orange-100 border-orange-300';
+        default:          return 'text-gray-500 bg-gray-50 border-gray-200';
+    }
+}
+
+function getStatusLabel(status) {
+    switch (status) {
+        case 'no_show':   return 'No Show';
+        case 'accepted':  return 'Accepted';
+        case 'completed': return 'Completed';
+        case 'rejected':  return 'Rejected';
+        case 'cancelled': return 'Cancelled';
+        case 'pending':   return 'Pending';
+        default: return status ? status.charAt(0).toUpperCase() + status.slice(1) : '—';
+    }
+}
+
+function timeToMinutes(t) {
+    const [h, m] = t.split(':').map(Number);
+    return h * 60 + m;
+}
+
+function fmtHour(h) {
+    const display = h > 12 ? h - 12 : h;
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    return `${display}:00 ${ampm}`;
+}
+
+// ─── TOGGLE NAME HELPER ─────────────────────────────────────────────────────
+function toggleName(id) {
+    const nameEl  = document.getElementById('name-' + id);
+    const btn     = document.getElementById('toggle-' + id);
+    if (!nameEl || !btn) return;
+    if (btn.innerText === 'Show more') {
+        nameEl.style.whiteSpace   = 'normal';
+        nameEl.style.overflow     = 'visible';
+        nameEl.style.textOverflow = 'unset';
+        nameEl.style.wordBreak    = 'break-all';
+        btn.innerText = 'Show less';
+    } else {
+        nameEl.style.whiteSpace   = 'nowrap';
+        nameEl.style.overflow     = 'hidden';
+        nameEl.style.textOverflow = 'ellipsis';
+        nameEl.style.wordBreak    = 'normal';
+        btn.innerText = 'Show more';
+    }
+}
+
+function toggleUpcomingName(id) {
+    const nameEl  = document.getElementById('uname-' + id);
+    const btn     = document.getElementById('utoggle-' + id);
+    if (!nameEl || !btn) return;
+    if (btn.innerText === 'Show more') {
+        nameEl.style.whiteSpace   = 'normal';
+        nameEl.style.overflow     = 'visible';
+        nameEl.style.textOverflow = 'unset';
+        nameEl.style.wordBreak    = 'break-all';
+        btn.innerText = 'Show less';
+    } else {
+        nameEl.style.whiteSpace   = 'nowrap';
+        nameEl.style.overflow     = 'hidden';
+        nameEl.style.textOverflow = 'ellipsis';
+        nameEl.style.wordBreak    = 'normal';
+        btn.innerText = 'Show more';
+    }
+}
+
+// ─── GLOBAL SEARCH ──────────────────────────────────────────────────────────
+globalSearchInput.addEventListener('input', function () {
+    const value = this.value.trim();
+    if (value === '') { globalSearchResults.classList.add('hidden'); return; }
+    const q = value.toLowerCase();
+    const results = allSessions.filter(s =>
+        (s.mentor  || '').toLowerCase().includes(q) ||
+        (s.subject || '').toLowerCase().includes(q) ||
+        (s.status  || '').toLowerCase().includes(q) ||
+        (s.date    || '').includes(q)
+    );
+    if (!results.length) {
+        globalSearchResults.innerHTML = `<div class="p-4 text-xs text-gray-400 text-center">No matching sessions found</div>`;
+    } else {
+        globalSearchResults.innerHTML = results.map(r => `
+            <div class="p-3 border-b last:border-0 hover:bg-gray-50 cursor-pointer">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <p class="text-sm font-bold text-slate-700">${r.mentor}</p>
+                        <p class="text-xs text-gray-400">${r.subject} • ${formatTimeTo12Hour(r.start)} – ${formatTimeTo12Hour(r.end)}</p>
+                        <p class="text-[10px] text-gray-400">${r.date}</p>
+                    </div>
+                    <span class="${getStatusColor(r.status)} text-[10px] px-2 py-1 rounded font-bold border">
+                        ${getStatusLabel(r.status)}
+                    </span>
+                </div>
+            </div>
+        `).join('');
+    }
+    globalSearchResults.classList.remove('hidden');
+});
+
+// ─── SORT ────────────────────────────────────────────────────────────────────
+function toggleSort(col) {
+    if (sortColumn === col) {
+        sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+    } else {
+        sortColumn = col;
+        sortDirection = 'asc';
+    }
+    tablePage = 0;
+    applyFilters();
+}
+
+// ─── TODAY'S TABLE ───────────────────────────────────────────────────────────
+function applyFilters() {
+    const tbody          = document.getElementById('tableBody');
+    const searchTerm     = searchInput.value.toLowerCase();
+    const selectedStatus = statusFilter.value;
+
+    let filtered = allSessions.filter(item => {
+        const matchesDate   = item.date === selectedDateStr;
+        const matchesMentor = item.mentor.toLowerCase().includes(searchTerm);
+        const matchesStatus = selectedStatus === '' || item.status === selectedStatus;
+        return matchesDate && matchesMentor && matchesStatus;
+    });
+
+    // Sort
+    filtered.sort((a, b) => {
+        let aVal, bVal;
+        if      (sortColumn === 'start')   { aVal = a.start;            bVal = b.start;            }
+        else if (sortColumn === 'mentor')  { aVal = a.mentor.toLowerCase(); bVal = b.mentor.toLowerCase(); }
+        else if (sortColumn === 'subject') { aVal = a.subject.toLowerCase(); bVal = b.subject.toLowerCase(); }
+        else if (sortColumn === 'status')  { aVal = a.status;            bVal = b.status;            }
+        if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
+        if (aVal > bVal) return sortDirection === 'asc' ?  1 : -1;
+        return 0;
+    });
+
+    const total   = filtered.length;
+    const maxPage = Math.max(0, Math.ceil(total / TABLE_PER_PAGE) - 1);
+    if (tablePage > maxPage) tablePage = 0;
+
+    const start   = tablePage * TABLE_PER_PAGE;
+    const visible = filtered.slice(start, start + TABLE_PER_PAGE);
+
+    if (!total) {
+        tbody.innerHTML = `<tr><td colspan="4" class="py-12 text-center text-gray-400 italic text-sm">No sessions found for this date.</td></tr>`;
+    } else {
+        tbody.innerHTML = visible.map(row => `
+            <tr class="border-b last:border-0 hover:bg-slate-50 transition">
+                <td class="py-4 font-bold text-slate-700" style="width:35%">
+                    <div style="max-width:260px;">
+                        <div id="name-${row.id}" style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis;max-width:100%;" title="${row.mentor}">${row.mentor}</div>
+                        <button onclick="toggleName('${row.id}')" id="toggle-${row.id}" style="font-size:9px;color:#7b1d1d;font-weight:600;margin-top:2px;background:none;border:none;cursor:pointer;padding:0;display:none;">Show more</button>
+                    </div>
+                </td>
+                <td class="text-slate-500" style="width:25%;white-space:nowrap;">${formatTimeTo12Hour(row.start)} – ${formatTimeTo12Hour(row.end)}</td>
+                <td class="text-slate-600 truncate" style="width:20%">${row.subject}</td>
+                <td style="width:20%">
+                    <span class="${getStatusColor(row.status)} font-bold text-[10px] px-2 py-1 rounded border">
+                        ${getStatusLabel(row.status)}
+                    </span>
+                </td>
+            </tr>
+        `).join('');
+
+        visible.forEach(row => {
+            const nameEl   = document.getElementById('name-' + row.id);
+            const toggleEl = document.getElementById('toggle-' + row.id);
+            if (nameEl && toggleEl && nameEl.scrollWidth > nameEl.clientWidth) {
+                toggleEl.style.display = 'block';
+            }
+        });
+    }
+
+    // Sort header indicators
+    ['mentor', 'start', 'subject', 'status'].forEach(col => {
+        const el = document.getElementById('sortHead-' + col);
+        if (!el) return;
+        const icon = el.querySelector('.sort-icon');
+        if (sortColumn === col) {
+            el.style.color = '#7b1d1d';
+            icon.innerHTML = sortDirection === 'asc'
+                ? '<i class="fa-solid fa-arrow-up" style="font-size:8px;"></i>'
+                : '<i class="fa-solid fa-arrow-down" style="font-size:8px;"></i>';
+        } else {
+            el.style.color = '#94a3b8';
+            icon.innerHTML = '<i class="fa-solid fa-arrow-up-arrow-down" style="font-size:8px;opacity:0.4;"></i>';
+        }
+    });
+
+    document.getElementById('pageIndicator').innerText =
+        total ? `Showing ${start + 1}–${Math.min(start + TABLE_PER_PAGE, total)} of ${total}` : 'Showing 0 results';
+
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    prevBtn.disabled = tablePage === 0;
+    nextBtn.disabled = tablePage >= maxPage;
+    prevBtn.classList.toggle('opacity-30', tablePage === 0);
+    nextBtn.classList.toggle('opacity-30', tablePage >= maxPage);
+}
+
+document.getElementById('prevBtn').addEventListener('click', () => { tablePage--; applyFilters(); });
+document.getElementById('nextBtn').addEventListener('click', () => { tablePage++; applyFilters(); });
+searchInput.addEventListener('input',   () => { tablePage = 0; applyFilters(); });
+statusFilter.addEventListener('change', () => { tablePage = 0; applyFilters(); });
+
+// ─── WEEKLY SCHEDULE ─────────────────────────────────────────────────────────
+function getCurrentWeekRange() {
+    const selected = new Date(selectedDateStr);
+    const day  = selected.getDay();
+    const diff = selected.getDate() - day + (day === 0 ? -6 : 1);
+    const monday = new Date(selected);
+    monday.setDate(diff);
+    monday.setHours(0, 0, 0, 0);
+    const friday = new Date(monday);
+    friday.setDate(monday.getDate() + 4);
+    return { monday, friday };
+}
+
+function updateWeekHeaders() {
+    const { monday } = getCurrentWeekRange();
+    ['monHead', 'tueHead', 'wedHead', 'thuHead', 'friHead'].forEach((id, i) => {
+        const d = new Date(monday);
+        d.setDate(monday.getDate() + i);
+        document.getElementById(id).innerText = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    });
+}
+
+function generateWeeklySchedule(){
+
+    const tbody=document.getElementById("weeklyScheduleBody");
+    tbody.innerHTML="";
+
+    const startHour=8;
+    const week=getCurrentWeekRange();
+
+    function timeToMinutes(t){
+    const [h,m]=t.split(":").map(Number);
+    return h*60+m;
+    }
+
+    // Compute dynamic end hour from the latest session end in this week
+    const weekSessions = allSessions.filter(s => {
+        if(!s.date || !s.end) return false;
+        if(!['accepted','pending','completed'].includes(s.status)) return false;
+        const d = new Date(s.date + "T00:00:00").setHours(0,0,0,0);
+        return d >= week.monday.getTime() && d <= week.friday.getTime();
+    });
+
+    let endHour = 15;
+    if(weekSessions.length) {
+        const latestEndMinutes = Math.max(...weekSessions.map(s => timeToMinutes(s.end)));
+        endHour = Math.ceil(latestEndMinutes / 60);
+    }
+    endHour = Math.max(endHour, startHour + 2);
+    endHour = Math.min(endHour, 22);
+
+    // Update the header range label dynamically
+    const fmtHour = h => {
+        const ampm = h >= 12 ? 'PM' : 'AM';
+        const display = h % 12 || 12;
+        return `${display}:00 ${ampm}`;
+    };
+    const rangeEl = document.getElementById('weeklyScheduleRange');
+    if(rangeEl) rangeEl.innerText = `${fmtHour(startHour)} – ${fmtHour(endHour)}`;
+
+    const days=["Monday","Tuesday","Wednesday","Thursday","Friday"];
+    for(let hour=startHour;hour<endHour;hour++){
+
+    for(let min of [0,30]){
+
+    const row=document.createElement("tr");
+
+    const timeCell=document.createElement("td");
+    timeCell.className="p-3 text-gray-500 font-semibold";
+
+    const displayHour = hour>12 ? hour-12 : hour;
+    const ampm = hour>=12 ? "PM":"AM";
+
+    timeCell.innerText=`${displayHour}:${min===0?'00':'30'} ${ampm}`;
+
+    row.appendChild(timeCell);
+
+    days.forEach(day=>{
+
+    const cell=document.createElement("td");
+    cell.className="p-2";
+
+    const slotStart=hour*60+min;
+    const slotEnd=slotStart+30;
+
+const sessions = allSessions.filter(s => {
+
+    // ❌ ignore invalid or old injected data
+    if(!s.date || !s.start || !s.end) return false;
+
+    const date = new Date(s.date + "T00:00:00");
+    const dayName = date.toLocaleDateString('en-US',{weekday:'long'});
+
+    const d = new Date(date).setHours(0,0,0,0);
+    const m = week.monday.getTime();
+    const f = week.friday.getTime();
+
+    if(!(d >= m && d <= f)) return false;
+    if(dayName !== day) return false;
+
+    // ✅ ONLY show real statuses
+    if(!['accepted','pending','completed'].includes(s.status)) return false;
+
+    const sessionStart = timeToMinutes(s.start);
+    const sessionEnd = timeToMinutes(s.end);
+
+    return sessionStart < slotEnd && sessionEnd > slotStart;
+
+});
+
+    if(sessions.length){
+
+cell.innerHTML = sessions.map(s => {
+
+    let colorClass = '';
+
+    if(s.status === 'pending'){
+        colorClass = 'bg-yellow-100 text-yellow-700 border border-yellow-300';
+    }else if(s.status === 'accepted'){
+        colorClass = 'bg-green-100 text-green-700 border border-green-300';
+    }else if(s.status === 'completed'){
+        colorClass = 'bg-gray-100 text-gray-600 border border-gray-300';
+    }
+
+    return `
+    <div class="schedule-block ${colorClass}">
+        ${s.subject}<br>
+        ${formatTimeTo12Hour(s.start)} - ${formatTimeTo12Hour(s.end)}
+    </div>
+    `;
+}).join("");
+
+    }
+
+    row.appendChild(cell);
+
+    });
+
+    tbody.appendChild(row);
+
+    }
+    }
+    }
+
+
+// ─── CALENDAR ────────────────────────────────────────────────────────────────
+function hasSessionOnDate(dateStr) {
+    const todayStr = new Date().toISOString().split('T')[0];
+    return allSessions.some(s =>
+        s.date === dateStr &&
+        s.status === 'accepted' &&
+        s.date >= todayStr
+    );
+}
+
+function renderCalendar() {
+    const grid      = document.getElementById('calendarGrid');
+    const monthDisp = document.getElementById('monthDisplay');
+    grid.innerHTML  = '';
+
+    const localToday = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
+
+    monthDisp.innerText = viewDate.toLocaleString('en-US', { month: 'long', year: 'numeric' });
+
+    const lastDay  = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 0).getDate();
+    const startDay = new Date(viewDate.getFullYear(), viewDate.getMonth(), 1).getDay();
+
+    for (let i = 0; i < startDay; i++) grid.innerHTML += '<div></div>';
+
+    for (let i = 1; i <= lastDay; i++) {
+        const dateStr = `${viewDate.getFullYear()}-${String(viewDate.getMonth() + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+        const dateObj = new Date(viewDate.getFullYear(), viewDate.getMonth(), i);
+        const dayEl   = document.createElement('div');
+        dayEl.className = 'cal-day';
+
+        if (dateObj < localToday) dayEl.style.color = '#9ca3af';
+        if (dateObj.toDateString() === localToday.toDateString()) dayEl.classList.add('cal-today');
+        if (dateStr === selectedDateStr) dayEl.classList.add('cal-selected');
+
+        const hasSession = hasSessionOnDate(dateStr);
+        dayEl.innerHTML = `<span>${i}</span>${hasSession ? `<div class="notif-dot"></div>` : ''}`;
+
+        dayEl.onclick = () => {
+            selectedDateStr = dateStr;
+            tablePage = 0;
+            refreshSchedules();
+            updateWeekHeaders();
+            renderCalendar();
+            updateTableDate();
+        };
+
+        grid.appendChild(dayEl);
+    }
+}
+
+function changeMonth(dir) {
+    viewDate.setMonth(viewDate.getMonth() + dir);
+    renderCalendar();
+}
+
+function updateTableDate() {
+    const date = new Date(selectedDateStr);
+    document.getElementById('tableSubtitle').innerText = date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+}
+
+// ─── MY UPCOMING SESSIONS PANEL ──────────────────────────────────────────────
+function renderUpcomingSessions() {
+    const container  = document.getElementById('upcomingSessionsList');
+    const badge      = document.getElementById('upcomingBadge');
+    const pagination = document.getElementById('upcomingPagination');
+    const pageInfo   = document.getElementById('upcomingPageInfo');
+    const prevBtn    = document.getElementById('upcomingPrevBtn');
+    const nextBtn    = document.getElementById('upcomingNextBtn');
+
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    // Upcoming = accepted sessions from today onward, sorted by date then time
+    const upcoming = allSessions
+        .filter(s => s.status === 'accepted' && s.date >= todayStr)
+        .sort((a, b) => {
+            if (a.date !== b.date) return a.date > b.date ? 1 : -1;
+            return a.start > b.start ? 1 : -1;
         });
 
-        profileTrigger.addEventListener('click', (e) => {
-            e.stopPropagation();
-            profileDropdown.classList.toggle('show');
-        });
+    const total   = upcoming.length;
+    badge.innerText = `${total} ${total === 1 ? 'Session' : 'Sessions'}`;
 
-        window.addEventListener('click', () => {
-            if (profileDropdown.classList.contains('show')) profileDropdown.classList.remove('show');
-        });
-    </script>
-</div>
+    if (!total) {
+        container.innerHTML = `<p class="text-xs text-gray-400 italic">No upcoming sessions. <a href="{{ route('student.bookings') }}" class="text-red-700 font-semibold">Book one now →</a></p>`;
+        pagination.classList.add('hidden');
+        return;
+    }
+
+    const maxPage = Math.ceil(total / UPCOMING_PER_PAGE) - 1;
+    if (upcomingPage > maxPage) upcomingPage = maxPage;
+    if (upcomingPage < 0) upcomingPage = 0;
+
+    const start   = upcomingPage * UPCOMING_PER_PAGE;
+    const visible = upcoming.slice(start, start + UPCOMING_PER_PAGE);
+    const hasPrev = upcomingPage > 0;
+    const hasNext = upcomingPage < maxPage;
+
+    container.innerHTML = visible.map(s => `
+        <div class="flex items-center justify-between group">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-full bg-green-100 text-green-700 flex items-center justify-center text-[10px] font-bold flex-shrink-0">
+                    ${s.mentor.slice(0, 2).toUpperCase()}
+                </div>
+                <div>
+                    <div style="max-width:180px;">
+                        <div id="uname-${s.id}" style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-size:11px;font-weight:700;color:#1e293b;" title="${s.mentor}">${s.mentor}</div>
+                        <button onclick="toggleUpcomingName('${s.id}')" id="utoggle-${s.id}" style="font-size:9px;color:#7b1d1d;font-weight:600;margin-top:1px;background:none;border:none;cursor:pointer;padding:0;display:none;">Show more</button>
+                    </div>
+                    <p class="text-[9px] text-gray-400 font-medium">${s.subject} • ${formatTimeTo12Hour(s.start)} – ${formatTimeTo12Hour(s.end)}</p>
+                    <p class="text-[9px] text-gray-400">${new Date(s.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+                </div>
+            </div>
+            <span class="${getStatusColor(s.status)} font-bold text-[10px] px-2 py-1 rounded border flex-shrink-0">
+                ${getStatusLabel(s.status)}
+            </span>
+        </div>
+    `).join('');
+
+    // Check for truncated mentor names
+    visible.forEach(s => {
+        const nameEl   = document.getElementById('uname-' + s.id);
+        const toggleEl = document.getElementById('utoggle-' + s.id);
+        if (nameEl && toggleEl && nameEl.scrollWidth > nameEl.clientWidth) {
+            toggleEl.style.display = 'block';
+        }
+    });
+
+    // Pagination
+    if (total > UPCOMING_PER_PAGE) {
+        pagination.classList.remove('hidden');
+        pageInfo.innerText = `${start + 1}–${Math.min(start + UPCOMING_PER_PAGE, total)} of ${total}`;
+        prevBtn.disabled = !hasPrev;
+        prevBtn.classList.toggle('opacity-30', !hasPrev);
+        prevBtn.classList.toggle('cursor-not-allowed', !hasPrev);
+        nextBtn.disabled = !hasNext;
+        nextBtn.classList.toggle('opacity-30', !hasNext);
+        nextBtn.classList.toggle('cursor-not-allowed', !hasNext);
+    } else {
+        pagination.classList.add('hidden');
+    }
+}
+
+document.getElementById('upcomingPrevBtn').addEventListener('click', () => { upcomingPage--; renderUpcomingSessions(); });
+document.getElementById('upcomingNextBtn').addEventListener('click', () => { upcomingPage++; renderUpcomingSessions(); });
+
+// ─── REFRESH ALL ─────────────────────────────────────────────────────────────
+function refreshSchedules() {
+    applyFilters();
+    generateWeeklySchedule();
+    updateWeekHeaders();
+    renderUpcomingSessions();
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+function initDashboard() {
+    renderCalendar();
+    refreshSchedules();
+    updateTableDate();
+    updateClock();
+}
+
+window.addEventListener('load', initDashboard);
+document.addEventListener('livewire:navigated', initDashboard);
+</script>
+</body>
