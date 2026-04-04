@@ -294,19 +294,21 @@ mount(function () {
 </header>
 
             <main class="scroll-container">
-<div class="main-search-container mb-8" style="position: relative;">
+<div class="main-search-container mb-8" style="position: relative; z-index: 10;">
     <div class="main-search-wrapper flex-1" style="position: relative;">
         <i class="fa-solid fa-magnifying-glass"></i>
-        <input type="text" id="mainDashboardSearch" placeholder="Search mentors, sessions, subjects, status..." class="main-search-input" autocomplete="off">
+        <input type="text" id="mainDashboardSearch"
+            placeholder="Search dashboard..."
+            class="main-search-input" autocomplete="off">
     </div>
     <div class="ml-4 flex gap-2">
         <button class="px-4 py-2 bg-white text-gray-600 rounded-lg text-xs font-bold hover:bg-gray-50 border border-gray-200 transition-all">
             <i class="fa-solid fa-filter mr-2"></i>Advanced Filter
         </button>
     </div>
-
-    {{-- Global Search Results Dropdown --}}
-    <div id="globalSearchResults" class="hidden absolute left-0 right-0 bg-white rounded-xl shadow-xl border border-gray-100 z-50 overflow-hidden" style="top: calc(100% + 6px);">
+    <div id="globalSearchResults"
+        class="hidden absolute left-0 right-0 bg-white rounded-xl shadow-xl border border-gray-100 overflow-y-auto"
+        style="top: calc(100% + 6px); max-height: 420px; z-index: 20;">
     </div>
 </div>
 
@@ -405,7 +407,7 @@ updateDate();
                             </div>
 
                             <div class="flex-grow">
-                                <table class="w-full text-left text-sm">
+                                <table class="w-full text-left text-sm table-fixed">
                                     <thead class="text-gray-400 border-b">
                                         <tr>
                                             <th class="pb-3 font-semibold uppercase text-[10px] tracking-wider">Mentor</th>
@@ -444,46 +446,46 @@ updateDate();
                         </div>
                     </div>
 
-                    <div class="flex flex-col gap-6">
-                        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                            <div class="flex justify-between items-center mb-6">
-                                <div class="flex gap-4">
-                                    <button onclick="changeMonth(-1)" class="text-gray-400 hover:text-maroon-800"><i class="fa-solid fa-chevron-left text-xs"></i></button>
-                                    <span id="monthDisplay" class="text-sm font-bold w-24 text-center"></span>
-                                    <button onclick="changeMonth(1)" class="text-gray-400 hover:text-maroon-800"><i class="fa-solid fa-chevron-right text-xs"></i></button>
-                                </div>
-                            </div>
-                            <div class="grid grid-cols-7 gap-1 mb-2">
-                                <div class="cal-header-day">S</div><div class="cal-header-day">M</div><div class="cal-header-day">T</div>
-                                <div class="cal-header-day">W</div><div class="cal-header-day">T</div><div class="cal-header-day">F</div><div class="cal-header-day">S</div>
-                            </div>
-                            <div id="calendarGrid" class="grid grid-cols-7 gap-1"></div>
+ <div class="flex flex-col gap-6">
 
-                            <div class="mt-6 pt-6 border-t border-gray-50">
-                                <div class="bg-slate-900 rounded-xl p-4 shadow-inner">
-                                    <div id="liveClock" class="text-3xl font-mono font-black text-white tracking-widest text-center">00:00:00</div>
-                                    <div id="liveDate" class="text-[10px] font-medium text-slate-400 text-center mt-1 uppercase">Saturday, March 14</div>
-                                </div>
-                            </div>
-                        </div>
+<div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100" id="section-quickactions">
+    <h3 class="font-bold mb-3 text-slate-800 text-sm tracking-tight">Quick Actions</h3>
+    <div class="grid grid-cols-2 gap-2">
+        <button class="border border-slate-300 p-2.5 rounded-lg text-[11px] font-bold hover:bg-gray-50 transition flex items-center justify-center gap-1.5">
+            <i class="fa-solid fa-user-plus text-[10px]"></i> Add Mentor
+        </button>
+        <button class="border border-slate-300 p-2.5 rounded-lg text-[11px] font-bold hover:bg-gray-50 transition flex items-center justify-center gap-1.5">
+            <i class="fa-solid fa-calendar-plus text-[10px]"></i> Create Session
+        </button>
+        <button class="border border-slate-300 p-2.5 rounded-lg text-[11px] font-bold hover:bg-gray-50 transition flex items-center justify-center gap-1.5">
+            <i class="fa-solid fa-book-open text-[10px]"></i> Manage Subjects
+        </button>
+        <button class="border border-slate-300 p-2.5 rounded-lg text-[11px] font-bold hover:bg-gray-50 transition flex items-center justify-center gap-1.5">
+            <i class="fa-solid fa-file-invoice text-[10px]"></i> Generate Report
+        </button>
+    </div>
+</div>
 
-                        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                            <h3 class="font-bold mb-4 text-slate-800 text-sm tracking-tight">Quick Actions</h3>
-                            <div class="flex flex-col gap-2">
-                                <button class="w-full bg-slate-800 text-white p-3 rounded-lg text-xs font-bold hover:bg-black transition flex items-center justify-center gap-2">
-                                    <i class="fa-solid fa-user-plus"></i> Add Mentor
-                                </button>
-                                <button class="w-full border border-slate-300 p-3 rounded-lg text-xs font-bold hover:bg-gray-50 transition flex items-center justify-center gap-2">
-                                    <i class="fa-solid fa-calendar-plus"></i> Create Session
-                                </button>
-                                <button class="w-full border border-slate-300 p-3 rounded-lg text-xs font-bold hover:bg-gray-50 transition flex items-center justify-center gap-2">
-                                    <i class="fa-solid fa-book-open"></i> Manage Subjects
-                                </button>
-                                <button class="w-full border border-slate-300 p-3 rounded-lg text-xs font-bold hover:bg-gray-50 transition flex items-center justify-center gap-2">
-                                    <i class="fa-solid fa-file-invoice"></i> Generate Report
-                                </button>
-                            </div>
-                        </div>
+    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+        <div class="flex justify-between items-center mb-6">
+            <div class="flex gap-4">
+                <button onclick="changeMonth(-1)" class="text-gray-400 hover:text-maroon-800"><i class="fa-solid fa-chevron-left text-xs"></i></button>
+                <span id="monthDisplay" class="text-sm font-bold w-24 text-center"></span>
+                <button onclick="changeMonth(1)" class="text-gray-400 hover:text-maroon-800"><i class="fa-solid fa-chevron-right text-xs"></i></button>
+            </div>
+        </div>
+        <div class="grid grid-cols-7 gap-1 mb-2">
+            <div class="cal-header-day">S</div><div class="cal-header-day">M</div><div class="cal-header-day">T</div>
+            <div class="cal-header-day">W</div><div class="cal-header-day">T</div><div class="cal-header-day">F</div><div class="cal-header-day">S</div>
+        </div>
+        <div id="calendarGrid" class="grid grid-cols-7 gap-1"></div>
+        <div class="mt-6 pt-6 border-t border-gray-50">
+            <div class="bg-slate-900 rounded-xl p-4 shadow-inner">
+<div id="liveClock" class="text-lg font-mono font-black text-white tracking-widest text-center">00:00:00</div>
+<div id="liveDate" class="text-[10px] font-medium text-slate-400 text-center mt-1 uppercase">Saturday, March 14</div>
+            </div>
+        </div>
+    </div>
 
                         <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
                             <div class="flex justify-between items-center mb-4">
@@ -575,13 +577,14 @@ updateDate();
         const allSessions = [
             { date: '2026-03-14', mentor: "Daniel Dyoco", mentee: "Frian Nabo", time: "09:00 AM", status: "Completed", color: "text-blue-600" },
             { date: '2026-03-14', mentor: "Rhona Shayne Lopez", mentee: "Mark Tuan", time: "10:30 AM", status: "Active", color: "text-green-600" },
-            { date: '2026-03-14', mentor: "Chezka Sinco", mentee: "Uno Dos Thirdy", time: "11:00 AM", status: "Active", color: "text-green-600" },
+            { date: '2026-03-14', mentor: "Chezka SincoChezka SincoChezka SincoChezka SincoChezka SincoChezka SincoChezka SincoChezka SincoChezka SincoChezka SincoChezka SincoChezka SincoChezka SincoChezka SincoChezka SincoChezka SincoChezka SincoChezka SincoChezka SincoChezka SincoChezka SincoChezka SincoChezka SincoChezka SincoChezka SincoChezka SincoChezka SincoChezka SincoChezka SincoChezka SincoChezka SincoChezka SincoChezka SincoChezka SincoChezka SincoChezka SincoChezka SincoChezka SincoChezka SincoChezka SincoChezka Sinco", mentee: "Uno Dos Thirdy", time: "11:00 AM", status: "Active", color: "text-green-600" },
             { date: '2026-03-14', mentor: "Arielle Mae Solis", mentee: "Kevin Hart", time: "01:00 PM", status: "Pending", color: "text-yellow-500" },
             { date: '2026-03-14', mentor: "Ax'l Conchada", mentee: "Alice Blue", time: "02:30 PM", status: "Upcoming", color: "text-orange-500" },
         ];
 
-        let selectedDateStr = '2026-03-14';
-        let viewDate = new Date(2026, 2, 1);
+const _now = new Date();
+let selectedDateStr = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, '0')}-${String(_now.getDate()).padStart(2, '0')}`;
+let viewDate = new Date(_now.getFullYear(), _now.getMonth(), 1);
 
         // Chart Configs
         const linearOptions = { maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false }, ticks: { font: { size: 9 } } }, y: { beginAtZero: true, grid: { display: false }, ticks: { font: { size: 9 } } } } };
@@ -637,55 +640,64 @@ updateDate();
         // Table Logic
 function applyFilters() {
     const tbody = document.getElementById('tableBody');
-    const searchTerm = searchInput.value.toLowerCase();
+    const searchTerm = searchInput.value.toLowerCase().trim();
     const selectedStatus = statusFilter.value;
-    const isSearching = searchTerm.length > 0;
 
     const filtered = allSessions.filter(item => {
-        // If there's a search term, search across ALL dates
-        // Otherwise, filter by selected calendar date as usual
-        const matchesDate = isSearching ? true : item.date === selectedDateStr;
-        const matchesSearch = item.mentor.toLowerCase().includes(searchTerm) ||
-                              item.mentee.toLowerCase().includes(searchTerm) ||
-                              item.date.includes(searchTerm) ||
-                              item.status.toLowerCase().includes(searchTerm);
+        const matchesSearch = searchTerm
+            ? item.mentor.toLowerCase().includes(searchTerm) ||
+              item.mentee.toLowerCase().includes(searchTerm)
+            : true;
         const matchesStatus = selectedStatus === 'All' || item.status === selectedStatus;
-        return matchesDate && matchesSearch && matchesStatus;
+        return matchesSearch && matchesStatus;
     });
 
     if (filtered.length === 0) {
         tbody.innerHTML = `<tr><td colspan="4" class="py-12 text-center text-gray-400 italic">No matching sessions found.</td></tr>`;
     } else {
-        tbody.innerHTML = filtered.map(row => `
-            <tr class="border-b last:border-0 hover:bg-slate-50 transition">
-                <td class="py-4 font-bold text-slate-700">${row.mentor}</td>
-                <td class="text-slate-600">${row.mentee}</td>
-                <td class="text-slate-500">${row.time}</td>
-                <td><span class="${row.color} font-bold text-[10px] bg-gray-50 px-2 py-1 rounded border border-current opacity-80">${row.status}</span></td>
-            </tr>
-        `).join('');
+ tbody.innerHTML = filtered.map(row => `
+    <tr class="border-b last:border-0 hover:bg-slate-50 transition">
+        <td class="py-4 font-bold text-slate-700 max-w-0 w-1/4">
+            <div class="truncate" title="${row.mentor}">${row.mentor}</div>
+        </td>
+        <td class="text-slate-600 max-w-0 w-1/4">
+            <div class="truncate" title="${row.mentee}">${row.mentee}</div>
+        </td>
+        <td class="text-slate-500 w-1/4">${row.time}</td>
+        <td class="w-1/4"><span class="${row.color} font-bold text-[10px] bg-gray-50 px-2 py-1 rounded border border-current opacity-80">${row.status}</span></td>
+    </tr>
+`).join('');
+
     }
+
     document.getElementById('pageIndicator').innerText = `Showing ${filtered.length} result${filtered.length !== 1 ? 's' : ''}`;
 }
-
         // Calendar Logic
-        function renderCalendar() {
-            const grid = document.getElementById('calendarGrid');
-            const monthDisp = document.getElementById('monthDisplay');
-            grid.innerHTML = '';
-            monthDisp.innerText = viewDate.toLocaleString('default', { month: 'long', year: 'numeric' });
-            const lastDay = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 0).getDate();
-            const startDay = new Date(viewDate.getFullYear(), viewDate.getMonth(), 1).getDay();
-            for (let i = 0; i < startDay; i++) grid.innerHTML += '<div></div>';
-            for (let i = 1; i <= lastDay; i++) {
-                const dateStr = `${viewDate.getFullYear()}-${String(viewDate.getMonth() + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
-                const dayEl = document.createElement('div');
-                dayEl.className = `cal-day ${i === 14 ? 'cal-today' : ''} ${dateStr === selectedDateStr ? 'cal-selected' : ''}`;
-                dayEl.innerHTML = `<span>${i}</span>`;
-                dayEl.onclick = () => { selectedDateStr = dateStr; applyFilters(); renderCalendar(); };
-                grid.appendChild(dayEl);
-            }
-        }
+function renderCalendar() {
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+    const grid = document.getElementById('calendarGrid');
+    const monthDisp = document.getElementById('monthDisplay');
+    grid.innerHTML = '';
+    monthDisp.innerText = viewDate.toLocaleString('default', { month: 'long', year: 'numeric' });
+
+    const lastDay = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 0).getDate();
+    const startDay = new Date(viewDate.getFullYear(), viewDate.getMonth(), 1).getDay();
+
+    for (let i = 0; i < startDay; i++) grid.innerHTML += '<div></div>';
+
+    for (let i = 1; i <= lastDay; i++) {
+        const dateStr = `${viewDate.getFullYear()}-${String(viewDate.getMonth() + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+        const isToday = dateStr === todayStr;
+        const isSelected = dateStr === selectedDateStr;
+        const dayEl = document.createElement('div');
+        dayEl.className = `cal-day ${isToday ? 'cal-today' : ''} ${isSelected ? 'cal-selected' : ''}`;
+        dayEl.innerHTML = `<span>${i}</span>`;
+        dayEl.onclick = () => { selectedDateStr = dateStr; applyFilters(); renderCalendar(); };
+        grid.appendChild(dayEl);
+    }
+}
 
         function changeMonth(dir) {
             viewDate.setMonth(viewDate.getMonth() + dir);
@@ -715,77 +727,179 @@ function applyFilters() {
     </script>
 
 <script>
+    const mainSearch = document.getElementById('mainDashboardSearch');
+
+    mainSearch.addEventListener('input', function () {
+    });
+</script>
+
+<script>
 (function () {
-    const searchIndex = [
-        { group: 'Sessions', badge: 'session', title: 'Daniel Dyoco → Frian Nabo',        sub: '09:00 AM · Completed', keywords: ['daniel dyoco','frian nabo','completed','session','09:00'] },
-        { group: 'Sessions', badge: 'session', title: 'Rhona Shayne Lopez → Mark Tuan',   sub: '10:30 AM · Active',    keywords: ['rhona','lopez','mark tuan','active','session','10:30'] },
-        { group: 'Sessions', badge: 'session', title: 'Chezka Sinco → Uno Dos Thirdy',    sub: '11:00 AM · Active',    keywords: ['chezka sinco','uno dos thirdy','active','session','11:00'] },
-        { group: 'Sessions', badge: 'session', title: 'Arielle Mae Solis → Kevin Hart',   sub: '01:00 PM · Pending',   keywords: ['arielle','solis','kevin hart','pending','session','01:00'] },
-        { group: 'Sessions', badge: 'session', title: "Ax'l Conchada → Alice Blue",       sub: '02:30 PM · Upcoming',  keywords: ["ax'l",'conchada','alice blue','upcoming','session','02:30'] },
-        { group: 'Pending Approvals', badge: 'approval', title: 'John Doe',    sub: 'Mentor Applicant', keywords: ['john doe','mentor applicant','pending','approval'] },
-        { group: 'Pending Approvals', badge: 'approval', title: 'Sarah Miller', sub: 'Session Change',   keywords: ['sarah miller','session change','pending','approval'] },
-        { group: 'Pending Approvals', badge: 'approval', title: 'Amy Lee',      sub: 'Subject Add',      keywords: ['amy lee','subject add','pending','approval'] },
-        { group: 'Pending Approvals', badge: 'approval', title: 'Tom Chen',     sub: 'Profile Edit',     keywords: ['tom chen','profile edit','pending','approval'] },
-        { group: 'Stats', badge: 'stat', title: 'Total Mentors',    sub: '{{ $totalMentors }}',   keywords: ['total mentors','mentors','count'] },
-        { group: 'Stats', badge: 'stat', title: 'Sessions Today',   sub: '{{ $sessionsToday }}',  keywords: ['sessions today','today','sessions'] },
-        { group: 'Stats', badge: 'stat', title: 'Pending Bookings', sub: '{{ $pendingBookings }}', keywords: ['pending bookings','pending'] },
-        { group: 'Stats', badge: 'stat', title: 'Total Mentees',    sub: '{{ $totalStudents }}',  keywords: ['total mentees','mentees','students'] },
+
+    // ── INDEX ──────────────────────────────────────────────────────────────
+    // Every piece of content on the dashboard lives here.
+    // `target` = the element id to scroll to on click.
+    // `action` = optional extra behaviour on click.
+    const INDEX = [
+
+        // ── STAT CARDS ──
+        { group: 'Stats',    label: 'Total Mentors',           detail: '{{ $totalMentors }} mentors registered',         target: 'section-stats',     keywords: ['total','mentors','mentor','count','registered'] },
+        { group: 'Stats',    label: 'Sessions Today',          detail: '{{ $sessionsToday }} sessions scheduled today',  target: 'section-stats',     keywords: ['sessions','today','scheduled','daily'] },
+        { group: 'Stats',    label: 'Pending Bookings',        detail: '{{ $pendingBookings }} awaiting approval',        target: 'section-approvals', keywords: ['pending','bookings','booking','approval','awaiting'] },
+        { group: 'Stats',    label: 'Average Rating',          detail: '4.9 overall satisfaction',                        target: 'section-analytics', keywords: ['rating','ratings','satisfaction','stars','average','4.9'] },
+        { group: 'Stats',    label: 'Total Mentees',           detail: '{{ $totalStudents }} students enrolled',          target: 'section-stats',     keywords: ['mentees','students','student','enrolled','total'] },
+
+        // ── TODAY'S SCHEDULE / SESSIONS ──
+        { group: 'Sessions', label: 'Daniel Dyoco',            detail: 'Mentoring Frian Nabo · 09:00 AM · Completed',    target: 'section-schedule',  keywords: ['daniel','dyoco','frian','nabo','completed','09:00','09','am'] },
+        { group: 'Sessions', label: 'Rhona Shayne Lopez',      detail: 'Mentoring Mark Tuan · 10:30 AM · Active',        target: 'section-schedule',  keywords: ['rhona','shayne','lopez','mark','tuan','active','10:30','10'] },
+        { group: 'Sessions', label: 'Chezka Sinco',            detail: 'Mentoring Uno Dos Thirdy · 11:00 AM · Active',   target: 'section-schedule',  keywords: ['chezka','sinco','uno','dos','thirdy','active','11:00','11'] },
+        { group: 'Sessions', label: 'Arielle Mae Solis',       detail: 'Mentoring Kevin Hart · 01:00 PM · Pending',      target: 'section-schedule',  keywords: ['arielle','mae','solis','kevin','hart','pending','1:00','01:00','pm'] },
+        { group: 'Sessions', label: "Ax'l Conchada",           detail: 'Mentoring Alice Blue · 02:30 PM · Upcoming',     target: 'section-schedule',  keywords: ["ax'l",'axl','conchada','alice','blue','upcoming','2:30','02:30'] },
+
+        // ── SESSION STATUSES (searchable words) ──
+        { group: 'Sessions', label: 'Active Sessions',         detail: 'View all currently active sessions',              target: 'section-schedule',  keywords: ['active','ongoing','live'] },
+        { group: 'Sessions', label: 'Completed Sessions',      detail: 'View all completed sessions',                    target: 'section-schedule',  keywords: ['completed','done','finished'] },
+        { group: 'Sessions', label: 'Upcoming Sessions',       detail: 'View all upcoming sessions',                     target: 'section-schedule',  keywords: ['upcoming','future','scheduled'] },
+        { group: 'Sessions', label: 'Pending Sessions',        detail: 'View sessions awaiting confirmation',             target: 'section-schedule',  keywords: ['pending','waiting','unconfirmed'] },
+
+        // ── PENDING APPROVALS ──
+        { group: 'Approvals', label: 'John Doe',               detail: 'Mentor Applicant · Pending approval',            target: 'section-approvals', keywords: ['john','doe','mentor applicant','applicant','new mentor'] },
+        { group: 'Approvals', label: 'Sarah Miller',           detail: 'Session Change Request · Pending',               target: 'section-approvals', keywords: ['sarah','miller','session change','change request'] },
+        { group: 'Approvals', label: 'Amy Lee',                detail: 'Subject Add Request · Pending',                  target: 'section-approvals', keywords: ['amy','lee','subject add','add subject','new subject'] },
+        { group: 'Approvals', label: 'Tom Chen',               detail: 'Profile Edit Request · Pending',                 target: 'section-approvals', keywords: ['tom','chen','profile edit','edit profile'] },
+
+        // ── ANALYTICS ──
+        { group: 'Analytics', label: 'Monthly Session Trends', detail: 'Weekly session volume — W1 to W4',               target: 'section-analytics', keywords: ['monthly','trends','sessions','volume','weekly','line chart','chart'] },
+        { group: 'Analytics', label: 'Top Mentors',            detail: 'Daniel D., Sarah J., James W. ranked by sessions', target: 'section-analytics', keywords: ['top','mentors','ranked','pie chart','leaderboard','best'] },
+        { group: 'Analytics', label: 'Satisfaction Rate',      detail: 'Excellent 70%, Good 20%, Average 10%',           target: 'section-analytics', keywords: ['satisfaction','rate','excellent','good','average','doughnut','donut','feedback'] },
+        { group: 'Analytics', label: 'Most Active Colleges',   detail: 'CS · CSS · CAC — session counts',                target: 'section-analytics', keywords: ['college','colleges','cs','css','cac','active','bar chart','campus'] },
+
+        // ── QUICK ACTIONS ──
+        { group: 'Quick Actions', label: 'Add Mentor',         detail: 'Register a new peer mentor',                     target: 'section-quickactions', keywords: ['add','mentor','register','new mentor','create mentor'] },
+        { group: 'Quick Actions', label: 'Create Session',     detail: 'Schedule a new mentoring session',               target: 'section-quickactions', keywords: ['create','session','schedule','new session','book'] },
+        { group: 'Quick Actions', label: 'Manage Subjects',    detail: 'View and edit available subjects',               target: 'section-quickactions', keywords: ['manage','subjects','subject','edit subjects','topics'] },
+        { group: 'Quick Actions', label: 'Generate Report',    detail: 'Export a summary report',                        target: 'section-quickactions', keywords: ['generate','report','export','download','summary'] },
+
+        // ── NAVIGATION ──
+        { group: 'Navigation', label: 'Dashboard',             detail: 'Go to the main dashboard',                       target: 'section-stats',     keywords: ['dashboard','home','overview','main'] },
+        { group: 'Navigation', label: 'Mentor Management',     detail: 'Manage and register mentors',                    target: 'section-stats',     keywords: ['mentor management','manage mentors','mentors page'] },
+        { group: 'Navigation', label: 'Session Management',    detail: 'View and manage all sessions',                   target: 'section-schedule',  keywords: ['session management','sessions page','all sessions'] },
+        { group: 'Navigation', label: 'Student Feedback',      detail: 'View student ratings and feedback',              target: 'section-analytics', keywords: ['feedback','ratings','student feedback','reviews'] },
     ];
 
-    const badgeStyles = {
-        session:  'background:#dbeafe;color:#1e40af;',
-        approval: 'background:#fef3c7;color:#92400e;',
-        stat:     'background:#f1f5f9;color:#475569;',
+    // ── BADGE STYLES ────────────────────────────────────────────────────────
+    const BADGE = {
+        'Stats':         { bg: '#f1f5f9', color: '#475569', text: 'Stat' },
+        'Sessions':      { bg: '#dbeafe', color: '#1e40af', text: 'Session' },
+        'Approvals':     { bg: '#fef3c7', color: '#92400e', text: 'Approval' },
+        'Analytics':     { bg: '#d1fae5', color: '#065f46', text: 'Analytics' },
+        'Quick Actions': { bg: '#ede9fe', color: '#5b21b6', text: 'Action' },
+        'Navigation':    { bg: '#fee2e2', color: '#991b1b', text: 'Nav' },
     };
 
-    function highlight(text, q) {
+    // ── HIGHLIGHT ───────────────────────────────────────────────────────────
+    function hl(text, q) {
         if (!q) return text;
         const re = new RegExp('(' + q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
-        return text.replace(re, '<mark style="background:#fef08a;border-radius:2px;padding:0 1px;">$1</mark>');
+        return text.replace(re, '<mark style="background:#fef08a;border-radius:2px;padding:0 1px;color:inherit;">$1</mark>');
     }
 
-    const input   = document.getElementById('mainDashboardSearch');
-    const results = document.getElementById('globalSearchResults');
+    // ── SCROLL + HIGHLIGHT TARGET ────────────────────────────────────────────
+    function scrollTo(id) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el.style.transition = 'box-shadow 0.3s';
+        el.style.boxShadow = '0 0 0 3px rgba(123,29,29,0.4)';
+        setTimeout(() => { el.style.boxShadow = ''; }, 1800);
+    }
 
-    input.addEventListener('input', function () {
-        const q = this.value.trim().toLowerCase();
-        if (!q) { results.classList.add('hidden'); return; }
-
-        const matches = searchIndex.filter(d =>
-            d.title.toLowerCase().includes(q) ||
-            d.sub.toLowerCase().includes(q) ||
-            d.keywords.some(k => k.includes(q))
-        );
+    // ── RENDER ───────────────────────────────────────────────────────────────
+    function render(q, matches) {
+        const resultsEl = document.getElementById('globalSearchResults');
 
         if (!matches.length) {
-            results.innerHTML = `<div class="px-4 py-5 text-center text-sm text-gray-400 italic">No results for "${this.value}"</div>`;
-            results.classList.remove('hidden');
+            resultsEl.innerHTML = `<div style="padding:20px;text-align:center;font-size:13px;color:#9ca3af;font-style:italic;">No results for "<strong>${q}</strong>"</div>`;
+            resultsEl.classList.remove('hidden');
             return;
         }
 
+        // Group
         const groups = {};
-        matches.forEach(m => { if (!groups[m.group]) groups[m.group] = []; groups[m.group].push(m); });
+        matches.forEach(m => {
+            if (!groups[m.group]) groups[m.group] = [];
+            groups[m.group].push(m);
+        });
 
         let html = '';
         for (const [grp, items] of Object.entries(groups)) {
-            html += `<div class="px-4 pt-3 pb-1 text-[10px] font-bold text-gray-400 uppercase tracking-widest">${grp}</div>`;
+            const b = BADGE[grp] || BADGE['Stats'];
+            html += `<div style="padding:8px 14px 4px;font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.08em;">${grp}</div>`;
             items.forEach(item => {
                 html += `
-                <div class="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 cursor-pointer border-b border-gray-50 last:border-0 transition">
-                    <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;white-space:nowrap;${badgeStyles[item.badge]}">${grp === 'Pending Approvals' ? 'Approval' : grp.replace('s','')}</span>
-                    <span class="text-sm font-semibold text-slate-700 flex-1">${highlight(item.title, this.value.trim())}</span>
-                    <span class="text-xs text-gray-400 ml-auto whitespace-nowrap">${highlight(item.sub, this.value.trim())}</span>
+                <div class="global-result-item"
+                    data-target="${item.target}"
+                    style="display:flex;align-items:center;gap:10px;padding:9px 14px;cursor:pointer;border-bottom:1px solid #f8fafc;transition:background .15s;">
+                    <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;white-space:nowrap;flex-shrink:0;background:${b.bg};color:${b.color};">${b.text}</span>
+                    <div style="flex:1;min-width:0;">
+                        <div style="font-size:13px;font-weight:600;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${hl(item.label, q)}</div>
+                        <div style="font-size:11px;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${hl(item.detail, q)}</div>
+                    </div>
+                    <i class="fa-solid fa-arrow-right" style="font-size:10px;color:#cbd5e1;flex-shrink:0;"></i>
                 </div>`;
             });
         }
 
-        results.innerHTML = html;
-        results.classList.remove('hidden');
+        resultsEl.innerHTML = html;
+        resultsEl.classList.remove('hidden');
+
+        // Click handlers
+        resultsEl.querySelectorAll('.global-result-item').forEach(el => {
+            el.addEventListener('mouseenter', () => el.style.background = '#f8fafc');
+            el.addEventListener('mouseleave', () => el.style.background = '');
+            el.addEventListener('click', () => {
+                scrollTo(el.dataset.target);
+                resultsEl.classList.add('hidden');
+                document.getElementById('mainDashboardSearch').value = '';
+            });
+        });
+    }
+
+    // ── SEARCH ───────────────────────────────────────────────────────────────
+    document.getElementById('mainDashboardSearch').addEventListener('input', function () {
+        const q = this.value.trim();
+        const resultsEl = document.getElementById('globalSearchResults');
+
+        if (!q) { resultsEl.classList.add('hidden'); return; }
+
+        const lower = q.toLowerCase();
+        const matches = INDEX.filter(item =>
+            item.label.toLowerCase().includes(lower) ||
+            item.detail.toLowerCase().includes(lower) ||
+            item.keywords.some(k => k.includes(lower))
+        );
+
+        render(q, matches);
     });
 
+    // ── CLOSE ON OUTSIDE CLICK ───────────────────────────────────────────────
     document.addEventListener('click', function (e) {
-        if (!e.target.closest('.main-search-container')) results.classList.add('hidden');
+        if (!e.target.closest('.main-search-container')) {
+            document.getElementById('globalSearchResults').classList.add('hidden');
+        }
     });
+
+    // ── KEYBOARD: ESCAPE TO CLOSE ────────────────────────────────────────────
+    document.getElementById('mainDashboardSearch').addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') {
+            document.getElementById('globalSearchResults').classList.add('hidden');
+            this.value = '';
+        }
+    });
+
 })();
+
 </script>
+
+
 </body>

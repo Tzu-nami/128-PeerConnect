@@ -222,7 +222,7 @@ mount(function () {
                     <div class="p-4 border-b border-gray-100 bg-slate-50">
                         <p class="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1">Signed in as</p>
                         <p class="text-sm font-bold text-slate-800 truncate">{{ auth()->user()->name }}</p>
-                        <p class="text-xs text-slate-500 truncate">{{ auth()->user()->email }}</p>
+                    <p class="text-xs text-slate-500 truncate">{{ auth()->user()->email }}</p>
                     </div>
                     <form method="POST" action="{{ route('logout') }}" class="m-0">
                         @csrf
@@ -386,5 +386,20 @@ mount(function () {
         window.addEventListener('click', () => {
             if (profileDropdown.classList.contains('show')) profileDropdown.classList.remove('show');
         });
+
+        /* Status Pills */
+.status-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+}
+.status-pending   { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+.status-confirmed { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+.status-completed { background: #f8fafc; color: #475569; border: 1px solid #e2e8f0; }
+.status-cancelled { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
     </script>
 </body>

@@ -564,6 +564,8 @@ mount(function () {
                     <div class="p-4 border-b border-gray-100 bg-slate-50 text-slate-800">
                         <p class="text-[11px] font-bold text-gray-400 uppercase mb-1">Signed in as</p>
                         <p class="text-sm font-bold truncate">{{ auth()->user()->name }}</p>
+                        <p class="text-xs text-slate-500 truncate">{{ auth()->user()->email }}</p>
+
                     </div>
                     <form method="POST" action="{{ route('logout') }}" class="m-0 border-t border-gray-50">
                         @csrf
@@ -591,7 +593,7 @@ mount(function () {
                     <div class="flex gap-4">
                         <div class="relative">
                             <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
-                            <input type="text" x-model="searchQuery" @input="currentPage = 1"  placeholder="Search mentors..." class="pl-8 pr-3 py-2 h-12 text-xs border border-gray-200 rounded-lg bg-[#fffffa] outline-none focus:ring-1 focus:ring-red-800 w-64">
+                            <input type="text" x-model="searchQuery" @input="currentPage = 1"  placeholder="Search mentors..." class="pl-8 pr-3 py-2 h-12 text-xs border border-gray-200 rounded-lg bg-white outline-none focus:ring-1 focus:ring-red-800 w-64">
                         </div>
                         
                         <button wire:click="openSubjectModal" @click="$wire.showSubjectModal = true" class="bg-slate-800 text-white px-6 py-3 rounded-xl text-xs font-bold flex items-center gap-2 hover:bg-black transition shadow-lg">
@@ -655,13 +657,13 @@ mount(function () {
 
                     {{-- Pagination --}}
                 <div class="mt-8 flex justify-center items-center gap-2" x-show="totalPages > 1" x-cloak>
-                    <button @click="currentPage--" :disabled="currentPage === 1" class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 bg-[#fffffa] text-slate-500 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition">
+                    <button @click="currentPage--" :disabled="currentPage === 1" class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-slate-500 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition">
                         <i class="fa-solid fa-chevron-left text-[10px]"></i>
                     </button>
                     <template x-for="page in pages" :key="page">
-                        <button @click="currentPage = page" :class="currentPage === page ? 'bg-[#1a3c2f] text-white shadow-sm' : 'bg-[#fffffa] border border-gray-200 text-slate-500 hover:bg-gray-100'" class="w-8 h-8 text-xs font-bold rounded-lg transition" x-text="page"></button>
+                        <button @click="currentPage = page" :class="currentPage === page ? 'bg-[#1a3c2f] text-white shadow-sm' : 'bg-white border border-gray-200 text-slate-500 hover:bg-gray-100'" class="w-8 h-8 text-xs font-bold rounded-lg transition" x-text="page"></button>
                     </template>
-                    <button @click="currentPage++" :disabled="currentPage === totalPages" class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 bg-[#fffffa] text-slate-500 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition">
+                    <button @click="currentPage++" :disabled="currentPage === totalPages" class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-slate-500 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition">
                         <i class="fa-solid fa-chevron-right text-[10px]"></i>
                     </button>
                 </div>
