@@ -121,7 +121,7 @@ mount(function () {
 
         .main-content { flex: 1; min-width: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
         .top-header { background: var(--header-maroon); height: var(--header-height); padding: 0 40px; display: flex; align-items: center; justify-content: space-between; color: white; flex-shrink: 0; }
-        .scroll-container { flex-grow: 1; overflow-y: auto; padding: 32px; width: 100%; }
+.scroll-container { flex-grow: 1; overflow-y: auto; padding: 16px 32px; width: 100%; }
 
         .profile-dropdown {
             position: absolute; top: 70px; right: 40px; background: white; border-radius: 12px;
@@ -132,10 +132,30 @@ mount(function () {
         .dropdown-item { padding: 12px 20px; font-size: 13px; color: #475569; display: flex; align-items: center; gap: 10px; transition: background 0.2s; }
         .dropdown-item:hover { background: #f8fafc; color: var(--header-maroon); }
 
-        .cal-header-day { font-size: 11px; font-weight: 800; color: #94a3b8; text-align: center; padding-bottom: 10px; text-transform: uppercase; }
-        .cal-day { aspect-ratio: 1/1; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; border-radius: 8px; transition: all 0.2s; cursor: pointer; font-size: 13px; font-weight: 500; }
-        .cal-today { background: #fee2e2 !important; color: var(--header-maroon) !important; font-weight: 800; }
-        .cal-selected { border: 2px solid var(--header-maroon); background: #f8fafc; }
+        .cal-header-day {
+    font-size: 10px;
+    font-weight: 800;
+    text-align: center;
+    color: #94a3b8;
+    text-transform: uppercase;
+    padding-bottom: 4px;
+}
+.cal-day {
+    aspect-ratio: 1/1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    transition: all 0.15s;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 500;
+    color: #475569;
+    width: 100%;
+}
+.cal-day:hover { background: #f1f5f9; color: #1e293b; }
+.cal-today { background: #fee2e2 !important; color: #7b1d1d !important; font-weight: 800; }
+.cal-selected { border: 2px solid #7b1d1d; background: #f8fafc; }
 
         .stats-overview-container { background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); border: 1px solid #e5e7eb; width: 100%; }
         .stats-header { padding: 12px 24px; background: #f8fafc; font-weight: 700; font-size: 0.9rem; color: #1e293b; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; justify-content: space-between; }
@@ -161,13 +181,23 @@ mount(function () {
     /* MAIN CONTENT SEARCH BAR */
 .main-search-container {
     background: white;
-    padding: 15px 25px;
-    border-radius: 12px;
+    padding: 10px 20px;
+    border-radius: 10px;
     box-shadow: 0 2px 10px rgba(0,0,0,0.03);
     margin-bottom: 24px;
     display: flex;
     align-items: center;
     border: 1px solid #eef2f3;
+}
+
+.main-search-input {
+    width: 100%;
+    padding: 9px 16px 9px 40px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    outline: none;
+    transition: all 0.2s;
 }
 
 .main-search-wrapper {
@@ -184,19 +214,32 @@ mount(function () {
     font-size: 0.9rem;
 }
 
-.main-search-input {
-    width: 100%;
-    padding: 12px 20px 12px 45px;
-    border: 1px solid #e2e8f0;
-    border-radius: 10px;
-    font-size: 0.85rem;
-    outline: none;
-    transition: all 0.2s;
-}
-
 .main-search-input:focus {
     border-color: var(--header-maroon);
     box-shadow: 0 0 0 3px rgba(123, 29, 29, 0.05);
+}
+
+.tooltip-wrap { position: relative; }
+.tooltip-wrap .tooltip-text {
+    visibility: hidden;
+    opacity: 0;
+    background: #1e293b;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 4px 8px;
+    border-radius: 6px;
+    position: absolute;
+    bottom: calc(100% + 4px);
+    left: 0;
+    white-space: nowrap;
+    z-index: 50;
+    transition: opacity 0.1s ease;
+    pointer-events: none;
+}
+.tooltip-wrap:hover .tooltip-text {
+    visibility: visible;
+    opacity: 1;
 }
     </style>
 
@@ -302,9 +345,6 @@ mount(function () {
             class="main-search-input" autocomplete="off">
     </div>
     <div class="ml-4 flex gap-2">
-        <button class="px-4 py-2 bg-white text-gray-600 rounded-lg text-xs font-bold hover:bg-gray-50 border border-gray-200 transition-all">
-            <i class="fa-solid fa-filter mr-2"></i>Advanced Filter
-        </button>
     </div>
     <div id="globalSearchResults"
         class="hidden absolute left-0 right-0 bg-white rounded-xl shadow-xl border border-gray-100 overflow-y-auto"
@@ -366,8 +406,7 @@ mount(function () {
 
                 <div class="grid grid-cols-3 gap-8">
                     <div class="col-span-2 space-y-8">
-                        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 min-h-[460px] flex flex-col">
-                            <div class="flex justify-between items-center mb-6">
+<div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col" id="section-schedule">                            <div class="flex justify-between items-center mb-6">
                                 <div>
     <h2 class="text-lg font-bold text-slate-800" id="tableTitle">Today's Schedule</h2>
     <p class="text-xs text-gray-400" id="tableSubtitle"></p>
@@ -406,8 +445,8 @@ updateDate();
                                 </div>
                             </div>
 
-                            <div class="flex-grow">
-                                <table class="w-full text-left text-sm table-fixed">
+<div>
+    <table class="w-full text-left text-sm table-fixed">
                                     <thead class="text-gray-400 border-b">
                                         <tr>
                                             <th class="pb-3 font-semibold uppercase text-[10px] tracking-wider">Mentor</th>
@@ -420,8 +459,8 @@ updateDate();
                                 </table>
                             </div>
 
-                            <div class="mt-6 pt-4 border-t border-gray-50 flex items-center justify-between">
-                                <div class="text-[11px] text-gray-400 font-medium" id="pageIndicator">Showing 0 results</div>
+<div class="mt-2 pt-2 border-t border-gray-50 flex items-center justify-between">
+                                    <div class="text-[11px] text-gray-400 font-medium" id="pageIndicator">Showing 0 results</div>
                                 <div class="flex gap-2">
 <button id="prevBtn" class="pagination-btn" disabled>
     <i class="fa-solid fa-chevron-left"></i>
@@ -466,27 +505,40 @@ updateDate();
     </div>
 </div>
 
-    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-        <div class="flex justify-between items-center mb-6">
-            <div class="flex gap-4">
-                <button onclick="changeMonth(-1)" class="text-gray-400 hover:text-maroon-800"><i class="fa-solid fa-chevron-left text-xs"></i></button>
-                <span id="monthDisplay" class="text-sm font-bold w-24 text-center"></span>
-                <button onclick="changeMonth(1)" class="text-gray-400 hover:text-maroon-800"><i class="fa-solid fa-chevron-right text-xs"></i></button>
-            </div>
-        </div>
-        <div class="grid grid-cols-7 gap-1 mb-2">
-            <div class="cal-header-day">S</div><div class="cal-header-day">M</div><div class="cal-header-day">T</div>
-            <div class="cal-header-day">W</div><div class="cal-header-day">T</div><div class="cal-header-day">F</div><div class="cal-header-day">S</div>
-        </div>
-        <div id="calendarGrid" class="grid grid-cols-7 gap-1"></div>
-        <div class="mt-6 pt-6 border-t border-gray-50">
-            <div class="bg-slate-900 rounded-xl p-4 shadow-inner">
-<div id="liveClock" class="text-lg font-mono font-black text-white tracking-widest text-center">00:00:00</div>
-<div id="liveDate" class="text-[10px] font-medium text-slate-400 text-center mt-1 uppercase">Saturday, March 14</div>
-            </div>
-        </div>
+<div class="bg-white rounded-xl shadow-sm border border-gray-100">
+    
+    {{-- Clock --}}
+    <div class="bg-slate-900 rounded-t-xl px-4 py-3 flex items-center justify-between">
+        <div id="liveDate" class="text-[10px] font-medium text-slate-400 uppercase tracking-widest"></div>
+        <div id="liveClock" class="text-sm font-mono font-bold text-white tracking-widest"></div>
     </div>
 
+    {{-- Calendar --}}
+    <div class="p-4">
+        <div class="flex justify-between items-center mb-4">
+            <span id="monthDisplay" class="text-sm font-bold text-slate-800"></span>
+            <div class="flex gap-2">
+                <button onclick="changeMonth(-1)" class="w-6 h-6 flex items-center justify-center rounded-md hover:bg-gray-100 text-gray-400 hover:text-slate-700 transition">
+                    <i class="fa-solid fa-chevron-left text-[10px]"></i>
+                </button>
+                <button onclick="changeMonth(1)" class="w-6 h-6 flex items-center justify-center rounded-md hover:bg-gray-100 text-gray-400 hover:text-slate-700 transition">
+                    <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-7 gap-1 mb-1">
+            <div class="cal-header-day">S</div>
+            <div class="cal-header-day">M</div>
+            <div class="cal-header-day">T</div>
+            <div class="cal-header-day">W</div>
+            <div class="cal-header-day">T</div>
+            <div class="cal-header-day">F</div>
+            <div class="cal-header-day">S</div>
+        </div>
+        <div id="calendarGrid" class="grid grid-cols-7 gap-1"></div>
+    </div>
+</div>
                         <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
                             <div class="flex justify-between items-center mb-4">
                                 <h3 class="font-bold text-slate-800 text-sm tracking-tight">Pending Approvals</h3>
@@ -550,6 +602,7 @@ updateDate();
         const searchInput = document.getElementById('liveSearchInput');
         const statusFilter = document.getElementById('statusFilter');
         const charts = [];
+        let currentPage = 1;
 
         // Dashboard Interactivity
         document.getElementById('sidebarToggle').addEventListener('click', () => {
@@ -577,7 +630,7 @@ updateDate();
         const allSessions = [
             { date: '2026-03-14', mentor: "Daniel Dyoco", mentee: "Frian Nabo", time: "09:00 AM", status: "Completed", color: "text-blue-600" },
             { date: '2026-03-14', mentor: "Rhona Shayne Lopez", mentee: "Mark Tuan", time: "10:30 AM", status: "Active", color: "text-green-600" },
-            { date: '2026-03-14', mentor: "Chezka SincoChezka SincoChezka SincoChezka SincoChezka SincoChezka SincoChezka SincoChezka SincoChezka SincoChezka SincoChezka SincoChezka SincoChezka SincoChezka SincoChezka SincoChezka SincoChezka SincoChezka SincoChezka SincoChezka SincoChezka SincoChezka SincoChezka SincoChezka SincoChezka SincoChezka SincoChezka SincoChezka SincoChezka SincoChezka SincoChezka SincoChezka SincoChezka SincoChezka SincoChezka SincoChezka SincoChezka SincoChezka SincoChezka SincoChezka SincoChezka Sinco", mentee: "Uno Dos Thirdy", time: "11:00 AM", status: "Active", color: "text-green-600" },
+            { date: '2026-03-14', mentor: "Chezka SincoChezka Sincezka SincoChezka SincoChezka SincoChezka SincoChezka SincoChezka Sinco", mentee: "Uno Dos Thirdy", time: "11:00 AM", status: "Active", color: "text-green-600" },
             { date: '2026-03-14', mentor: "Arielle Mae Solis", mentee: "Kevin Hart", time: "01:00 PM", status: "Pending", color: "text-yellow-500" },
             { date: '2026-03-14', mentor: "Ax'l Conchada", mentee: "Alice Blue", time: "02:30 PM", status: "Upcoming", color: "text-orange-500" },
         ];
@@ -652,25 +705,40 @@ function applyFilters() {
         return matchesSearch && matchesStatus;
     });
 
-    if (filtered.length === 0) {
+    const perPage = 4;
+    const totalPages = Math.ceil(filtered.length / perPage);
+    if (currentPage > totalPages) currentPage = 1;
+
+    const start = (currentPage - 1) * perPage;
+    const paginated = filtered.slice(start, start + perPage);
+
+    if (paginated.length === 0) {
         tbody.innerHTML = `<tr><td colspan="4" class="py-12 text-center text-gray-400 italic">No matching sessions found.</td></tr>`;
     } else {
- tbody.innerHTML = filtered.map(row => `
-    <tr class="border-b last:border-0 hover:bg-slate-50 transition">
-        <td class="py-4 font-bold text-slate-700 max-w-0 w-1/4">
-            <div class="truncate" title="${row.mentor}">${row.mentor}</div>
-        </td>
-        <td class="text-slate-600 max-w-0 w-1/4">
-            <div class="truncate" title="${row.mentee}">${row.mentee}</div>
-        </td>
-        <td class="text-slate-500 w-1/4">${row.time}</td>
-        <td class="w-1/4"><span class="${row.color} font-bold text-[10px] bg-gray-50 px-2 py-1 rounded border border-current opacity-80">${row.status}</span></td>
-    </tr>
-`).join('');
-
+        tbody.innerHTML = paginated.map(row => `
+            <tr class="border-b last:border-0 hover:bg-slate-50 transition">
+                <td class="py-4 font-bold text-slate-700 max-w-0 w-1/4">
+                    <div class="tooltip-wrap">
+                        <div class="truncate">${row.mentor}</div>
+                        <span class="tooltip-text">${row.mentor}</span>
+                    </div>
+                </td>
+                <td class="text-slate-600 max-w-0 w-1/4">
+                    <div class="tooltip-wrap">
+                        <div class="truncate">${row.mentee}</div>
+                        <span class="tooltip-text">${row.mentee}</span>
+                    </div>
+                </td>
+                <td class="text-slate-500 w-1/4">${row.time}</td>
+                <td class="w-1/4"><span class="${row.color} font-bold text-[10px] bg-gray-50 px-2 py-1 rounded border border-current opacity-80">${row.status}</span></td>
+            </tr>
+        `).join('');
     }
 
-    document.getElementById('pageIndicator').innerText = `Showing ${filtered.length} result${filtered.length !== 1 ? 's' : ''}`;
+    document.getElementById('pageIndicator').innerText = `Showing ${start + 1}–${Math.min(start + perPage, filtered.length)} of ${filtered.length} result${filtered.length !== 1 ? 's' : ''}`;
+
+    document.getElementById('prevBtn').disabled = currentPage === 1;
+document.getElementById('nextBtn').disabled = currentPage >= totalPages;
 }
         // Calendar Logic
 function renderCalendar() {
@@ -704,9 +772,11 @@ function renderCalendar() {
             renderCalendar();
         }
 
-        // Listeners
-        searchInput.addEventListener('input', applyFilters);
-        statusFilter.addEventListener('change', applyFilters);
+// Listeners
+searchInput.addEventListener('input', applyFilters);
+statusFilter.addEventListener('change', applyFilters);
+document.getElementById('prevBtn').addEventListener('click', () => { currentPage--; applyFilters(); });
+document.getElementById('nextBtn').addEventListener('click', () => { currentPage++; applyFilters(); });
 
         // Bootstrap
         initCharts();
