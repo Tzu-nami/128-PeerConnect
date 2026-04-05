@@ -1,6 +1,7 @@
 <?php
 
 use function Livewire\Volt\{layout, state, mount, computed, action, uses};
+use Illuminate\Support\Facades\Storage;
 use Livewire\WithFileUploads;
 use App\Models\MentorProfiles;
 use App\Models\MentorAvailabilities;
@@ -180,8 +181,10 @@ $updateMentor = action(function () {
 
     // Update
     if($this->editAvatar) {
-        $path = $this->editAvatar->store('mentor-avatars', 'public');
-        $mentorNew->user->update(['avatar' => '/storage/' . $path]);
+        $filename = $this->editAvatar->hashName();
+        $path = $this->editAvatar->storeAs('', $filename, 's3');
+        $url = rtrim(env('SUPABASE_PUBLIC_URL'), '/') . '/' . $filename;
+        $mentorNew->user->update(['avatar' => $url]);
     }
 
     MentorSubjects::where('mentor_id', $mentorNew->id)->delete();
@@ -309,8 +312,10 @@ $saveMentor = action(function () {
     $userMentor->update(['user_roles' => 'mentor']);
 
     if ($this->avatar) {
-        $path = $this->avatar->store('mentor-avatars', 'public');
-        $userMentor->update(['avatar' => '/storage/' . $path]);
+        $filename = $this->avatar->hashName();
+        $path = $this->avatar->storeAs('', $filename, 's3');
+        $url = rtrim(env('SUPABASE_PUBLIC_URL'), '/') . '/' . $filename;
+        $userMentor->update(['avatar' => $url]);
     }
 
     $mentorProf = MentorProfiles::create(['user_id' => $userMentor->id]);
@@ -1022,15 +1027,15 @@ mount(function () {
                                 </div>
                             </div>
 
-                            <div class="flex-1 pt-1 flex flex-col justify-center h-32">
+                            <div class="flex-1 pt-1 flex flex-col justify-center h-32 min-w-0">
                                 <input type="file" id="edit-avatar-upload" wire:model="editAvatar" accept="image/*" class="hidden" 
                                     @change="fileName = $event.target.files[0].name" />
                                 <label for="edit-avatar-upload" class="block w-full text-center py-2.5 px-4 rounded-lg text-xs font-bold bg-slate-800 text-white hover:bg-black cursor-pointer transition shadow-sm">
                                     <span wire:loading.remove wire:target="editAvatar">Upload New Picture</span>
                                     <span wire:loading.inline-block wire:target="editAvatar">Uploading...</span>
                                 </label>
-                                <div class="mt-3 text-[10px] text-center">
-                                    <p x-show="fileName" class="text-slate-700 font-bold truncate px-2" x-text="fileName"></p>
+                                <div class="mt-3 text-[10px] text-center w-full">
+                                    <p x-show="fileName" class="text-slate-700 font-bold truncate px-2 block w-full" x-text="fileName"></p>
                                 </div>
                                 @error('editAvatar') <p class="mt-1 text-xs text-red-600 text-center">{{ $message }}</p> @enderror
                             </div>
