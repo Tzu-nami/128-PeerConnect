@@ -499,7 +499,7 @@ color:#065f46;
 
                         <div class="mentor-card group flex flex-col h-full" @click="openModal(mentor)">
 
-                            <div class="p-5 flex gap-5 border-b border-gray-100 bg-[#fffffa]">
+                            <div class="p-3 flex gap-5 border-b border-gray-100 bg-[#fffffa]">
                                 <div class="w-28 h-28 aspect-square rounded-2xl overflow-hidden flex-shrink-0 bg-gray-100 border border-gray-200 shadow-inner">
                                     <img :src="mentor.avatar" :alt="mentor.lastName" class="w-full h-full object-cover bg-[#fffffa]" />
                                 </div>
@@ -517,11 +517,11 @@ color:#065f46;
                             <div class="px-5 pb-2 pt-2 flex-1">
                                 <p class="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Subjects</p>
                                 <div class="flex flex-nowrap overflow-hidden gap-1">
-                                    <template x-for="(subject, index) in mentor.subjects.slice(0, 5)" :key="index">
+                                    <template x-for="(subject, index) in mentor.subjects.slice(0, 4)" :key="index">
                                         <span class="bg-red-50 text-red-700 border border-red-100 px-2 py-0.5 rounded text-[10px] font-bold whitespace-nowrap" x-text="subject.code"></span>
                                     </template>
-                                    <template x-if="mentor.subjects.length > 5">
-                                        <span class="bg-slate-100 text-slate-600 px-2 py-0.5 rounded text-[10px] font-bold border border-slate-200 whitespace-nowrap" x-text="'+' + (mentor.subjects.length - 5)"></span>
+                                    <template x-if="mentor.subjects.length > 4">
+                                        <span class="bg-slate-100 text-slate-600 px-2 py-0.5 rounded text-[10px] font-bold border border-slate-200 whitespace-nowrap" x-text="'+' + (mentor.subjects.length - 4)"></span>
                                     </template>
                                 </div>
                             </div>
@@ -549,7 +549,7 @@ color:#065f46;
                 </div>
 
                 {{-- Pagination --}}
-                <div class="mt-8 flex justify-center items-center gap-2" x-show="totalPages > 1" x-cloak>
+                <div class="mt-4 flex justify-center items-center gap-2" x-show="totalPages > 1" x-cloak>
                     <button @click="currentPage--" :disabled="currentPage === 1" class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 bg-[#fffffa] text-slate-500 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition">
                         <i class="fa-solid fa-chevron-left text-[10px]"></i>
                     </button>
