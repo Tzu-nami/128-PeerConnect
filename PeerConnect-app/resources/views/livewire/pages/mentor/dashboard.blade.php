@@ -132,10 +132,10 @@
             }
             .sidebar:not(.collapsed) .sidebar-logo-container { justify-content: flex-start; }
 
-            .logo-icon { flex-shrink: 0; font-size: 1.25rem; width: 32px; text-align: center; }
+            .logo-icon { flex-shrink: 0; font-size: 1.3rem; width: 32px; text-align: center; }
 
             .logo-text {
-                font-size: 1rem;
+                font-size: 1.2rem;
                 font-weight: 700;
                 white-space: nowrap;
                 overflow: hidden;
@@ -150,7 +150,7 @@
                 display: flex;
                 align-items: center;
                 gap: 14px;
-                padding: 14px 20px;
+                padding: 18px 20px;
                 color: rgba(255,255,255,0.7);
                 text-decoration: none;
                 transition: background 0.2s, color 0.2s, padding 0.3s, justify-content 0.3s;
@@ -161,12 +161,12 @@
                 border: none;
                 width: 100%;
                 cursor: pointer;
-                font-size: 0.875rem;
+                font-size: 1.04rem;
                 justify-content: flex-start;
             }
-            .sidebar.collapsed .nav-item { justify-content: center; padding: 14px 0; }
+            .sidebar.collapsed .nav-item { justify-content: center; padding: 18px 0; }
 
-            .nav-item i { width: 32px; text-align: center; flex-shrink: 0; font-size: 18px; transition: width 0.3s; }
+            .nav-item i { width: 32px; text-align: center; flex-shrink: 0; font-size: 22px; transition: width 0.3s; }
             .sidebar.collapsed .nav-item i { width: 32px; margin: 0; }
 
             .nav-item span {
@@ -197,7 +197,7 @@
             .sidebar.collapsed .nav-item:hover::after { opacity: 1; visibility: visible; }
 
             /* Logout section */
-            .sidebar-footer { padding: 12px 0; border-top: 1px solid rgba(255,255,255,0.1); }
+            .sidebar-footer { padding: 6px 0; border-top: 1px solid rgba(255,255,255,0.1); }
 
             /* ── TOGGLE BUTTON ── */
             .sidebar-toggle-btn {
@@ -363,7 +363,7 @@
 
             <div class="main-content">
                 <header class="top-header relative">
-                    <div class="text-lg">Welcome, <span class="font-bold">{{ auth()->user()->name }}</span></div>
+                    <div class="text-lg">Welcome, {{ auth()->user()->user_roles}} <span class="font-bold">{{ auth()->user()->name }}</span></div>
                     
                     <button id="profileTrigger" class="flex items-center gap-2 px-3 py-1 bg-white rounded-full hover:bg-gray-100 transition shadow-sm border-2 border-white/20 group">
                         <div class="w-8 h-8 bg-red-900 text-white rounded-full flex items-center justify-center text-xs font-bold">
@@ -762,12 +762,12 @@
                 if (profileDropdown.classList.contains('show')) profileDropdown.classList.remove('show');
             });
 
-            function updateClock() {
-                const now = new Date();
-                document.getElementById('liveClock').innerText = now.toLocaleTimeString('en-US', { hour12: false });
-                document.getElementById('liveDate').innerText = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
-            }
-            setInterval(updateClock, 1000); 
+function updateClock() {
+    const now = new Date(new Date().toLocaleString("en-US", {timeZone:"Asia/Manila"}));
+    document.getElementById('liveClock').innerText = now.toLocaleTimeString('en-US', { hour12: false });
+    document.getElementById('liveDate').innerText = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+}
+setInterval(updateClock, 1000);
 
             // Local State
     const allSessions = @json($this->sessions);
@@ -777,10 +777,11 @@
 
             let showAllRequests = false;
 
-            const today = new Date(new Date().toLocaleString("en-US",{timeZone:"Asia/Manila"}));
+const today = new Date(new Date().toLocaleString("en-US",{timeZone:"Asia/Manila"}));
+const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
 
-            let selectedDateStr = today.toISOString().split("T")[0];
-            let viewDate = new Date(today.getFullYear(), today.getMonth(), 1);
+let selectedDateStr = todayStr;
+let viewDate = new Date(today.getFullYear(), today.getMonth(), 1);
 
             // Table Logic
 
@@ -1053,7 +1054,8 @@ cell.innerHTML = sessions.map(s => {
         function getStatusColor(status) {
             switch (status) {
                 case 'accepted':  return 'text-blue-700 bg-blue-100 border-blue-300';
-                case 'completed': return 'text-gray-600 bg-gray-100 border-gray-300';
+                case 'completed': return 'text-gray-900 bg-gray-100 border-gray-400';
+                case 'closed':    return 'text-gray-500 bg-gray-100 border-gray-300';
                 case 'pending':   return 'text-yellow-700 bg-yellow-100 border-yellow-300';
                 case 'rejected':  return 'text-red-700 bg-red-100 border-red-300';
                 case 'cancelled': return 'text-red-700 bg-red-100 border-red-300';
@@ -1067,6 +1069,7 @@ cell.innerHTML = sessions.map(s => {
                 case 'no_show':   return 'No Show';
                 case 'accepted':  return 'Accepted';
                 case 'completed': return 'Completed';
+                case 'closed':    return 'Closed';
                 case 'rejected':  return 'Rejected';
                 case 'cancelled': return 'Cancelled';
                 case 'pending':   return 'Pending';
@@ -1121,10 +1124,10 @@ cell.innerHTML = sessions.map(s => {
                 dayEl.style.color = "#9ca3af";
             }
 
-            /* Highlight current day */
-            if(dateObj.toDateString() === today.toDateString()){
-                dayEl.classList.add("cal-today");
-            }
+/* Highlight current day */
+if(dateStr === todayStr){
+    dayEl.classList.add("cal-today");
+}
 
             /* Highlight selected day */
             if(dateStr === selectedDateStr){
