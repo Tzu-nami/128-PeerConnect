@@ -65,22 +65,17 @@ body { margin: 0; font-family: 'Inter', sans-serif; background: var(--bg-light);
     justify-content: flex-start;
 }
 
-.logo-icon {
-    flex-shrink: 0;
-    font-size: 1.25rem;
-    width: 32px;
-    text-align: center;
-}
+            .logo-icon { flex-shrink: 0; font-size: 1.3rem; width: 32px; text-align: center; }
 
-.logo-text {
-    font-size: 1rem;
-    font-weight: 700;
-    white-space: nowrap;
-    overflow: hidden;
-    opacity: 1;
-    max-width: 200px;
-    transition: opacity 0.2s, max-width 0.3s;
-}
+            .logo-text {
+                font-size: 1.2rem;
+                font-weight: 700;
+                white-space: nowrap;
+                overflow: hidden;
+                opacity: 1;
+                max-width: 200px;
+                transition: opacity 0.2s, max-width 0.3s;
+            }
 .sidebar.collapsed .logo-text {
     opacity: 0;
     max-width: 0;
@@ -88,36 +83,27 @@ body { margin: 0; font-family: 'Inter', sans-serif; background: var(--bg-light);
 }
 
 /* NAV ITEMS */
-.nav-item {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    padding: 14px 20px;
-    color: rgba(255,255,255,0.7);
-    text-decoration: none;
-    transition: background 0.2s, color 0.2s, padding 0.3s, justify-content 0.3s;
-    white-space: nowrap;
-    position: relative;
-    text-align: left;
-    background: transparent;
-    border: none;
-    width: 100%;
-    cursor: pointer;
-    font-size: 0.875rem;
-    justify-content: flex-start;
-}
+            .nav-item {
+                display: flex;
+                align-items: center;
+                gap: 14px;
+                padding: 18px 20px;
+                color: rgba(255,255,255,0.7);
+                text-decoration: none;
+                transition: background 0.2s, color 0.2s, padding 0.3s, justify-content 0.3s;
+                white-space: nowrap;
+                position: relative;
+                text-align: left;
+                background: transparent;
+                border: none;
+                width: 100%;
+                cursor: pointer;
+                font-size: 1.04rem;
+                justify-content: flex-start;
+            }
+            .sidebar.collapsed .nav-item { justify-content: center; padding: 18px 0; }
 
-.sidebar.collapsed .nav-item {
-    justify-content: center;
-    padding: 14px 0;
-}
-
-.nav-item i {
-    width: 32px;
-    text-align: center;
-    flex-shrink: 0;
-    font-size: 18px;
-}
+            .nav-item i { width: 32px; text-align: center; flex-shrink: 0; font-size: 22px; transition: width 0.3s; }
 
 .nav-item span {
     overflow: hidden;
@@ -177,7 +163,7 @@ body { margin: 0; font-family: 'Inter', sans-serif; background: var(--bg-light);
 
 /* FOOTER */
 .sidebar-footer {
-    padding: 12px 0;
+    padding: 6px 0;
     border-top: 1px solid rgba(255,255,255,0.1);
 }
 
@@ -311,7 +297,7 @@ color:#065f46;
 
         <div class="main-content">
             <header class="top-header relative">
-                <div class="text-lg">Welcome, <span class="font-bold">{{ auth()->user()->name }}</span></div>
+                <div class="text-lg">Welcome, {{ auth()->user()->user_roles }} <span class="font-bold">{{ auth()->user()->name }}</span></div>
                 <button id="profileTrigger" class="flex items-center gap-2 px-3 py-1 bg-white rounded-full hover:bg-gray-100 transition shadow-sm border-2 border-white/20 group">
                     <div class="w-8 h-8 bg-red-900 text-white rounded-full flex items-center justify-center text-xs font-bold">
                         {{ strtoupper(substr(auth()->user()->name, 0, 2)) }}
