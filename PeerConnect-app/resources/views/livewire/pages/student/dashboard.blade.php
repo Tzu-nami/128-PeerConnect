@@ -267,23 +267,40 @@ $dismissSuccessMessage = action(function () {
         }
         .sidebar:not(.collapsed) .sidebar-logo-container { justify-content: flex-start; }
 
-        .logo-icon { flex-shrink: 0; font-size: 1.25rem; width: 32px; text-align: center; }
-        .logo-text {
-            font-size: 1rem; font-weight: 700; white-space: nowrap; overflow: hidden;
-            opacity: 1; max-width: 200px; transition: opacity 0.2s, max-width 0.3s;
-        }
+            .logo-icon { flex-shrink: 0; font-size: 1.3rem; width: 32px; text-align: center; }
+
+            .logo-text {
+                font-size: 1.2rem;
+                font-weight: 700;
+                white-space: nowrap;
+                overflow: hidden;
+                opacity: 1;
+                max-width: 200px;
+                transition: opacity 0.2s, max-width 0.3s;
+            }
         .sidebar.collapsed .logo-text { opacity: 0; max-width: 0; pointer-events: none; }
 
-        .nav-item {
-            display: flex; align-items: center; gap: 14px; padding: 14px 20px;
-            color: rgba(255,255,255,0.7); text-decoration: none;
-            transition: background 0.2s, color 0.2s, padding 0.3s, justify-content 0.3s;
-            white-space: nowrap; position: relative; text-align: left;
-            background: transparent; border: none; width: 100%;
-            cursor: pointer; font-size: 0.875rem; justify-content: flex-start;
-        }
-        .sidebar.collapsed .nav-item { justify-content: center; padding: 14px 0; }
-        .nav-item i { width: 32px; text-align: center; flex-shrink: 0; font-size: 18px; }
+            .nav-item {
+                display: flex;
+                align-items: center;
+                gap: 14px;
+                padding: 18px 20px;
+                color: rgba(255,255,255,0.7);
+                text-decoration: none;
+                transition: background 0.2s, color 0.2s, padding 0.3s, justify-content 0.3s;
+                white-space: nowrap;
+                position: relative;
+                text-align: left;
+                background: transparent;
+                border: none;
+                width: 100%;
+                cursor: pointer;
+                font-size: 1.04rem;
+                justify-content: flex-start;
+            }
+            .sidebar.collapsed .nav-item { justify-content: center; padding: 18px 0; }
+
+            .nav-item i { width: 32px; text-align: center; flex-shrink: 0; font-size: 22px; transition: width 0.3s; }
         .nav-item span { overflow: hidden; opacity: 1; max-width: 200px; transition: opacity 0.2s, max-width 0.3s; }
         .sidebar.collapsed .nav-item span { opacity: 0; max-width: 0; pointer-events: none; }
         .nav-item:hover, .nav-item.active { background: rgba(255,255,255,0.1); color: white; }
@@ -300,7 +317,7 @@ $dismissSuccessMessage = action(function () {
         }
         .sidebar.collapsed .nav-item:hover::after { opacity: 1; visibility: visible; }
 
-        .sidebar-footer { padding: 12px 0; border-top: 1px solid rgba(255,255,255,0.1); }
+        .sidebar-footer { padding: 6px 0; border-top: 1px solid rgba(255,255,255,0.1); }
 
         .sidebar-toggle-btn {
             position: absolute; right: -16px; top: 3%; width: 32px; height: 32px;
@@ -405,7 +422,7 @@ $dismissSuccessMessage = action(function () {
     <!-- MAIN -->
     <div class="main-content">
         <header class="top-header relative">
-            <div class="text-lg">Welcome, <span class="font-bold">{{ auth()->user()->name }}</span></div>
+            <div class="text-lg">Welcome, {{ auth()->user()->user_roles }} <span class="font-bold">{{ auth()->user()->name }}</span></div>
 
             <button id="profileTrigger" class="flex items-center gap-2 px-3 py-1 bg-white rounded-full hover:bg-gray-100 transition shadow-sm border-2 border-white/20 group">
                 <div class="w-8 h-8 bg-red-900 text-white rounded-full flex items-center justify-center text-xs font-bold">
@@ -915,7 +932,7 @@ function generateWeeklySchedule(){
         return d >= week.monday.getTime() && d <= week.friday.getTime();
     });
 
-    let endHour = 15;
+    let endHour = 10;
     if(weekSessions.length) {
         const latestEndMinutes = Math.max(...weekSessions.map(s => timeToMinutes(s.end)));
         endHour = Math.ceil(latestEndMinutes / 60);
