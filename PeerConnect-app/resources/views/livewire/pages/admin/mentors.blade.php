@@ -181,6 +181,10 @@ $updateMentor = action(function () {
 
     // Update
     if($this->editAvatar) {
+        $baseUrl = rtrim(env('SUPABASE_PUBLIC_URL'), '/');
+        $oldFile = str_replace($baseUrl . '/', '', $mentorNew->user->avatar);
+        Storage::disk('s3')->delete($oldFile);
+
         $filename = $this->editAvatar->hashName();
         $path = $this->editAvatar->storeAs('', $filename, 's3');
         $url = rtrim(env('SUPABASE_PUBLIC_URL'), '/') . '/' . $filename;
