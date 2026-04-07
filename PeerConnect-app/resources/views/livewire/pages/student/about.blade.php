@@ -22,8 +22,8 @@ mount(function () {
     --header-maroon: #7b1d1d; 
     --bg-light: #f4f7f6; 
     --header-height: 80px; 
-    --sidebar-width: 260px;
-    --sidebar-collapsed-width: 72px;
+    --sidebar-width: 280px;
+    --sidebar-collapsed-width: 80px;
 }
 
 * { box-sizing: border-box; }
@@ -55,20 +55,18 @@ body { margin: 0; font-family: 'Inter', sans-serif; background: var(--bg-light);
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 0 20px;
-    gap: 12px;
+    padding: 0 24px;
+    gap: 15px;
     flex-shrink: 0;
     overflow: hidden;
-    transition: padding 0.3s, justify-content 0.3s;
 }
 .sidebar:not(.collapsed) .sidebar-logo-container {
-    justify-content: flex-start;
 }
 
             .logo-icon { flex-shrink: 0; font-size: 1.3rem; width: 32px; text-align: center; }
 
             .logo-text {
-                font-size: 1.2rem;
+                font-size: 1.1rem;
                 font-weight: 700;
                 white-space: nowrap;
                 overflow: hidden;
@@ -98,12 +96,11 @@ body { margin: 0; font-family: 'Inter', sans-serif; background: var(--bg-light);
                 border: none;
                 width: 100%;
                 cursor: pointer;
-                font-size: 1.04rem;
                 justify-content: flex-start;
             }
-            .sidebar.collapsed .nav-item { justify-content: center; padding: 18px 0; }
+            .sidebar.collapsed .nav-item { justify-content: center; padding: 15px 0; }
 
-            .nav-item i { width: 32px; text-align: center; flex-shrink: 0; font-size: 22px; transition: width 0.3s; }
+            .nav-item i { width: 20px; text-align: center; flex-shrink: 0; transition: width 0.3s; }
 
 .nav-item span {
     overflow: hidden;
@@ -119,12 +116,10 @@ body { margin: 0; font-family: 'Inter', sans-serif; background: var(--bg-light);
 }
 
 /* ACTIVE + HOVER */
-.nav-item:hover,
-.nav-item.active {
-    background: rgba(255,255,255,0.1);
+.nav-item:hover {
     color: white;
+    background: rgba(255,255,255,0.05);
 }
-
 .nav-item.active {
     background: var(--bg-light);
     color: var(--header-maroon);
@@ -257,15 +252,35 @@ color:#065f46;
     <div class="app-wrapper">
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-logo-container">
-                <i class="fa-solid fa-graduation-cap logo-icon"></i>
-                <span class="logo-text">LRC PeerConnect</span>
-            </div>
+    <div class="logo-content">
+        <i class="fa-solid fa-graduation-cap text-xl"></i>
+        <span class="logo-text">LRC PeerConnect</span>
+    </div>
+</div>
 
-            <button class="sidebar-toggle-btn" id="sidebarToggle" aria-label="Toggle sidebar">
-                <span class="toggle-icon">
-                    <i class="fa-solid fa-chevron-right"></i>
-                </span>
-            </button>
+<!-- Floating toggle button on the sidebar edge -->
+<button id="sidebarToggle" style="
+    position: absolute;
+    top: 50%;
+    right: -16px;
+    transform: translateY(-50%);
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--header-maroon);
+    border: 2px solid white;
+    color: white;
+    font-size: 0.75rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 40;
+    box-shadow: 2px 0 8px rgba(0,0,0,0.15);
+    transition: background 0.2s;
+">
+    <i class="fa-solid fa-chevron-left" id="toggleIcon"></i>
+</button>
 
             <nav class="flex-grow">
                 <a href="{{ route('student.dashboard') }}" class="nav-item" data-tooltip="Dashboard">
@@ -455,8 +470,12 @@ color:#065f46;
 
     <script>
         const sidebar = document.getElementById('sidebar');
-        document.getElementById('sidebarToggle').addEventListener('click', () => sidebar.classList.toggle('collapsed'));
-        const profileTrigger = document.getElementById('profileTrigger');
+document.getElementById('sidebarToggle').addEventListener('click', () => {
+    sidebar.classList.toggle('collapsed');
+    const icon = document.getElementById('toggleIcon');
+    icon.classList.toggle('fa-chevron-left');
+    icon.classList.toggle('fa-chevron-right');
+});        const profileTrigger = document.getElementById('profileTrigger');
         const profileDropdown = document.getElementById('profileDropdown');
         profileTrigger.addEventListener('click', (e) => { e.stopPropagation(); profileDropdown.classList.toggle('show'); });
         window.addEventListener('click', () => profileDropdown.classList.remove('show'));
