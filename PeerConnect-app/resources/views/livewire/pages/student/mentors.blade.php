@@ -451,9 +451,11 @@ color:#065f46;
                         <div class="relative">
                             <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-300 text-xs"></i>
                             <input type="text" x-model="searchQuery" @input="currentPage = 1"  placeholder="Search mentors..."
-                                   class="pl-8 pr-3 py-2 text-xs border border-gray-200 rounded-lg bg-[#fffffa] outline-none focus:ring-1 focus:ring-red-800 w-64">
+                                   class="pl-8 pr-3 py-2 text-xs border border-gray-200 rounded-lg bg-white outline-none focus:ring-1 w-64">
                         </div>
-                        <select x-model="selectedDay" @change="currentPage = 1" class="border border-gray-200 rounded-lg px-8 py-2 text-xs text-slate-600 outline-none cursor-pointer focus:ring-1 focus:ring-red-800 bg-[#fffffa]">
+                        <div class="relative">
+                            <i class="fa-solid fa-filter absolute left-3 top-1/2 -translate-y-1/2 text-gray-300 text-xs"></i>
+                        <select x-model="selectedDay" @change="currentPage = 1" class="border border-gray-200 rounded-lg px-8 py-2 text-xs text-slate-600 outline-none cursor-pointer focus:ring-1 bg-white">
                             <option value="">Any Day</option>
                             <option value="Mon">Monday</option>
                             <option value="Tue">Tuesday</option>
@@ -462,18 +464,22 @@ color:#065f46;
                             <option value="Fri">Friday</option>
                             <option value="Sat">Saturday</option>
                         </select>
-                        <select x-model="selectedSubject" @change="currentPage = 1" class="border border-gray-200 rounded-lg px-8 py-2 text-xs text-slate-600 outline-none cursor-pointer focus:ring-1 focus:ring-red-800 bg-[#fffffa]">
+                        </div>
+                        <div class="relative">
+                            <i class="fa-solid fa-filter absolute left-3 top-1/2 -translate-y-1/2 text-gray-300 text-xs"></i>
+                        <select x-model="selectedSubject" @change="currentPage = 1" class="border border-gray-200 rounded-lg px-8 py-2 text-xs text-slate-600 outline-none cursor-pointer focus:ring-1 bg-white">
                             <option value="">All Subjects</option>
                             @foreach($this->subjects as $subject)
                             <option value="{{ $subject->id }}">{{ $subject->code }}</option>
                             @endforeach
                         </select>
+                        </div>
                     </div>
                 </div>
 
                 <p class="text-xs text-gray-400 mb-4 font-medium" x-text="filteredMentors.length + ' mentor' + (filteredMentors.length !==1 ? 's' : '') + ' found'"></p>
 
-                <div x-show="filteredMentors.length === 0" x-cloak class="bg-[#fffffa] rounded-xl border border-gray-100 py-20 text-center shadow-sm">
+                <div x-show="filteredMentors.length === 0" x-cloak class="bg-white rounded-xl border border-gray-100 py-20 text-center shadow-sm">
                     <i class="fa-solid fa-chalkboard-user text-4xl mb-4 block"></i>
                     <p class="font-medium">No mentors found.</p>
                     <p class="text-xs mt-1">Try adjusting your search or filter.</p>
@@ -485,9 +491,9 @@ color:#065f46;
 
                         <div class="mentor-card group flex flex-col h-full" @click="openModal(mentor)">
 
-                            <div class="p-3 flex gap-5 border-b border-gray-100 bg-[#fffffa]">
+                            <div class="p-3 flex gap-5 border-b border-gray-100 bg-white">
                                 <div class="w-28 h-28 aspect-square rounded-2xl overflow-hidden flex-shrink-0 bg-gray-100 border border-gray-200 shadow-inner">
-                                    <img :src="mentor.avatar" :alt="mentor.lastName" class="w-full h-full object-cover bg-[#fffffa]" />
+                                    <img :src="mentor.avatar" :alt="mentor.lastName" class="w-full h-full object-cover bg-white" />
                                 </div>
                                 <div class="flex-1 flex flex-col min-w-0 pr-1">
                                     <p class="font-black text-slate-800 text-2xl sm:text-3xl leading-none uppercase tracking-tighter truncate" x-text="mentor.lastName"></p>
@@ -500,7 +506,7 @@ color:#065f46;
                             </div>
 
                             {{-- Subjects taught --}}
-                            <div class="px-5 pb-2 pt-2 flex-1">
+                            <div class="px-5 pb-2 pt-2 flex-1 bg-white">
                                 <p class="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Subjects</p>
                                 <div class="flex flex-nowrap overflow-hidden gap-1">
                                     <template x-for="(subject, index) in mentor.subjects.slice(0, 4)" :key="index">
@@ -513,7 +519,7 @@ color:#065f46;
                             </div>
 
                             {{-- Days and view more --}}
-                            <div class="px-5 pb-2 pt-2 pb-6 mt-auto flex justify-between items-end border-t border-gray-50 bg-[#fffffa] group-hover:bg-gray-50/50 transition-colors duration-300">
+                            <div class="px-5 pb-2 pt-2 pb-6 mt-auto flex justify-between items-end border-t border-gray-50 bg-white group-hover:bg-gray-50/50 transition-colors duration-300">
                                 <div class="flex-1 pr-3">
                                     <p class="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Available Days</p>
                                     <div class="flex flex-wrap gap-1.5">
@@ -536,13 +542,13 @@ color:#065f46;
 
                 {{-- Pagination --}}
                 <div class="mt-4 flex justify-center items-center gap-2" x-show="totalPages > 1" x-cloak>
-                    <button @click="currentPage--" :disabled="currentPage === 1" class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 bg-[#fffffa] text-slate-500 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition">
+                    <button @click="currentPage--" :disabled="currentPage === 1" class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-slate-500 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition">
                         <i class="fa-solid fa-chevron-left text-[10px]"></i>
                     </button>
                     <template x-for="page in pages" :key="page">
-                        <button @click="currentPage = page" :class="currentPage === page ? 'bg-[#1a3c2f] text-white shadow-sm' : 'bg-[#fffffa] border border-gray-200 text-slate-500 hover:bg-gray-100'" class="w-8 h-8 text-xs font-bold rounded-lg transition" x-text="page"></button>
+                        <button @click="currentPage = page" :class="currentPage === page ? 'bg-[#1a3c2f] text-white shadow-sm' : 'bg-white border border-gray-200 text-slate-500 hover:bg-gray-100'" class="w-8 h-8 text-xs font-bold rounded-lg transition" x-text="page"></button>
                     </template>
-                    <button @click="currentPage++" :disabled="currentPage === totalPages" class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 bg-[#fffffa] text-slate-500 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition">
+                    <button @click="currentPage++" :disabled="currentPage === totalPages" class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-slate-500 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition">
                         <i class="fa-solid fa-chevron-right text-[10px]"></i>
                     </button>
                 </div>
@@ -622,7 +628,7 @@ color:#065f46;
 
                             </div>
 
-                            <div class="flex-shrink-0 px-6 py-4 bg-gray-50 border-t border-gray-100">
+                            <div class="flex-shrink-0 px-6 py-4 bg-[#fffffa] border-t border-gray-100">
                                 <a :href="selectedMentor.bookingUrl" class="block w-full text-center bg-[#1a3c2f] hover:bg-[#2d5c47] text-white text-sm font-bold py-3 rounded-xl transition shadow-sm">
                                     <i class="fa-solid fa-calendar-check mr-2"></i> Book a Session
                                 </a>
