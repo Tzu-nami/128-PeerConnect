@@ -180,6 +180,9 @@ mount(function () {
                 </a>                
                 <a href="{{ route('admin.mentors') }}" class="nav-item {{ request()->routeIs('admin.mentors') ? 'active' : '' }}" data-tooltip="Mentor Management">
                     <i class="fa-solid fa-chalkboard-user w-5"></i><span>Mentor Management</span>
+                </a>
+                <a href="{{ route('admin.mentors') }}" class="nav-item {{ request()->routeIs('admin.mentors') ? 'active' : '' }}" data-tooltip="Course Management">
+                    <i class="fa-solid fa-book-open w-5"></i><span>Course Management</span>
                 </a>                 
                 <a href="{{ route('admin.sessions') }}" class="nav-item {{ request()->routeIs('admin.sessions') ? 'active' : '' }}" data-tooltip="Session Management">
                     <i class="fa-solid fa-calendar-days w-5"></i><span>Session Management</span>
