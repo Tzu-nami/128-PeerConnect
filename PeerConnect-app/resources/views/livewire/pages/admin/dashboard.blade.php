@@ -59,6 +59,8 @@ mount(function () {
             transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             z-index: 30;
             position: relative;
+            overflow: visible;
+
         }
         .sidebar.collapsed { width: var(--sidebar-collapsed-width); }
 
@@ -78,6 +80,7 @@ mount(function () {
         .logo-content { display: flex; align-items: center; gap: 12px; white-space: nowrap; }
         .logo-text { font-size: 1.1rem; font-weight: 700; }
 
+        
        /* FLAT BLENDING STYLE */
 .nav-item {
     display: flex;
@@ -114,7 +117,7 @@ mount(function () {
             margin-left: 10px; background: rgba(0, 0, 0, 0.9); color: white; padding: 5px 12px; border-radius: 4px; font-size: 12px; opacity: 0; visibility: hidden; transition: opacity 0.2s; pointer-events: none; z-index: 100;
         }
         .sidebar.collapsed .nav-item:hover::after { opacity: 1; visibility: visible; }
-        .sidebar.collapsed .logo-content, .sidebar.collapsed .nav-item span { display: none; }
+        .sidebar.collapsed .logo-content span, .sidebar.collapsed .nav-item span { display: none; }
         .sidebar.collapsed .sidebar-logo-container, .sidebar.collapsed .nav-item { justify-content: center; padding: 15px 0; }
         .sidebar.collapsed .nav-item i { margin: 0; width: auto; }
         .sidebar.collapsed .nav-item.active { border-left: none; }
@@ -248,13 +251,36 @@ mount(function () {
 <body>
     <div class="app-wrapper">
         <aside class="sidebar" id="sidebar">
-            <div class="sidebar-logo-container">
-                <button id="sidebarToggle"><i class="fa-solid fa-bars"></i></button>
-                <div class="logo-content">
-                    <i class="fa-solid fa-graduation-cap text-xl"></i>
-                    <span class="logo-text">LRC PeerConnect</span>
-                </div>
-            </div>
+<div class="sidebar-logo-container">
+    <div class="logo-content">
+        <i class="fa-solid fa-graduation-cap text-xl"></i>
+        <span class="logo-text">LRC PeerConnect</span>
+    </div>
+</div>
+
+<!-- Floating toggle button on the sidebar edge -->
+<button id="sidebarToggle" style="
+    position: absolute;
+    top: 50%;
+    right: -16px;
+    transform: translateY(-50%);
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--header-maroon);
+    border: 2px solid white;
+    color: white;
+    font-size: 0.75rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 40;
+    box-shadow: 2px 0 8px rgba(0,0,0,0.15);
+    transition: background 0.2s;
+">
+    <i class="fa-solid fa-chevron-left" id="toggleIcon"></i>
+</button>
             <nav class="flex-grow">
                 <a href="{{ route('admin.dashboard') }}" class="nav-item {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}" data-tooltip="Dashboard">
                     <i class="fa-solid fa-gauge w-5"></i><span>Dashboard</span>
@@ -408,8 +434,10 @@ mount(function () {
                     <div class="col-span-2 space-y-8">
 <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col" id="section-schedule">                            <div class="flex justify-between items-center mb-6">
                                 <div>
+<div class="flex items-center gap-2">
+    <i class="fa-solid fa-calendar-check"></i>
     <h2 class="text-lg font-bold text-slate-800" id="tableTitle">Today's Schedule</h2>
-    <p class="text-xs text-gray-400" id="tableSubtitle"></p>
+</div>    <p class="text-xs text-gray-400" id="tableSubtitle"></p>
 </div>
 
 
@@ -469,14 +497,14 @@ updateDate();
                             </div>
                         </div>
 
-                        <div class="stats-overview-container">
-                            <div class="stats-header">
-                                <div class="flex items-center gap-2">
-                                    <i class="fa-solid fa-chart-line text-maroon-800"></i>
-                                    <span>LRC Performance Analytics</span>
-                                </div>
-                            </div>
-                            <div class="stats-body">
+<div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+    <div class="flex justify-between items-center mb-6">
+        <div class="flex items-center gap-2">
+            <i class="fa-solid fa-chart-line"></i>
+            <span class="text-lg font-bold text-slate-800">LRC Performance Analytics</span>
+        </div>
+    </div>
+    <div class="grid grid-cols-2 gap-6">
                                 <div class="stats-column"><div class="stats-column-title">Monthly Session Trends</div><div class="h-44"><canvas id="lineChart"></canvas></div></div>
                                 <div class="stats-column"><div class="stats-column-title">Top Mentors</div><div class="h-44"><canvas id="pieChart"></canvas></div></div>
                                 <div class="stats-column"><div class="stats-column-title">Satisfaction Rate</div><div class="h-44 flex justify-center"><canvas id="doughnutChart"></canvas></div></div>
@@ -603,12 +631,6 @@ updateDate();
         const statusFilter = document.getElementById('statusFilter');
         const charts = [];
         let currentPage = 1;
-
-        // Dashboard Interactivity
-        document.getElementById('sidebarToggle').addEventListener('click', () => {
-            sidebar.classList.toggle('collapsed');
-            setTimeout(() => { charts.forEach(c => c.resize()); }, 310);
-        });
 
         profileTrigger.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -951,6 +973,14 @@ document.getElementById('nextBtn').addEventListener('click', () => { currentPage
 
         render(q, matches);
     });
+
+    document.getElementById('sidebarToggle').addEventListener('click', () => {
+    sidebar.classList.toggle('collapsed');
+    const icon = document.getElementById('toggleIcon');
+    icon.classList.toggle('fa-chevron-left');
+    icon.classList.toggle('fa-chevron-right');
+    setTimeout(() => { charts.forEach(c => c.resize()); }, 310);
+});
 
     // ── CLOSE ON OUTSIDE CLICK ───────────────────────────────────────────────
     document.addEventListener('click', function (e) {

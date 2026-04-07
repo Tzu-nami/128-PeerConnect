@@ -78,6 +78,7 @@ mount(function () {
             transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             z-index: 30;
             position: relative;
+            overflow: visible;
         }
         .sidebar.collapsed { width: var(--sidebar-collapsed-width); }
 
@@ -134,7 +135,7 @@ mount(function () {
             margin-left: 10px; background: rgba(0, 0, 0, 0.9); color: white; padding: 5px 12px; border-radius: 4px; font-size: 12px; opacity: 0; visibility: hidden; transition: opacity 0.2s; pointer-events: none; z-index: 100;
         }
         .sidebar.collapsed .nav-item:hover::after { opacity: 1; visibility: visible; }
-        .sidebar.collapsed .logo-content, .sidebar.collapsed .nav-item span { display: none; }
+        .sidebar.collapsed .logo-content span, .sidebar.collapsed .nav-item span { display: none; }
         .sidebar.collapsed .sidebar-logo-container, .sidebar.collapsed .nav-item { justify-content: center; padding: 15px 0; }
         .sidebar.collapsed .nav-item i { margin: 0; width: auto; }
         .sidebar.collapsed .nav-item.active { border-left: none; }
@@ -178,12 +179,35 @@ mount(function () {
     <div class="app-wrapper">
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-logo-container">
-                <button id="sidebarToggle"><i class="fa-solid fa-bars"></i></button>
-                <div class="logo-content">
-                    <i class="fa-solid fa-graduation-cap text-xl"></i>
-                    <span class="logo-text">LRC PeerConnect</span>
-                </div>
-            </div>
+    <div class="logo-content">
+        <i class="fa-solid fa-graduation-cap text-xl"></i>
+        <span class="logo-text">LRC PeerConnect</span>
+    </div>
+</div>
+
+<!-- Floating toggle button on the sidebar edge -->
+<button id="sidebarToggle" style="
+    position: absolute;
+    top: 50%;
+    right: -16px;
+    transform: translateY(-50%);
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--header-maroon);
+    border: 2px solid white;
+    color: white;
+    font-size: 0.75rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 40;
+    box-shadow: 2px 0 8px rgba(0,0,0,0.15);
+    transition: background 0.2s;
+">
+    <i class="fa-solid fa-chevron-left" id="toggleIcon"></i>
+</button>
             <nav class="flex-grow">
                 <a href="{{ route('admin.dashboard') }}" class="nav-item {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}" data-tooltip="Dashboard">
                     <i class="fa-solid fa-gauge w-5"></i><span>Dashboard</span>
@@ -325,16 +349,15 @@ mount(function () {
                                         </td>
 <td class="px-6 py-4">
     <div class="flex flex-wrap gap-1">
-        <span class="bg-red-50 text-red-700 px-2 py-0.5 rounded text-[10px] font-bold border border-red-100">
-            {{ $session['subject'] }}
+        <span class="text-sm text-slate-600 font-medium">
+             {{ $session['subject'] }}
         </span>
     </div>
     </td>
                                         <td class="px-6 py-4 text-sm text-slate-600">
                                             <div class="flex items-center gap-2">
-                                                <span class="w-6 h-6 rounded bg-emerald-100 text-emerald-700 text-[10px] flex items-center justify-center font-bold">{{ $session['mentor_init'] }}</span>
-                                                {{ $session['mentor'] }}
-                                            </div>
+    {{ $session['mentor'] }}
+</div>
                                         </td>
                                         <td class="px-6 py-4">
                                             <div class="text-sm font-semibold text-slate-700">{{ Carbon::parse($session['schedule'])->format('M d, Y') }}</div>
@@ -372,12 +395,6 @@ mount(function () {
         const profileTrigger = document.getElementById('profileTrigger');
         const profileDropdown = document.getElementById('profileDropdown');
 
-        // Dashboard Interactivity
-        document.getElementById('sidebarToggle').addEventListener('click', () => {
-            sidebar.classList.toggle('collapsed');
-            setTimeout(() => { charts.forEach(c => c.resize()); }, 310);
-        });
-
         profileTrigger.addEventListener('click', (e) => {
             e.stopPropagation();
             profileDropdown.classList.toggle('show');
@@ -397,9 +414,17 @@ mount(function () {
     font-weight: 700;
     letter-spacing: 0.03em;
 }
-.status-pending   { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+.status-pill { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 4px; font-size: 14px; font-weight: 700; letter-spacing: 0em; }.status-pending   { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
 .status-confirmed { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
 .status-completed { background: #f8fafc; color: #475569; border: 1px solid #e2e8f0; }
 .status-cancelled { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+
+document.getElementById('sidebarToggle').addEventListener('click', () => {
+    sidebar.classList.toggle('collapsed');
+    const icon = document.getElementById('toggleIcon');
+    icon.classList.toggle('fa-chevron-left');
+    icon.classList.toggle('fa-chevron-right');
+    setTimeout(() => { charts.forEach(c => c.resize()); }, 310);
+});
     </script>
 </body>
