@@ -427,7 +427,7 @@ $dismissFeedbackSubmitted = action(function () {
         .table-filter-select, .header-filter { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 12px; font-size: 0.75rem; color: #475569; outline: none; cursor: pointer; }
 
         /* ── ACTIVE BOOKING CARD ── */
-        .active-booking-card { background: #fffffa; border-radius: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.07); overflow: hidden; }
+        .active-booking-card { background: white; border-radius: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.07); overflow: hidden; }
         .active-booking-banner { display: flex; align-items: center; gap: 12px; padding: 16px 24px; }
         .active-booking-banner.pending  { background: linear-gradient(135deg,#fef9c3,#fef3c7); border-bottom: 1px solid #fde68a; }
         .active-booking-banner.accepted { background: linear-gradient(135deg,#d1fae5,#a7f3d0); border-bottom: 1px solid #6ee7b7; }
@@ -912,7 +912,7 @@ $dismissFeedbackSubmitted = action(function () {
 
             {{-- ══ BOOKING FORM ══ --}}
             @else
-            <div class="bg-[#fffffa] p-6 rounded-lg shadow-sm border-gray-200"
+            <div class="bg-white p-6 rounded-lg shadow-sm border-gray-200"
                 x-data="{
                     allMentors: @js($this->mentors),
                     allSubjects: @js($this->mentorSubjects),
@@ -1018,7 +1018,7 @@ $dismissFeedbackSubmitted = action(function () {
         </div>
 
         <div class="lg:col-span-1 space-y-6">
-            <div class="bg-[#fffffa] rounded-xl shadow-sm border-gray-200 overflow-hidden p-6" 
+            <div class="bg-white rounded-xl shadow-sm border-gray-200 overflow-hidden p-6" 
                 x-data="{ 
                     open: $wire.entangle('toggleProfileOpen'),
                     college: $wire.entangle('college_id'),
@@ -1097,7 +1097,7 @@ $dismissFeedbackSubmitted = action(function () {
                 </div>
             </div>
 
-            <div class="bg-[#fffffa] rounded-xl shadow-sm border-gray-200 overflow-hidden p-6">
+            <div class="bg-white rounded-xl shadow-sm border-gray-200 overflow-hidden p-6">
                 <h3 class="text-base font-semibold text-gray-900 mb-4">Recent Bookings</h3>
                 @forelse($this->studentBookings as $booking)
                     <div class="mb-4 pb-4 border-b border-gray-100 last:border-0 last:mb-0 last:pb-0">
@@ -1139,7 +1139,7 @@ $dismissFeedbackSubmitted = action(function () {
 
 <!-- CONFIRMATION MODAL -->
     <div id="confirmModal" style="display:none;" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-        <div class="bg-[#fffffa] rounded-xl p-6 max-w-sm w-full mx-4 shadow-2xl" id="confirmModalBox">
+        <div class="bg-white rounded-xl p-6 max-w-sm w-full mx-4 shadow-2xl" id="confirmModalBox">
             <div class="flex items-center gap-3 mb-3">
                 <div id="confirmIconWrap" class="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0"></div>
                 <h3 id="confirmTitle" class="text-base font-bold text-gray-900"></h3>
