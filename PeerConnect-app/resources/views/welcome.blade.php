@@ -7,22 +7,28 @@
         <meta http-equiv="X-UA-Compatible" content="ie=edge">
         <title>{{ config('app.name', 'UPB LRC | PeerConnect') }}</title>
 
-        {{-- Fonts --}}
-        <link href="https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,200..1000;1,200..1000&display=swap" rel="stylesheet">
-        <link href="https://fonts.googleapis.com/css2?family=Marcellus&display=swap" rel="stylesheet">
-
-        {{-- Icons --}}
-        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&icon_names=arrow_forward_ios" />
-        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&icon_names=arrow_forward,arrow_forward_ios" />
-
-        {{-- Styles --}}
+        {{-- Styles and Scripts --}}
         @vite(['resources/js/app.js', 'resources/css/app.css'])
     </head>
+
     <body>
+        @php
+            $bookUrl = auth()->check() ? match(true) {
+                auth()->user()->isStudent() => route('student.bookings'),
+                auth()->user()->isMentor()  => route('mentor.bookings'),
+                default                     => route('login')
+            } : route('login');
+
+            $dashboardUrl = auth()->check() ? match(true) {
+                auth()->user()->isStudent() => route('student.dashboard',),
+                auth()->user()->isMentor()  => route('mentor.dashboard',),
+                auth()->user()->isAdmin()   => route('admin.dashboard',),
+                default                     => route('login')
+            } : route('login');
+        @endphp
+
         <header>
-            @if(Route::has('login'))
-                <livewire:welcome.navigation/>
-            @endif
+            <livewire:welcome.navigation/>
         </header>
 
         <main>
@@ -46,35 +52,50 @@
                     <h2 class="text-[33px] font-heading tracking-[0.15rem] uppercase text-up-yellow mb-6">
                         University of the Philippines Baguio
                     </h2>
-                    <h1 class="font-heading text-8xl font-bold text-cream mb-2.5 tracking-wide">
+                    <h1 class="font-heading text-8xl font-bold text-cream mb-4 tracking-wide">
                         Learning<br>Resource<br>Center
                     </h1>
 
                     {{-- Description --}}
-                    <p class="font-light leading-[1.85] text-cream/70 max-w-[480px] mb-12">
-                        Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
-                        Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+                    <p class="font-light leading-[1.85] text-cream/70 max-w-[480px] mb-10">
+                        The UPB Learning Resource Center connects you with dedicated peer mentors ready to support your academic journey.
+                        Whether you're keeping up, catching up, or getting ahead, our mentors are here to guide you every step of the way.
                     </p>
 
                     {{-- Book Now --}}
-                    <a href="#"
-                       class="inline-block bg-transparent border border-up-yellow text-up-yellow-light
-                       px-10 py-3.5 text-[13px] font-medium tracking-[0.12em] uppercase
-                       no-underline transition-colors duration-200
-                       hover:bg-up-yellow hover:text-up-maroon-dark">
-                        Book Now
-                    </a>
+                    @auth
+                        @unless(auth()->user()->isAdmin())
+                            <a href="{{ $bookUrl }}"
+                               class="inline-block bg-transparent border border-up-yellow text-up-yellow-light
+                               px-10 py-3.5 text-[13px] font-medium tracking-[0.12em] uppercase
+                               no-underline transition-colors duration-200
+                               hover:bg-up-yellow hover:text-up-maroon-dark">
+                                Book Now
+                            </a>
+                        @endunless
+
+                    @else
+                        <a href="{{ route('login') }}"
+                           class="inline-block bg-transparent border border-up-yellow text-up-yellow-light
+                           px-10 py-3.5 text-[13px] font-medium tracking-[0.12em] uppercase
+                           no-underline transition-colors duration-200
+                           hover:bg-up-yellow hover:text-up-maroon-dark">
+                            Book Now
+                        </a>
+                    @endauth
                 </div>
 
                 {{-- Scroll indicator --}}
-                <div class="flex flex-col gap-2 items-center justify-center absolute z-20 left-1/2 -translate-x-1/2 bottom-10 cursor-pointer text-up-yellow">
-                    <p class="text-[12px] tracking-[0.2rem] opacity-90">SCROLL</p>
-                    <span class="material-symbols-outlined rotate-90 leading-none">arrow_forward_ios</span>
-                </div>
+                <a href="#services" class="flex flex-col gap-2 items-center justify-center absolute z-20 left-1/2 -translate-x-1/2 bottom-7 cursor-pointer text-up-yellow">
+                    <p class="text-[12px] tracking-[0.2rem] font-bold opacity-90 mb-2">SCROLL</p>
+                    <div class="animate-bounce">
+                        <span class="material-symbols-outlined rotate-90 leading-none">arrow_forward_ios</span>
+                    </div>
+                </a>
             </section>
 
             {{-- What We Offer --}}
-            <section class="h-auto px-52 py-20 bg-white">
+            <section class="h-auto px-52 py-20 bg-white" id="services">
                 {{-- Header --}}
                 <div class="flex flex-col gap-4 mb-12">
                     <div class="flex items-center gap-3 text-up-yellow text-xs tracking-widest font-medium uppercase">
@@ -89,34 +110,49 @@
                 {{-- Content --}}
                 <div class="grid grid-cols-3">
                     {{-- Column 1 --}}
-                    <div class="px-12 py-10 border-r border-cream-dark">
+                    <a href="#"
+                       class="group flex flex-col px-12 py-10 border-r border-cream-dark transition-colors hover:bg-cream-dark/30">
                         <div class="w-full h-48 bg-cream-dark rounded-sm mb-5"></div>
-                        <div class="text-xl text-up-maroon font-medium mb-3">One-on-One Sessions</div>
-                        <div class="text-base leading-7 font-light">Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor
-                            incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation
-                            ullamco laboris nisi ut aliquip ex ea commodo consequat.
+                        <div class="text-xl text-up-maroon font-medium mb-2">One-on-One Sessions</div>
+                        <div class="text-base leading-7 font-light mb-3">
+                            Get personalized support from one of our experienced mentors.
+                            Work through challenging concepts, review course materials, and build confidence at your own pace, all in a focused and supportive environment.
                         </div>
-                    </div>
+                        <div class="flex items-center gap-1 text-up-maroon opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200">
+                            Read more
+                            <span class="material-symbols-outlined">arrow_right_alt</span>
+                        </div>
+                    </a>
 
                     {{-- Column 2 --}}
-                    <div class="px-12 py-10 border-r border-cream-dark">
+                    <a href="{{ route('public.services') }}"
+                       class="group flex flex-col px-12 py-10 border-r border-cream-dark transition-colors hover:bg-cream-dark/30">
                         <div class="w-full h-48 bg-cream-dark rounded-sm mb-5"></div>
-                        <div class="text-xl text-up-maroon font-medium mb-3">Group Sessions</div>
-                        <div class="text-base leading-7 font-light">Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor
-                            incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation
-                            ullamco laboris nisi ut aliquip ex ea commodo consequat.
+                        <div class="text-xl text-up-maroon font-medium mb-2">Group Sessions</div>
+                        <div class="text-base leading-7 font-light mb-3">
+                            Gather with a group of friends in a guided session led by a peer mentor.
+                            Ideal for tackling challenging subjects together, sharing different perspectives, and learning from one another.
                         </div>
-                    </div>
+                        <div class="flex items-center gap-1 text-up-maroon opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200">
+                            Read more
+                            <span class="material-symbols-outlined">arrow_right_alt</span>
+                        </div>
+                    </a>
 
                     {{-- Column 3 --}}
-                    <div class="px-12 py-10">
+                    <a href="#"
+                       class="group flex flex-col px-12 py-10 border-r border-cream-dark transition-colors hover:bg-cream-dark/30">
                         <div class="w-full h-48 bg-cream-dark rounded-sm mb-5"></div>
-                        <div class="text-xl text-up-maroon font-medium mb-3">Review Classes</div>
-                        <div class="text-base leading-7 font-light">Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor
-                            incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation
-                            ullamco laboris nisi ut aliquip ex ea commodo consequat.
+                        <div class="text-xl text-up-maroon font-medium mb-2">Review Classes</div>
+                        <div class="text-base leading-7 font-light mb-3">
+                            Prepare for major exams through review sessions led by experienced peer mentors.
+                            Review key topics, tackle common problem areas, and build effective exam strategies.
                         </div>
-                    </div>
+                        <div class="flex items-center gap-1 text-up-maroon opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200">
+                            Read more
+                            <span class="material-symbols-outlined">arrow_right_alt</span>
+                        </div>
+                    </a>
                 </div>
             </section>
 
@@ -134,47 +170,44 @@
 
                 {{-- Content --}}
                 <div class="flex items-center justify-center gap-4 text-white">
-                    <div class="flex-1 flex flex-col max-w-xs h-[500px] items-center px-10 py-12 border border-up-yellow/25">
-                        <div class="font-heading text-6xl text-cream/10 mb-10 mt-5">01</div>
-                        <div class="w-14 h-14 bg-up-yellow mb-5"></div>
+
+                    <a href="{{ $dashboardUrl }}"
+                       class="group flex-1 flex flex-col max-w-xs items-center px-10 py-12 border border-up-yellow/25 no-underline transition-all duration-300 hover:border-up-yellow hover:bg-white/5">
+                        <span class="material-symbols-outlined text-5xl text-up-yellow/70 mb-6 transition-transform duration-300 group-hover:scale-110 group-hover:text-up-yellow">login</span>
                         <div class="text-xs text-up-yellow tracking-[0.2em] font-semibold uppercase mb-2">Step 1</div>
-                        <div class="font-heading text-2xl text-cream font-medium tracking-wider mb-3">Login</div>
-                        <span class="block w-8 h-px bg-up-yellow/40 mb-4"></span>
-                        <div class="text-sm leading-7 font-light text-cream/60">
-                            Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor
-                            incididunt ut labore et dolore magna aliqua.
+                        <div class="font-heading text-2xl text-cream font-medium tracking-wider mb-4">Login</div>
+                        <span class="block w-8 h-px bg-up-yellow/40 mb-4 transition-all duration-300 group-hover:w-12 group-hover:bg-up-yellow/60"></span>
+                        <div class="text-sm leading-7 font-light text-cream/60 text-center">
+                            Sign in with your UP email to access the booking system, browse available mentors and check session schedules.
                         </div>
-                    </div>
+                    </a>
 
                     {{-- Arrow --}}
                     <span class="material-symbols-outlined text-up-yellow/40 text-3xl flex-shrink-0">arrow_forward</span>
 
                     {{-- Step 2 --}}
-                    <div class="flex-1 flex flex-col max-w-xs h-[500px] items-center px-10 py-12 border border-up-yellow/25">
-                        <div class="font-heading text-6xl text-cream/10 mb-10 mt-5">02</div>
-                        <div class="w-14 h-14 bg-up-yellow mb-5"></div>
+                    <a href="{{ $bookUrl }}"
+                       class="group flex-1 flex flex-col max-w-xs items-center px-10 py-12 border border-up-yellow/25 no-underline transition-all duration-300 hover:border-up-yellow hover:bg-white/5">
+                        <span class="material-symbols-outlined text-5xl text-up-yellow/70 mb-6 transition-transform duration-300 group-hover:scale-110 group-hover:text-up-yellow">schedule</span>
                         <div class="text-xs text-up-yellow tracking-[0.2em] font-semibold uppercase mb-2">Step 2</div>
-                        <div class="font-heading text-2xl text-cream font-medium tracking-wider mb-3">Schedule</div>
-                        <span class="block w-8 h-px bg-up-yellow/40 mb-4"></span>
-                        <div class="text-sm leading-7 font-light text-cream/60">
-                            Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor
-                            incididunt ut labore et dolore magna aliqua.
+                        <div class="font-heading text-2xl text-cream font-medium tracking-wider mb-4">Schedule</div>
+                        <span class="block w-8 h-px bg-up-yellow/40 mb-4 transition-all duration-300 group-hover:w-12 group-hover:bg-up-yellow/60"></span>
+                        <div class="text-sm leading-7 font-light text-cream/60 text-center">
+                            Choose a session type, select your preferred mentor and subject, and pick a date and time that works for you.
                         </div>
-                    </div>
+                    </a>
 
                     {{-- Arrow --}}
                     <span class="material-symbols-outlined text-up-yellow/40 text-3xl flex-shrink-0">arrow_forward</span>
 
                     {{-- Step 3 --}}
-                    <div class="flex-1 flex flex-col max-w-xs h-[500px] items-center px-10 py-12 border border-up-yellow/25">
-                        <div class="font-heading text-6xl text-cream/10 mb-10 mt-5">03</div>
-                        <div class="w-14 h-14 bg-up-yellow mb-5"></div>
+                    <div class="group flex-1 flex flex-col max-w-xs items-center px-10 py-12 border border-up-yellow/25 no-underline transition-all duration-300 hover:border-up-yellow hover:bg-white/5">
+                        <span class="material-symbols-outlined text-5xl text-up-yellow/70 mb-6 transition-transform duration-300 group-hover:scale-110 group-hover:text-up-yellow">person_raised_hand</span>
                         <div class="text-xs text-up-yellow tracking-[0.2em] font-semibold uppercase mb-2">Step 3</div>
-                        <div class="font-heading text-2xl text-cream font-medium tracking-wider mb-3">Attend</div>
-                        <span class="block w-8 h-px bg-up-yellow/40 mb-4"></span>
-                        <div class="text-sm leading-7 font-light text-cream/60">
-                            Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor
-                            incididunt ut labore et dolore magna aliqua.
+                        <div class="font-heading text-2xl text-cream font-medium tracking-wider mb-4">Attend</div>
+                        <span class="block w-8 h-px bg-up-yellow/40 mb-4 transition-all duration-300 group-hover:w-12 group-hover:bg-up-yellow/60"></span>
+                        <div class="text-sm leading-7 font-light text-cream/60 text-center">
+                            Attend your scheduled session and make the most of your time. Engage, ask questions, and learn actively.
                         </div>
                     </div>
                 </div>
