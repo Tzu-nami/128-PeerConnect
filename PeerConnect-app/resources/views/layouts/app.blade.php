@@ -16,13 +16,13 @@
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
 
-    <body class="font-sans antialiased">
+    <body class="antialiased">
         <div class="app-wrapper">
 
-            <livewire:layout.sidebar />
+            <livewire:layouts.sidebar />
 
             <div class="main-content">
-                <livewire:layout.navigation />
+                <livewire:layouts.navigation />
                 <main class="scroll-container">
                     {{ $slot }}
                 </main>
