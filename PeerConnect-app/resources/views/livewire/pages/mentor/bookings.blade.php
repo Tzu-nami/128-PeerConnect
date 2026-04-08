@@ -220,7 +220,7 @@ $submitBooking = action(function () {
     }
 
     $validated = $this->validate([
-        'mentor_id' => ['required', 'exists:mentor_profiles,id'],
+        'mentor_id' => ['required'],
         'subject_id' => ['required', 'exists:subjects,id'],
         'topic' => ['required', 'string', 'max:255'],
         'tutorialMode_id' => ['required', 'exists:tutorial_modes,id'],
@@ -242,6 +242,33 @@ $submitBooking = action(function () {
         'schedule_end' => 'end time',
     ]);
 
+    // For "any" choice of peer mentor
+    if($validated['mentor_id'] === 'any') {
+        $dayOfWeek = strtolower(\Carbon\Carbon::parse($validated['date'])->format('l'));
+
+        // Find all mentors who fit subject and timeslot criteria
+        $qualifiedMentors = \App\Models\User::whereHas('mentorProfile', function($trait) use ($validated, $dayOfWeek) {
+            $trait->whereHas('subjects', function($subTrait) use ($validated) {
+                $subTrait->where('subject_id', $validated['subject_id']);
+            })->whereHas('availabilities',function($availTrait) use ($validated, $dayOfWeek) {
+                $availTrait->where('day_of_week', $dayOfWeek)->whereTime('start_time', '<=', $validated['schedule_start'])->whereTime('end_time', '>=', $validated['schedule_end']);
+            });
+        })->where('id', '!=', auth()->id())->get();
+
+        // Check if there exists mentor
+        if($qualifiedMentors->isEmpty()) {
+            $this->addError('mentor_id', 'No mentors are available for this specific date and timeframe.');
+            return;
+        }
+        // Set mentor to null until someone accepts
+        $booking = Bookings::create([
+            ...$validated,
+            'student_id' => $profile->id,
+            'mentor_id' => null,
+            'booking_status' => 'pending',
+        ]);
+    } else {
+
     $selectedMentor = MentorProfiles::find($validated['mentor_id']);
 
     if ($selectedMentor && $selectedMentor->user_id === auth()->id()) {
@@ -254,6 +281,7 @@ $submitBooking = action(function () {
         'student_id' => $profile->id,
         'booking_status' => 'pending',
     ]);
+    }
 
     $this->reset(['mentor_id', 'subject_id', 'topic', 'tutorialMode_id', 'date', 'schedule_start', 'schedule_end']);
     $this->successMessage = true;
@@ -877,7 +905,7 @@ $dismissFeedbackSubmitted = action(function () {
                             <div class="booking-detail-item"><label>Subject</label><p>{{ $ab->subject->code ?? '—' }} &mdash; {{ $ab->subject->name ?? '' }}</p></div>
                             <div class="booking-detail-item"><label>Tutorial Mode</label><p>{{ $ab->tutorialMode->mode ?? '—' }}</p></div>
                             <div class="booking-detail-item full"><label>Topic</label><p>{{ $ab->topic }}</p></div>
-                            <div class="booking-detail-item full"><label>Peer Mentor</label><p>{{ strtoupper($ab->mentor->user->lastName ?? 'UNKNOWN') }}, {{ $ab->mentor->user->firstName ?? 'Mentor' }}</p></div>
+                            <div class="booking-detail-item full"><label>Peer Mentor</label><p>{{ strtoupper($ab->mentor->user->lastName ?? 'MENTOR') }}, {{ $ab->mentor->user->firstName ?? 'TBD' }}</p></div>
                             <div class="booking-detail-item"><label>Date</label><p>{{ \Carbon\Carbon::parse($ab->date)->format('l, F j, Y') }}</p></div>
                             <div class="booking-detail-item"><label>Time</label><p>{{ \Carbon\Carbon::parse($ab->schedule_start)->format('g:i A') }} &ndash; {{ \Carbon\Carbon::parse($ab->schedule_end)->format('g:i A') }}</p></div>
                         </div>
@@ -885,7 +913,7 @@ $dismissFeedbackSubmitted = action(function () {
                         <div class="mt-6 pt-5 border-t border-gray-100 flex items-center justify-between gap-4">
                             <p class="flex items-center gap-2 text-xs text-gray-400 flex-1">
                                 <i class="fa-solid fa-circle-info text-gray-300 flex-shrink-0"></i>
-                                You may cancel this booking at any time while it is <strong class="text-gray-500">{{ $ab->booking_status }}</strong>.
+                                You may cancel this booking at any time.
                             </p>
                             <div x-show="!confirmCancel">
                                 <button type="button" @click="confirmCancel = true"
@@ -898,7 +926,7 @@ $dismissFeedbackSubmitted = action(function () {
                                 <button type="button" wire:click="cancelBooking"
                                     wire:loading.attr="disabled" wire:loading.class="opacity-60 cursor-not-allowed" wire:target="cancelBooking"
                                     class="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-lg transition-colors">
-                                    <span wire:loading.remove wire:target="cancelBooking">Yes, Cancel</span>
+                                    <span wire:loading.remove wire:target="cancelBooking">Cancel</span>
                                     <span wire:loading wire:target="cancelBooking"><i class="fa-solid fa-spinner fa-spin"></i> Cancelling...</span>
                                 </button>
                                 <button type="button" @click="confirmCancel = false"
@@ -914,6 +942,39 @@ $dismissFeedbackSubmitted = action(function () {
             @else
             <div class="bg-white p-6 rounded-lg shadow-sm border-gray-200"
                 x-data="{
+                    // Validation of data
+                    date: $wire.entangle('date'),
+                    start_time: $wire.entangle('schedule_start'),
+                    end_time: $wire.entangle('schedule_end'),
+                    mentor_id: $wire.entangle('mentor_id'),
+                    dateError: '',
+                    timeError: '',
+
+                    init() {
+                        // Check Sunday inputs
+                        this.$watch('date', value => {
+                        if(!value) { this.dateError = ''; return; }
+                        const d = new Date(value + 'T00:00:00');
+                            if(d.getDay() === 0) {
+                                this.dateError = 'The session cannot be on a Sunday.';
+                            } else {
+                                this.dateError = '';
+                            }
+                        });
+                        // Check time inputs
+                        this.$watch('start_time', () => this.validateTime());
+                        this.$watch('end_time', () => this.validateTime());
+                    },
+
+                    validateTime() {
+                        if(this.start_time && this.end_time) {
+                            if(this.end_time <= this.start_time) {
+                                this.timeError = 'End time must be later than start time.';
+                            } else {
+                                this.timeError = '';
+                            }
+                        }
+                    },
                     allMentors: @js($this->mentors),
                     allSubjects: @js($this->mentorSubjects),
                     allAvailabilities: @js($this->mentorAvailabilities),
@@ -975,12 +1036,13 @@ $dismissFeedbackSubmitted = action(function () {
                         </select>
                         @error('tutorialMode_id') <span class="mt-1 text-xs text-red-600">{{ $message }}</span> @enderror
                     </div>
-                    <div>
-                        <label class="block text-base font-medium text-gray-700 mb-1">Preferred Day<span class="text-red-500">*</span></label>
-                        <input type="date" wire:model="date" class="w-full rounded-lg border-gray-300 shadow-sm text-base px-2 py-1" min="{{ \Carbon\Carbon::tomorrow()->format('Y-m-d') }}">
-                        @error('date') <span class="mt-1 text-xs text-red-600">{{ $message }}</span> @enderror
-                    </div>
-                    <div class="grid grid-cols-2 gap-4">
+                    <div class="grid grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-base font-medium text-gray-700 mb-1">Preferred Day<span class="text-red-500">*</span></label>
+                            <input type="date" wire:model="date" class="w-full rounded-lg border-gray-300 shadow-sm text-base px-2 py-1" min="{{ \Carbon\Carbon::tomorrow()->format('Y-m-d') }}">
+                            @error('date') <span class="mt-1 text-xs text-red-600">{{ $message }}</span> @enderror
+                        </div>
+
                         <div>
                             <label class="block text-base font-medium text-gray-700 mb-1">Start Time<span class="text-red-500">*</span></label>
                             <input type="time" wire:model="schedule_start" class="w-full rounded-lg border-gray-300 shadow-sm text-base px-2 py-1">
@@ -990,21 +1052,41 @@ $dismissFeedbackSubmitted = action(function () {
                             <label class="block text-base font-medium text-gray-700 mb-1">End Time<span class="text-red-500">*</span></label>
                             <input type="time" wire:model="schedule_end" class="w-full rounded-lg border-gray-300 shadow-sm text-base px-2 py-1">
                             @error('schedule_end') <span class="mt-1 text-xs text-red-600">{{ $message }}</span> @enderror
+                            <span x-show="timeError" x-cloak class="mt-1 text-xs text-red-600" x-text="timeError"></span>
                         </div>
                     </div>
                     <div>
                         <label class="block text-base font-medium text-gray-700 mb-1">Preferred Mentor<span class="text-red-500">*</span></label>
                         <select wire:model="mentor_id" class="w-full rounded-lg border-gray-300 shadow-sm text-base px-2 py-1">
                             <option value="" x-text="filteredMentors.length === 0 ? '--- No mentors available. Please select a different date or timeframe. ---' : '--- Select a mentor ---'"></option>
+                            <template x-if="filteredMentors.length > 0">
+                                <option value="any">ANY (Alerts all available mentors)</option>
+                            </template>
                             <template x-for="mentor in filteredMentors" :key="mentor.profile_id">
                                 <option :value="mentor.profile_id" x-text="mentor.name"></option>
                             </template>
                         </select>
                         @error('mentor_id') <span class="mt-1 text-xs text-red-600">{{ $message }}</span> @enderror
                     </div>
+                    <div x-show="mentor_id === 'any' && filteredMentors.length > 0" x-cloak class="mt-3 bg-blue-50 border border-blue-200 rounded-lg p-3 animate-[slideDown_0.2s_ease]">
+                        <p class="text-xs font-bold text-blue-800 mb-1">
+                            <i class="fa-solid fa-triangle-exclamation mr-1"></i> First Come First Serve
+                        </p>
+                        <p class="text-[11px] text-blue-600 mb-2 leading-tight">
+                            Your request will be sent to the following mentors. The first to accept will take your session.
+                        </p>
+                        <ul class="text-[12px] font-semibold text-blue-700 space-y-0.5 pl-1">
+                            <template x-for="mentor in filteredMentors" :key="mentor.profile_id">
+                                <li class="flex items-center gap-1.5">
+                                    <span class="w-1 h-1 rounded-full bg-blue-400"></span>
+                                    <span x-text="mentor.name"></span>
+                                </li>
+                            </template>
+                        </ul>
+                    </div>
                     <div class="pt-4">
                         <button type="button" id="bookingSubmitBtn"
-                            @if(!auth()->user()->studentProfile) disabled @endif
+                            @if(!auth()->user()->studentProfile) disabled @endif :disabled="dateError !== '' || timeError !== ''"
                             class="w-full bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium py-2 px-4 rounded-lg text-sm transition-colors"
                             wire:loading.attr="disabled" wire:loading.class="opacity-60 cursor-not-allowed" wire:target="submitBooking">
                             <span wire:loading.remove wire:target="submitBooking">Submit Booking Request</span>
@@ -1105,7 +1187,7 @@ $dismissFeedbackSubmitted = action(function () {
                             <div>
                                 <p class="text-sm font-medium text-gray-800">{{ $booking->subject->code }}</p>
                                 <p class="text-xs font-medium text-gray-800">{{ $booking->topic }}</p>
-                                <p class="text-xs font-medium text-gray-800">{{ strtoupper($booking->mentor->user->lastName ?? 'UNKNOWN') }}, {{ $booking->mentor->user->firstName ?? 'Mentor' }}</p>
+                                <p class="text-xs font-medium text-gray-800">{{ strtoupper($booking->mentor->user->lastName ?? 'MENTOR') }}, {{ $booking->mentor->user->firstName ?? 'TBD' }}</p>
                             </div>
                             @php
                                 $statusColors = match($booking->booking_status) {
