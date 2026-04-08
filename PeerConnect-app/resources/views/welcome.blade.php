@@ -14,7 +14,7 @@
 @endphp
 
 <x-layout.landing>
-    <main>
+    <main class="animate-fade-up">
         {{-- Hero --}}
         <section class="relative min-h-screen flex flex-col justify-center px-20 bg-cover bg-top"
                  style="background-image: url('https://cwpbwqcxlccbittkhasq.supabase.co/storage/v1/object/public/assets/images/lrc-session.png'); background-position: center 83px">
