@@ -22,6 +22,11 @@
     }
 }
 
+@keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
 :root {
     --sidebar-green:           #1a3c2f;
     --up-maroon:               #7B1113;
