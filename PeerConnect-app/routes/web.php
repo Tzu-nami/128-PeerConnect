@@ -51,6 +51,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Volt::route('/mentors', 'pages.admin.mentors')
             ->name('admin.mentors');
 
+        Volt::route('/courses', 'pages.admin.courses')
+            ->name('admin.courses');
+
         Volt::route('/sessions', 'pages.admin.sessions')
             ->name('admin.sessions');
 
