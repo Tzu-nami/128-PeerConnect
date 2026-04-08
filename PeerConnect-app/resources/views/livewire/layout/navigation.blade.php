@@ -10,35 +10,33 @@ new class extends Component {
         $this->redirect('/', navigate: true);
     }
 };
-
 ?>
 
 <header class="top-header relative">
 
-    {{-- Left: Welcome --}}
-    <div class="welcome-text">
-        Welcome, <strong>{{ auth()->user()->name }}</strong>
+    <div class="text-lg">
+        Welcome, <span class="font-bold">{{ auth()->user()->name }}</span>
     </div>
 
-    {{-- Right: Profile trigger --}}
-    <button id="profileTrigger" type="button">
-        <div class="profile-avatar">
+    {{-- Profile trigger --}}
+    <button id="profileTrigger" type="button"
+            class="flex items-center gap-2 px-3 py-1 bg-white rounded-full hover:bg-gray-100 transition shadow-sm border-2 border-white/20 group">
+        <div class="w-8 h-8 bg-red-900 text-white rounded-full flex items-center justify-center text-xs font-bold">
             {{ strtoupper(substr(auth()->user()->name, 0, 2)) }}
         </div>
-        <i class="fa-solid fa-chevron-down" id="dropdownArrow"></i>
+        <i class="fa-solid fa-chevron-down text-[10px] text-gray-500 group-hover:text-red-900 transition"></i>
     </button>
 
     {{-- Dropdown --}}
     <div id="profileDropdown" class="profile-dropdown">
-        <div style="padding: 14px 18px; border-bottom: 1px solid #f1f5f9; background: #f8fafc;">
-            <p style="font-size: 10px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.08em; margin: 0 0 4px;">Signed in as</p>
-            <p style="font-size: 13px; font-weight: 700; color: #1e293b; margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ auth()->user()->name }}</p>
-            <p style="font-size: 11px; color: #64748b; margin: 2px 0 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ auth()->user()->email }}</p>
+        <div class="p-4 border-b border-gray-100 bg-slate-50">
+            <p class="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1">Signed in as</p>
+            <p class="text-sm font-bold text-slate-800 truncate">{{ auth()->user()->name }}</p>
+            <p class="text-xs text-slate-500 truncate">{{ auth()->user()->email }}</p>
         </div>
-        <a href="#" class="dropdown-item">
-            <i class="fa-solid fa-user-gear"></i> Account Settings
-        </a>
-        <button wire:click="logout" class="dropdown-item" style="border-top: 1px solid #f1f5f9; color: #dc2626; font-weight: 600;">
+        <button wire:click="logout"
+                class="dropdown-item w-full text-left"
+                style="border-top: 1px solid #f1f5f9; color: #dc2626; font-weight: 600;">
             <i class="fa-solid fa-right-from-bracket"></i> Logout
         </button>
     </div>
