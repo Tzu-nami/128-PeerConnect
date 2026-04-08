@@ -1,5 +1,4 @@
 <nav class="fixed top-0 left-0 right-0 z-50 flex items-center h-[83px] px-7 bg-up-maroon-dark ">
-
     {{-- Brand --}}
     <a href="{{ request()->is('/') ? '#' : url('/') }}" class="flex items-center gap-4 w-1/4">
         <div class="flex items-center gap-3">
@@ -11,7 +10,7 @@
                  class="w-[70px] h-[70px] object-contain" />
         </div>
         <div class="leading-tight">
-            <span class="block text-[20px] font-medium text-cream/70 tracking-widest uppercase">
+            <span class="block text-[20px] font-body font-medium text-cream/70 tracking-widest uppercase">
                 UPB LRC
             </span>
             <span class="block text-[15px] font-semibold text-up-yellow-light tracking-wider">
@@ -67,5 +66,4 @@
             </a>
         @endauth
     </div>
-
 </nav>
