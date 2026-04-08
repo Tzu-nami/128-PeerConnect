@@ -17,181 +17,83 @@ mount(function () {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-:root { 
-    --sidebar-green: #1a3c2f; 
-    --header-maroon: #7b1d1d; 
-    --bg-light: #f4f7f6; 
-    --header-height: 80px; 
-    --sidebar-width: 280px;
-    --sidebar-collapsed-width: 80px;
-}
+        :root { --sidebar-green: #1a3c2f; --header-maroon: #7b1d1d; --bg-light: #f4f7f6; --header-height: 80px; --sidebar-width: 260px; --sidebar-collapsed-width: 72px; }
+        * { box-sizing: border-box; }
+        body { margin: 0; font-family: 'Inter', sans-serif; background: var(--bg-light); overflow: hidden; }
+        .app-wrapper { display: flex; height: 100vh; width: 100vw; overflow: hidden; }
 
-* { box-sizing: border-box; }
+/* ── SIDEBAR ── */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: var(--sidebar-green);
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            color: white;
+            height: 100vh;
+            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 30;
+            position: relative;
+            overflow: visible;
+        }
+        .sidebar.collapsed { width: var(--sidebar-collapsed-width); }
 
-body { margin: 0; font-family: 'Inter', sans-serif; background: var(--bg-light); overflow: hidden; }
-.app-wrapper { display: flex; height: 100vh; width: 100vw; overflow: hidden; }
+        /* ── Logo row ── */
+        .sidebar-logo-container {
+            height: var(--header-height);
+            display: flex; align-items: center; justify-content: center;
+            padding: 0 20px; gap: 12px; flex-shrink: 0; overflow: hidden;
+            transition: padding 0.3s, justify-content 0.3s;
+        }
+        .sidebar:not(.collapsed) .sidebar-logo-container { justify-content: flex-start; }
+        .logo-icon { flex-shrink: 0; font-size: 27px; width: auto; text-align: center; }
+        .logo-text { font-size: 1.24rem; font-weight: 700; white-space: nowrap; overflow: hidden; opacity: 1; max-width: 200px; transition: opacity 0.2s, max-width 0.3s; }
+        .logo-content { display: flex; align-items: center; gap: 12px; white-space: nowrap; }
+        .sidebar.collapsed .logo-text { opacity: 0; max-width: 0; pointer-events: none; }
+        .sidebar.collapsed .sidebar-logo-container { justify-content: center; padding: 0; width: 100%; }
+        .sidebar.collapsed .logo-content { gap: 0; justify-content: center; width: 100%; }
 
-/* ───────── SIDEBAR (UPDATED) ───────── */
-.sidebar {
-    width: var(--sidebar-width);
-    background: var(--sidebar-green);
-    flex-shrink: 0;
-    display: flex;
-    flex-direction: column;
-    color: white;
-    height: 100vh;
-    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    z-index: 30;
-    position: relative;
-    overflow: visible;
-}
-.sidebar.collapsed {
-    width: var(--sidebar-collapsed-width);
-}
+        /* ── Nav items ── */
+        .nav-item {
+            display: flex; align-items: center; gap: 14px; padding: 16px 20px;
+            color: rgba(255,255,255,0.7); text-decoration: none;
+            transition: background 0.2s, color 0.2s, padding 0.3s, justify-content 0.3s;
+            white-space: nowrap; position: relative; text-align: left;
+            background: transparent; border: none; width: 100%;
+            cursor: pointer; font-size: 0.95rem; justify-content: flex-start;
+        }
+        .nav-item i { width: 32px; text-align: center; flex-shrink: 0; font-size: 22px; transition: width 0.3s; }
+        .nav-item span { overflow: hidden; opacity: 1; max-width: 200px; transition: opacity 0.2s, max-width 0.3s; }
+        .nav-item:hover, .nav-item.active { background: rgba(255,255,255,0.1); color: white; }
+        .nav-item.active { background: var(--bg-light); color: var(--header-maroon); font-weight: 700; border-radius: 0; width: calc(100% + 1px); z-index: 10; }
 
-/* LOGO */
-.sidebar-logo-container {
-    height: var(--header-height);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0 24px;
-    gap: 15px;
-    flex-shrink: 0;
-    overflow: hidden;
-}
-.sidebar:not(.collapsed) .sidebar-logo-container {
-}
+        .sidebar.collapsed .nav-item { display: flex; align-items: center; justify-content: center; padding: 16px 0; width: 100%; gap: 0; }
+        .sidebar.collapsed .nav-item i { margin: 0; width: auto; text-align: center; flex-shrink: 0; }
+        .sidebar.collapsed .nav-item span { opacity: 0; max-width: 0; pointer-events: none; }
 
-            .logo-icon { flex-shrink: 0; font-size: 1.3rem; width: 32px; text-align: center; }
+        .nav-item::after {
+            content: attr(data-tooltip);
+            position: absolute; left: 100%; top: 50%; transform: translateY(-50%);
+            margin-left: 14px; background: rgba(0,0,0,0.85); color: white;
+            padding: 5px 12px; border-radius: 4px; font-size: 12px; font-weight: 500;
+            white-space: nowrap; opacity: 0; visibility: hidden; transition: opacity 0.2s;
+            pointer-events: none; z-index: 100;
+        }
+        .sidebar.collapsed .nav-item:hover::after { opacity: 1; visibility: visible; }
 
-            .logo-text {
-                font-size: 1.1rem;
-                font-weight: 700;
-                white-space: nowrap;
-                overflow: hidden;
-                opacity: 1;
-                max-width: 200px;
-                transition: opacity 0.2s, max-width 0.3s;
-            }
-.sidebar.collapsed .logo-text {
-    opacity: 0;
-    max-width: 0;
-    pointer-events: none;
-}
+        .sidebar-footer { padding: 0; border-top: 1px solid rgba(255,255,255,0.1); }
 
-/* NAV ITEMS */
-            .nav-item {
-                display: flex;
-                align-items: center;
-                gap: 14px;
-                padding: 18px 20px;
-                color: rgba(255,255,255,0.7);
-                text-decoration: none;
-                transition: background 0.2s, color 0.2s, padding 0.3s, justify-content 0.3s;
-                white-space: nowrap;
-                position: relative;
-                text-align: left;
-                background: transparent;
-                border: none;
-                width: 100%;
-                cursor: pointer;
-                justify-content: flex-start;
-            }
-            .sidebar.collapsed .nav-item { justify-content: center; padding: 15px 0; }
-
-            .nav-item i { width: 20px; text-align: center; flex-shrink: 0; transition: width 0.3s; }
-
-.nav-item span {
-    overflow: hidden;
-    opacity: 1;
-    max-width: 200px;
-    transition: opacity 0.2s, max-width 0.3s;
-}
-
-.sidebar.collapsed .nav-item span {
-    opacity: 0;
-    max-width: 0;
-    pointer-events: none;
-}
-
-/* ACTIVE + HOVER */
-.nav-item:hover {
-    color: white;
-    background: rgba(255,255,255,0.05);
-}
-.nav-item.active {
-    background: var(--bg-light);
-    color: var(--header-maroon);
-    font-weight: 700;
-    border-radius: 0;
-    width: calc(100% + 1px);
-    z-index: 10;
-}
-
-/* TOOLTIP */
-.nav-item::after {
-    content: attr(data-tooltip);
-    position: absolute;
-    left: 100%;
-    top: 50%;
-    transform: translateY(-50%);
-    margin-left: 14px;
-    background: rgba(0,0,0,0.85);
-    color: white;
-    padding: 5px 12px;
-    border-radius: 4px;
-    font-size: 12px;
-    font-weight: 500;
-    white-space: nowrap;
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.2s;
-    pointer-events: none;
-    z-index: 100;
-}
-
-.sidebar.collapsed .nav-item:hover::after {
-    opacity: 1;
-    visibility: visible;
-}
-
-/* FOOTER */
-.sidebar-footer {
-    padding: 6px 0;
-    border-top: 1px solid rgba(255,255,255,0.1);
-}
-
-/* TOGGLE BUTTON */
-.sidebar-toggle-btn {
-    position: absolute;
-    right: -16px;
-    top: 3%;
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    background: #ffffff;
-    border: none;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #7b1d1d;
-    font-size: 13px;
-    z-index: 50;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.25);
-    transition: background 0.2s;
-}
-.sidebar-toggle-btn:hover {
-    background: #dfcece;
-}
-
-.sidebar-toggle-btn .toggle-icon {
-    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.sidebar:not(.collapsed) .sidebar-toggle-btn .toggle-icon {
-    transform: rotate(180deg);
-}
+        .sidebar-toggle-btn {
+            position: absolute; right: -16px; top: 50%;
+            width: 32px; height: 32px; border-radius: 50%;
+            background: var(--header-maroon); border: 2px solid white;
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+            color: white; font-size: 13px; z-index: 50;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.25); transition: background 0.2s; flex-shrink: 0;
+        }
+        .sidebar-toggle-btn:hover { background: #dfcece; }
+        .sidebar-toggle-btn .toggle-icon { transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); display: flex; align-items: center; justify-content: center; }
+        .sidebar:not(.collapsed) .sidebar-toggle-btn .toggle-icon { transform: rotate(180deg); }
 
         .main-content { flex: 1; min-width: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
         .top-header { background: var(--header-maroon); height: var(--header-height); padding: 0 40px; display: flex; align-items: center; justify-content: space-between; color: white; flex-shrink: 0; }
@@ -252,41 +154,23 @@ color:#065f46;
     <div class="app-wrapper">
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-logo-container">
-    <div class="logo-content">
-        <i class="fa-solid fa-graduation-cap text-xl"></i>
-        <span class="logo-text">LRC PeerConnect</span>
-    </div>
-</div>
+            <div class="logo-content">
+                <i class="fa-solid fa-graduation-cap logo-icon"></i>
+                <span class="logo-text">LRC PeerConnect</span>
+            </div>
+            </div>
 
-<!-- Floating toggle button on the sidebar edge -->
-<button id="sidebarToggle" style="
-    position: absolute;
-    top: 50%;
-    right: -16px;
-    transform: translateY(-50%);
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    background: var(--header-maroon);
-    border: 2px solid white;
-    color: white;
-    font-size: 0.75rem;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 40;
-    box-shadow: 2px 0 8px rgba(0,0,0,0.15);
-    transition: background 0.2s;
-">
-    <i class="fa-solid fa-chevron-left" id="toggleIcon"></i>
-</button>
+            <button class="sidebar-toggle-btn" id="sidebarToggle" aria-label="Toggle sidebar">
+                <span class="toggle-icon">
+                    <i class="fa-solid fa-chevron-right"></i>
+                </span>
+            </button>
 
             <nav class="flex-grow">
                 <a href="{{ route('student.dashboard') }}" class="nav-item" data-tooltip="Dashboard">
                     <i class="fa-solid fa-gauge w-5"></i><span>Dashboard</span>
                 </a>
-                <a href="{{ route('student.mentors') }}" class="nav-item" data-tooltip="Mentors">
+                <a href="{{ route('student.mentors') }}" class="nav-item active" data-tooltip="Mentors">
                     <i class="fa-solid fa-chalkboard-user w-5"></i><span>Mentors</span>
                 </a>
                 <a href="{{ route('student.bookings') }}" class="nav-item" data-tooltip="Bookings">
@@ -295,7 +179,7 @@ color:#065f46;
                 <a href="{{ route('student.history') }}" class="nav-item" data-tooltip="History">
                     <i class="fa-solid fa-clock-rotate-left w-5"></i><span>History</span>
                 </a>
-                <a href="{{ route('student.about') }}" class="nav-item active" data-tooltip="About Us">
+                <a href="{{ route('student.about') }}" class="nav-item" data-tooltip="About Us">
                     <i class="fa-solid fa-circle-info w-5"></i><span>About Us</span>
                 </a>
             </nav>
