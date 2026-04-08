@@ -1,7 +1,7 @@
-<nav class="fixed top-0 left-0 right-0 z-50 flex items-center h-[83px] px-7 bg-up-maroon-dark">
+<nav class="fixed top-0 left-0 right-0 z-50 flex items-center h-[83px] px-7 bg-up-maroon-dark ">
 
     {{-- Brand --}}
-    <div class="flex items-center gap-4 w-1/4">
+    <a href="{{ request()->is('/') ? '#' : url('/') }}" class="flex items-center gap-4 w-1/4">
         <div class="flex items-center gap-3">
             <img src="https://cwpbwqcxlccbittkhasq.supabase.co/storage/v1/object/public/assets/logos/uplogo.png"
                  alt="UPB Logo"
@@ -18,16 +18,16 @@
                 PeerConnect
             </span>
         </div>
-    </div>
+    </a>
 
     {{-- Nav links --}}
     <ul class="flex gap-20 list-none flex-1 justify-center">
         @foreach (
         [
-            'Mentors'    => '#',
+            'Mentors'    => route('public.mentors'),
             'Staff'      => '#',
-            'Services'   => '#',
-            'About Us'   => '#',
+            'Services'   => request()->is('services') ? route('public.services') : url('/').'#services',
+            'About Us'   => route('public.about'),
             'Contact Us' => '#',
         ] as $label => $href)
             <li>
@@ -42,12 +42,30 @@
 
     {{-- User action --}}
     <div class="flex items-center justify-end gap-3.5 w-1/4">
+        @auth
+            @php
+                $dashboardUrl = match(true) {
+                    auth()->user()->isStudent() => route('student.dashboard'),
+                    auth()->user()->isMentor() => route('mentor.dashboard'),
+                    auth()->user()->isAdmin() => route('admin.dashboard'),
+                    default => route('login')
+                };
+            @endphp
+
+            <a href="{{ $dashboardUrl }}"
+               class="bg-up-yellow text-up-maroon-dark px-7 py-2.5 text-[14px]
+                      font-semibold tracking-widest uppercase rounded-sm
+                      transition-colors duration-200 hover:bg-up-yellow-light no-underline">
+                Dashboard
+            </a>
+        @else
             <a href="{{ route('login') }}"
                class="bg-up-yellow text-up-maroon-dark px-7 py-2.5 text-[14px]
                       font-semibold tracking-widest uppercase rounded-sm
                       transition-colors duration-200 hover:bg-up-yellow-light no-underline">
                 Log In
             </a>
+        @endauth
     </div>
 
 </nav>
