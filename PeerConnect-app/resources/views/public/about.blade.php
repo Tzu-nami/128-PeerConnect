@@ -1,8 +1,8 @@
 <x-layout.landing>
-    <main class="mt-[83px] px-6 md:px-20 pt-10 pb-20">
+    <main class="mt-[83px] px-6 md:px-20 pt-10 pb-20 overflow-hidden">
         <section class="flex flex-col gap-10">
             {{-- Title --}}
-            <div class="flex flex-col gap-4">
+            <div class="flex flex-col gap-4 animate-fade-up">
                 <div class="flex items-center gap-3 text-up-yellow-dark text-xs tracking-widest font-bold uppercase">
                     <span class="block w-8 h-px bg-up-yellow-dark font-bold"></span>
                     About Us
@@ -15,7 +15,7 @@
             {{-- Content --}}
             <div class="grid grid-cols-2 gap-20">
                 {{-- Left Column --}}
-                <div class="flex flex-col gap-9">
+                <div class="flex flex-col gap-9 animate-fade-up [animation-delay:150ms]">
                     {{-- Description --}}
                     <div class="text-base text-text-brown leading-8 border-l border-up-yellow-dark pl-5">
                         LRC PeerConnect is a peer mentoring platform that connects UPB students with trained student-mentors for enrichment sessions and academic support, all within a simple and easy-to-use booking system.
@@ -89,7 +89,7 @@
                 </div>
 
                 {{-- Right Column --}}
-                <div class="flex flex-col gap-7">
+                <div class="flex flex-col gap-7 animate-fade-up [animation-delay:250ms]">
                     {{-- Process --}}
                     <div>
                         <div class="text-up-yellow-dark font-bold tracking-widest uppercase mb-4">
