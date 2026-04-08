@@ -3,6 +3,8 @@
     use function Livewire\Volt\{layout, state, mount, computed, action};
     use App\Models\Bookings;
     use App\Models\MentorProfiles;
+    use App\Models\MentorAvailabilities;
+    use App\Models\MentorSubjects;
 
     layout('layouts.app');
 
@@ -25,13 +27,45 @@
                 'completed_at'   => now(),
             ]);
 
-        return Bookings::with([
+        $mySubjectIds = \App\Models\MentorSubjects::where('mentor_id', $mentorProfile->id)->pluck('subject_id');
+        $mySched = \App\Models\MentorAvailabilities::where('mentor_id', $mentorProfile->id)->get();
+
+        $allBookings = Bookings::with([
             'student.user',
             'subject'
         ])
-        ->where('mentor_id', $mentorProfile->id)
-        ->get()
-    ->map(function ($b) {
+        ->where(function($query) use ($mentorProfile) 
+        {
+            $query->where('mentor_id', $mentorProfile->id);
+        })->orWhere(function($query) use ($mySubjectIds) {
+            // For bookings with null mentors
+            $query->whereNull('mentor_id')->where('booking_status', 'pending')->whereIn('subject_id', $mySubjectIds);
+        })
+        ->get();
+
+        $validBookings = $allBookings->filter(function($booking) use ($mentorProfile, $mySched) {
+            // If directly assigned to mentor
+            if($booking->mentor_id === $mentorProfile->id) {
+                return true;
+            }
+            // Check day of week
+            $bookingDay = strtolower(\Carbon\Carbon::parse($booking->date)->format('l'));
+            
+            return $mySched->contains(function($avail) use ($bookingDay, $booking) {
+                if(strtolower($avail->day_of_week) !== $bookingDay) {
+                    return false;
+                }
+
+                // Check if mentor available for that any slot timeframe
+                $availStart = strtotime($avail->start_time);
+                $availEnd = strtotime($avail->end_time);
+                $bookStart = strtotime($booking->schedule_start);
+                $bookEnd = strtotime($booking->schedule_end);
+                return $availStart <= $bookStart && $availEnd >= $bookEnd;
+            });
+        });
+
+    return $validBookings->map(function ($b) {
         $start = \Carbon\Carbon::parse($b->schedule_start);
         $end   = \Carbon\Carbon::parse($b->schedule_end);
 
@@ -58,6 +92,7 @@
     'duration' => $start->format('h:i A') . ' - ' . $end->format('h:i A') . ' (' . $durationText . ')',
 
             'status'   => $b->booking_status,
+            'is_open' => is_null($b->mentor_id),
         ];
     })
         ->values()
@@ -599,6 +634,10 @@
                 </button>`;
 
             if (s.status === 'pending') {
+                // If free for all
+            if (s.is_open) {
+                return btn('<i class="fa-solid fa-triangle-exclamation mr-1"></i> Claim Session', 'accepted', 'bg-purple-600 text-white hover:bg-purple-700')
+            }
                 return btn('Accept', 'accepted', 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200')
                     + btn('Reject', 'rejected', 'bg-red-100 text-red-700 hover:bg-red-200');
             }
@@ -897,12 +936,17 @@ function toggleModalText(id) {
             }
 
             const isUncomplete = status === 'accepted' && req.status === 'completed';
+            const isClaiming = status === 'accepted' && req.status === 'pending' && req.is_open;
 
             const dialogConfig = {
                 accepted: isUncomplete ? {
                     title:   'Revert to accepted?',
                     body:    'This will mark the session as accepted again, reversing the completed status.',
                     variant: 'neutral',
+                } : isClaiming ? {
+                    title: 'Claim Open Session?',
+                    body: 'You are about to claim this session. It will be permanently assigned to you.',
+                    variant: 'accept',
                 } : {
                     title:   'Accept booking?',
                     body:    'The student will be notified that their session has been approved.',
