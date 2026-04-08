@@ -25,7 +25,7 @@
         [
             'Mentors'    => route('public.mentors'),
             'Staff'      => '#',
-            'Services'   => request()->is('services') ? route('public.services') : url('/').'#services',
+            'Services'   => request()->is('/') ? url('/').'#services' : route('public.services'),
             'About Us'   => route('public.about'),
             'Contact Us' => '#',
         ] as $label => $href)
