@@ -10,8 +10,6 @@
         <title>{{ config('app.name', 'UPB LRC - PeerConnect') }}</title>
 
         {{-- Fonts and Icons --}}
-        <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&display=swap" rel="stylesheet">
-        <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
         {{-- Scripts --}}
@@ -19,13 +17,13 @@
     </head>
 
     <body class="font-sans antialiased">
-        <div class="{{-- app-wrapper --}}">
+        <div class="app-wrapper">
 
-{{--            <livewire:layout.sidebar />--}}
+            <livewire:layout.sidebar />
 
             <div class="main-content">
-{{--                <livewire:layout.navigation />--}}
-                <main class="{{-- scroll-container --}}">
+                <livewire:layout.navigation />
+                <main class="scroll-container">
                     {{ $slot }}
                 </main>
             </div>
