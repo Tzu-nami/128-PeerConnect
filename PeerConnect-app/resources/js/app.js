@@ -54,3 +54,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
+
+if (history.scrollRestoration) {
+    history.scrollRestoration = 'manual';
+}
