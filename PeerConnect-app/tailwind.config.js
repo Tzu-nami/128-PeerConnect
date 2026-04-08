@@ -15,15 +15,21 @@ export default {
                 body: ['Nunito', 'sans-serif'],
             },
             colors: {
+                // Up Color Palette
                 'up-maroon':     '#7B1113',
                 'up-maroon-dark':'#5A0D0F',
                 'up-green':      '#014421',
                 'up-yellow':     '#F3AA2C',
                 'up-yellow-light':'#F8CB72',
+                'up-yellow-dark':'#C28212',
                 'up-black':      '#000000',
+
+                // Others
                 'cream':         '#FAF8F2',
                 'cream-dark':    '#EEE8DA',
-                'text-brown':    '#5A3C3E',
+                'cream-border':  '#D6CFC0',
+                'text-brown':    '#554444',
+                'text-brown-light': '#998888'
             },
         },
     },
