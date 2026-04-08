@@ -52,7 +52,7 @@ test('navigation menu can be rendered', function () {
 
     $response
         ->assertOk()
-        ->assertSeeVolt('layout.navigation');
+        ->assertSeeVolt('layouts.navigation');
 });
 
 test('users can logout', function () {
