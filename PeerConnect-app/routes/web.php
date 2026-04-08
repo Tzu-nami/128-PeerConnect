@@ -3,31 +3,38 @@
 use Illuminate\Support\Facades\Route;
 use Livewire\Volt\Volt;
 
-/*
-|--------------------------------------------------------------------------
-| Public Route
-|--------------------------------------------------------------------------
-*/
-
+// Guest Routes
 Route::get('/', function () {
     return view('welcome');
 });
 
+Route::get('/mentors', function() {
+    return view('public.mentors');
+})->name('public.mentors');
 
-/*
-|--------------------------------------------------------------------------
-| Authenticated Routes
-|--------------------------------------------------------------------------
-*/
+Route::get('/staff', function() {
+    return view('public.staff');
+})->name('public.staff');
 
+Route::get('/services', function() {
+    return view('public.services');
+})->name('public.services');
+
+Route::get('/about', function() {
+    return view('public.about');
+})->name('public.about');
+
+Route::get('/contact', function() {
+    return view('public.contact');
+})->name('public.contact');
+
+
+
+
+// Authenticated Routes
 Route::middleware(['auth', 'verified'])->group(function () {
 
-    /*
-    |--------------------------------------------------------------------------
-    | Dashboard Redirect
-    |--------------------------------------------------------------------------
-    */
-
+    // Dashboard Redirect
     Route::get('/dashboard', function () {
         return match(auth()->user()->user_roles) {
             'admin' => redirect()->route('admin.dashboard'),
@@ -36,13 +43,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         };
     })->name('dashboard');
 
-
-    /*
-    |--------------------------------------------------------------------------
-    | ADMIN ROUTES
-    |--------------------------------------------------------------------------
-    */
-
+    // Admin Routes
     Route::middleware('role:admin')->prefix('admin')->group(function () {
 
         Volt::route('/dashboard', 'pages.admin.dashboard')
@@ -59,13 +60,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     });
 
-
-    /*
-    |--------------------------------------------------------------------------
-    | MENTOR ROUTES
-    |--------------------------------------------------------------------------
-    */
-
+    // Mentor Routes
     Route::middleware('role:mentor')->prefix('mentor')->group(function () {
 
         Volt::route('/dashboard', 'pages.mentor.dashboard')
@@ -125,13 +120,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     });
 
-
-    /*
-    |--------------------------------------------------------------------------
-    | STUDENT ROUTES
-    |--------------------------------------------------------------------------
-    */
-
+    // Student Routes
     Route::middleware('role:student')->prefix('student')->group(function () {
 
         Volt::route('/dashboard', 'pages.student.dashboard')
@@ -152,11 +141,5 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
 
 });
-
-
-Route::view('profile', 'profile')
-    ->middleware(['auth'])
-    ->name('profile');
-
 
 require __DIR__.'/auth.php';
