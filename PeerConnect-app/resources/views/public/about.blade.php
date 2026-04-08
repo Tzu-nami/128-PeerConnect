@@ -103,13 +103,13 @@
                         </div>
                     </div>
 
-                    {{-- Right Column --}}
-                    <div class="flex flex-col gap-9">
-                        {{-- Process --}}
-                        <div>
-                            <div class="text-up-yellow-dark font-bold tracking-widest uppercase mb-4">
-                                How it Works
-                            </div>
+                {{-- Right Column --}}
+                <div class="flex flex-col gap-7">
+                    {{-- Process --}}
+                    <div>
+                        <div class="text-up-yellow-dark font-bold tracking-widest uppercase mb-4">
+                            How it Works
+                        </div>
 
                             <div class="border border-cream-border divide-y divide-cream-border">
                                 <div class="py-4 px-4 flex items-start gap-5">
