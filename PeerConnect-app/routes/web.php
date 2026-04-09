@@ -95,6 +95,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Volt::route('/sessions', 'pages.mentor.sessions')
             ->name('mentor.sessions');
 
+        Volt::route('/history', 'pages.mentor.history')
+            ->name('mentor.history');
+
         Volt::route('/feedbacks', 'pages.mentor.feedbacks')
             ->name('mentor.feedbacks');
 
