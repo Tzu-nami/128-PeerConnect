@@ -28,11 +28,16 @@ mount(function () {
         $this->yearLevel_id = $profile->yearLevel_id;
         $this->toggleProfileOpen = false;
     }
+    if(request()->has('mentor')) {
+        $this->mentor_id = (string) request('mentor');
+        $this->isMentorLocked = true;
+    }
 });
 
 // For booking forms inputs
 state([
     'mentor_id' => '',
+    'isMentorLocked' => false,
     'subject_id' => '',
     'topic' => '',
     'tutorialMode_id' => '',
@@ -89,6 +94,10 @@ $mentorSubjects = computed(function () {
 });
 
 $subjects = computed(function () {
+    if($this->isMentorLocked && $this->mentor_id) {
+        $subjectIds = MentorSubjects::where('mentor_id', $this->mentor_id)->pluck('subject_id');
+        return Subjects::whereIn('id', $subjectIds)->orderBy('code')->get();
+    }
     return Subjects::orderBy('code')->get();
 });
 
@@ -977,31 +986,63 @@ $dismissFeedbackSubmitted = action(function () {
                     start_time: $wire.entangle('schedule_start'),
                     end_time: $wire.entangle('schedule_end'),
                     mentor_id: $wire.entangle('mentor_id'),
+                    isMentorLocked: $wire.entangle('isMentorLocked'),
                     dateError: '',
                     timeError: '',
 
                     init() {
-                        // Check Sunday inputs
+                        // Check unavailable days for locked mentors
                         this.$watch('date', value => {
-                        if(!value) { this.dateError = ''; return; }
-                        const d = new Date(value + 'T00:00:00');
-                            if(d.getDay() === 0) {
-                                this.dateError = 'The session cannot be on a Sunday.';
-                            } else {
-                                this.dateError = '';
+                            this.dateError = '';
+                            if(!value) {
+                                this.validateTime();
+                                return;
                             }
+
+                        // Check Sunday inputs
+                            const d = new Date(value + 'T00:00:00');
+                                if(d.getDay() === 0) {
+                                    this.dateError = 'The session cannot be on a Sunday.';
+                                    return;
+                                }
+                                
+                            if(this.isMentorLocked) {
+                                const dayChosen = this.getDayOfWeek(value);
+                                const avails = this.allAvailabilities.filter(a => a.mentorProfile_id == this.mentor_id && a.day_of_week === dayChosen);
+                                if(avails.length === 0) {
+                                    this.dateError = 'This mentor is not available on this day.';
+                                    return;
+                                }
+                            }
+                            this.validateTime(); // Checks time
                         });
+
                         // Check time inputs
                         this.$watch('start_time', () => this.validateTime());
                         this.$watch('end_time', () => this.validateTime());
                     },
 
                     validateTime() {
+                        this.timeError = '';
                         if(this.start_time && this.end_time) {
                             if(this.end_time <= this.start_time) {
                                 this.timeError = 'End time must be later than start time.';
-                            } else {
-                                this.timeError = '';
+                                return;
+                            }       
+                            if (this.isMentorLocked && this.date) {
+                                const dayChosen = this.getDayOfWeek(this.date);
+                                const avails = this.allAvailabilities.filter(a => a.mentorProfile_id == this.mentor_id && a.day_of_week === dayChosen);
+                                if (avails.length > 0) {
+                                    const fits = avails.some(a => {
+                                        let start = a.start_time.substring(0,5), end = a.end_time.substring(0,5);
+                                        let startChosen = this.start_time.substring(0,5), endChosen = this.end_time.substring(0,5);
+                                        return start <= startChosen && end >= endChosen;
+                                    });
+
+                                    if (!fits) {
+                                        this.timeError = 'Time does not fit their schedule.';
+                                    }
+                                }
                             }
                         }
                     },
@@ -1015,6 +1056,9 @@ $dismissFeedbackSubmitted = action(function () {
                         return days[d.getDay()];
                     },
                     get filteredMentors() {
+                        if (this.isMentorLocked && this.mentor_id) {
+                            return this.allMentors.filter(m => m.profile_id == this.mentor_id);
+                        }
                         let choices = this.allMentors;
                         if ($wire.subject_id) {
                             const validIds = this.allSubjects.filter(s => s.subject_id == $wire.subject_id).map(s => s.mentorProfile_id);
@@ -1089,15 +1133,23 @@ $dismissFeedbackSubmitted = action(function () {
                     </div>
                     <div>
                         <label class="block text-base font-medium text-gray-700 mb-1">Preferred Mentor<span class="text-red-500">*</span></label>
-                        <select wire:model="mentor_id" class="w-full rounded-lg border-gray-300 shadow-sm text-base px-2 py-1">
-                            <option value="" x-text="filteredMentors.length === 0 ? '--- No mentors available. Please select a different date or timeframe. ---' : '--- Select a mentor ---'"></option>
-                            <template x-if="filteredMentors.length > 0">
+                        <select wire:model="mentor_id" :disabled="isMentorLocked" class="w-full rounded-lg border-gray-300 shadow-sm text-base px-2 py-1 disabled:bg-gray-100 disabled:text-gray-900 disabled:cursor-not-allowed">
+                            <template x-if="!isMentorLocked">
+                                <option value="" x-text="filteredMentors.length === 0 ? '--- No mentors available. Please select a different date or time slot. ---' : '--- Select a mentor ---'"></option>
+                            </template>
+                            <template x-if="filteredMentors.length > 0 && !isMentorLocked">
                                 <option value="any" class="bg-blue-100">ANY (Alerts all available mentors)</option>
                             </template>
                             <template x-for="mentor in filteredMentors" :key="mentor.profile_id">
                                 <option :value="mentor.profile_id" x-text="mentor.name"></option>
                             </template>
                         </select>
+
+                        {{-- Lock mentor dropdown --}}
+                        <div x-show="isMentorLocked" x-cloak class="mt-1.5 flex justify-between items-center px-1">
+                            <span class="text-[11px] text-blue-600 font-bold"><i class="fa-solid fa-lock mr-1"></i> Mentor Locked.</span>
+                            <a href="{{ route('student.bookings') }}" class="text-[10px] text-gray-400 hover:text-red-600 underline">Unlock & Clear</a>
+                        </div>
                         @error('mentor_id') <span class="mt-1 text-xs text-red-600">{{ $message }}</span> @enderror
                     </div>
                     <div x-show="mentor_id === 'any' && filteredMentors.length > 0" x-cloak class="mt-3 bg-blue-50 border border-blue-200 rounded-lg p-3 animate-[slideDown_0.2s_ease]">
@@ -1336,7 +1388,21 @@ $dismissFeedbackSubmitted = action(function () {
         const dateText    = dateEl?.value ? new Date(dateEl.value + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) : '—';
         const startText   = formatTime(startEl?.value) || '—';
         const endText     = formatTime(endEl?.value)   || '—';
-        const mentorText  = mentorEl?.options[mentorEl.selectedIndex]?.text || '—';
+        let mentorText = '—';
+        if(mentorEl && mentorEl.selectedIndex >= 0 && mentorEl.options[mentorEl.selectedIndex].value !== "") {
+            mentorText = mentorEl.options[mentorEl.selectedIndex].text;
+        } else {
+            // Find submit component
+            const componentElement = bookingSubmitBtn.closest('[wire\\:id');
+            if(componentElement) {
+                const livewireComponent = Livewire.find(componentElement.getAttribute('wire:id'));
+                if(livewireComponent && livewireComponent.get('isMentorLocked')) {
+                    const lockedId = livewireComponent.get('mentor_id');
+                    const mentorObj = livewireComponent.get('mentors').find(m => m.profile_id == lockedId);
+                    if(mentorObj) mentorText = mentorObj.name;
+                }
+            }
+        }
 
         function formatTime(t) {
             if (!t) return '';

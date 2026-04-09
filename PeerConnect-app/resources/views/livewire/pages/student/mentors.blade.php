@@ -49,7 +49,7 @@ $allMentors = computed(function () {
             'yearLevel' => $mp->user->studentProfile->yearLevel->name,
             'degreeProgram' => $mp->user->studentProfile->degreeProgram->name,
             'college' => $mp->user->studentProfile->college->name,
-            'bookingUrl' => route('student.bookings', ['mentor' => $mp->user_id]),
+            'bookingUrl' => route('student.bookings', ['mentor' => $mp->id]),
         ];
     })->sortBy('lastName')->values();
 });
@@ -441,12 +441,15 @@ color:#065f46;
                 </div>
 
                 {{-- Pagination --}}
-                <div class="mt-4 flex justify-center items-center gap-2" x-show="totalPages > 1" x-cloak>
+                <div class="mt-4 flex justify-center items-center gap-2" x-show="totalPages >= 1" x-cloak>
                     <button @click="currentPage--" :disabled="currentPage === 1" class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-slate-500 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition">
                         <i class="fa-solid fa-chevron-left text-[10px]"></i>
                     </button>
-                    <template x-for="page in pages" :key="page">
-                        <button @click="currentPage = page" :class="currentPage === page ? 'bg-[#1a3c2f] text-white shadow-sm' : 'bg-white border border-gray-200 text-slate-500 hover:bg-gray-100'" class="w-8 h-8 text-xs font-bold rounded-lg transition" x-text="page"></button>
+                    <template x-for="(page, index) in pages" :key="index">
+                        <div class="contents">
+                        <button @click="currentPage = page" :class="currentPage === page ? 'bg-[#1a3c2f] text-white shadow-sm' : 'bg-white border border-gray-200 text-slate-500 hover:bg-gray-100'" class="w-8 h-8 text-xs font-bold rounded-lg transition" x-text="page" x-show="page !== '...'"></button>
+                        <span x-show="page === '...'" class="w-7 h-7 flex items-center justify-center text-[11px] font-bold text-gray-400 tracking-widest shrink-0">...</span>
+                        </div>
                     </template>
                     <button @click="currentPage++" :disabled="currentPage === totalPages" class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-slate-500 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition">
                         <i class="fa-solid fa-chevron-right text-[10px]"></i>
@@ -586,9 +589,19 @@ color:#065f46;
                 },
 
                 get pages() {
-                    return Array.from({
-                        length: this.totalPages
-                    }, (_, i) => i + 1);
+                    const total = this.totalPages;
+                    const current = this.currentPage;
+
+                    if(total <= 8) {
+                        return Array.from({ length: total }, (_, i) => i + 1);
+                    }
+                    if(current <= 4) {
+                        return [1, 2, 3, 4,, 5, '...', total];
+                    }
+                    if(current >= total - 3) {
+                        return [1, '...', total - 3, total - 2, total - 1, total];
+                    }
+                    return [1, '...', current - 1, current, current + 1, '...', total];
                 },
 
                 openModal(mentor) {
