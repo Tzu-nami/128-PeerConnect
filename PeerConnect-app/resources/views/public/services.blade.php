@@ -27,7 +27,7 @@
     <section class="px-64 border-t border-cream-border pt-12 animate-fade-up [animation-delay:250ms]">
         <div class="flex flex-col gap-12">
             {{-- Row 1 --}}
-            <div id="one-on-one" class="grid grid-cols-2 gap-14 scroll-mt-72 items-center">
+            <div id="one-on-one" class="grid grid-cols-2 gap-14 scroll-mt-36 items-center">
                 <img
                     src="https://cwpbwqcxlccbittkhasq.supabase.co/storage/v1/object/public/assets/images/landing-carousel/Image-7.jpeg"
                     alt="One on One Tutorial Session"
@@ -58,7 +58,7 @@
             <hr>
 
             {{-- Row 2 --}}
-            <div id="group-session" class="grid grid-cols-2 gap-14 scroll-mt-80 items-center">
+            <div id="group-session" class="grid grid-cols-2 gap-14 scroll-mt-72 items-center">
                 <div class="flex flex-col justify-center">
                     <h1 class="text-2xl font-heading text-up-maroon font-bold mb-3">Group Sessions</h1>
                     <p class="leading-6 mb-3">
