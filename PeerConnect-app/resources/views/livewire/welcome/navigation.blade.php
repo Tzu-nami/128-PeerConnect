@@ -29,10 +29,14 @@
             'About Us'   => route('public.about'),
             'Contact Us' => route('public.contact')
         ] as $label => $href)
+            @php
+                // Check if the current URL matches the link
+                $isActive = request()->url() == $href || (request()->is('/') && $label === 'Home');
+            @endphp
             <li>
                 <a href="{{ $href }}"
-                   class="whitespace-nowrap text-[15px] font-medium text-cream/75 tracking-widest uppercase
-                          transition-colors duration-200 hover:text-up-yellow-light no-underline">
+                   class="whitespace-nowrap text-[15px] font-medium tracking-widest uppercase transition-colors duration-200 no-underline
+                      {{ $isActive ? 'text-up-yellow-light font-bold' : 'text-cream/75 hover:text-up-yellow-light' }}">
                     {{ $label }}
                 </a>
             </li>
