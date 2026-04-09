@@ -24,10 +24,10 @@
         @foreach (
         [
             'Mentors'    => route('public.mentors'),
-            'Staff'      => '#',
+            'Staff'      => route('public.staff'),
             'Services'   => request()->is('/') ? url('/').'#services' : route('public.services'),
             'About Us'   => route('public.about'),
-            'Contact Us' => '#',
+            'Contact Us' => route('public.contact')
         ] as $label => $href)
             <li>
                 <a href="{{ $href }}"
@@ -41,29 +41,11 @@
 
     {{-- User action --}}
     <div class="flex items-center justify-end gap-3.5 w-1/4">
-        @auth
-            @php
-                $dashboardUrl = match(true) {
-                    auth()->user()->isStudent() => route('student.dashboard'),
-                    auth()->user()->isMentor() => route('mentor.dashboard'),
-                    auth()->user()->isAdmin() => route('admin.dashboard'),
-                    default => route('login')
-                };
-            @endphp
-
             <a href="{{ $dashboardUrl }}"
                class="bg-up-yellow text-up-maroon-dark px-7 py-2.5 text-[14px]
                       font-semibold tracking-widest uppercase rounded-sm
                       transition-colors duration-200 hover:bg-up-yellow-light no-underline">
-                Dashboard
+                {{ auth()->check() ? 'Dashboard' : 'Log In' }}
             </a>
-        @else
-            <a href="{{ route('login') }}"
-               class="bg-up-yellow text-up-maroon-dark px-7 py-2.5 text-[14px]
-                      font-semibold tracking-widest uppercase rounded-sm
-                      transition-colors duration-200 hover:bg-up-yellow-light no-underline">
-                Log In
-            </a>
-        @endauth
     </div>
 </nav>
