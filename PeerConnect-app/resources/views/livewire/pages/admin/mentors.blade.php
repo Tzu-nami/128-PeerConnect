@@ -397,16 +397,42 @@ mount(function () {
     <script src="https://cdn.tailwindcss.com"></script>
 
     <style>
-        :root { --sidebar-green: #1a3c2f; --header-maroon: #7b1d1d; --bg-light: #f4f7f6; --header-height: 80px; --sidebar-width: 260px; --sidebar-collapsed-width: 72px; }
+        :root {
+            --sidebar-green: #1a3c2f;
+            --header-maroon: #7b1d1d;
+            --bg-light: #f4f7f6;
+            --header-height: 80px;
+            --sidebar-width: 260px;
+            --sidebar-collapsed-width: 72px;
+        }
+
         * { box-sizing: border-box; }
         body { margin: 0; font-family: 'Inter', sans-serif; background: var(--bg-light); overflow: hidden; }
         .app-wrapper { display: flex; height: 100vh; width: 100vw; overflow: hidden; }
 
-/* ── SIDEBAR ── */
-        .sidebar { width: var(--sidebar-width); background: var(--sidebar-green); flex-shrink: 0; display: flex; flex-direction: column; color: white; height: 100vh; transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1); z-index: 30; position: relative; overflow: visible; }
+        /* ── SIDEBAR ── */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: var(--sidebar-green);
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            color: white;
+            height: 100vh;
+            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 30;
+            position: relative;
+            overflow: visible;
+        }
+        .sidebar.collapsed { width: var(--sidebar-collapsed-width); }
 
-/* ── Logo row ── */
-        .sidebar-logo-container { height: var(--header-height); display: flex; align-items: center; justify-content: center; padding: 0 20px; gap: 12px; flex-shrink: 0; overflow: hidden; transition: padding 0.3s, justify-content 0.3s; }
+        /* ── Logo row ── */
+        .sidebar-logo-container {
+            height: var(--header-height);
+            display: flex; align-items: center; justify-content: center;
+            padding: 0 20px; gap: 12px; flex-shrink: 0; overflow: hidden;
+            transition: padding 0.3s, justify-content 0.3s;
+        }
         .sidebar:not(.collapsed) .sidebar-logo-container { justify-content: flex-start; }
         .logo-icon { flex-shrink: 0; font-size: 27px; width: auto; text-align: center; }
         .logo-text { font-size: 1.24rem; font-weight: 700; white-space: nowrap; overflow: hidden; opacity: 1; max-width: 200px; transition: opacity 0.2s, max-width 0.3s; }
@@ -530,10 +556,10 @@ mount(function () {
                 <a href="{{ route('admin.dashboard') }}" class="nav-item" data-tooltip="Dashboard">
                     <i class="fa-solid fa-gauge w-5"></i><span>Dashboard</span>
                 </a>                
-                <a href="{{ route('admin.mentors') }}" class="nav-item" data-tooltip="Mentor Management">
+                <a href="{{ route('admin.mentors') }}" class="nav-item active" data-tooltip="Mentor Management">
                     <i class="fa-solid fa-chalkboard-user w-5"></i><span>Mentor Management</span>
                 </a>
-                <a href="{{ route('admin.courses') }}" class="nav-item active" data-tooltip="Course Management">
+                <a href="{{ route('admin.courses') }}" class="nav-item" data-tooltip="Course Management">
                     <i class="fa-solid fa-book-open w-5"></i><span>Course Management</span>
                 </a>
                 <a href="{{ route('admin.sessions') }}" class="nav-item" data-tooltip="Session Management">
@@ -1403,12 +1429,8 @@ mount(function () {
             };
         }
 
-        document.getElementById('sidebarToggle').addEventListener('click', () => {
-    sidebar.classList.toggle('collapsed');
-    const icon = document.getElementById('toggleIcon');
-    icon.classList.toggle('fa-chevron-left');
-    icon.classList.toggle('fa-chevron-right');
-    setTimeout(() => { charts.forEach(c => c.resize()); }, 310);
-});
+    document.getElementById('sidebarToggle').addEventListener('click', () => {
+        document.getElementById('sidebar').classList.toggle('collapsed');
+    });
     </script>
 </div>
