@@ -3,26 +3,22 @@ import './bootstrap';
 import Swiper from 'swiper';
 import { Navigation, Pagination } from 'swiper/modules';
 
-const swiper = new Swiper('.swiper', {
-    modules: [Navigation, Pagination],
-
+const swiper = new Swiper('#activities-swiper', {
+    modules: [Pagination],
     loop: true,
     centeredSlides: true,
     slidesPerView: 3,
-    spaceBetween: 15,
+    spaceBetween: 16,
     initialSlide: 2,
     watchSlidesProgress: true,
-
     pagination: {
         el: '.swiper-pagination',
         clickable: true,
     },
-
-    navigation: {
-        nextEl: '.swiper-button-next',
-        prevEl: '.swiper-button-prev',
-    },
 });
+
+document.getElementById('btn-prev').addEventListener('click', () => swiper.slidePrev());
+document.getElementById('btn-next').addEventListener('click', () => swiper.slideNext());
 
 document.addEventListener('DOMContentLoaded', () => {
     const sidebar       = document.getElementById('sidebar');
