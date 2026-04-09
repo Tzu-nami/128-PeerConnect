@@ -58,6 +58,7 @@ return [
             'use_path_style_endpoint' => env('AWS_USE_PATH_STYLE_ENDPOINT', true),
             'throw' => false,
             'report' => false,
+            'public_url' => env('SUPABASE_PUBLIC_URL'),
         ],
 
     ],

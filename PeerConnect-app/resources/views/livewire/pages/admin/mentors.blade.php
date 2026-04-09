@@ -181,13 +181,13 @@ $updateMentor = action(function () {
 
     // Update
     if($this->editAvatar) {
-        $baseUrl = rtrim(env('SUPABASE_PUBLIC_URL'), '/');
+        $baseUrl = rtrim(config('filesystems.disks.s3.public_url'), '/');
         $oldFile = str_replace($baseUrl . '/', '', $mentorNew->user->avatar);
         Storage::disk('s3')->delete($oldFile);
 
         $filename = $this->editAvatar->hashName();
         $path = $this->editAvatar->storeAs('', $filename, 's3');
-        $url = rtrim(env('SUPABASE_PUBLIC_URL'), '/') . '/' . $filename;
+        $url = rtrim(config('filesystems.disks.s3.public_url'), '/') . '/' . $filename;
         $mentorNew->user->update(['avatar' => $url]);
     }
 
@@ -318,7 +318,7 @@ $saveMentor = action(function () {
     if ($this->avatar) {
         $filename = $this->avatar->hashName();
         $path = $this->avatar->storeAs('', $filename, 's3');
-        $url = rtrim(env('SUPABASE_PUBLIC_URL'), '/') . '/' . $filename;
+        $url = rtrim(config('filesystems.disks.s3.public_url'), '/') . '/' . $filename;
         $userMentor->update(['avatar' => $url]);
     }
 
