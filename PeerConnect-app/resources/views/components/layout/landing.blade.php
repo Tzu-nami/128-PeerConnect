@@ -21,7 +21,7 @@
             <livewire:welcome.navigation/>
         </header>
 
-        <main>
+        <main class="{{ isset($noMargin) ? '' : 'mt-[83px]' }}">
             {{ $slot }}
         </main>
 
