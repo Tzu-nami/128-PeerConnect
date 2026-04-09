@@ -43,7 +43,7 @@
 
             {{-- Scroll indicator --}}
             <a href="#services" class="flex flex-col gap-2 items-center justify-center absolute z-20 left-1/2 -translate-x-1/2 bottom-7 cursor-pointer text-up-yellow">
-                <p class="text-[12px] tracking-[0.2rem] font-bold opacity-90 mb-2">SCROLL</p>
+                <p class=" tracking-[0.2rem] font-bold opacity-90 mb-2">SCROLL</p>
                 <div class="animate-bounce">
                     <span class="material-symbols-outlined rotate-90 leading-none">arrow_forward_ios</span>
                 </div>
@@ -66,7 +66,7 @@
             {{-- Content --}}
             <div class="grid grid-cols-3">
                 {{-- Column 1 --}}
-                <a href="{{ route('public.services') }}#one-on-one"
+                <a href="{{ route('public.services') }}"
                    class="group flex flex-col px-12 py-10 border-r border-cream-dark transition-colors hover:bg-cream-dark/30">
                     <img
                         src="https://cwpbwqcxlccbittkhasq.supabase.co/storage/v1/object/public/assets/images/landing-carousel/Image-7.jpeg"
