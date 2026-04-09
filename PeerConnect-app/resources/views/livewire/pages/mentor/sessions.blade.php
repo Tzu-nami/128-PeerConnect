@@ -3,6 +3,8 @@
     use function Livewire\Volt\{layout, state, mount, computed, action};
     use App\Models\Bookings;
     use App\Models\MentorProfiles;
+    use App\Models\MentorAvailabilities;
+    use App\Models\MentorSubjects;
 
     layout('layouts.app');
 
@@ -25,13 +27,45 @@
                 'completed_at'   => now(),
             ]);
 
-        return Bookings::with([
+        $mySubjectIds = \App\Models\MentorSubjects::where('mentor_id', $mentorProfile->id)->pluck('subject_id');
+        $mySched = \App\Models\MentorAvailabilities::where('mentor_id', $mentorProfile->id)->get();
+
+        $allBookings = Bookings::with([
             'student.user',
             'subject'
         ])
-        ->where('mentor_id', $mentorProfile->id)
-        ->get()
-    ->map(function ($b) {
+        ->where(function($query) use ($mentorProfile) 
+        {
+            $query->where('mentor_id', $mentorProfile->id);
+        })->orWhere(function($query) use ($mySubjectIds) {
+            // For bookings with null mentors
+            $query->whereNull('mentor_id')->where('booking_status', 'pending')->whereIn('subject_id', $mySubjectIds);
+        })
+        ->get();
+
+        $validBookings = $allBookings->filter(function($booking) use ($mentorProfile, $mySched) {
+            // If directly assigned to mentor
+            if($booking->mentor_id === $mentorProfile->id) {
+                return true;
+            }
+            // Check day of week
+            $bookingDay = strtolower(\Carbon\Carbon::parse($booking->date)->format('l'));
+            
+            return $mySched->contains(function($avail) use ($bookingDay, $booking) {
+                if(strtolower($avail->day_of_week) !== $bookingDay) {
+                    return false;
+                }
+
+                // Check if mentor available for that any slot timeframe
+                $availStart = strtotime($avail->start_time);
+                $availEnd = strtotime($avail->end_time);
+                $bookStart = strtotime($booking->schedule_start);
+                $bookEnd = strtotime($booking->schedule_end);
+                return $availStart <= $bookStart && $availEnd >= $bookEnd;
+            });
+        });
+
+    return $validBookings->map(function ($b) {
         $start = \Carbon\Carbon::parse($b->schedule_start);
         $end   = \Carbon\Carbon::parse($b->schedule_end);
 
@@ -58,6 +92,7 @@
     'duration' => $start->format('h:i A') . ' - ' . $end->format('h:i A') . ' (' . $durationText . ')',
 
             'status'   => $b->booking_status,
+            'is_open' => is_null($b->mentor_id),
         ];
     })
         ->values()
@@ -77,144 +112,45 @@
         <script src="https://cdn.tailwindcss.com?plugins=line-clamp"></script>
 
         <style>
-            :root {
-                --sidebar-green: #1a3c2f;
-                --header-maroon: #7b1d1d;
-                --bg-light: #f4f7f6;
-                --header-height: 80px;
-                --sidebar-width: 260px;
-                --sidebar-collapsed-width: 72px;
-            }
+        :root { --sidebar-green: #1a3c2f; --header-maroon: #7b1d1d; --bg-light: #f4f7f6; --header-height: 80px; --sidebar-width: 260px; --sidebar-collapsed-width: 72px; }
+        * { box-sizing: border-box; }
+        body { margin: 0; font-family: 'Inter', sans-serif; background: var(--bg-light); overflow: hidden; }
+        .app-wrapper { display: flex; height: 100vh; width: 100vw; overflow: hidden; }
 
-            * { box-sizing: border-box; }
+/* ── SIDEBAR ── */
+        .sidebar { width: var(--sidebar-width); background: var(--sidebar-green); flex-shrink: 0; display: flex; flex-direction: column; color: white; height: 100vh; transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1); z-index: 30; position: relative; overflow: visible; }
 
-            body { margin: 0; font-family: 'Inter', sans-serif; background: var(--bg-light); overflow: hidden; }
-            .app-wrapper { display: flex; height: 100vh; width: 100vw; overflow: hidden; }
+/* ── Logo row ── */
+        .sidebar-logo-container { height: var(--header-height); display: flex; align-items: center; justify-content: center; padding: 0 20px; gap: 12px; flex-shrink: 0; overflow: hidden; transition: padding 0.3s, justify-content 0.3s; }
+        .sidebar:not(.collapsed) .sidebar-logo-container { justify-content: flex-start; }
+        .logo-icon { flex-shrink: 0; font-size: 27px; width: auto; text-align: center; }
+        .logo-text { font-size: 1.24rem; font-weight: 700; white-space: nowrap; overflow: hidden; opacity: 1; max-width: 200px; transition: opacity 0.2s, max-width 0.3s; }
+        .logo-content { display: flex; align-items: center; gap: 12px; white-space: nowrap; }
 
-            /* ── SIDEBAR ── */
-            .sidebar {
-                width: var(--sidebar-width);
-                background: var(--sidebar-green);
-                flex-shrink: 0;
-                display: flex;
-                flex-direction: column;
-                color: white;
-                height: 100vh;
-                transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                z-index: 30;
-                position: relative;
-                overflow: visible;
-            }
-            .sidebar.collapsed { width: var(--sidebar-collapsed-width); }
+/* ── Nav items ── */
+        .nav-item { display: flex; align-items: center; gap: 14px; padding: 18px 20px; color: rgba(255,255,255,0.7); text-decoration: none; transition: background 0.2s, color 0.2s, padding 0.3s, justify-content 0.3s; white-space: nowrap; position: relative; text-align: left; background: transparent; border: none; width: 100%; cursor: pointer; font-size: 0.95rem; justify-content: flex-start; }
+        .nav-item i { width: 32px; text-align: center; flex-shrink: 0; font-size: 22px; transition: width 0.3s; }
+        .nav-item span { overflow: hidden; opacity: 1; max-width: 200px; transition: opacity 0.2s, max-width 0.3s; }
+        .nav-item:hover, .nav-item.active { background: rgba(255,255,255,0.1); color: white; }
+        .nav-item.active { background: var(--bg-light); color: var(--header-maroon); font-weight: 700; border-radius: 0; width: calc(100% + 1px); z-index: 10; }
+        
+        .sidebar.collapsed { width: var(--sidebar-collapsed-width); }
+        .sidebar.collapsed .sidebar-logo-container { justify-content: center; padding: 0; width: 100%; }
+        .sidebar.collapsed .logo-content { gap: 0; justify-content: center; width: 100%; }
+        .sidebar.collapsed .logo-icon { font-size: 22px; width: auto; margin: 0; }
+        .sidebar.collapsed .nav-item { display: flex; align-items: center; justify-content: center; padding: 18px 0; width: 100%; gap: 0; }
+        .sidebar.collapsed .nav-item i { margin: 0; width: auto; text-align: center; flex-shrink: 0; }
+        .sidebar.collapsed .nav-item span, .sidebar.collapsed .logo-content span { opacity: 0; max-width: 0; pointer-events: none; }
+        .sidebar.collapsed .nav-item.active { border-left: none; }
 
-            /* ── Logo row ── */
-            .sidebar-logo-container {
-                height: var(--header-height);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                padding: 0 20px;
-                gap: 12px;
-                flex-shrink: 0;
-                overflow: hidden;
-                transition: padding 0.3s, justify-content 0.3s;
-            }
-            .sidebar:not(.collapsed) .sidebar-logo-container { justify-content: flex-start; }
+        .nav-item::after { content: attr(data-tooltip); position: absolute; left: 100%; top: 50%; transform: translateY(-50%); margin-left: 14px; background: rgba(0,0,0,0.85); color: white; padding: 5px 12px; border-radius: 4px; font-size: 12px; font-weight: 500; white-space: nowrap; opacity: 0; visibility: hidden; transition: opacity 0.2s; pointer-events: none; z-index: 100; }
+        .sidebar.collapsed .nav-item:hover::after { opacity: 1; visibility: visible; }
+        .sidebar-footer { padding: 0px 0; border-top: 1px solid rgba(255,255,255,0.1); }
 
-            .logo-icon { flex-shrink: 0; font-size: 1.25rem; width: 32px; text-align: center; }
-
-            .logo-text {
-                font-size: 1rem;
-                font-weight: 700;
-                white-space: nowrap;
-                overflow: hidden;
-                opacity: 1;
-                max-width: 200px;
-                transition: opacity 0.2s, max-width 0.3s;
-            }
-            .sidebar.collapsed .logo-text { opacity: 0; max-width: 0; pointer-events: none; }
-
-            /* ── Nav items ── */
-            .nav-item {
-                display: flex;
-                align-items: center;
-                gap: 14px;
-                padding: 14px 20px;
-                color: rgba(255,255,255,0.7);
-                text-decoration: none;
-                transition: background 0.2s, color 0.2s, padding 0.3s, justify-content 0.3s;
-                white-space: nowrap;
-                position: relative;
-                text-align: left;
-                background: transparent;
-                border: none;
-                width: 100%;
-                cursor: pointer;
-                font-size: 0.875rem;
-                justify-content: flex-start;
-            }
-            .sidebar.collapsed .nav-item { justify-content: center; padding: 14px 0; }
-
-            .nav-item i { width: 32px; text-align: center; flex-shrink: 0; font-size: 18px; transition: width 0.3s; }
-            .sidebar.collapsed .nav-item i { width: 32px; margin: 0; }
-
-            .nav-item span {
-                overflow: hidden; opacity: 1; max-width: 200px;
-                transition: opacity 0.2s, max-width 0.3s;
-            }
-            .sidebar.collapsed .nav-item span { opacity: 0; max-width: 0; pointer-events: none; }
-
-            .nav-item:hover, .nav-item.active { background: rgba(255,255,255,0.1); color: white; }
-            .nav-item.active {
-                background: var(--bg-light);
-                color: var(--header-maroon);
-                font-weight: 700;
-                border-radius: 0;
-                width: calc(100% + 1px);
-                z-index: 10;
-            }
-
-            /* Tooltips */
-            .nav-item::after {
-                content: attr(data-tooltip);
-                position: absolute; left: 100%; top: 50%; transform: translateY(-50%);
-                margin-left: 14px; background: rgba(0,0,0,0.85); color: white;
-                padding: 5px 12px; border-radius: 4px; font-size: 12px; font-weight: 500;
-                white-space: nowrap; opacity: 0; visibility: hidden; transition: opacity 0.2s;
-                pointer-events: none; z-index: 100;
-            }
-            .sidebar.collapsed .nav-item:hover::after { opacity: 1; visibility: visible; }
-
-            /* Logout section */
-            .sidebar-footer { padding: 12px 0; border-top: 1px solid rgba(255,255,255,0.1); }
-
-            /* ── TOGGLE BUTTON ── */
-            .sidebar-toggle-btn {
-                position: absolute;
-                right: -16px;
-                top: 3%;
-                width: 32px;
-                height: 32px;
-                border-radius: 50%;
-                background: #ffffff;
-                border: none;
-                cursor: pointer;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                color: #7b1d1d;
-                font-size: 13px;
-                z-index: 50;
-                box-shadow: 0 2px 8px rgba(0,0,0,0.25);
-                transition: background 0.2s;
-                flex-shrink: 0;
-            }
-            .sidebar-toggle-btn:hover { background: #dfcece; }
-            .sidebar-toggle-btn .toggle-icon {
-                transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                display: flex; align-items: center; justify-content: center;
-            }
-            .sidebar:not(.collapsed) .sidebar-toggle-btn .toggle-icon { transform: rotate(180deg); }
+        .sidebar-toggle-btn { position: absolute; right: -16px; top: 50%; width: 32px; height: 32px; border-radius: 50%; background: var(--header-maroon); border: 2px solid white; cursor: pointer; display: flex; align-items: center; justify-content: center; color: white; font-size: 13px; z-index: 50; box-shadow: 0 2px 8px rgba(0,0,0,0.25); transition: background 0.2s; flex-shrink: 0; }
+        .sidebar-toggle-btn:hover { background: #dfcece; }
+        .sidebar-toggle-btn .toggle-icon { transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); display: flex; align-items: center; justify-content: center; }
+        .sidebar:not(.collapsed) .sidebar-toggle-btn .toggle-icon { transform: rotate(180deg); }
             /* lahat ng may sidebar copy paste*/
             .main-content { flex: 1; min-width: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
             .top-header { background: var(--header-maroon); height: var(--header-height); padding: 0 40px; display: flex; align-items: center; justify-content: space-between; color: white; flex-shrink: 0; }
@@ -237,6 +173,35 @@
             .topic-text.line-clamp-1 {display: -webkit-box;-webkit-line-clamp: 1;-webkit-box-orient: vertical;overflow: hidden;white-space: normal;word-break: break-all;}
             @keyframes slideDown {from { opacity: 0; transform: translateY(-6px); }to   { opacity: 1; transform: translateY(0); }}
             @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+.scroll-cell-wrap { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.scroll-cell {
+    max-height: 1.4em;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    line-height: 1.4;
+}
+.scroll-cell.expanded {
+    max-height: 80px;
+    overflow-y: auto;
+}
+.scroll-cell::-webkit-scrollbar { width: 3px; }
+.scroll-cell::-webkit-scrollbar-track { background: transparent; }
+.scroll-cell::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 99px; }
+.scroll-toggle-btn {
+    display: none;
+    font-size: 10px;
+    color: #94a3b8;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    text-align: left;
+    line-height: 1;
+}
+.scroll-toggle-btn:hover { color: #7b1d1d; }
+.scroll-cell-wrap.overflowing .scroll-toggle-btn { display: inline-block; }
             #confirmMeta {max-height: 200px;overflow-y: auto;}
 
         </style>
@@ -249,8 +214,10 @@
         <!-- ito navbar copy paste mo -->
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-logo-container">
+                <div class="logo-content">
                 <i class="fa-solid fa-graduation-cap logo-icon"></i>
                 <span class="logo-text">LRC PeerConnect</span>
+                </div>
             </div>
 
             <button class="sidebar-toggle-btn" id="sidebarToggle" aria-label="Toggle sidebar">
@@ -287,7 +254,7 @@
 
         <div class="main-content">
             <header class="top-header relative">
-                <div class="text-lg">Welcome, <span class="font-bold">{{ auth()->user()->name }}</span></div>
+                <div class="text-lg">Welcome, {{ auth()->user()->user_roles}} <span class="font-bold">{{ auth()->user()->name }}</span></div>
                 <button id="profileTrigger" class="flex items-center gap-2 px-3 py-1 bg-white rounded-full hover:bg-gray-100 transition shadow-sm border-2 border-white/20 group">
                     <div class="w-8 h-8 bg-red-900 text-white rounded-full flex items-center justify-center text-xs font-bold">
                         {{ strtoupper(substr(auth()->user()->name, 0, 2)) }}
@@ -335,16 +302,15 @@
                     <div id="sessionsBannerArea" class="flex flex-col gap-2 mb-4"></div>
                     
                     <table class="w-full text-left text-sm table-fixed">
-                        <thead class="text-gray-400 border-b">
-                            <tr>
-<th onclick="setSort('student')" class="cursor-pointer pb-3 text-[13px] select-none"><div class="flex items-center gap-1 hover:text-red-800 transition">Student<span id="sort-student" class="text-[10px]"></span></div></th>
-<th onclick="setSort('subject')" class="cursor-pointer pb-3 text-[13px] select-none"><div class="flex items-center gap-1 hover:text-red-800 transition">Subject<span id="sort-subject" class="text-[10px]"></span></div></th>
-<th onclick="setSort('topic')" class="cursor-pointer pb-3 text-[13px] select-none"><div class="flex items-center gap-1 hover:text-red-800 transition">Topic<span id="sort-topic" class="text-[10px]"></span></div></th>
-<th onclick="setSort('date')" class="cursor-pointer pb-3 text-[13px] select-none"><div class="flex items-center gap-1 hover:text-red-800 transition">Date<span id="sort-date" class="text-[10px]"></span></div></th>
-<th onclick="setSort('duration')" class="cursor-pointer pb-3 text-[13px] select-none"><div class="flex items-center gap-1 hover:text-red-800 transition">Duration<span id="sort-duration" class="text-[10px]"></span></div></th>
-<th onclick="setSort('status')" class="cursor-pointer pb-3 text-[13px] select-none"><div class="flex justify-center gap-1 hover:text-red-800 transition">Status<span id="sort-status" class="text-[10px]"></span></div></th>
-<th class="pb-3 text-[13px] select-none"><div class="flex justify-end gap-1">Actions&nbsp;&nbsp;&nbsp;</div></th>
-                            </tr>
+<thead class="text-gray-400 border-b">
+    <tr>
+<th onclick="setSort('student')"  class="cursor-pointer pb-3 text-[13px] select-none" style="width:16%;"><div class="flex items-center gap-1 hover:text-red-800 transition">Student<span id="sort-student" class="text-[10px]"></span></div></th>
+<th onclick="setSort('subject')"  class="cursor-pointer pb-3 text-[13px] select-none" style="width:9%;"><div class="flex items-center gap-1 hover:text-red-800 transition">Subject<span id="sort-subject" class="text-[10px]"></span></div></th>
+<th onclick="setSort('topic')"    class="cursor-pointer pb-3 text-[13px] select-none" style="width:17%;"><div class="flex items-center gap-1 hover:text-red-800 transition">Topic<span id="sort-topic" class="text-[10px]"></span></div></th>
+<th onclick="setSort('date')"     class="cursor-pointer pb-3 text-[13px] select-none" style="width:11%;"><div class="flex items-center gap-1 hover:text-red-800 transition">Date<span id="sort-date" class="text-[10px]"></span></div></th>
+<th onclick="setSort('duration')" class="cursor-pointer pb-3 text-[13px] select-none" style="width:17%;"><div class="flex items-center gap-1 hover:text-red-800 transition">Duration<span id="sort-duration" class="text-[10px]"></span></div></th>
+<th onclick="setSort('status')"   class="cursor-pointer pb-3 text-[13px] select-none" style="width:9%;"><div class="flex justify-center gap-1 hover:text-red-800 transition">Status<span id="sort-status" class="text-[10px]"></span></div></th>
+<th class="pb-3 text-[13px] select-none" style="width:16%;"><div class="flex justify-end gap-1">Actions</div></th>
                             </tr>
                         </thead>
                         <tbody id="sessionsTable">
@@ -539,8 +505,9 @@
 
         function getStatusColor(status) {
             switch (status) {
-                case 'accepted':  return 'text-blue-700 bg-blue-100 border-blue-300';
-                case 'completed': return 'text-gray-600 bg-gray-100 border-gray-300';
+                case 'accepted':  return 'text-green-900 bg-green-100 border-green-400';
+                case 'completed': return 'text-gray-900 bg-gray-100 border-gray-400';
+                case 'closed':    return 'text-gray-500 bg-gray-100 border-gray-300';
                 case 'pending':   return 'text-yellow-700 bg-yellow-100 border-yellow-300';
                 case 'rejected':  return 'text-red-700 bg-red-100 border-red-300';
                 case 'cancelled': return 'text-red-700 bg-red-100 border-red-300';
@@ -548,12 +515,13 @@
                 default:          return 'text-gray-500 bg-gray-50 border-gray-200';
             }
         }
-
+        
         function getStatusLabel(status) {
             switch (status) {
                 case 'no_show':   return 'No Show';
-                case 'accepted':  return 'Upcoming';
+                case 'accepted':  return 'Accepted';
                 case 'completed': return 'Completed';
+                case 'closed':    return 'Closed';
                 case 'rejected':  return 'Rejected';
                 case 'cancelled': return 'Cancelled';
                 case 'pending':   return 'Pending';
@@ -569,6 +537,10 @@
                 </button>`;
 
             if (s.status === 'pending') {
+                // If free for all
+            if (s.is_open) {
+                return btn('<i class="fa-solid fa-triangle-exclamation mr-1"></i> Claim Session', 'accepted', 'bg-purple-600 text-white hover:bg-purple-700')
+            }
                 return btn('Accept', 'accepted', 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200')
                     + btn('Reject', 'rejected', 'bg-red-100 text-red-700 hover:bg-red-200');
             }
@@ -652,46 +624,27 @@ function updateSortIcons() {
 
             tbody.innerHTML = visible.map(s => `
                 <tr class="border-b hover:bg-slate-50">
-                    <td class="py-4 text-sm align-middle pr-4" style="max-width:0; width:17%;">
-        <div class="flex flex-col justify-center" style="min-width:0;">
-            <div class="flex items-start justify-between gap-2" style="min-width:0;">
-                <span class="topic-text line-clamp-1 flex-1 leading-snug font-bold text-slate-700"
-                    id="student-${s.id}">
-                    ${s.student}
-                </span>
-
-                ${s.student.length > 20 ? `
-                    <button onclick="toggleStudent('${s.id}')"
-                        id="more-student-${s.id}"
-                        class="text-[10px] text-gray-400 hover:text-gray-600 whitespace-nowrap">
-                        see more
-                    </button>
-                ` : ''}
-            </div>
-
-            <div class="flex justify-end mt-1">
-                <button onclick="toggleStudent('${s.id}')"
-                    id="less-student-${s.id}"
-                    class="hidden text-[10px] text-gray-400 hover:text-gray-600">
-                    view less
-                </button>
-            </div>
+<td class="py-3 text-sm align-middle pr-4" style="max-width:0; width:16%;">
+    <div class="scroll-cell-wrap" id="wrap-student-${s.id}">
+        <div class="scroll-cell font-bold text-slate-700 text-sm"
+             id="student-${s.id}"
+             title="${s.student}">
+            ${s.student}
         </div>
-    </td>
+        <button class="scroll-toggle-btn" onclick="toggleScrollCell('student-${s.id}', this)">see more</button>
+    </div>
+</td>
                     <td class="text-sm">${s.subject}</td>
-                    <td class="text-sm pr-4 align-middle" style="max-width:0; width:22%;">
-                        <div class="py-3 flex flex-col justify-center" style="min-width:0;">
-                            <div class="flex items-start justify-between gap-2" style="min-width:0;">
-                                <span class="topic-text line-clamp-1 flex-1 leading-snug" style="min-width:0; max-width:100%;" id="topic-${s.id}">${s.topic}</span>
-                                    ${s.topic.length > 40 ? `
-                                        <button onclick="toggleTopic('${s.id}')" id=" more-${s.id}" class="text-[10px] text-gray-400 hover:text-gray-600 whitespace-nowrap self-start flex-shrink-0">see more</button>
-                                ` : ''}
-                            </div>
-                            <div class="flex justify-end mt-1">
-                                <button onclick="toggleTopic('${s.id}')" id="less-${s.id}" class="hidden text-[10px] text-gray-400 hover:text-gray-600 flex-shrink-0">view less</button>
-                            </div>
-                        </div>
-                    </td>
+<td class="py-3 text-sm align-middle pr-2" style="max-width:0; width:30%;">
+    <div class="scroll-cell-wrap" id="wrap-topic-${s.id}">
+        <div class="scroll-cell text-slate-600 text-sm"
+             id="topic-${s.id}"
+             title="${s.topic}">
+            ${s.topic}
+        </div>
+        <button class="scroll-toggle-btn" onclick="toggleScrollCell('topic-${s.id}', this)">see more</button>
+    </div>
+</td>
                     <td class="text-sm pr-0">${s.date}</td>
                     <td class="text-sm pl-0">
                         <div class="flex gap-2 font-medium tabular-nums">
@@ -711,6 +664,7 @@ function updateSortIcons() {
                     </td>
                 </tr>
     `).join('');
+    requestAnimationFrame(checkScrollOverflow);
         }
 
 function sortSessions(data) {
@@ -753,25 +707,6 @@ function sortSessions(data) {
     });
 }
 
-    function toggleStudent(id) {
-        const textEl = document.getElementById(`student-${id}`);
-        const moreBtn = document.getElementById(`more-student-${id}`);
-        const lessBtn = document.getElementById(`less-student-${id}`);
-
-        const isCollapsed = textEl.classList.contains('line-clamp-1');
-
-        if (isCollapsed) {
-            textEl.classList.remove('line-clamp-1');
-            textEl.classList.add('line-clamp-none');
-            moreBtn?.classList.add('hidden');
-            lessBtn?.classList.remove('hidden');
-        } else {
-            textEl.classList.add('line-clamp-1');
-            textEl.classList.remove('line-clamp-none');
-            lessBtn?.classList.add('hidden');
-            moreBtn?.classList.remove('hidden');
-        }
-    }
 
         function updateSessionsPagination(total, maxPage) {
             const info    = document.getElementById('sessionsPageInfo');
@@ -904,12 +839,17 @@ function toggleModalText(id) {
             }
 
             const isUncomplete = status === 'accepted' && req.status === 'completed';
+            const isClaiming = status === 'accepted' && req.status === 'pending' && req.is_open;
 
             const dialogConfig = {
                 accepted: isUncomplete ? {
                     title:   'Revert to accepted?',
                     body:    'This will mark the session as accepted again, reversing the completed status.',
                     variant: 'neutral',
+                } : isClaiming ? {
+                    title: 'Claim Open Session?',
+                    body: 'You are about to claim this session. It will be permanently assigned to you.',
+                    variant: 'accept',
                 } : {
                     title:   'Accept booking?',
                     body:    'The student will be notified that their session has been approved.',
@@ -1110,25 +1050,25 @@ const metaHtml = `
                 });
         }
 
-    function toggleTopic(id) {
-        const textEl = document.getElementById(`topic-${id}`);
-        const moreBtn = document.getElementById(`more-${id}`);
-        const lessBtn = document.getElementById(`less-${id}`);
+function toggleScrollCell(id, btn) {
+    const el = document.getElementById(id);
+    if (!el || !btn) return;
+    const expanded = el.classList.toggle('expanded');
+    btn.textContent = expanded ? 'view less' : 'see more';
+}
 
-        const isCollapsed = textEl.classList.contains('line-clamp-1');
-
-        if (isCollapsed) {
-            textEl.classList.remove('line-clamp-1');
-            textEl.classList.add('line-clamp-none');
-            moreBtn.classList.add('hidden');
-            lessBtn.classList.remove('hidden');
+function checkScrollOverflow() {
+    document.querySelectorAll('.scroll-cell-wrap').forEach(wrap => {
+        const cell = wrap.querySelector('.scroll-cell');
+        if (!cell) return;
+        // Compare natural scroll height vs the clamped max-height (1.4em ≈ ~20px)
+        if (cell.scrollHeight > cell.clientHeight + 2) {
+            wrap.classList.add('overflowing');
         } else {
-            textEl.classList.add('line-clamp-1');
-            textEl.classList.remove('line-clamp-none');
-            lessBtn.classList.add('hidden');
-            moreBtn.classList.remove('hidden');
+            wrap.classList.remove('overflowing');
         }
-    }
+    });
+}
 
         document.addEventListener('DOMContentLoaded', () => {
 
