@@ -13,6 +13,7 @@ state([
     'sessionsToday' => 0,
     'pendingBookings' => 0,
     'totalStudents' => 0,
+    'todaySessions' => [],
 ]);
 
 mount(function () {
@@ -21,7 +22,21 @@ mount(function () {
     $this->sessionsToday = Bookings::whereDate('date', Carbon::today()) -> count();
     $this->pendingBookings = Bookings::where('booking_status', 'pending') -> count();
     $this->totalStudents = StudentProfiles::count();
+
+      $this->todaySessions = Bookings::with(['mentor.user', 'student.user'])
+        ->whereDate('date', Carbon::today())
+        ->orderBy('schedule_start')
+        ->get()
+        ->map(fn($b) => [
+            'date'   => $b->date,
+            'mentor' => $b->mentor->user->name  ?? 'Unknown Mentor',
+            'mentee' => $b->student->user->name ?? 'Unknown Mentee',
+            'time'   => Carbon::parse($b->start_time)->format('h:i A'),
+            'status' => ucfirst($b->booking_status),
+        ])
+        ->toArray();
 });
+
 
 ?>
 
@@ -609,13 +624,15 @@ updateDate();
         setInterval(updateClock, 1000);
 
         // Local State
-        const allSessions = [
-            { date: '2026-03-14', mentor: "Daniel Dyoco", mentee: "Frian Nabo", time: "09:00 AM", status: "Completed", color: "text-blue-600" },
-            { date: '2026-03-14', mentor: "Rhona Shayne Lopez", mentee: "Mark Tuan", time: "10:30 AM", status: "Active", color: "text-green-600" },
-            { date: '2026-03-14', mentor: "Chezka SincoChezka Sincezka SincoChezka SincoChezka SincoChezka SincoChezka SincoChezka Sinco", mentee: "Uno Dos Thirdy", time: "11:00 AM", status: "Active", color: "text-green-600" },
-            { date: '2026-03-14', mentor: "Arielle Mae Solis", mentee: "Kevin Hart", time: "01:00 PM", status: "Pending", color: "text-yellow-500" },
-            { date: '2026-03-14', mentor: "Ax'l Conchada", mentee: "Alice Blue", time: "02:30 PM", status: "Upcoming", color: "text-orange-500" },
-        ];
+        const allSessions = @json($todaySessions).map(s => ({
+    ...s,
+    color: {
+        'Active':    'text-green-600',
+        'Completed': 'text-blue-600',
+        'Pending':   'text-yellow-500',
+        'Upcoming':  'text-orange-500',
+    }[s.status] ?? 'text-gray-500'
+}));
 
 const _now = new Date();
 let selectedDateStr = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, '0')}-${String(_now.getDate()).padStart(2, '0')}`;
