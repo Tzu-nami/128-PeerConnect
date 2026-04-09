@@ -191,6 +191,45 @@ $sessions = computed(function () {
             display: flex; align-items: center; gap: 16px;
             box-shadow: 0 1px 3px rgba(0,0,0,0.06);
         }
+
+        .hover-tooltip-wrap {
+    position: relative;
+    display: inline-block;
+    max-width: 100%;
+}
+.hover-tooltip-wrap .tooltip-full {
+    visibility: hidden;
+    opacity: 0;
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 0;
+    background: #1e293b;
+    color: #f8fafc;
+    font-size: 11px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    white-space: normal;
+    word-break: break-word;
+    width: max-content;
+    max-width: 260px;
+    z-index: 100;
+    transition: opacity 0.15s ease;
+    line-height: 1.5;
+    pointer-events: none;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+.hover-tooltip-wrap:hover .tooltip-full {
+    visibility: visible;
+    opacity: 1;
+}
+.hover-tooltip-wrap .truncated-label {
+    display: block;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    max-width: 100%;
+    cursor: default;
+}
     </style>
 </head>
 
@@ -328,6 +367,14 @@ $sessions = computed(function () {
                                 <option value="cancelled">Cancelled</option>
                                 <option value="no_show">No Show</option>
                             </select>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex border border-gray-200 rounded-lg overflow-hidden text-xs font-medium">
+                            <button id="filter-all"   onclick="setDateFilter('all')"   class="date-range-btn active px-3 py-2 bg-red-900 text-white hover:bg-red-800 transition-colors">All time</button>
+                            <button id="filter-week"  onclick="setDateFilter('week')"  class="date-range-btn px-3 py-2 text-gray-500 hover:bg-gray-50 hover:text-gray-700 transition-colors border-l border-gray-200">This week</button>
+                            <button id="filter-month" onclick="setDateFilter('month')" class="date-range-btn px-3 py-2 text-gray-500 hover:bg-gray-50 hover:text-gray-700 transition-colors border-l border-gray-200">This month</button>
                         </div>
                     </div>
 
@@ -563,6 +610,21 @@ $sessions = computed(function () {
 
     /* ── PAGINATION ── */
     let sessionsPage = 0;
+
+    let activeDateFilter = 'all';
+
+function setDateFilter(range) {
+    activeDateFilter = range;
+    sessionsPage = 0;
+    document.querySelectorAll('.date-range-btn').forEach(btn => {
+        btn.classList.remove('bg-red-900', 'text-white', 'hover:bg-red-800');
+        btn.classList.add('text-gray-500', 'hover:bg-gray-50', 'hover:text-gray-700');
+    });
+    const active = document.getElementById('filter-' + range);
+        active.classList.add('bg-red-900', 'text-white', 'hover:bg-red-800');
+        active.classList.remove('text-gray-500', 'hover:text-gray-700', 'hover:bg-gray-50');
+    renderSessions();
+}
     const SESSIONS_PER_PAGE = 10;
 
     function updateSessionsPagination(total, maxPage) {
@@ -592,6 +654,22 @@ $sessions = computed(function () {
             const hay = [s.student, s.subject, s.topic, s.date, s.duration, s.status, s.mentor ?? ''].join(' ').toLowerCase();
             return hay.includes(search) && (filter === 'All' || s.status === filter);
         });
+        // Date range filter
+if (activeDateFilter !== 'all') {
+    const now = new Date();
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - now.getDay());
+    startOfWeek.setHours(0, 0, 0, 0);
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    filtered = filtered.filter(s => {
+        if (!s.date) return false;
+        const d = new Date(s.date);
+        if (activeDateFilter === 'week')  return d >= startOfWeek;
+        if (activeDateFilter === 'month') return d >= startOfMonth;
+        return true;
+    });
+}
 
         filtered = sortSessions(filtered);
 
@@ -608,34 +686,24 @@ $sessions = computed(function () {
         const visible = filtered.slice(sessionsPage * SESSIONS_PER_PAGE, sessionsPage * SESSIONS_PER_PAGE + SESSIONS_PER_PAGE);
         updateSessionsPagination(total, maxPage);
 
-        tbody.innerHTML = visible.map(s => {
+ tbody.innerHTML = visible.map(s => {
             const mentorBadge = s.is_open
                 ? `<span class="text-[10px] px-2 py-0.5 bg-purple-100 text-purple-700 border border-purple-200 rounded font-semibold">Open</span>`
                 : `<span class="text-slate-600 text-sm">${s.mentor ?? '—'}</span>`;
 
-            const studentCollapse = s.student.length > 20
-                ? `<button onclick="toggleText('student-${s.id}')" id="more-student-${s.id}" class="text-[10px] text-gray-400 hover:text-gray-600 whitespace-nowrap">see more</button>
-                   <button onclick="toggleText('student-${s.id}')" id="less-student-${s.id}" class="hidden text-[10px] text-gray-400 hover:text-gray-600">view less</button>`
-                : '';
-
-            const topicCollapse = s.topic.length > 40
-                ? `<button onclick="toggleText('topic-${s.id}')" id="more-topic-${s.id}" class="text-[10px] text-gray-400 hover:text-gray-600 whitespace-nowrap">see more</button>
-                   <button onclick="toggleText('topic-${s.id}')" id="less-topic-${s.id}" class="hidden text-[10px] text-gray-400 hover:text-gray-600">view less</button>`
-                : '';
-
             return `
             <tr class="border-b hover:bg-slate-50">
                 <td class="py-3 text-sm align-middle pr-2" style="max-width:0;">
-                    <div class="flex flex-col" style="min-width:0;">
-                        <span class="topic-text line-clamp-1 font-bold text-slate-700 leading-snug" id="student-${s.id}">${s.student}</span>
-                        ${studentCollapse}
+                    <div class="hover-tooltip-wrap" style="max-width:100%;">
+                        <span class="truncated-label font-bold text-slate-700 leading-snug">${s.student}</span>
+                        ${s.student.length > 20 ? `<span class="tooltip-full">${s.student}</span>` : ''}
                     </div>
                 </td>
                 <td class="py-3 text-sm text-slate-600">${s.subject}</td>
                 <td class="py-3 text-sm pr-2 align-middle" style="max-width:0;">
-                    <div class="flex flex-col" style="min-width:0;">
-                        <span class="topic-text line-clamp-1 text-slate-600 leading-snug" id="topic-${s.id}">${s.topic}</span>
-                        ${topicCollapse}
+                    <div class="hover-tooltip-wrap" style="max-width:100%;">
+                        <span class="truncated-label text-slate-600 leading-snug">${s.topic}</span>
+                        ${s.topic.length > 40 ? `<span class="tooltip-full">${s.topic}</span>` : ''}
                     </div>
                 </td>
                 <td class="py-3 align-middle">${mentorBadge}</td>
@@ -688,16 +756,10 @@ $sessions = computed(function () {
 
         const cfg = cfgMap[status] ?? { title:'Confirm action', body:'Are you sure?', variant:'neutral' };
 
-        const metaHtml = `
+ const metaHtml = `
             <div class="flex justify-between items-start gap-2">
                 <span class="text-gray-400">Student</span>
-                <div class="flex flex-col items-end max-w-[160px]">
-                    <span id="modal-text-student-${req.id}" class="font-medium text-gray-700 text-right topic-text line-clamp-1">${req.student}</span>
-                    ${req.student.length > 25 ? `
-                        <button onclick="toggleModalText('student-${req.id}')" id="modal-more-student-${req.id}" class="text-[10px] text-gray-400 hover:text-gray-600">see more</button>
-                        <button onclick="toggleModalText('student-${req.id}')" id="modal-less-student-${req.id}" class="hidden text-[10px] text-gray-400 hover:text-gray-600">view less</button>
-                    ` : ''}
-                </div>
+                <span class="font-medium text-gray-700 text-right" style="max-width:160px;word-break:break-word;">${req.student}</span>
             </div>
             <div class="flex justify-between gap-2">
                 <span class="text-gray-400">Mentor</span>
@@ -709,13 +771,7 @@ $sessions = computed(function () {
             </div>
             <div class="flex justify-between items-start gap-2">
                 <span class="text-gray-400">Topic</span>
-                <div class="flex flex-col items-end max-w-[180px]">
-                    <span id="modal-text-topic-${req.id}" class="font-medium text-gray-700 text-right topic-text line-clamp-1">${req.topic}</span>
-                    ${req.topic.length > 40 ? `
-                        <button onclick="toggleModalText('topic-${req.id}')" id="modal-more-topic-${req.id}" class="text-[10px] text-gray-400 hover:text-gray-600">see more</button>
-                        <button onclick="toggleModalText('topic-${req.id}')" id="modal-less-topic-${req.id}" class="hidden text-[10px] text-gray-400 hover:text-gray-600">view less</button>
-                    ` : ''}
-                </div>
+                <span class="font-medium text-gray-700 text-right" style="max-width:180px;word-break:break-word;">${req.topic}</span>
             </div>
             <div class="flex justify-between gap-2">
                 <span class="text-gray-400">Date</span>
@@ -726,7 +782,6 @@ $sessions = computed(function () {
                 <span class="font-medium text-gray-700">${formatTimeRange(req)}</span>
             </div>
         `;
-
         openConfirmModal({ title: cfg.title, body: cfg.body, meta: metaHtml, variant: cfg.variant, onConfirm: () => commitStatus(id, status, req) });
     }
 
