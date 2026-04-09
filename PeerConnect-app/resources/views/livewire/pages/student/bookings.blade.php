@@ -210,14 +210,14 @@ $submitBooking = action(function () {
         return;
     }
 
-    $hasPendingFeedback = Bookings::where('student_id', $profile->id)
+    /*$hasPendingFeedback = Bookings::where('student_id', $profile->id)
         ->whereRaw("booking_status::text = 'completed'")
         ->exists();
 
     if ($hasPendingFeedback) {
         session()->flash('error', 'Please submit your session feedback before making a new booking.');
         return;
-    }
+    }*/
 
     $validated = $this->validate([
         'mentor_id' => ['required'],
@@ -332,9 +332,16 @@ $submitFeedback = action(function () {
         'q10' => ['required', 'in:0,1'],
     ]);
 
+    /*$booking = Bookings::with(['subject'])
+        ->where('student_id', $profile->id)
+        ->whereRaw("booking_status::text = 'completed'")*/
     $booking = Bookings::with(['subject'])
         ->where('student_id', $profile->id)
-        ->whereRaw("booking_status::text = 'completed'")
+        ->where('booking_status', 'completed')
+        ->where('completed_at', '>=', now()->subDays(2))
+        ->whereNotIn('id', function($query) {
+            $query->select('booking_id')->from('feedback');
+        })
         ->latest()
         ->first();
 
@@ -359,7 +366,7 @@ $submitFeedback = action(function () {
         'q10'            => \DB::raw($this->q10 == '1' ? 'true' : 'false'),
     ]);
 
-    $booking->update(['booking_status' => 'closed']);
+    //$booking->update(['booking_status' => 'closed']);
 
     $this->reset(['feedbackText','q1','q2','q3','q4','q5','q6','q7','q8','q9','q10']);
     $this->feedbackStep = 1;
@@ -458,7 +465,7 @@ $dismissFeedbackSubmitted = action(function () {
 
         .main-content { flex: 1; min-width: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
         .top-header { background: var(--header-maroon); height: var(--header-height); padding: 0 40px; display: flex; align-items: center; justify-content: space-between; color: white; flex-shrink: 0; }
-        .scroll-container { flex-grow: 1; overflow-y: auto; padding: 32px; width: 100%; }
+        .scroll-container { flex-grow: 1; overflow-y: scroll; padding: 32px; width: 100%; }
 
         .profile-dropdown {
             position: absolute; top: 70px; right: 40px; background: white; border-radius: 12px;
@@ -687,12 +694,15 @@ $dismissFeedbackSubmitted = action(function () {
                         ->latest()->first()
                     : null;
 
-                $completedBooking = $studentProfileForCheck
-                    ? \App\Models\Bookings::with(['mentor.user', 'subject', 'tutorialMode'])
-                        ->where('student_id', $studentProfileForCheck->id)
-                        ->whereRaw("booking_status::text = 'completed'")
-                        ->latest()->first()
-                    : null;
+                $completedBooking = null;
+                    if($studentProfileForCheck) {
+                        // If student no answer feedback forms within 2 days
+                        $completedBooking = \App\Models\Bookings::with(['mentor.user', 'subject', 'tutorialMode'])->where('student_id', $studentProfileForCheck->id)->where('booking_status', 'completed')
+                        ->where('completed_at', '>=', now()->subDays(2))->whereNotIn('id', function($query) {
+                            $query->select('booking_id')->from('feedback');
+                        })
+                        ->latest()->first();
+                    }
 
                 // All 10 questions
                 $questions = [
@@ -712,7 +722,7 @@ $dismissFeedbackSubmitted = action(function () {
             {{-- ══════════════════════════════════
                  MULTI-STEP FEEDBACK FORM
                  ══════════════════════════════════ --}}
-            @if($completedBooking && !$activeBooking)
+            @if($completedBooking)
                 @php $cb = $completedBooking; @endphp
 
                 <div class="feedback-card">
@@ -722,13 +732,10 @@ $dismissFeedbackSubmitted = action(function () {
                         </div>
                         <div class="flex-1 min-w-0">
                             <p class="text-sm font-bold text-blue-900 mb-0.5">
-                                Your session is complete &mdash;
-                                <span class="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-200 text-blue-800">
-                                    Feedback Required
-                                </span>
+                                Your session is complete
                             </p>
                             <p class="text-xs text-blue-700 leading-snug">
-                                Please rate your experience before booking again. Step {{ $feedbackStep }} of 3.
+                                Please rate your experience of the enrichment session. Step {{ $feedbackStep }} of 3.
                             </p>
                         </div>
                     </div>
@@ -753,9 +760,10 @@ $dismissFeedbackSubmitted = action(function () {
                                 <label>Mentor</label>
                                 <p>{{ strtoupper($cb->mentor->user->lastName ?? 'UNKNOWN') }}, {{ $cb->mentor->user->firstName ?? '' }}</p>
                             </div>
-                            <div class="fs-item full">
+                            <div class="fs-item full min-w-0">
                                 <label>Topic &amp; Date</label>
-                                <p>{{ $cb->topic }} &mdash; {{ \Carbon\Carbon::parse($cb->date)->format('F j, Y') }}</p>
+                                <p class="truncate" title="{{ $cb->topic }}">{{ $cb->topic }}</p> 
+                                <p class="shrink-0">&mdash; {{ \Carbon\Carbon::parse($cb->date)->format('F j, Y') }}</p>
                             </div>
                         </div>
 
@@ -893,8 +901,9 @@ $dismissFeedbackSubmitted = action(function () {
                     </div>
                 </div>
 
+            @endif
             {{-- ══ ACTIVE BOOKING VIEW ══ --}}
-            @elseif($activeBooking)
+            @if($activeBooking)
                 @php
                     $ab        = $activeBooking;
                     $isPending = $ab->booking_status === 'pending';
@@ -925,7 +934,7 @@ $dismissFeedbackSubmitted = action(function () {
                         <div class="booking-detail-grid">
                             <div class="booking-detail-item"><label>Subject</label><p>{{ $ab->subject->code ?? '—' }} &mdash; {{ $ab->subject->name ?? '' }}</p></div>
                             <div class="booking-detail-item"><label>Tutorial Mode</label><p>{{ $ab->tutorialMode->mode ?? '—' }}</p></div>
-                            <div class="booking-detail-item full"><label>Topic</label><p>{{ $ab->topic }}</p></div>
+                            <div class="booking-detail-item full"><label>Topic</label><p class="line-clamp-1 break-words" title="{{ $ab->topic }}">{{ $ab->topic }}</p></div>
                             <div class="booking-detail-item full"><label>Peer Mentor</label><p>{{ strtoupper($ab->mentor->user->lastName ?? 'MENTOR') }}, {{ $ab->mentor->user->firstName ?? 'TBD' }}</p></div>
                             <div class="booking-detail-item"><label>Date</label><p>{{ \Carbon\Carbon::parse($ab->date)->format('l, F j, Y') }}</p></div>
                             <div class="booking-detail-item"><label>Time</label><p>{{ \Carbon\Carbon::parse($ab->schedule_start)->format('g:i A') }} &ndash; {{ \Carbon\Carbon::parse($ab->schedule_end)->format('g:i A') }}</p></div>
@@ -960,7 +969,7 @@ $dismissFeedbackSubmitted = action(function () {
                 </div>
 
             {{-- ══ BOOKING FORM ══ --}}
-            @else
+            @elseif(!$completedBooking)
             <div class="bg-white p-6 rounded-lg shadow-sm border-gray-200"
                 x-data="{
                     // Validation of data
@@ -1038,7 +1047,7 @@ $dismissFeedbackSubmitted = action(function () {
                         <select wire:model="subject_id" class="w-full rounded-lg border-gray-300 shadow-sm text-base px-2 py-1">
                             <option value="">--- Select a Subject ---</option>
                             @foreach($this->subjects as $subject)
-                                <option value="{{ $subject['id'] }}">{{ $subject['code'] }} - {{ $subject['name'] }}</option>
+                                <option value="{{ $subject['id'] }}">{{ strtoupper($subject['code']) }} - {{ $subject['name'] }}</option>
                             @endforeach
                         </select>
                         @error('subject_id') <span class="mt-1 text-xs text-red-600">{{ $message }}</span> @enderror
@@ -1083,7 +1092,7 @@ $dismissFeedbackSubmitted = action(function () {
                         <select wire:model="mentor_id" class="w-full rounded-lg border-gray-300 shadow-sm text-base px-2 py-1">
                             <option value="" x-text="filteredMentors.length === 0 ? '--- No mentors available. Please select a different date or timeframe. ---' : '--- Select a mentor ---'"></option>
                             <template x-if="filteredMentors.length > 0">
-                                <option value="any">ANY (Alerts all available mentors)</option>
+                                <option value="any" class="bg-blue-100">ANY (Alerts all available mentors)</option>
                             </template>
                             <template x-for="mentor in filteredMentors" :key="mentor.profile_id">
                                 <option :value="mentor.profile_id" x-text="mentor.name"></option>
@@ -1206,18 +1215,19 @@ $dismissFeedbackSubmitted = action(function () {
                 <h3 class="text-base font-semibold text-gray-900 mb-4">Recent Bookings</h3>
                 @forelse($this->studentBookings as $booking)
                     <div class="mb-4 pb-4 border-b border-gray-100 last:border-0 last:mb-0 last:pb-0">
-                        <div class="flex items-start justify-between gap-2">
-                            <div>
-                                <p class="text-sm font-medium text-gray-800">{{ $booking->subject->code }}</p>
-                                <p class="text-xs font-medium text-gray-800">{{ $booking->topic }}</p>
+                        <div class="flex items-start justify-between gap-3">
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-medium text-gray-800">{{ strtoupper($booking->subject->code) }}</p>
+                                <p class="text-xs font-medium text-gray-800 truncate" title="{{ $booking->topic }}">{{ $booking->topic }}</p>
                                 <p class="text-xs font-medium text-gray-800">{{ strtoupper($booking->mentor->user->lastName ?? 'MENTOR') }} {{ $booking->mentor->user->firstName ?? 'TBD' }}</p>
                             </div>
+                            <div class="flex-shrink-0">
                             @php
                                 $statusColors = match($booking->booking_status) {
                                     'pending' => 'bg-yellow-100 text-yellow-800',
                                     'accepted' => 'bg-green-100 text-green-800',
                                     'rejected' => 'bg-red-100 text-red-800',
-                                    'completed' => 'bg-blue-100 text-blue-800',
+                                    'completed' => 'bg-green-100 text-green-800',
                                     'cancelled' => 'bg-red-100 text-red-800',
                                     'closed'    => 'bg-purple-100 text-purple-800',
                                     'no-show'   => 'bg-red-100 text-red-800',
@@ -1227,6 +1237,7 @@ $dismissFeedbackSubmitted = action(function () {
                             <span class="text-xs font-medium px-2 py-1 rounded-full capitalize {{ $statusColors }}">
                                 {{ str_replace('_', ' ', $booking->booking_status) }}
                             </span>
+                        </div>
                         </div>
                         <p class="text-xs text-gray-400 mt-1">
                             {{ \Carbon\Carbon::parse($booking->date)->format('l, F j, Y') }},
@@ -1336,11 +1347,26 @@ $dismissFeedbackSubmitted = action(function () {
         }
 
         const metaHtml = `
-            <div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span style="color:#9ca3af;">Subject</span><span style="font-weight:600;color:#374151;text-align:right;max-width:60%;">${subjectText}</span></div>
-            <div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span style="color:#9ca3af;">Topic</span><span style="font-weight:600;color:#374151;text-align:right;max-width:60%;">${topicText}</span></div>
-            <div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span style="color:#9ca3af;">Mentor</span><span style="font-weight:600;color:#374151;text-align:right;max-width:60%;">${mentorText}</span></div>
-            <div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span style="color:#9ca3af;">Date</span><span style="font-weight:600;color:#374151;text-align:right;max-width:60%;">${dateText}</span></div>
-            <div style="display:flex;justify-content:space-between;"><span style="color:#9ca3af;">Time</span><span style="font-weight:600;color:#374151;">${startText} – ${endText}</span></div>
+            <div class="flex justify-between items-start gap-4 mb-1">
+                <span class="text-gray-400 shrink-0">Subject</span>
+                <span class="font-semibold text-gray-700 text-right truncate">${subjectText}</span>
+            </div>
+            <div class="flex justify-between items-start gap-4 mb-1">
+                <span class="text-gray-400 shrink-0">Topic</span>
+                <span class="font-semibold text-gray-700 text-right line-clamp-2 break-all" title="${topicText}">${topicText}</span>
+            </div>
+            <div class="flex justify-between items-start gap-4 mb-1">
+                <span class="text-gray-400 shrink-0">Mentor</span>
+                <span class="font-semibold text-gray-700 text-right truncate">${mentorText}</span>
+            </div>
+            <div class="flex justify-between items-start gap-4 mb-1">
+                <span class="text-gray-400 shrink-0">Date</span>
+                <span class="font-semibold text-gray-700 text-right">${dateText}</span>
+            </div>
+            <div class="flex justify-between items-start gap-4">
+                <span class="text-gray-400 shrink-0">Time</span>
+                <span class="font-semibold text-gray-700 text-right">${startText} – ${endText}</span>
+            </div>
         `;
 
         openConfirmModal({
