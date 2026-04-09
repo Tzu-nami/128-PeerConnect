@@ -1,22 +1,6 @@
-@php
-    $bookUrl = auth()->check() ? match(true) {
-        auth()->user()->isStudent() => route('student.bookings'),
-        auth()->user()->isMentor()  => route('mentor.bookings'),
-        default                     => route('login')
-    } : route('login');
-
-    $dashboardUrl = auth()->check() ? match(true) {
-        auth()->user()->isStudent() => route('student.dashboard',),
-        auth()->user()->isMentor()  => route('mentor.dashboard',),
-        auth()->user()->isAdmin()   => route('admin.dashboard',),
-        default                     => route('login')
-    } : route('login');
-@endphp
-
-<x-layout.landing>
-    <main class="animate-fade-up">
+<x-layout.landing :noMargin="true">
         {{-- Hero --}}
-        <section class="relative min-h-screen flex flex-col justify-center px-20 bg-cover bg-top"
+        <section class="relative min-h-screen flex flex-col justify-center px-20 bg-cover bg-top animate-fade-up"
                  style="background-image: url('https://cwpbwqcxlccbittkhasq.supabase.co/storage/v1/object/public/assets/images/lrc-session.png'); background-position: center 83px">
 
             {{-- Overlay --}}
@@ -46,26 +30,15 @@
                 </p>
 
                 {{-- Book Now --}}
-                @auth
-                    @unless(auth()->user()->isAdmin())
-                        <a href="{{ $bookUrl }}"
-                           class="inline-block bg-transparent border border-up-yellow text-up-yellow-light
+                @if($shouldShowBookNow)
+                    <a href="{{ $bookUrl }}"
+                       class="inline-block bg-transparent border border-up-yellow text-up-yellow-light
                                px-10 py-3.5 text-[13px] font-medium tracking-[0.12em] uppercase
                                no-underline transition-colors duration-200
                                hover:bg-up-yellow hover:text-up-maroon-dark">
-                            Book Now
-                        </a>
-                    @endunless
-
-                @else
-                    <a href="{{ route('login') }}"
-                       class="inline-block bg-transparent border border-up-yellow text-up-yellow-light
-                           px-10 py-3.5 text-[13px] font-medium tracking-[0.12em] uppercase
-                           no-underline transition-colors duration-200
-                           hover:bg-up-yellow hover:text-up-maroon-dark">
                         Book Now
                     </a>
-                @endauth
+                @endif
             </div>
 
             {{-- Scroll indicator --}}
@@ -78,7 +51,7 @@
         </section>
 
         {{-- What We Offer --}}
-        <section class="h-auto px-52 py-20 bg-white" id="services">
+        <section id="services" class="h-auto px-52 py-20 bg-white scroll-mt-20">
             {{-- Header --}}
             <div class="flex flex-col gap-4 mb-12">
                 <div class="flex items-center gap-3 text-up-yellow text-xs tracking-widest font-medium uppercase">
@@ -93,9 +66,12 @@
             {{-- Content --}}
             <div class="grid grid-cols-3">
                 {{-- Column 1 --}}
-                <a href="#"
+                <a href="{{ route('public.services') }}#one-on-one"
                    class="group flex flex-col px-12 py-10 border-r border-cream-dark transition-colors hover:bg-cream-dark/30">
-                    <div class="w-full h-48 bg-cream-dark rounded-sm mb-5"></div>
+                    <img
+                        src="https://cwpbwqcxlccbittkhasq.supabase.co/storage/v1/object/public/assets/images/landing-carousel/Image-7.jpeg"
+                        alt="One on One Tutorial Session"
+                        class="w-full h-48 object-cover rounded-sm mb-5 border border-cream-border">
                     <div class="text-xl text-up-maroon font-medium mb-2">One-on-One Sessions</div>
                     <div class="text-base leading-7 font-light mb-3">
                         Get personalized support from one of our experienced mentors.
@@ -108,9 +84,12 @@
                 </a>
 
                 {{-- Column 2 --}}
-                <a href="{{ route('public.services') }}"
+                <a href="{{ route('public.services') }}#group-session"
                    class="group flex flex-col px-12 py-10 border-r border-cream-dark transition-colors hover:bg-cream-dark/30">
-                    <div class="w-full h-48 bg-cream-dark rounded-sm mb-5"></div>
+                    <img
+                        src="https://cwpbwqcxlccbittkhasq.supabase.co/storage/v1/object/public/assets/images/landing-carousel/Image-8.jpg"
+                        alt="Group Tutorial Session"
+                        class="w-full h-48 object-cover rounded-sm mb-5 border border-cream-border">
                     <div class="text-xl text-up-maroon font-medium mb-2">Group Sessions</div>
                     <div class="text-base leading-7 font-light mb-3">
                         Gather with a group of friends in a guided session led by a peer mentor.
@@ -123,9 +102,12 @@
                 </a>
 
                 {{-- Column 3 --}}
-                <a href="#"
+                <a href="{{ route('public.services') }}#review-classes"
                    class="group flex flex-col px-12 py-10 border-r border-cream-dark transition-colors hover:bg-cream-dark/30">
-                    <div class="w-full h-48 bg-cream-dark rounded-sm mb-5"></div>
+                    <img
+                        src="https://cwpbwqcxlccbittkhasq.supabase.co/storage/v1/object/public/assets/images/landing-carousel/Image-6.jpg"
+                        alt="Review Class"
+                        class="w-full h-48 object-cover rounded-sm mb-5 border border-cream-border">
                     <div class="text-xl text-up-maroon font-medium mb-2">Review Classes</div>
                     <div class="text-base leading-7 font-light mb-3">
                         Prepare for major exams through review sessions led by experienced peer mentors.
@@ -209,21 +191,19 @@
             </div>
 
             {{-- Image carousel --}}
-            <div class="">
-                <div class="swiper">
+            <div class="swiper-outer">
+                <button class="swiper-nav-btn" id="btn-prev">&#8249;</button>
+                <div class="swiper" id="activities-swiper">
                     <div class="swiper-wrapper">
-                        <div class="swiper-slide"><img src="https://cwpbwqcxlccbittkhasq.supabase.co/storage/v1/object/public/assets/images/placeholder.jpg" alt="Image"></div>
-                        <div class="swiper-slide"><img src="https://cwpbwqcxlccbittkhasq.supabase.co/storage/v1/object/public/assets/images/placeholder.jpg" alt="Image"></div>
-                        <div class="swiper-slide"><img src="https://cwpbwqcxlccbittkhasq.supabase.co/storage/v1/object/public/assets/images/placeholder.jpg" alt="Image"></div>
-                        <div class="swiper-slide"><img src="https://cwpbwqcxlccbittkhasq.supabase.co/storage/v1/object/public/assets/images/placeholder.jpg" alt="Image"></div>
-                        <div class="swiper-slide"><img src="https://cwpbwqcxlccbittkhasq.supabase.co/storage/v1/object/public/assets/images/placeholder.jpg" alt="Image"></div>
-                        <div class="swiper-slide"><img src="https://cwpbwqcxlccbittkhasq.supabase.co/storage/v1/object/public/assets/images/placeholder.jpg" alt="Image"></div>
+                        <div class="swiper-slide"><img src="https://cwpbwqcxlccbittkhasq.supabase.co/storage/v1/object/public/assets/images/landing-carousel/Image-1.jpg" alt="Activity 1"></div>
+                        <div class="swiper-slide"><img src="https://cwpbwqcxlccbittkhasq.supabase.co/storage/v1/object/public/assets/images/landing-carousel/Image-2.jpg" alt="Activity 2"></div>
+                        <div class="swiper-slide"><img src="https://cwpbwqcxlccbittkhasq.supabase.co/storage/v1/object/public/assets/images/landing-carousel/Image-3.jpg" alt="Activity 3"></div>
+                        <div class="swiper-slide"><img src="https://cwpbwqcxlccbittkhasq.supabase.co/storage/v1/object/public/assets/images/landing-carousel/Image-4.jpg" alt="Activity 4"></div>
+                        <div class="swiper-slide"><img src="https://cwpbwqcxlccbittkhasq.supabase.co/storage/v1/object/public/assets/images/landing-carousel/Image-5.jpg" alt="Activity 5"></div>
                     </div>
                     <div class="swiper-pagination"></div>
-                    <div class="swiper-button-prev"></div>
-                    <div class="swiper-button-next"></div>
                 </div>
+                <button class="swiper-nav-btn" id="btn-next">&#8250;</button>
             </div>
         </section>
-    </main>
 </x-layout.landing>
