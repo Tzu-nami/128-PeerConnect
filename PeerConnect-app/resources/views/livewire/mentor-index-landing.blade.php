@@ -15,7 +15,7 @@
     }
     .day-pill {
         display: inline-block;
-        padding: 2px 8px;
+        padding: 2px 5px;
         border-radius: 999px;
         font-size: 10px;
         font-weight: 700;
@@ -64,7 +64,7 @@
         {{-- Subject dropdown --}}
         <div class="relative">
             <select x-model="selectedSubject" @change="currentPage = 1"
-                    class="appearance-none border border-gray-200 rounded pl-3 pr-8 py-1.5 text-xs text-slate-600 outline-none cursor-pointer focus:ring-1 focus:ring-up-maroon bg-white">
+                    class="appearance-none border border-gray-200 rounded pl-3 pr-8 py-1.5 text-xs text-slate-600 outline-none cursor-pointer focus:ring-1 focus:border-up-maroon focus:ring-up-maroon bg-white">
                 <option value="">All Subjects</option>
                 @foreach($subjects as $subject)
                     <option value="{{ $subject->id }}">{{ $subject->code }}</option>
@@ -76,7 +76,7 @@
         <div class="relative">
             <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-300 text-xs"></i>
             <input type="text" x-model="searchQuery" @input="currentPage = 1" placeholder="Search by name..."
-                   class="pl-8 pr-3 py-1.5 text-xs border border-gray-200 rounded bg-white outline-none focus:ring-1 focus:ring-up-maroon w-52">
+                   class="pl-8 pr-3 py-1.5 text-xs border border-gray-200 rounded bg-white outline-none focus:ring-1 focus:border-up-maroon focus:ring-up-maroon w-52">
         </div>
 
         {{-- Count --}}
@@ -127,7 +127,7 @@
                         </template>
                         <template x-if="mentor.subjects.length > 3">
                             <span class="bg-slate-100 text-slate-600 px-2 py-0.5 rounded text-[10px] font-bold border border-slate-200 whitespace-nowrap"
-                                  x-text="'+' + (mentor.subjects.length - 3)"></span>
+                                  x-text="'+' + (mentor.subjects.length - 3)" :title="mentor.subjects.slice(3, 10).map(s => s.code).join('\n') + (mentor.subjects.length > 8 ? '\n...and more' : '')"></span>
                         </template>
                     </div>
                 </div>
@@ -289,7 +289,19 @@
                 return Math.max(1, Math.ceil(this.filteredMentors.length / this.perPage));
             },
             get pages() {
-                return Array.from({ length: this.totalPages }, (_, i) => i + 1);
+                const total = this.totalPages;
+                const current = this.currentPage;
+
+                if(total <= 8) {
+                    return Array.from({ length: total }, (_, i) => i + 1);
+                }
+                if(current <= 4) {
+                    return [1, 2, 3, 4,, 5, '...', total];
+                }
+                if(current >= total - 3) {
+                    return [1, '...', total - 3, total - 2, total - 1, total];
+                }
+                return [1, '...', current - 1, current, current + 1, '...', total];
             },
             openModal(mentor) {
                 this.selectedMentor = mentor;
