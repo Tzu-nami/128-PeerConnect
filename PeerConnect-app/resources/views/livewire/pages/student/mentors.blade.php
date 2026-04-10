@@ -218,7 +218,7 @@ color:#065f46;
 .day-pill {
     display: inline-block;
     padding: 2px 8px;
-    border-radius: 999px;
+    border-radius: 5px;
     font-size: 10px;
     font-weight: 700;
     background: #f1f5f9;
@@ -451,7 +451,7 @@ color:#065f46;
                         <p class="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Available Days</p>
                         <div class="flex flex-wrap gap-1.5">
                             <template x-for="day in mentor.days">
-                                <span class="day-pill" x-text="day"></span>
+                                <span class="day-pill" :title="day" x-text="day === 'Thu' ? 'Th' : (day.charAt(0))"></span>
                             </template>
                             <template x-if="mentor.days.length === 0">
                                 <span class="text-[10px] text-gray-400 italic">None</span>
@@ -460,7 +460,7 @@ color:#065f46;
                     </div>
                     <div class="flex-shrink-0">
                         <span class="text-[11px] font-bold text-slate-400 group-hover:text-[#1a3c2f] transition-colors flex items-center gap-1 tracking-widest whitespace-nowrap">
-                            View Profile <i class="fa-solid fa-chevron-right text-[10px] transition-transform group-hover:translate-x-1"></i>
+                            View <i class="fa-solid fa-chevron-right text-[9px] transition-transform group-hover:translate-x-1"></i>
                         </span>
                     </div>
                 </div>
