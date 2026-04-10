@@ -138,7 +138,7 @@ mount(function () {
 
         .main-content { flex: 1; min-width: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
         .top-header { background: var(--header-maroon); height: var(--header-height); padding: 0 40px; display: flex; align-items: center; justify-content: space-between; color: white; flex-shrink: 0; }
-.scroll-container { flex-grow: 1; overflow-y: auto; padding: 16px 32px; width: 100%; }
+        .scroll-container { flex-grow: 1; overflow-y: auto; padding: 16px 32px; width: 100%; }
 
         .profile-dropdown {
             position: absolute; top: 70px; right: 40px; background: white; border-radius: 12px;
