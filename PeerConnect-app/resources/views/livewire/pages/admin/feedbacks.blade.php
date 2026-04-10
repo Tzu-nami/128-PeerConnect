@@ -79,7 +79,7 @@ mount(function () {
         .nav-item.active { background: var(--bg-light); color: var(--header-maroon); font-weight: 700; border-radius: 0; width: calc(100% + 1px); z-index: 10; }
 
         .sidebar.collapsed .nav-item { display: flex; align-items: center; justify-content: center; padding: 16px 0; width: 100%; gap: 0; }
-        .sidebar.collapsed .nav-item i { margin: 0; width: auto; text-align: center; flex-shrink: 0; }
+        .sidebar.collapsed .nav-item i { margin: 0; width: auto; text-align: center; flex-shrink: 0; font-size: 22px;}
         .sidebar.collapsed .nav-item span { opacity: 0; max-width: 0; pointer-events: none; }
 
         .nav-item::after {
@@ -154,7 +154,7 @@ mount(function () {
 
                 <button class="sidebar-toggle-btn" id="sidebarToggle" aria-label="Toggle sidebar">
                     <span class="toggle-icon">
-                        <i class="fa-solid fa-chevron-right"></i>
+                        <i class="fa-solid fa-chevron-right" id="toggleIcon"></i>
                     </span>
                 </button>
 
@@ -212,24 +212,44 @@ mount(function () {
 
 <main class="scroll-container">
     <div class="space-y-6">
-    <div class="grid grid-cols-4 gap-4">
-        <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-green-600">
-            <p class="text-xs font-bold text-gray-400 uppercase">Average Rating</p>
-            <p class="text-2xl font-black text-slate-800">4.8 / 5.0</p>
-        </div>
-        <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-blue-600">
-            <p class="text-xs font-bold text-gray-400 uppercase">Total Responses</p>
-            <p class="text-2xl font-black text-slate-800">1,240</p>
-        </div>
-        <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-yellow-500">
-            <p class="text-xs font-bold text-gray-400 uppercase">Positive Sentiment</p>
-            <p class="text-2xl font-black text-slate-800">94%</p>
-        </div>
-        <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-red-600">
-            <p class="text-xs font-bold text-gray-400 uppercase">Flagged Comments</p>
-            <p class="text-2xl font-black text-slate-800">3</p>
+ <div class="grid grid-cols-4 gap-4">
+    <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-green-600">
+        <div class="flex items-center gap-3">
+            <i class="fa-solid fa-star text-green-600 text-2xl"></i>
+            <div>
+                <p class="text-xs font-bold text-gray-400 uppercase">Average Rating</p>
+                <p class="text-2xl font-black text-slate-800">4.8 / 5.0</p>
+            </div>
         </div>
     </div>
+    <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-blue-600">
+        <div class="flex items-center gap-3">
+            <i class="fa-solid fa-chart-bar text-blue-600 text-2xl"></i>
+            <div>
+                <p class="text-xs font-bold text-gray-400 uppercase">Total Responses</p>
+                <p class="text-2xl font-black text-slate-800">1,240</p>
+            </div>
+        </div>
+    </div>
+    <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-yellow-500">
+        <div class="flex items-center gap-3">
+            <i class="fa-solid fa-face-smile text-yellow-500 text-2xl"></i>
+            <div>
+                <p class="text-xs font-bold text-gray-400 uppercase">Positive Sentiment</p>
+                <p class="text-2xl font-black text-slate-800">94%</p>
+            </div>
+        </div>
+    </div>
+    <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-red-600">
+        <div class="flex items-center gap-3">
+            <i class="fa-solid fa-flag text-red-600 text-2xl"></i>
+            <div>
+                <p class="text-xs font-bold text-gray-400 uppercase">Flagged Comments</p>
+                <p class="text-2xl font-black text-slate-800">3</p>
+            </div>
+        </div>
+    </div>
+</div>
 
     <div class="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-200">
         <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-white">

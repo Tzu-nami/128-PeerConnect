@@ -274,7 +274,7 @@ $dismissSuccessMessage = action(function () {
         .nav-item:hover, .nav-item.active { background: rgba(255,255,255,0.1); color: white; }
         .nav-item.active { background: var(--bg-light); color: var(--header-maroon); font-weight: 700; border-radius: 0; width: calc(100% + 1px); z-index: 10; }
 
-        .sidebar.collapsed .nav-item { display: flex; align-items: center; justify-content: center; padding: 16px 0; width: 100%; gap: 0; }
+        .sidebar.collapsed .nav-item { display: flex; align-items: center; justify-content: center; padding: 19px 0; width: 100%; gap: 0; }
         .sidebar.collapsed .nav-item i { margin: 0; width: auto; text-align: center; flex-shrink: 0; }
         .sidebar.collapsed .nav-item span { opacity: 0; max-width: 0; pointer-events: none; }
 

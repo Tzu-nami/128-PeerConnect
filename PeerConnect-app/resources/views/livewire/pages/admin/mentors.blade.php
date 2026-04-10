@@ -456,7 +456,7 @@ mount(function () {
         .nav-item.active { background: var(--bg-light); color: var(--header-maroon); font-weight: 700; border-radius: 0; width: calc(100% + 1px); z-index: 10; }
 
         .sidebar.collapsed .nav-item { display: flex; align-items: center; justify-content: center; padding: 16px 0; width: 100%; gap: 0; }
-        .sidebar.collapsed .nav-item i { margin: 0; width: auto; text-align: center; flex-shrink: 0; }
+        .sidebar.collapsed .nav-item i { margin: 0; width: auto; text-align: center; flex-shrink: 0; font-size: 22px;}
         .sidebar.collapsed .nav-item span { opacity: 0; max-width: 0; pointer-events: none; }
 
         .nav-item::after {
@@ -548,7 +548,7 @@ mount(function () {
 
                 <button class="sidebar-toggle-btn" id="sidebarToggle" aria-label="Toggle sidebar">
                     <span class="toggle-icon">
-                        <i class="fa-solid fa-chevron-right"></i>
+                        <i class="fa-solid fa-chevron-right" id="toggleIcon"></i>
                     </span>
                 </button>
 
