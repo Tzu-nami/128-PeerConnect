@@ -1,6 +1,6 @@
 <style>
     .mentor-card {
-        background: #fffffa;
+        background: #ffffff;
         border: 1.5px solid #e5e7eb;
         border-radius: 16px;
         overflow: hidden;
@@ -86,7 +86,7 @@
 
     {{-- Empty state --}}
     <div x-show="filteredMentors.length === 0" x-cloak
-         class="bg-[#fffffa] rounded-xl border border-gray-100 py-20 text-center shadow-sm">
+         class="bg-[#ffffff] rounded-xl border border-gray-100 py-20 text-center shadow-sm">
         <i class="fa-solid fa-chalkboard-user text-4xl text-gray-300 mb-4 block"></i>
         <p class="font-medium text-gray-500">No mentors found.</p>
         <p class="text-xs mt-1 text-gray-400">Try adjusting your search or filter.</p>
@@ -99,7 +99,7 @@
             <div class="mentor-card group flex flex-col w-full" @click="openModal(mentor)">
 
                 {{-- Card header --}}
-                <div class="p-3 flex gap-3 border-b border-gray-100 bg-[#fffffa] overflow-hidden">
+                <div class="p-3 flex gap-3 border-b border-gray-100 bg-[#ffffff] overflow-hidden">
                     <div class="w-20 h-20 flex-shrink-0 rounded-2xl overflow-hidden bg-gray-100 border border-gray-200 shadow-inner">
                         <img :src="mentor.avatar" :alt="mentor.lastName" class="w-full h-full object-cover">
                     </div>
@@ -133,7 +133,7 @@
                 </div>
 
                 {{-- Available days --}}
-                <div class="px-4 pb-4 pt-2 mt-auto flex justify-between items-end border-t border-gray-50 bg-[#fffffa] group-hover:bg-gray-50/50 transition-colors">
+                <div class="px-4 pb-4 pt-2 mt-auto flex justify-between items-end border-t border-gray-50 bg-[#ffffff] group-hover:bg-gray-50/50 transition-colors">
                     <div class="flex-1 pr-2 min-w-0">
                         <p class="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Available Days</p>
                         <div class="flex flex-wrap gap-1.5">
@@ -159,16 +159,16 @@
     {{-- Pagination --}}
     <div class="mt-6 flex justify-center items-center gap-2" x-show="totalPages > 1" x-cloak>
         <button @click="currentPage--" :disabled="currentPage === 1"
-                class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 bg-[#fffffa] text-slate-500 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition">
+                class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 bg-[#ffffff] text-slate-500 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition">
             <i class="fa-solid fa-chevron-left text-[10px]"></i>
         </button>
         <template x-for="page in pages" :key="page">
             <button @click="currentPage = page"
-                    :class="currentPage === page ? 'bg-[#1a3c2f] text-white shadow-sm' : 'bg-[#fffffa] border border-gray-200 text-slate-500 hover:bg-gray-100'"
+                    :class="currentPage === page ? 'bg-[#1a3c2f] text-white shadow-sm' : 'bg-[#ffffff] border border-gray-200 text-slate-500 hover:bg-gray-100'"
                     class="w-8 h-8 text-xs font-bold rounded-lg transition" x-text="page"></button>
         </template>
         <button @click="currentPage++" :disabled="currentPage === totalPages"
-                class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 bg-[#fffffa] text-slate-500 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition">
+                class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 bg-[#ffffff] text-slate-500 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition">
             <i class="fa-solid fa-chevron-right text-[10px]"></i>
         </button>
     </div>
@@ -176,7 +176,7 @@
     {{-- Modal --}}
     <template x-teleport="body">
         <div class="modal-overlay" x-show="showModal" @click.self="showModal = false" x-cloak>
-            <div class="bg-[#fffffa] w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col" style="max-height: 90vh;">
+            <div class="bg-[#ffffff] w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col" style="max-height: 90vh;">
                 <template x-if="selectedMentor">
                     <div class="contents">
 
@@ -201,7 +201,7 @@
                             </button>
                         </div>
 
-                        <div class="overflow-y-auto flex-1 p-6 space-y-6 bg-[#fffffa]">
+                        <div class="overflow-y-auto flex-1 p-6 space-y-6 bg-[#ffffff]">
                             <div>
                                 <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Teachable Subjects</p>
                                 <div class="flex flex-wrap gap-2">

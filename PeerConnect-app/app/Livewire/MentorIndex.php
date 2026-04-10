@@ -50,7 +50,7 @@ class MentorIndex extends Component
                 'yearLevel'     => $mp->user->studentProfile->yearLevel->name,
                 'degreeProgram' => $mp->user->studentProfile->degreeProgram->name,
                 'college'       => $mp->user->studentProfile->college->name,
-                'bookingUrl'    => route('student.bookings', ['mentor' => $mp->user_id]),
+                'bookingUrl'    => route('student.bookings', ['mentor' => $mp->id]),
             ];
         })->sortBy('lastName')->values();
 
