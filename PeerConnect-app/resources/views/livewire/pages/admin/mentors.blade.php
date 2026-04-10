@@ -37,7 +37,7 @@ state([
     'avatar' => null,
 
     'availabilities' => [
-        ['day_of_week' => '', 'start_time' => '', 'end_time' => '']
+        ['id' => '1', 'day_of_week' => '', 'start_time' => '', 'end_time' => '']
     ],
 
     'newSubjectCode' => '',
@@ -118,6 +118,10 @@ $openModal = action(function () {
 $closeModal = action(function () {
     $this->showModal = false;
     $this->showConfirm = false;
+
+    $this->reset(['up_mail', 'newMentor', 'emailError', 'avatar']);
+    $this->selectedSubjects = [];
+    $this->availabilities = [['id' => '1', 'day_of_week' => '', 'start_time' => '', 'end_time' => '']];
 });
 
 // For edit mentors
@@ -218,6 +222,10 @@ $updateMentor = action(function () {
 $closeEditModal = action(function () {
     $this->showEditModal = false;
     $this->showEditConfirm = false;
+
+    $this->editAvatar = null;
+    $this->selectedSubjects = [];
+    $this->availabilities = [];
 });
 
 // For add new subjects
@@ -233,6 +241,8 @@ $openSubjectModal = action(function () {
 $closeSubjectModal = action(function () {
     $this->showSubjectModal = false;
     $this->showSubjectConfirm = false;
+
+    $this->reset(['newSubjectCode', 'newSubjectName']);
 });
 
 // Find student email to give mentor access
@@ -783,7 +793,7 @@ mount(function () {
     </div>
 
     {{-- Add new mentor modal form --}}
-    <div x-show="$wire.showModal" x-cloak class="modal-overlay" wire:click.self="closeModal" @click.self="$wire.showModal = false">
+    <div x-show="$wire.showModal" x-cloak class="modal-overlay">
         <div class="bg w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col" style="max-height: 90vh;">
 
             {{-- Header --}}
@@ -910,7 +920,10 @@ mount(function () {
                         <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest m-0">Availability Schedule</h3>
                     </div>
                     
-                    <div>
+                    <div x-data="{
+                        avails: $wire.entangle('availabilities')
+                    }">
+                    <div wire:ignore>
                         <div class="grid grid-cols-[1fr_1fr_1fr_auto] gap-2 px-1 mb-1">
                             <label class="text-[10px] font-bold text-slate-500 uppercase">Day</label>
                             <label class="text-[10px] font-bold text-slate-500 uppercase">Start Time</label>
@@ -918,46 +931,48 @@ mount(function () {
                             <div class="w-8"></div> </div>
 
                         <div class="space-y-2">
-                            @foreach($availabilities as $i => $row)
-                                <div class="grid grid-cols-[1fr_1fr_1fr_auto] gap-2 items-center" wire:key="avail-{{ $i }}">
+                            <template x-for="(row, index) in avails" :key="row.id">
+                                <div class="grid grid-cols-[1fr_1fr_1fr_auto] gap-2 items-center">
                                     
                                     <div>
-                                        <select wire:model="availabilities.{{ $i }}.day_of_week" class="form-input text-xs h-10 w-full">
+                                        <select x-model="row.day_of_week" class="form-input text-xs h-10 w-full">
                                             <option value="">- Day -</option>
-                                            @foreach(['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as $day)
-                                                <option value="{{ $day }}">{{ ucfirst($day) }}</option>
-                                            @endforeach
+                                            <option value="monday">Monday</option>
+                                            <option value="tuesday">Tuesday</option>
+                                            <option value="wednesday">Wednesday</option>
+                                            <option value="thursday">Thursday</option>
+                                            <option value="friday">Friday</option>
+                                            <option value="saturday">Saturday</option>
                                         </select>
-                                        @error("availabilities.{$i}.day_of_week") <p class="mt-0.5 text-[10px] text-red-600">{{ $message }}</p> @enderror
                                     </div>
 
                                     <div>
-                                        <input type="time" wire:model="availabilities.{{ $i }}.start_time" class="form-input text-xs h-10 w-full" />
-                                        @error("availabilities.{$i}.start_time") <p class="mt-0.5 text-[10px] text-red-600">{{ $message }}</p> @enderror
+                                        <input type="time" x-model="row.start_time" class="form-input text-xs h-10 w-full" />
                                     </div>
 
                                     <div>
-                                        <input type="time" wire:model="availabilities.{{ $i }}.end_time" class="form-input text-xs h-10 w-full" />
-                                        @error("availabilities.{$i}.end_time") <p class="mt-0.5 text-[10px] text-red-600">{{ $message }}</p> @enderror
+                                        <input type="time" x-model="row.end_time" class="form-input text-xs h-10 w-full" />
                                     </div>
 
                                     <div class="flex items-center justify-center">
-                                        @if(count($availabilities) > 1)
-                                            <button type="button" wire:click="toggleAvailabilityOff({{ $i }})" class="w-8 h-8 flex items-center justify-center rounded-lg bg-red-50 text-red-400 hover:bg-red-100 hover:text-red-600 transition">
+                                        <template x-if="avails.length > 1">
+                                            <button type="button" @click="avails.splice(index, 1)" class="w-8 h-8 flex items-center justify-center rounded-lg bg-red-50 text-red-400 hover:bg-red-100 hover:text-red-600 transition">
                                                 <i class="fa-solid fa-xmark text-xs"></i>
                                             </button>
-                                        @else
+                                        </template>
+                                        <template x-if="avails.length <= 1">
                                             <div class="w-8"></div>
-                                        @endif
+                                        </template>
                                     </div>
                                 </div>
-                            @endforeach
+                            </template>
                         </div>
 
-                        <button wire:click="toggleAvailabilityOn" type="button" class="mt-3 flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-800 transition">
+                        <button @click="avails.push({id: Date.now() + Math.random(), day_of_week: '', start_time: '', end_time: ''})" type="button" class="mt-3 flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-800 transition">
                             <i class="fa-solid fa-plus text-[10px]"></i> Add more days or time slots
                         </button>
-                        @error('availabilities') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                    </div>
+                    @error('availabilities') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
                     </div>
                 </div>
 
@@ -1002,7 +1017,7 @@ mount(function () {
     </div>
 
     {{-- Edit Mentor modal --}}
-    <div x-show="showEditModal" x-cloak class="modal-overlay" @click.self="showEditModal = false; $wire.closeEditModal()">
+    <div x-show="showEditModal" x-cloak class="modal-overlay">
         <div class="bg w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col" style="max-height: 90vh;">
             {{-- Header --}}
             <div class="px-8 py-6 bg-[#fffffa] border-b flex justify-between items-center flex-shrink-0">
@@ -1121,7 +1136,7 @@ mount(function () {
                             <div class="w-8"></div> </div>
 
                         <div class="space-y-2">
-                            <template x-for="(row, index) in editForm.availabilities" :key="index">
+                            <template x-for="(row, index) in editForm.availabilities" :key="row.id">
                                 <div class="grid grid-cols-[1fr_1fr_1fr_auto] gap-2 items-center">
                                     
                                     <div>
@@ -1158,7 +1173,7 @@ mount(function () {
                             </template>
                         </div>
 
-                        <button @click="editForm.availabilities.push({day_of_week: '', start_time: '', end_time: ''})" type="button" class="mt-3 flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-800 transition">
+                        <button @click="editForm.availabilities.push({id: Date.now(), day_of_week: '', start_time: '', end_time: ''})" type="button" class="mt-3 flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-800 transition">
                             <i class="fa-solid fa-plus text-[10px]"></i> Add more days or time slots
                         </button>
                     </div>
@@ -1212,7 +1227,7 @@ mount(function () {
     </div>
 
     {{-- Subject Modal --}}
-    <div x-show="$wire.showSubjectModal" x-cloak class="modal-overlay" wire:click.self="closeSubjectModal" @click.self="$wire.showSubjectModal = false">
+    <div x-show="$wire.showSubjectModal" x-cloak class="modal-overlay">
         <div class="bg-[#fffffa] w-full max-w-md rounded-2xl shadow-2xl overflow-hidden">
 
             {{-- Header --}}
@@ -1400,6 +1415,7 @@ mount(function () {
                     for (const day in mentor.schedule) {
                         mentor.schedule[day].slots.forEach(slot => {
                             avails.push({
+                                id: Date.now() + Math.random(),
                                 day_of_week: day.toLowerCase(),
                                 start_time: this.convertTime(slot.start),
                                 end_time: this.convertTime(slot.end)
@@ -1408,6 +1424,7 @@ mount(function () {
                     }
                     if (avails.length === 0) {
                         avails.push({
+                            id: Date.now() + Math.random(),
                             day_of_week: '',
                             start_time: '',
                             end_time: ''
