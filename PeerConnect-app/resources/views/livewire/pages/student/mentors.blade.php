@@ -358,11 +358,11 @@ color:#065f46;
             <span class="text-[10px] font-bold uppercase tracking-widest text-gray-400 pl-2 pr-1">Day</span>
             <div class="flex gap-1">
                 <button @click="selectedDay = ''; currentPage = 1"
-                        :class="selectedDay === '' ? 'bg-[#7b1d1d] text-white shadow-md' : 'bg-white text-slate-600 border border-gray-200 hover:bg-gray-100'"
+                        :class="selectedDay === '' ? 'bg-up-maroon text-white shadow-md' : 'bg-white text-slate-600 border border-gray-200 hover:bg-gray-100'"
                         class="px-3 py-1.5 text-xs font-bold rounded transition">All</button>
                 <template x-for="day in ['Mon','Tue','Wed','Thu','Fri','Sat']" :key="day">
                     <button @click="selectedDay = day; currentPage = 1"
-                            :class="selectedDay === day ? 'bg-[#7b1d1d] text-white shadow-md' : 'bg-white text-slate-600 border border-gray-200 hover:bg-gray-100'"
+                            :class="selectedDay === day ? 'bg-up-maroon text-white shadow-md' : 'bg-white text-slate-600 border border-gray-200 hover:bg-gray-100'"
                             class="px-3 py-1.5 text-xs font-bold rounded transition"
                             x-text="day"></button>
                 </template>
@@ -373,7 +373,7 @@ color:#065f46;
         <div class="relative shadow-sm">
             <i class="fa-solid fa-filter absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
             <select x-model="selectedSubject" @change="currentPage = 1"
-                    class="appearance-none border border-gray-200 rounded-lg pl-8 pr-8 py-1.5 text-xs font-medium text-slate-700 outline-none cursor-pointer focus:ring-1 focus:border-up-maroon focus:ring-[#7b1d1d] bg-white h-[34px]">
+                    class="appearance-none border border-gray-200 rounded-lg pl-8 pr-8 py-1.5 text-xs font-medium text-slate-700 outline-none cursor-pointer focus:ring-1 focus:border-up-maroon focus:ring-up-maroon bg-white h-[34px]">
                 <option value="">All Subjects</option>
                 @foreach($this->subjects as $subject)
                     <option value="{{ $subject->id }}">{{ $subject->code }}</option>
@@ -386,7 +386,7 @@ color:#065f46;
         <div class="relative shadow-sm">
             <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
             <input type="text" x-model="searchQuery" @input="currentPage = 1" placeholder="Search by name..."
-                class="pl-8 pr-3 py-1.5 text-xs font-medium text-slate-700 placeholder-gray-400 border border-gray-200 rounded-lg bg-white outline-none focus:ring-1 focus:border-[#7b1d1d] focus:ring-[#7b1d1d] w-56 h-[34px] transition-shadow">
+                class="pl-8 pr-3 py-1.5 text-xs font-medium text-slate-700 placeholder-gray-400 border border-gray-200 rounded-lg bg-white outline-none focus:ring-1 focus:border-up-maroon focus:ring-up-maroon w-56 h-[34px] transition-shadow">
         </div>
         
     </div>
