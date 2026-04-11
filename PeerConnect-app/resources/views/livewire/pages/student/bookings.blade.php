@@ -210,6 +210,7 @@ $submitBooking = action(function () {
 
     $profile = StudentProfiles::where('user_id', auth()->id())->first();
 
+    
     $hasActive = Bookings::where('student_id', $profile->id)
         ->whereRaw("booking_status::text IN ('pending', 'accepted')")
         ->exists();
@@ -498,7 +499,7 @@ $dismissFeedbackSubmitted = action(function () {
         .active-booking-banner.accepted .active-booking-banner-icon { background: #6ee7b7; color: #065f46; }
         .active-booking-body { padding: 24px; }
         .booking-detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-        .booking-detail-item label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #9ca3af; display: block; margin-bottom: 3px; }
+        .booking-detail-item label { font-size: 11px; font-weight: 600; letter-spacing: 0.05em; color: rgb(107 114 128); display: block; margin-bottom: 3px; }
         .booking-detail-item p { font-size: 14px; font-weight: 600; color: #1f2937; margin: 0; }
         .booking-detail-item.full { grid-column: 1 / -1; }
 
@@ -702,7 +703,6 @@ $dismissFeedbackSubmitted = action(function () {
                         ->whereRaw("booking_status::text IN ('pending', 'accepted')")
                         ->latest()->first()
                     : null;
-
                 $completedBooking = null;
                     if($studentProfileForCheck) {
                         // If student no answer feedback forms within 2 days
@@ -920,68 +920,73 @@ $dismissFeedbackSubmitted = action(function () {
                     $statusLabel = $isPending ? 'Awaiting Approval' : 'Accepted';
                     $statusIcon  = $isPending ? '<i class="fa-solid fa-hourglass-half"></i>' : '<i class="fa-solid fa-circle-check"></i>';
                     $statusDesc  = $isPending
-                        ? 'Your booking request has been submitted and is waiting for the mentor\'s confirmation. You cannot make a new booking until this one is resolved.'
-                        : 'Your session has been confirmed! Please be on time. You cannot make a new booking until this session is completed.';
+                        ? 'Your booking request has been submitted. You cannot make a new booking until this one is resolved.'
+                        : 'Your session has been confirmed! Please be on time.';
                 @endphp
 
                 <div class="active-booking-card" x-data="{ confirmCancel: false }">
                     <div class="active-booking-banner {{ $statusClass }}">
-                        <div class="active-booking-banner-icon">{!! $statusIcon !!}</div>
+                        <div class="active-booking-banner-icon w-12 h-12 text-xl">{!! $statusIcon !!}</div>
                         <div class="flex-1 min-w-0">
-                            <p class="text-sm font-bold {{ $isPending ? 'text-yellow-900' : 'text-green-900' }} mb-0.5">
-                                You have an active booking &mdash;
-                                <span class="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full {{ $isPending ? 'bg-yellow-200 text-yellow-800' : 'bg-green-200 text-green-800' }}">
+                            <div class="flex flex-wrap items-center gap-3 mb-1">
+                                <h2 class="text-xl font-extrabold tracking-tight {{ $isPending ? 'text-yellow-900' : 'text-green-900' }}">
+                                    You have an active booking 
+                                </h2>
+                                <span class="inline-flex items-center gap-1 text-l font-bold px-3 py-0.5 rounded-full {{ $isPending ? 'bg-yellow-200 text-yellow-800' : 'bg-green-200 text-green-800' }}">
                                     {{ $statusLabel }}
                                 </span>
-                            </p>
-                            <p class="text-xs {{ $isPending ? 'text-yellow-700' : 'text-green-700' }} leading-snug">{{ $statusDesc }}</p>
+                            </div>
+                            <p class="text-sm {{ $isPending ? 'text-yellow-800' : 'text-green-800' }} leading-snug">{{ $statusDesc }}</p>
                         </div>
                     </div>
 
                     <div class="active-booking-body">
                         <h2 class="text-base font-semibold text-gray-900 mb-4">Session Details</h2>
                         <div class="booking-detail-grid">
-                            <div class="booking-detail-item"><label>Subject</label><p>{{ $ab->subject->code ?? '—' }} &mdash; {{ $ab->subject->name ?? '' }}</p></div>
-                            <div class="booking-detail-item"><label>Tutorial Mode</label><p>{{ $ab->tutorialMode->mode ?? '—' }}</p></div>
-                            <div class="booking-detail-item full"><label>Topic</label><p class="line-clamp-1 break-words" title="{{ $ab->topic }}">{{ $ab->topic }}</p></div>
-                            <div class="booking-detail-item full"><label>Peer Mentor</label><p>{{ strtoupper($ab->mentor->user->lastName ?? 'MENTOR') }}, {{ $ab->mentor->user->firstName ?? 'TBD' }}</p></div>
-                            <div class="booking-detail-item"><label>Date</label><p>{{ \Carbon\Carbon::parse($ab->date)->format('l, F j, Y') }}</p></div>
-                            <div class="booking-detail-item"><label>Time</label><p>{{ \Carbon\Carbon::parse($ab->schedule_start)->format('g:i A') }} &ndash; {{ \Carbon\Carbon::parse($ab->schedule_end)->format('g:i A') }}</p></div>
+                            <div class="booking-detail-item min-w-0"><label>Subject</label><p class="truncate" title="{{ $ab->subject->code ?? '—' }} — {{ $ab->subject->name ?? '' }}">{{ $ab->subject->code ?? '—' }} &mdash; {{ $ab->subject->name ?? '' }}</p></div>
+                            <div class="booking-detail-item min-w-0"><label>Tutorial Mode</label><p class="truncate" title="{{ $ab->tutorialMode->mode ?? '—' }}">{{ $ab->tutorialMode->mode ?? '—' }}</p></div>
+                            <div class="booking-detail-item min-w-0"><label>Topic</label><p class="line-clamp-1 break-words" title="{{ $ab->topic }}">{{ $ab->topic }}</p></div>
+                            <div class="booking-detail-item min-w-0"><label>Peer Mentor</label><p class="truncate" title="{{ strtoupper($ab->mentor->user->lastName ?? 'MENTOR') }}, {{ $ab->mentor->user->firstName ?? 'TBD' }}">{{ strtoupper($ab->mentor->user->lastName ?? 'MENTOR') }}, {{ $ab->mentor->user->firstName ?? 'TBD' }}</p></div>
+                            <div class="booking-detail-item min-w-0"><label>Date</label><p>{{ \Carbon\Carbon::parse($ab->date)->format('l, F j, Y') }}</p></div>
+                            <div class="booking-detail-item min-w-0"><label>Time</label><p>{{ \Carbon\Carbon::parse($ab->schedule_start)->format('g:i A') }} &ndash; {{ \Carbon\Carbon::parse($ab->schedule_end)->format('g:i A') }}</p></div>
                         </div>
 
                         <div class="mt-6 pt-5 border-t border-gray-100 flex items-center justify-between gap-4">
-                            <p class="flex items-center gap-2 text-xs text-gray-400 flex-1">
-                                <i class="fa-solid fa-circle-info text-gray-300 flex-shrink-0"></i>
+                            <p class="flex items-center gap-2 text-xs font-bold text-gray-500 flex-1">
+                                <i class="fa-solid fa-circle-info text-gray-500 flex-shrink-0 font-bold"></i>
                                 You may cancel this booking at any time.
                             </p>
-                            <div x-show="!confirmCancel">
-                                <button type="button" @click="confirmCancel = true"
+                            <div>
+                                <button type="button" @click="openConfirmModal({
+                                        title: 'Cancel Booking?',
+                                        body: 'Are you sure you want to cancel this session? You will need to submit a new request if you change your mind.',
+                                        variant: 'cancel',
+                                        confirmText: 'Confirm',
+                                        loadingText: 'Cancelling...',
+                                        onConfirm: async () => { await $wire.cancelBooking(); }
+                                    })"
                                     class="flex-shrink-0 flex items-center gap-2 px-4 py-2 bg-red-50 hover:bg-red-100 text-red-700 font-semibold text-sm rounded-lg border border-red-200 transition-colors">
                                     <i class="fa-solid fa-ban"></i> Cancel Booking
                                 </button>
                             </div>
-                            <div x-show="confirmCancel" style="display:none;" class="flex items-center gap-2">
-                                <span class="text-xs font-semibold text-red-700">Are you sure?</span>
-                                <button type="button" wire:click="cancelBooking"
-                                    wire:loading.attr="disabled" wire:loading.class="opacity-60 cursor-not-allowed" wire:target="cancelBooking"
-                                    class="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-lg transition-colors">
-                                    <span wire:loading.remove wire:target="cancelBooking">Cancel</span>
-                                    <span wire:loading wire:target="cancelBooking"><i class="fa-solid fa-spinner fa-spin"></i> Cancelling...</span>
-                                </button>
-                                <button type="button" @click="confirmCancel = false"
-                                    class="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs font-semibold rounded-lg transition-colors">
-                                    Go Back
-                                </button>
-                            </div>
+                            
                         </div>
                     </div>
                 </div>
 
             {{-- ══ BOOKING FORM ══ --}}
             @elseif(!$completedBooking)
-            <div class="bg-white p-6 rounded-lg shadow-sm border-gray-200"
+            <div class="flex-1 min-w-0 items-center gap-4 rounded-lg pb-6 pt-0">
+                <h1 class="text-3xl font-extrabold tracking-tight text-transparent bg-clip-text bg-up-maroon flex items-center gap-3">
+                    <i class="fa-solid fa-calendar-plus text-up-maroon text-2xl drop-shadow-sm"></i>
+                    Request An Enrichment Session
+                </h1>
+                <p class="text-sm font-medium text-slate-500 leading-snug mt-1">Please fill out the details below. Your request will be reviewed by the peer mentor.</p>
+            </div>
+            <div class="bg-white pl-6 pr-6 pb-6 pt-4 rounded-lg shadow-sm border-gray-200 overflow-hidden"
                 x-data="{
                     // Validation of data
+                    subject_id: $wire.entangle('subject_id'),
                     date: $wire.entangle('date'),
                     start_time: $wire.entangle('schedule_start'),
                     end_time: $wire.entangle('schedule_end'),
@@ -991,8 +996,12 @@ $dismissFeedbackSubmitted = action(function () {
                     timeError: '',
 
                     init() {
+                        this.$watch('subject_id', () => { 
+                            if (!this.isMentorLocked) this.mentor_id = ''; 
+                        });
                         // Check unavailable days for locked mentors
                         this.$watch('date', value => {
+                            if (!this.isMentorLocked) this.mentor_id = '';
                             this.dateError = '';
                             if(!value) {
                                 this.validateTime();
@@ -1018,8 +1027,14 @@ $dismissFeedbackSubmitted = action(function () {
                         });
 
                         // Check time inputs
-                        this.$watch('start_time', () => this.validateTime());
-                        this.$watch('end_time', () => this.validateTime());
+                        this.$watch('start_time', () => {
+                            if (!this.isMentorLocked) this.mentor_id = '';
+                            this.validateTime()
+                        });
+                        this.$watch('end_time', () => {
+                            if (!this.isMentorLocked) this.mentor_id = '';
+                            this.validateTime()
+                        });
                     },
 
                     validateTime() {
@@ -1082,14 +1097,12 @@ $dismissFeedbackSubmitted = action(function () {
                         return choices;
                     }
                 }">
-                <h2 class="text-lg font-semibold text-gray-900 mb-1">Request an Enrichment Session!</h2>
-                <p class="text-gray-500 text-sm mb-6">Please fill out all required fields. Your request will then be reviewed by the peer mentor.</p>
 
-                <form id="bookingForm" wire:submit.prevent="submitBooking" class="space-y-2">
+                <form id="bookingForm" wire:submit.prevent="submitBooking" class="space-y-3">
                     <div>
                         <label class="block text-base font-medium text-gray-700 mb-1">Subject<span class="text-red-500">*</span></label>
                         <select wire:model="subject_id" class="w-full rounded-lg border-gray-300 shadow-sm text-base px-2 py-1">
-                            <option value="">--- Select a Subject ---</option>
+                            <option value="" disabled>--- Select a Subject ---</option>
                             @foreach($this->subjects as $subject)
                                 <option value="{{ $subject['id'] }}">{{ strtoupper($subject['code']) }} - {{ $subject['name'] }}</option>
                             @endforeach
@@ -1104,7 +1117,7 @@ $dismissFeedbackSubmitted = action(function () {
                     <div>
                         <label class="block text-base font-medium text-gray-700 mb-1">Tutorial Mode<span class="text-red-500">*</span></label>
                         <select wire:model="tutorialMode_id" class="w-full rounded-lg border-gray-300 shadow-sm text-base px-2 py-1">
-                            <option value="">--- Select Mode of Tutoring ---</option>
+                            <option value="" disabled>--- Select Mode of Tutoring ---</option>
                             @foreach($this->tutorialModes as $mode)
                                 <option value="{{ $mode['id'] }}">{{ $mode['mode'] }}</option>
                             @endforeach
@@ -1134,9 +1147,7 @@ $dismissFeedbackSubmitted = action(function () {
                     <div>
                         <label class="block text-base font-medium text-gray-700 mb-1">Preferred Mentor<span class="text-red-500">*</span></label>
                         <select wire:model="mentor_id" :disabled="isMentorLocked" class="w-full rounded-lg border-gray-300 shadow-sm text-base px-2 py-1 disabled:bg-gray-100 disabled:text-gray-900 disabled:cursor-not-allowed">
-                            <template x-if="!isMentorLocked">
-                                <option value="" x-text="filteredMentors.length === 0 ? '--- No mentors available. Please select a different date or time slot. ---' : '--- Select a mentor ---'"></option>
-                            </template>
+                            <option value="" x-text="filteredMentors.length === 0 ? '--- No mentors available. Please select a different date or time slot. ---' : '--- Select a mentor ---'" disabled></option>
                             <template x-if="filteredMentors.length > 0 && !isMentorLocked">
                                 <option value="any" class="bg-blue-100">ANY (Alerts all available mentors)</option>
                             </template>
@@ -1156,10 +1167,10 @@ $dismissFeedbackSubmitted = action(function () {
                         <p class="text-xs font-bold text-blue-800 mb-1">
                             <i class="fa-solid fa-triangle-exclamation mr-1"></i> First Come First Serve
                         </p>
-                        <p class="text-[11px] text-blue-600 mb-2 leading-tight">
+                        <p class="text-xs text-blue-800 mb-2 leading-tight">
                             Your request will be sent to the following mentors. The first to accept will take your session.
                         </p>
-                        <ul class="text-[12px] font-semibold text-blue-700 space-y-0.5 pl-1">
+                        <ul class="text-xs font-semibold text-blue-800 space-y-0.5 pl-1">
                             <template x-for="mentor in filteredMentors" :key="mentor.profile_id">
                                 <li class="flex items-center gap-1.5">
                                     <span class="w-1 h-1 rounded-full bg-blue-400"></span>
@@ -1184,7 +1195,9 @@ $dismissFeedbackSubmitted = action(function () {
         </div>
 
         <div class="lg:col-span-1 space-y-6">
-            <div class="bg-white rounded-xl shadow-sm border-gray-200 overflow-hidden p-6" 
+            
+            {{-- 1. Student Profile Toggle --}}
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden" 
                 x-data="{ 
                     open: $wire.entangle('toggleProfileOpen'),
                     college: $wire.entangle('college_id'),
@@ -1216,17 +1229,17 @@ $dismissFeedbackSubmitted = action(function () {
                     </svg>
                 </button>
 
-                <div x-show="open" style="display: none;" x-transition class="px-5 pb-5 border-t border-gray-100">
-                    <div x-show="showSuccess" style="display: none;" x-transition class="mt-3 mb-2 text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2">Profile Updated!</div>
-                    <form wire:submit.prevent="saveProfile" class="space-y-4 mt-4">
+                <div x-show="open" style="display: none;" x-transition class="px-5 py-5 border-t border-gray-100">
+                    <div x-show="showSuccess" style="display: none;" x-transition class="mb-4 text-sm font-semibold text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2">Profile Updated!</div>
+                    <form wire:submit.prevent="saveProfile" class="space-y-4">
                         <div>
-                            <label class="block text-base font-medium text-gray-700 mb-1">Student Number<span class="text-red-500">*</span></label>
-                            <input type="text" wire:model="student_num" class="w-full rounded-lg border-gray-300 shadow-sm text-base px-2 py-1" placeholder="e.g 2023-00000" maxlength="10">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Student Number<span class="text-red-500">*</span></label>
+                            <input type="text" wire:model="student_num" class="w-full rounded-lg border-gray-300 shadow-sm text-sm px-3 py-2" placeholder="e.g 2023-00000" maxlength="10">
                             @error('student_num') <span class="mt-1 text-xs text-red-600">{{ $message }}</span> @enderror
                         </div>
                         <div>
-                            <label class="block text-base font-medium text-gray-700 mb-1">College<span class="text-red-500">*</span></label>
-                            <select x-model="college" class="w-full rounded-lg border-gray-300 shadow-sm text-base px-2 py-1">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">College<span class="text-red-500">*</span></label>
+                            <select x-model="college" class="w-full rounded-lg border-gray-300 shadow-sm text-sm px-3 py-2">
                                 <option value="">--- College ---</option>
                                 @foreach($this->colleges as $c)
                                     <option value="{{ $c['id'] }}">{{ $c['name'] }}</option>
@@ -1235,8 +1248,8 @@ $dismissFeedbackSubmitted = action(function () {
                             @error('college_id') <span class="mt-1 text-xs text-red-600">{{ $message }}</span> @enderror
                         </div>
                         <div>
-                            <label class="block text-base font-medium text-gray-700 mb-1">Degree Program<span class="text-red-500">*</span></label>
-                            <select x-model="degree" x-bind:disabled="!college" class="w-full rounded-lg border-gray-300 shadow-sm text-base px-2 py-1 disabled:bg-gray-100">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Degree Program<span class="text-red-500">*</span></label>
+                            <select x-model="degree" x-bind:disabled="!college" class="w-full rounded-lg border-gray-300 shadow-sm text-sm px-3 py-2 disabled:bg-gray-100">
                                 <option value="">--- Degree Program ---</option>
                                 <template x-for="deprog in filteredDeProgs" :key="deprog.id">
                                     <option :value="deprog.id" x-text="deprog.name"></option>
@@ -1245,8 +1258,8 @@ $dismissFeedbackSubmitted = action(function () {
                             @error('degreeProgram_id') <span class="mt-1 text-xs text-red-600">{{ $message }}</span> @enderror
                         </div>
                         <div>
-                            <label class="block text-base font-medium text-gray-700 mb-1">Year Level<span class="text-red-500">*</span></label>
-                            <select wire:model="yearLevel_id" class="w-full rounded-lg border-gray-300 shadow-sm text-base px-2 py-1">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Year Level<span class="text-red-500">*</span></label>
+                            <select wire:model="yearLevel_id" class="w-full rounded-lg border-gray-300 shadow-sm text-sm px-3 py-2">
                                 <option value="">--- Year Level ---</option>
                                 @foreach($this->yearLevels as $level)
                                     <option value="{{ $level['id'] }}">{{ $level['name'] }}</option>
@@ -1254,53 +1267,62 @@ $dismissFeedbackSubmitted = action(function () {
                             </select>
                             @error('yearLevel_id') <span class="mt-1 text-xs text-red-600">{{ $message }}</span> @enderror
                         </div>
-                        <button type="submit" class="w-full bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white font-medium py-2 px-4 rounded-lg text-sm transition-colors"
+                        <button type="submit" class="w-full bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white font-bold py-2.5 px-4 rounded-lg text-sm transition-colors mt-2"
                             wire:loading.attr="disabled" wire:loading.class="opacity-60 cursor-not-allowed" wire:target="saveProfile">
                             <span wire:loading.remove wire:target="saveProfile">{{ auth()->user()->studentProfile ? 'Update Profile' : 'Save Profile' }}</span>
-                            <span wire:loading wire:target="saveProfile">Saving...</span>
+                            <span wire:loading wire:target="saveProfile"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Saving...</span>
                         </button>
                     </form>
                 </div>
             </div>
 
-            <div class="bg-white rounded-xl shadow-sm border-gray-200 overflow-hidden p-6">
-                <h3 class="text-base font-semibold text-gray-900 mb-4">Recent Bookings</h3>
-                @forelse($this->studentBookings as $booking)
-                    <div class="mb-4 pb-4 border-b border-gray-100 last:border-0 last:mb-0 last:pb-0">
-                        <div class="flex items-start justify-between gap-3">
-                            <div class="flex-1 min-w-0">
-                                <p class="text-sm font-medium text-gray-800">{{ strtoupper($booking->subject->code) }}</p>
-                                <p class="text-xs font-medium text-gray-800 truncate" title="{{ $booking->topic }}">{{ $booking->topic }}</p>
-                                <p class="text-xs font-medium text-gray-800">{{ strtoupper($booking->mentor->user->lastName ?? 'MENTOR') }} {{ $booking->mentor->user->firstName ?? 'TBD' }}</p>
+            {{-- 2. Recent Bookings Toggle --}}
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden" x-data="{ open: false }">
+                <button @click="open = !open" type="button" class="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-gray-50 transition-colors">
+                    <span class="text-base font-semibold text-gray-900">Recent Bookings</span>
+                    <svg class="w-4 h-4 text-gray-400 transition-transform duration-200" :class="{ 'rotate-180': open }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                    </svg>
+                </button>
+                
+                <div x-show="open" style="display: none;" x-transition class="px-5 pb-5 pt-2 border-t border-gray-100">
+                    @forelse($this->studentBookings as $booking)
+                        <div class="mb-4 pb-4 border-b border-gray-100 last:border-0 last:mb-0 last:pb-0">
+                            <div class="flex items-start justify-between gap-3">
+                                <div class="flex-1 min-w-0">
+                                    <p class="text-sm font-bold text-gray-800">{{ strtoupper($booking->subject->code) }}</p>
+                                    <p class="text-xs font-medium text-gray-500 mt-0.5">Mentor: {{ strtoupper($booking->mentor->user->lastName ?? 'MENTOR') }}, {{ $booking->mentor->user->firstName ?? 'TBD' }}</p>
+                                    <p class="text-xs font-medium text-gray-500 truncate mt-0.5" title="{{ $booking->topic }}">Topic: {{ $booking->topic }}</p>
+                                </div>
+                                <div class="flex-shrink-0 mt-1">
+                                    @php
+                                        $statusColors = match($booking->booking_status) {
+                                            'pending' => 'bg-yellow-100 text-yellow-800',
+                                            'accepted' => 'bg-green-100 text-green-800',
+                                            'rejected' => 'bg-red-100 text-red-800',
+                                            'completed' => 'bg-green-100 text-green-800',
+                                            'cancelled' => 'bg-red-100 text-red-800',
+                                            'closed'    => 'bg-purple-100 text-purple-800',
+                                            'no-show'   => 'bg-red-100 text-red-800',
+                                            default     => 'bg-gray-100 text-gray-800',
+                                        };
+                                    @endphp
+                                    <span class="text-xs font-bold px-2.5 py-1 rounded-full capitalize {{ $statusColors }}">
+                                        {{ str_replace('_', ' ', $booking->booking_status) }}
+                                    </span>
+                                </div>
                             </div>
-                            <div class="flex-shrink-0">
-                            @php
-                                $statusColors = match($booking->booking_status) {
-                                    'pending' => 'bg-yellow-100 text-yellow-800',
-                                    'accepted' => 'bg-green-100 text-green-800',
-                                    'rejected' => 'bg-red-100 text-red-800',
-                                    'completed' => 'bg-green-100 text-green-800',
-                                    'cancelled' => 'bg-red-100 text-red-800',
-                                    'closed'    => 'bg-purple-100 text-purple-800',
-                                    'no-show'   => 'bg-red-100 text-red-800',
-                                    default     => 'bg-gray-100 text-gray-800',
-                                };
-                            @endphp
-                            <span class="text-xs font-medium px-2 py-1 rounded-full capitalize {{ $statusColors }}">
-                                {{ str_replace('_', ' ', $booking->booking_status) }}
-                            </span>
+                            <p class="text-xs text-gray-500 mt-1 font-medium">
+                                <i class="fa-regular fa-calendar mr-1"></i> {{ \Carbon\Carbon::parse($booking->date)->format('M j, Y (D)') }} &bull;
+                                <i class="fa-regular fa-clock mx-1"></i> {{ \Carbon\Carbon::parse($booking->schedule_start)->format('g:i A') }} - {{ \Carbon\Carbon::parse($booking->schedule_end)->format('g:i A') }}
+                            </p>
                         </div>
-                        </div>
-                        <p class="text-xs text-gray-400 mt-1">
-                            {{ \Carbon\Carbon::parse($booking->date)->format('l, F j, Y') }},
-                            {{ \Carbon\Carbon::parse($booking->schedule_start)->format('g:i A') }} - {{ \Carbon\Carbon::parse($booking->schedule_end)->format('g:i A') }}
-                        </p>
-                    </div>
-                @empty
-                    <p class="text-sm text-gray-500 text-center py-4">No recent bookings.</p>
-                @endforelse
+                    @empty
+                        <p class="text-sm text-gray-500 text-center py-4">No recent bookings found.</p>
+                    @endforelse
+                </div>
             </div>
-        </div>
+
         </div>
             </main>
         </div>
@@ -1308,7 +1330,7 @@ $dismissFeedbackSubmitted = action(function () {
 
 <!-- CONFIRMATION MODAL -->
     <div id="confirmModal" style="display:none;" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-        <div class="bg-[#fffffa] rounded-xl p-6 max-w-sm w-full mx-4 shadow-2xl" id="confirmModalBox">
+        <div class="bg-[#ffffff] rounded-xl p-6 max-w-sm w-full mx-4 shadow-2xl" id="confirmModalBox">
             <div class="flex items-center gap-3 mb-3">
                 <div id="confirmIconWrap" class="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0"></div>
                 <h3 id="confirmTitle" class="text-base font-bold text-gray-900"></h3>
@@ -1322,7 +1344,7 @@ $dismissFeedbackSubmitted = action(function () {
         </div>
     </div>
 
-    </div>
+
 
 <script>
     const sidebar = document.getElementById('sidebar');
@@ -1348,11 +1370,12 @@ $dismissFeedbackSubmitted = action(function () {
 
     function closeConfirmModal() { confirmModal.style.display = 'none'; confirmOkBtn.onclick = null; }
 
-    function openConfirmModal({ title, body, meta, variant, onConfirm }) {
+    function openConfirmModal({ title, body, meta, confirmText, loadingText, variant, onConfirm }) {
         const variants = {
             accept:  { iconHtml: iconCheck('#059669'), iconBg: '#d1fae5', btnClass: 'bg-emerald-600 hover:bg-emerald-700', label: 'Confirm' },
             reject:  { iconHtml: iconX('#dc2626'),     iconBg: '#fee2e2', btnClass: 'bg-red-600 hover:bg-red-700',         label: 'Reject'  },
             neutral: { iconHtml: iconInfo('#64748b'),  iconBg: '#f1f5f9', btnClass: 'bg-gray-700 hover:bg-gray-800',       label: 'Confirm' },
+            cancel: { iconHtml: iconX('#dc2626'), iconBg: '#fee2e2', btnClass: 'bg-red-700 hover:bg-red-800', label: 'Cancel'  },
         };
         const v = variants[variant] || variants.neutral;
         confirmIconWrap.style.background = v.iconBg;
@@ -1362,8 +1385,33 @@ $dismissFeedbackSubmitted = action(function () {
         confirmMeta.innerHTML            = meta || '';
         confirmMeta.style.display        = meta ? 'block' : 'none';
         confirmOkBtn.className   = `px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors ${v.btnClass}`;
-        confirmOkBtn.textContent = v.label;
-        confirmOkBtn.onclick     = () => { closeConfirmModal(); onConfirm(); };
+        confirmOkBtn.textContent = confirmText || v.label;
+        confirmOkBtn.onclick = async () => { 
+                // 1. Trigger visual loading state
+                const originalText = confirmOkBtn.textContent;
+                confirmOkBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i>${loadingText || 'Processing...'}`;
+                confirmOkBtn.classList.add('opacity-70', 'cursor-not-allowed');
+                confirmOkBtn.style.pointerEvents = 'none';
+                
+                confirmCancelBtn.disabled = true;
+                confirmCancelBtn.classList.add('opacity-50', 'cursor-not-allowed');
+
+                try {
+                    const result = onConfirm();
+                    if (result && typeof result.then === 'function') {
+                        await result;
+                    }
+                } finally {
+                    confirmOkBtn.textContent = originalText;
+                    confirmOkBtn.classList.remove('opacity-70', 'cursor-not-allowed');
+                    confirmOkBtn.style.pointerEvents = 'auto';
+                    
+                    confirmCancelBtn.disabled = false;
+                    confirmCancelBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    
+                    closeConfirmModal();
+                }
+            };
         confirmModal.style.display = 'flex';
     }
 
@@ -1393,7 +1441,7 @@ $dismissFeedbackSubmitted = action(function () {
             mentorText = mentorEl.options[mentorEl.selectedIndex].text;
         } else {
             // Find submit component
-            const componentElement = bookingSubmitBtn.closest('[wire\\:id');
+            const componentElement = bookingSubmitBtn.closest('[wire\\:id]');
             if(componentElement) {
                 const livewireComponent = Livewire.find(componentElement.getAttribute('wire:id'));
                 if(livewireComponent && livewireComponent.get('isMentorLocked')) {
