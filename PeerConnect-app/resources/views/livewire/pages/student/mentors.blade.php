@@ -353,6 +353,12 @@ color:#065f46;
     </div>
 
     <div class="flex flex-wrap items-center gap-3">
+        {{-- Search --}}
+        <div class="relative shadow-sm">
+            <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
+            <input type="text" x-model="searchQuery" @input="currentPage = 1" placeholder="Search by name..."
+                class="pl-8 pr-3 py-1.5 text-xs font-medium text-slate-700 placeholder-gray-400 border border-gray-200 rounded-lg bg-white outline-none focus:ring-1 focus:border-up-maroon focus:ring-up-maroon w-56 h-[34px] transition-shadow">
+        </div>
         {{-- Day filter buttons --}}
         <div class="flex items-center gap-2 bg-gray-50 p-1 rounded-lg border border-gray-200 shadow-sm">
             <span class="text-[10px] font-bold uppercase tracking-widest text-gray-400 pl-2 pr-1">Day</span>
@@ -380,13 +386,6 @@ color:#065f46;
                 @endforeach
             </select>
             <i class="fa-solid fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-[10px] pointer-events-none"></i>
-        </div>
-
-        {{-- Search --}}
-        <div class="relative shadow-sm">
-            <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
-            <input type="text" x-model="searchQuery" @input="currentPage = 1" placeholder="Search by name..."
-                class="pl-8 pr-3 py-1.5 text-xs font-medium text-slate-700 placeholder-gray-400 border border-gray-200 rounded-lg bg-white outline-none focus:ring-1 focus:border-up-maroon focus:ring-up-maroon w-56 h-[34px] transition-shadow">
         </div>
         
     </div>
