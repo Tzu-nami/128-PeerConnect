@@ -254,10 +254,15 @@ $studentHistory = computed(function () {
 
             <main class="scroll-container">
 
-                <div class="mb-6">
-                    <h1 class="text-2xl font-black text-slate-800">Session History</h1>
-                    <p class="text-sm text-gray-400 mt-1">View all your past and current enrichment session bookings.</p>
+            <div class="mb-6 pb-4 border-b border-gray-200 flex flex-wrap items-center justify-between gap-4 animate-[slideDown_0.3s_ease]">
+                <div>
+                    <h1 class="text-3xl font-extrabold tracking-tight text-transparent bg-clip-text bg-up-maroon flex items-center gap-3">
+                        <i class="fa-solid fa-history text-up-maroon text-2xl drop-shadow-sm"></i>
+                        Session History
+                    </h1>
+                    <p class="text-sm font-medium text-slate-500 mt-1">View your past and current bookings</p>
                 </div>
+            </div>
 
                 {{-- Summary Cards --}}
                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
@@ -266,7 +271,7 @@ $studentHistory = computed(function () {
                             <i class="fa-solid fa-list-check text-slate-600"></i>
                         </div>
                         <div>
-                            <p class="text-[11px] font-bold text-gray-400 uppercase">Total Session Requests</p>
+                            <p class="text-xs font-bold text-gray-400 uppercase tracking-wide">Total Requests</p>
                             <p class="text-xl font-black text-slate-800">{{ $this->summaryCount['total'] }}</p>
                         </div>
                     </div>
@@ -275,7 +280,7 @@ $studentHistory = computed(function () {
                             <i class="fa-solid fa-circle-check text-blue-600"></i>
                         </div>
                         <div>
-                            <p class="text-[11px] font-bold text-gray-400 uppercase">Completed Sessions</p>
+                            <p class="text-xs font-bold text-gray-400 uppercase tracking-wide">Completed</p>
                             <p class="text-xl font-black text-slate-800">{{ $this->summaryCount['completed'] }}</p>
                         </div>
                     </div>
@@ -284,7 +289,7 @@ $studentHistory = computed(function () {
                             <i class="fa-solid fa-clock text-yellow-500"></i>
                         </div>
                         <div>
-                            <p class="text-[11px] font-bold text-gray-400 uppercase">Ongoing Sessions</p>
+                            <p class="text-xs font-bold text-gray-400 uppercase tracking-wide">Ongoing</p>
                             <p class="text-xl font-black text-slate-800">{{ $this->summaryCount['ongoing'] }}</p>
                         </div>
                     </div>
@@ -293,7 +298,7 @@ $studentHistory = computed(function () {
                             <i class="fa-solid fa-ban text-red-500"></i>
                         </div>
                         <div>
-                            <p class="text-[11px] font-bold text-gray-400 uppercase">Cancelled</p>
+                            <p class="text-xs font-bold text-gray-400 uppercase tracking-wide">Cancelled</p>
                             <p class="text-xl font-black text-slate-800">{{ $this->summaryCount['cancelled'] }}</p>
                         </div>
                     </div>
@@ -302,7 +307,7 @@ $studentHistory = computed(function () {
                 {{-- Table --}}
                 <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden" x-data="{
                 search: '',
-                filterStatus: 'all',
+                filterStatuses: [],
                 currentPage: 1,
                 perPage: 5,
                 bookings: @js($this->studentHistory),
@@ -315,7 +320,7 @@ $studentHistory = computed(function () {
                         session.topic.toLowerCase().includes(term) ||
                         session.mentor.toLowerCase().includes(term) ||
                         session.date.toLowerCase().includes(term);
-                        const matchStatus = this.filterStatus === 'all' || session.raw_status === this.filterStatus;
+                        const matchStatus = this.filterStatuses.length === 0 || this.filterStatuses.includes(session.raw_status);
                         return matchSearch && matchStatus;
                     });
                 },
@@ -358,20 +363,28 @@ $studentHistory = computed(function () {
                             <h2 class="font-bold text-slate-800 text-sm">All Bookings</h2>
                             <p class="text-xs text-gray-400 font-medium" x-text="filteredBookings.length + ' Session' + (filteredBookings.length !==1 ? 's' : '') + ' found'"></p>
                         </div>
-                        <div class="flex gap-2 flex-wrap">
+                        <div class="flex gap-3 flex-wrap">
                             <div class="relative">
-                                <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-300 text-xs"></i>
-                                <input type="text" placeholder="Search subject, topic, or date..." class="pl-8 pr-3 py-2 text-xs border border-gray-200 rounded-lg outline-none focus:ring-1 w-52" x-model="search" @input="currentPage = 1">
+                                <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-300 text-sm"></i>
+                                <input type="text" placeholder="Search subject, topic, or date..." class="pl-8 pr-3 py-1.5 text-xs font-medium text-slate-700 placeholder-gray-400 border border-gray-200 rounded-lg bg-white outline-none focus:ring-1 focus:border-up-maroon focus:ring-up-maroon w-56 h-[34px] transition-shadow" x-model="search" @input="currentPage = 1">
                             </div>
-                            <select id="historyStatusFilter" class="bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs text-slate-600 outline-none cursor-pointer" x-model="filterStatus" @change="currentPage = 1">
-                                <option value="all">All Status</option>
-                                <option value="pending">Pending</option>
-                                <option value="accepted">Accepted</option>
-                                <option value="completed">Completed</option>
-                                <option value="cancelled">Cancelled</option>
-                                <option value="rejected">Rejected</option>
-                                <option value="no-show">No Show</option>
-                            </select>
+                            <div class="relative" x-data="{ openFilter: false }">
+                                <button @click="openFilter = !openFilter" @click.outside="openFilter = false" class="w-32 bg-white border border-gray-200 rounded-lg px-4 py-2 text-xs font-bold text-slate-600 outline-none flex items-center justify-between hover:bg-gray-50 transition">
+                                    <div class="flex items-center gap-2">
+                                        <i class="fa-solid fa-filter text-gray-400"></i> Status
+                                    </div>
+                                    <span x-show="filterStatuses.length > 0" class="bg-red-900 text-white rounded-full px-1.5 text-[10px] ml-1" x-text="filterStatuses.length"></span>
+                                </button>
+                                
+                                <div x-show="openFilter" x-transition class="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-xl shadow-xl z-20 overflow-hidden py-1">
+                                    <template x-for="status in ['pending', 'accepted', 'completed', 'cancelled', 'rejected', 'no_show']">
+                                        <label class="flex items-center gap-2 px-4 py-2.5 hover:bg-gray-50 cursor-pointer text-xs text-slate-700 font-medium capitalize transition">
+                                            <input type="checkbox" :value="status" x-model="filterStatuses" @change="currentPage = 1" class="rounded border-gray-300 text-red-900 focus:ring-red-900 w-4 h-4 transition">
+                                            <span x-text="status.replace('_', ' ')"></span>
+                                        </label>
+                                    </template>
+                                </div>
+                            </div>
                         </div>
                         
                     </div>
@@ -409,7 +422,7 @@ $studentHistory = computed(function () {
                                         </td>
                                         <td class="px-5 py-4 text-xs text-slate-500" x-text="booking.mode"></td>
                                         <td class="px-5 py-4">
-                                            <span :class="'text-[9px] px-2 py-1 rounded border font-bold uppercase tracking-wider ' + booking.statusClass" x-text="booking.statusLabel"></span>
+                                            <span :class="'text-xs font-bold px-2.5 py-1 rounded-full ' + booking.statusClass" x-text="booking.statusLabel"></span>
                                         </td>
                                     </tr>
                                 </template>
