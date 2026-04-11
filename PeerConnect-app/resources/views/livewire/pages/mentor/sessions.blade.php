@@ -278,26 +278,31 @@
 
             <main class="scroll-container">
                 <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+<div class="flex justify-between items-center mb-6">
+    <div>
+        <h2 class="text-lg font-bold text-slate-800">All Sessions</h2>
+        <p class="text-xs text-gray-400">All student-selected mentor sessions</p>
+    </div>
+    <div class="flex gap-2 items-center">
 
-                    <div class="flex justify-between items-center mb-6">
-                        <div>
-                            <h2 class="text-lg font-bold text-slate-800">All Sessions</h2>
-                            <p class="text-xs text-gray-400">All student-selected mentor sessions</p>
-                        </div>
-                        <div class="flex gap-2">
-                            <input type="text" id="searchInput" placeholder="Search..."
-                                class="px-3 py-2 text-xs border border-gray-200 rounded-lg">
-                            <select id="statusFilter" class="table-filter-select">
-                                <option value="All">All</option>
-                                <option value="pending">Pending</option>
-                                <option value="accepted">Accepted</option>
-                                <option value="completed">Completed</option>
-                                <option value="rejected">Rejected</option>
-                                <option value="cancelled">Cancelled</option>
-                                <option value="no_show">No Show</option>
-                            </select>
-                        </div>
-                    </div>
+        {{-- Wrap icon + input in a relative container --}}
+        <div class="relative">
+            <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-300 text-xs"></i>
+            <input type="text" id="searchInput" placeholder="Search..."
+                class="pl-8 pr-3 py-1.5 text-xs font-medium text-slate-700 placeholder-gray-400 border border-gray-200 rounded-lg bg-white outline-none focus:ring-1 focus:border-up-maroon focus:ring-up-maroon w-56 h-[34px] transition-shadow">
+        </div>
+
+        <select id="statusFilter" class="table-filter-select">
+            <option value="All">All</option>
+            <option value="pending">Pending</option>
+            <option value="accepted">Accepted</option>
+            <option value="completed">Completed</option>
+            <option value="rejected">Rejected</option>
+            <option value="cancelled">Cancelled</option>
+            <option value="no_show">No Show</option>
+        </select>
+    </div>
+</div>
 
                     <div id="sessionsBannerArea" class="flex flex-col gap-2 mb-4"></div>
                     
@@ -631,7 +636,7 @@ function updateSortIcons() {
              title="${s.student}">
             ${s.student}
         </div>
-        <button class="scroll-toggle-btn" onclick="toggleScrollCell('student-${s.id}', this)">see more</button>
+        
     </div>
 </td>
                     <td class="text-sm">${s.subject}</td>
@@ -642,7 +647,7 @@ function updateSortIcons() {
              title="${s.topic}">
             ${s.topic}
         </div>
-        <button class="scroll-toggle-btn" onclick="toggleScrollCell('topic-${s.id}', this)">see more</button>
+        
     </div>
 </td>
                     <td class="text-sm pr-0">${s.date}</td>
