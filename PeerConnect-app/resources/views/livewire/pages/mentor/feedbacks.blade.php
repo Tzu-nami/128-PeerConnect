@@ -194,12 +194,6 @@ $totalPages = computed(function () {
         .remarks-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px 14px 14px 28px; margin-top: 10px; font-size: 13px; color: #374151; line-height: 1.6; position: relative; }
         .remarks-box::before { content: '\201C'; font-size: 2rem; color: #d1d5db; position: absolute; top: -4px; left: 8px; line-height: 1; font-family: Georgia, serif; }
     /* TRUNCATION */
-.truncate-2 {
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-}
 
 /* expanded state */
 .truncate-expanded {
@@ -217,11 +211,7 @@ $totalPages = computed(function () {
 .see-more-btn:hover {
     color: #7b1d1d;
 }
-/* handles long words + normal text */
-.break-text {
-    word-break: break-word;      /* fallback */
-    overflow-wrap: anywhere;     /* modern fix */
-}
+
 /* base truncation */
 .truncate-2 {
     display: -webkit-box;
@@ -250,6 +240,87 @@ $totalPages = computed(function () {
 .scrollable-text::-webkit-scrollbar-thumb {
     background: #cbd5f5;
     border-radius: 4px;
+}
+
+/* FIXED TABLE LAYOUT */
+table {
+    table-layout: fixed;
+    width: 100%;
+    max-width: 100%;
+    border-collapse: collapse;
+}
+
+/* VERY IMPORTANT: allow shrinking */
+td, th {
+    min-width: 0;
+}
+
+/* TEXT CONTAINER (ellipsis) */
+.text-ellipsis {
+    display: block;
+    width: 100%;
+    overflow: hidden;
+}
+
+.text-content {
+    display: block;
+    width: 100%;
+    white-space: normal;        /* allow wrapping */
+    overflow-wrap: anywhere;    /* break long words */
+    word-break: break-word;
+    line-height: 1.4;
+}
+
+.line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* ALLOW WRAPPING WHEN NEEDED */
+.text-wrap {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+/* HANDLE LONG WORDS (fallback safety) */
+.break-word {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+/* HOVER TOOLTIP */
+.hover-tooltip {
+    position: relative;
+    cursor: pointer;
+}
+
+.hover-tooltip::after {
+    content: attr(data-full);
+    position: absolute;
+    left: 0;
+    top: 110%;
+    background: rgba(0,0,0,0.85);
+    color: #fff;
+    padding: 8px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    line-height: 1.4;
+    white-space: normal;
+    min-width: 200px;
+    max-width: 400px;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(5px);
+    transition: 0.15s ease;
+    z-index: 999;
+}
+
+.hover-tooltip:hover::after {
+    opacity: 1;
+    transform: translateY(0);
 }
     </style>
 
@@ -322,8 +393,8 @@ $totalPages = computed(function () {
                             <div class="relative">
                                 <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-300 text-xs"></i>
                                 <input type="text" wire:model.live.debounce.300ms="search"
-                                    placeholder="Search feedback, subject, topic..."
-                                    class="pl-9 pr-3 py-2 text-xs border border-gray-200 rounded-lg outline-none focus:ring-1 focus:ring-red-800 w-56">
+                                    placeholder="Search... "
+                                    class="w-full pl-8 pr-3 py-1.5 text-xs font-medium text-slate-700 placeholder-gray-400 border border-gray-200 rounded-lg bg-white outline-none focus:ring-1 focus:border-up-maroon focus:ring-up-maroon w-56 h-[34px] transition-shadow">
                             </div>
                             <select wire:model.live="subjectFilter" class="table-filter-select">
                                 <option value="">All Subjects</option>
@@ -336,18 +407,15 @@ $totalPages = computed(function () {
 
                     {{-- Table --}}
                     @if(count($this->paginatedFeedbacks) > 0)
-                    <div class="overflow-x-auto">
+                    <div class="w-full">
                         <table class="w-full text-left">
                             <thead class="bg-slate-50 text-gray-400 text-[10px] uppercase tracking-wider">
                                 <tr>
-                                    <th class="px-6 py-4 font-semibold" style="width:11%">Date</th>
-                                    <th class="px-6 py-4 font-semibold" style="width:11%">Subject</th>
-                                    <th class="px-6 py-4 font-semibold" style="width:19%">Topic</th>
-                                    <th class="px-6 py-4 font-semibold" style="width:19%">
-                                        Rating
-                                        <span class="normal-case font-normal text-gray-300 ml-0.5 text-[9px]">(click)</span>
-                                    </th>
-                                    <th class="px-6 py-4 font-semibold" style="width:40%">Feedback</th>
+                                    <th class="px-6 py-4 font-semibold" style="width:3%">Date</th>
+                                    <th class="px-6 py-4 font-semibold" style="width:3%">Subject</th>
+                                    <th class="px-6 py-4 font-semibold" style="width:5%">Topic</th>
+                                    <th class="px-6 py-4 font-semibold" style="width:9%">Feedback</th>
+                                    <th class="px-6 py-4 font-semibold" style="width:5%">Rating</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-100">
@@ -400,43 +468,43 @@ $totalPages = computed(function () {
 
                                 {{-- Date --}}
                                 <td class="px-6 py-5 align-top">
-                                    <p class="text-xs font-semibold text-slate-700">
+                                    <span class="inline-block text-slate-700 text-[12px] font-semibold">
                                         {{ $fb->date_submitted ? \Carbon\Carbon::parse($fb->date_submitted)->format('M j, Y') : '—' }}
-                                    </p>
-                                    <p class="text-[10px] text-gray-400 mt-0.5">
-                                        {{ $fb->date_submitted ? \Carbon\Carbon::parse($fb->date_submitted)->format('g:i A') : '' }}
-                                    </p>
+                                    </span>
                                 </td>
 
                                 {{-- Subject --}}
                                 <td class="px-6 py-5 align-top">
                                     @if($fb->subject)
-                                        <span class="inline-block bg-slate-100 text-slate-700 text-[11px] font-semibold px-2 py-1 rounded">{{ $fb->subject }}</span>
+                                        <span class="inline-block text-slate-700 text-[11px] font-semibold">{{ $fb->subject }}
                                     @else
                                         <span class="text-gray-300 text-xs">—</span>
                                     @endif
                                 </td>
 
                                 {{-- Topic --}}
-                                <td class="px-6 py-5 align-top">
-@php
-    $topicText = $fb->topic ?? '—';
-@endphp
+<td class="px-6 py-5 align-top" style="width:19%">
+    @php $topicText = $fb->topic ?? '—'; @endphp
 
-<div>
-    <p class="text-xs text-slate-600 leading-relaxed truncate-2 break-text"
-       id="topic-{{ $fb->id }}">
-        {{ $topicText }}
-    </p>
-
-    @if(strlen($topicText) > 80)
-        <span class="see-more-btn"
-              onclick="toggleText('topic-{{ $fb->id }}', this)">
-            See more...
+    <div class="hover-tooltip" data-full="{{ $topicText }}">
+        <span class="text-content line-clamp-2 text-xs text-slate-600">
+            {{ $topicText }}
         </span>
-    @endif
-</div>
-                                </td>
+    </div>
+</td>
+
+
+
+                                {{-- Feedback text --}}
+<td class="px-6 py-5 align-top" style="width:5%">
+    @php $feedbackText = $fb->feedback ?? '—'; @endphp
+
+    <div class="hover-tooltip" data-full="{{ $feedbackText }}">
+        <span class="text-content line-clamp-2 text-[11px] bg-slate-100 px-2 py-1 rounded text-slate-700 font-semibold block">
+            {{ $feedbackText }}
+        </span>
+    </div>
+</td>
 
                                 {{-- Rating (clickable) --}}
                                 <td class="px-6 py-5 align-top">
@@ -460,31 +528,8 @@ $totalPages = computed(function () {
                                             </span>
                                         @endif
 
-                                        <span class="text-[9px] text-gray-300 mt-0.5 flex items-center gap-1">
-                                            <i class="fa-solid fa-arrow-up-right-from-square"></i> View details
-                                        </span>
+
                                     </button>
-                                </td>
-
-                                {{-- Feedback text --}}
-                                <td class="px-6 py-5 align-top">
-@php
-    $feedbackText = $fb->feedback ?? '—';
-@endphp
-
-<div>
-    <p class="text-sm text-slate-600 leading-relaxed pl-4 truncate-2 break-text"
-       id="feedback-{{ $fb->id }}">
-        {{ $feedbackText }}
-    </p>
-
-    @if(strlen($feedbackText) > 120)
-        <span class="see-more-btn"
-              onclick="toggleText('feedback-{{ $fb->id }}', this)">
-            See more...
-        </span>
-    @endif
-</div>
                                 </td>
 
                             </tr>
@@ -503,7 +548,7 @@ $totalPages = computed(function () {
                         <div class="flex gap-2 items-center">
                             <button wire:click="$set('page', {{ max(1, $this->page - 1) }})"
                                 @if($this->page <= 1) disabled @endif class="pagination-btn">
-                                <i class="fa-solid fa-chevron-left text-[10px]"></i> Previous
+                                <i class="fa-solid fa-chevron-left text-[10px]"></i>
                             </button>
                             @for($p = 1; $p <= $this->totalPages; $p++)
                                 <button wire:click="$set('page', {{ $p }})"
@@ -513,7 +558,7 @@ $totalPages = computed(function () {
                             @endfor
                             <button wire:click="$set('page', {{ min($this->totalPages, $this->page + 1) }})"
                                 @if($this->page >= $this->totalPages) disabled @endif class="pagination-btn">
-                                Next <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                                <i class="fa-solid fa-chevron-right text-[10px]"></i>
                             </button>
                         </div>
                         <span></span>
@@ -611,8 +656,26 @@ function toggleText(id, btn) {
     }
 }
     function openFeedbackModal(data) {
-        document.getElementById('modalMeta').textContent =
-            `${data.subject} · ${data.topic} · ${data.date}`;
+const topicId = 'modal-topic-' + Date.now();
+
+document.getElementById('modalMeta').innerHTML = `
+    <span style="font-size:15px;font-weight:700">${data.subject}</span>
+    
+    <span class="truncate-2 break-text inline-block align-bottom"
+          id="${topicId}">
+        ${data.topic}
+    </span>
+
+    ${data.topic && data.topic.length > 50 ? `
+        <span class="see-more-btn ml-1"
+              onclick="toggleText('${topicId}', this)">
+            See more...
+        </span>
+    ` : ''}
+
+    <span>${data.date}</span>
+`;
+
 
         const avg    = data.avg;
         const avgPct = avg ? ((avg / 5) * 100).toFixed(1) : 0;
@@ -688,7 +751,7 @@ if (data.feedback) {
     html += `
     <div style="margin-top:8px;">
     <div class = "remarks-box">
-        <p class="text-sm text-slate-700 leading-relaxed truncate-2 break-text"
+        <p style="font-size:12px;color:#d1d5db;font-style:italic;padding:6px 0;"
            id="${feedbackId}">
             ${data.feedback}
         </p>
