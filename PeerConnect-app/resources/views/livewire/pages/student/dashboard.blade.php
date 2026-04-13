@@ -274,7 +274,7 @@ $dismissSuccessMessage = action(function () {
         .nav-item:hover, .nav-item.active { background: rgba(255,255,255,0.1); color: white; }
         .nav-item.active { background: var(--bg-light); color: var(--header-maroon); font-weight: 700; border-radius: 0; width: calc(100% + 1px); z-index: 10; }
 
-        .sidebar.collapsed .nav-item { display: flex; align-items: center; justify-content: center; padding: 19px 0; width: 100%; gap: 0; }
+        .sidebar.collapsed .nav-item { display: flex; align-items: center; justify-content: center; padding: 16px 0; width: 100%; gap: 0; }
         .sidebar.collapsed .nav-item i { margin: 0; width: auto; text-align: center; flex-shrink: 0; }
         .sidebar.collapsed .nav-item span { opacity: 0; max-width: 0; pointer-events: none; }
 
@@ -304,7 +304,7 @@ $dismissSuccessMessage = action(function () {
 
         .main-content { flex: 1; min-width: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
         .top-header { background: var(--header-maroon); height: var(--header-height); padding: 0 40px; display: flex; align-items: center; justify-content: space-between; color: white; flex-shrink: 0; }
-        .scroll-container { flex-grow: 1; overflow-y: auto; padding: 32px; width: 100%; }
+        .scroll-container { flex-grow: 1; overflow-y: scroll; padding: 32px; width: 100%; }
 
         .profile-dropdown {
             position: absolute; top: 70px; right: 40px; background: white; border-radius: 12px;
@@ -315,21 +315,89 @@ $dismissSuccessMessage = action(function () {
         .dropdown-item { padding: 12px 20px; font-size: 13px; color: #475569; display: flex; align-items: center; gap: 10px; transition: background 0.2s; }
         .dropdown-item:hover { background: #f8fafc; color: var(--header-maroon); }
 
-        .cal-header-day { font-size: 11px; font-weight: 800; color: #94a3b8; text-align: center; padding-bottom: 10px; text-transform: uppercase; }
-        .cal-day { aspect-ratio: 1/1; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; border-radius: 8px; transition: all 0.2s; cursor: pointer; font-size: 13px; font-weight: 500; }
-        .cal-today { background: #fee2e2 !important; color: var(--header-maroon) !important; font-weight: 800; }
-        .cal-selected { border: 2px solid var(--header-maroon); background: #f8fafc; }
+        /* ── CALENDAR (clock bar on top, compact nav — from mentor dashboard) ── */
+        .cal-header-day {
+            font-size: 10px;
+            font-weight: 800;
+            text-align: center;
+            color: #94a3b8;
+            text-transform: uppercase;
+            padding-bottom: 4px;
+        }
+        .cal-day {
+            aspect-ratio: 1/1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            border-radius: 6px;
+            transition: all 0.15s;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 500;
+            color: #475569;
+            width: 100%;
+        }
+        .cal-day:hover { background: #f1f5f9; color: #1e293b; }
+        .cal-today { background: #fee2e2 !important; color: #7b1d1d !important; font-weight: 800; }
+        .cal-selected { border: 2px solid #7b1d1d; background: #f8fafc; }
+        /* Notification dot — absolute so it never shifts the day number */
+        .notif-dot {
+            position: absolute;
+            top: 2px;
+            right: 3px;
+            width: 5px;
+            height: 5px;
+            background: #22c55e;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
 
         .pagination-btn { padding: 4px 10px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 11px; font-weight: 600; color: #64748b; transition: all 0.2s; }
         .pagination-btn:hover:not(:disabled) { background: #f1f5f9; color: var(--header-maroon); border-color: var(--header-maroon); }
-        .table-filter-select { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 12px; font-size: 0.75rem; color: #475569; outline: none; cursor: pointer; }
+        .table-filter-select, .header-filter { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 12px; font-size: 0.75rem; color: #475569; outline: none; cursor: pointer; }
+
+        /* ── WEEKLY SCHEDULE TABLE ── */
         .weekly-table { table-layout: fixed; width: 100%; }
         .weekly-table th, .weekly-table td { width: 16%; }
-        .schedule-block { font-size: 9px; line-height: 1.2; padding: 2px 4px; margin-bottom: 2px; border-radius: 4px; background: #d1fae5; color: #065f46; }
-        .notif-dot { width: 6px; height: 6px; background: #1ff04c; border-radius: 50%; }
-        @keyframes slideDown { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Status-differentiated schedule blocks */
+        .schedule-block {
+            font-size: 9px;
+            line-height: 1.3;
+            padding: 3px 5px;
+            margin-bottom: 3px;
+            border-radius: 5px;
+            border-left: 3px solid transparent;
+            overflow: hidden;
+        }
+        .schedule-block.status-pending   { background: #fef9c3; color: #854d0e;  border-left-color: #eab308; }
+        .schedule-block.status-accepted  { background: #d1fae5; color: #065f46;  border-left-color: #10b981; }
+        .schedule-block.status-completed { background: #e2e8f0; color: #475569;  border-left-color: #94a3b8; }
+
+        /* Weekly schedule legend */
+        .sched-legend { display: flex; flex-wrap: wrap; gap: 8px; }
+        .sched-legend-item { display: flex; align-items: center; gap: 4px; font-size: 9px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.03em; }
+        .sched-legend-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
 
         .topic-text { word-break: break-word; overflow-wrap: anywhere; white-space: normal; }
+        .topic-text.line-clamp-1 { display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
+        .topic-text.line-clamp-none { display: block; overflow: visible; }
+
+        .hover-tooltip { position: relative; cursor: pointer; }
+        .hover-tooltip::after {
+            content: attr(data-full);
+            position: absolute; left: 0; top: 110%;
+            background: rgba(0,0,0,0.85); color: #fff;
+            padding: 8px 10px; border-radius: 6px;
+            font-size: 11px; line-height: 1.4;
+            white-space: normal; word-break: break-word; overflow-wrap: anywhere;
+            width: 320px; max-width: 320px;
+            opacity: 0; pointer-events: none;
+            transform: translateY(5px); transition: 0.15s ease; z-index: 9999;
+        }
+        .hover-tooltip:hover::after { opacity: 1; transform: translateY(0); }
         .topic-text.line-clamp-1 { display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
         .topic-text.line-clamp-none { display: block; overflow: visible; }
 
@@ -343,6 +411,7 @@ $dismissSuccessMessage = action(function () {
         }
         #statusToast.show { opacity: 1; transform: translateY(0); }
         @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 
@@ -353,29 +422,31 @@ $dismissSuccessMessage = action(function () {
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-logo-container">
             <div class="logo-content">
-            <i class="fa-solid fa-graduation-cap logo-icon"></i>
-            <span class="logo-text">LRC PeerConnect</span>
+                <i class="fa-solid fa-graduation-cap logo-icon"></i>
+                <span class="logo-text">LRC PeerConnect</span>
             </div>
         </div>
 
         <button class="sidebar-toggle-btn" id="sidebarToggle" aria-label="Toggle sidebar">
-            <span class="toggle-icon"><i class="fa-solid fa-chevron-right"></i></span>
+            <span class="toggle-icon">
+                <i class="fa-solid fa-chevron-right"></i>
+            </span>
         </button>
 
         <nav class="flex-grow">
-            <a href="{{ route('student.dashboard') }}" class="nav-item active" data-tooltip="Dashboard">
+            <a href="{{ route('student.dashboard') }}" class="nav-item {{ request()->routeIs('student.dashboard') ? 'active' : '' }}" data-tooltip="Dashboard">
                 <i class="fa-solid fa-gauge"></i><span>Dashboard</span>
             </a>
-            <a href="{{ route('student.mentors') }}" class="nav-item" data-tooltip="Mentors">
+            <a href="{{ route('student.mentors') }}" class="nav-item {{ request()->routeIs('student.mentors') ? 'active' : '' }}" data-tooltip="Mentors">
                 <i class="fa-solid fa-chalkboard-user"></i><span>Mentors</span>
             </a>
-            <a href="{{ route('student.bookings') }}" class="nav-item" data-tooltip="Bookings">
+            <a href="{{ route('student.bookings') }}" class="nav-item {{ request()->routeIs('student.bookings') ? 'active' : '' }}" data-tooltip="Bookings">
                 <i class="fa-solid fa-calendar-check"></i><span>Bookings</span>
             </a>
-            <a href="{{ route('student.history') }}" class="nav-item" data-tooltip="History">
+            <a href="{{ route('student.history') }}" class="nav-item {{ request()->routeIs('student.history') ? 'active' : '' }}" data-tooltip="History">
                 <i class="fa-solid fa-clock-rotate-left"></i><span>History</span>
             </a>
-            <a href="{{ route('student.about') }}" class="nav-item" data-tooltip="About Us">
+            <a href="{{ route('student.about') }}" class="nav-item {{ request()->routeIs('student.about') ? 'active' : '' }}" data-tooltip="About Us">
                 <i class="fa-solid fa-circle-info"></i><span>About Us</span>
             </a>
         </nav>
@@ -393,7 +464,7 @@ $dismissSuccessMessage = action(function () {
     <!-- MAIN -->
     <div class="main-content">
         <header class="top-header relative">
-            <div class="text-lg">Welcome, {{ auth()->user()->user_roles }} <span class="font-bold">{{ auth()->user()->name }}</span></div>
+            <div class="text-lg">Welcome, <span class="font-bold">{{ auth()->user()->name }}</span></div>
 
             <button id="profileTrigger" class="flex items-center gap-2 px-3 py-1 bg-white rounded-full hover:bg-gray-100 transition shadow-sm border-2 border-white/20 group">
                 <div class="w-8 h-8 bg-red-900 text-white rounded-full flex items-center justify-center text-xs font-bold">
@@ -426,7 +497,7 @@ $dismissSuccessMessage = action(function () {
                         type="text"
                         id="globalSearchInput"
                         placeholder="Search ALL sessions (mentor, subject, date, status)..."
-                        class="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:ring-1 focus:ring-red-800"
+                        class="w-full pl-8 pr-3 py-1.5 text-xs font-medium text-slate-700 placeholder-gray-400 border border-gray-200 rounded-lg bg-white outline-none focus:ring-1 focus:border-up-maroon focus:ring-up-maroon h-[34px] transition-shadow"
                     >
                 </div>
                 <div id="globalSearchResults"
@@ -440,7 +511,7 @@ $dismissSuccessMessage = action(function () {
                 <div class="col-span-2 space-y-8">
 
                     <!-- TODAY'S SESSIONS TABLE -->
-                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 min-h-[460px] flex flex-col">
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col">
                         <div class="flex justify-between items-center mb-6">
                             <div>
                                 <h2 class="text-lg font-bold text-slate-800" id="tableTitle">Today's Schedule</h2>
@@ -449,10 +520,10 @@ $dismissSuccessMessage = action(function () {
                             <div class="flex gap-2">
                                 <div class="relative w-48">
                                     <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-300 text-xs"></i>
-                                    <input type="text" id="liveSearchInput" placeholder="Search mentors..." class="w-full pl-9 pr-3 py-2 text-xs border border-gray-200 rounded-lg outline-none focus:ring-1 focus:ring-red-800">
+                                    <input type="text" id="liveSearchInput" placeholder="Search mentors..." class="w-full pl-8 pr-3 py-1.5 text-xs font-medium text-slate-700 placeholder-gray-400 border border-gray-200 rounded-lg bg-white outline-none focus:ring-1 focus:border-up-maroon focus:ring-up-maroon w-56 h-[34px] transition-shadow">
                                 </div>
                                 <select id="statusFilter" class="table-filter-select">
-                                    <option value="">All Status</option>
+                                    <option value="">All</option>
                                     <option value="pending">Pending</option>
                                     <option value="accepted">Accepted</option>
                                     <option value="completed">Completed</option>
@@ -462,37 +533,35 @@ $dismissSuccessMessage = action(function () {
                             </div>
                         </div>
 
-                        <div class="flex-grow">
-                            <table class="w-full text-left text-sm table-fixed">
-                                <thead class="text-gray-400 border-b">
-                                    <tr>
-                                        <th class="pb-3 text-[10px] tracking-wider" style="width:35%">
-                                            <button id="sortHead-mentor" onclick="toggleSort('mentor')" class="flex items-center gap-1 font-semibold uppercase hover:text-red-800 transition-colors" style="color:#94a3b8;">
-                                                Mentor <span class="sort-icon"><i class="fa-solid fa-arrow-up-arrow-down" style="font-size:8px;opacity:0.4;"></i></span>
-                                            </button>
-                                        </th>
-                                        <th class="pb-3 text-[10px] tracking-wider" style="width:25%">
-                                            <button id="sortHead-start" onclick="toggleSort('start')" class="flex items-center gap-1 font-semibold uppercase hover:text-red-800 transition-colors" style="color:#7b1d1d;">
-                                                Time <span class="sort-icon"><i class="fa-solid fa-arrow-up" style="font-size:8px;"></i></span>
-                                            </button>
-                                        </th>
-                                        <th class="pb-3 text-[10px] tracking-wider" style="width:20%">
-                                            <button id="sortHead-subject" onclick="toggleSort('subject')" class="flex items-center gap-1 font-semibold uppercase hover:text-red-800 transition-colors" style="color:#94a3b8;">
-                                                Subject <span class="sort-icon"><i class="fa-solid fa-arrow-up-arrow-down" style="font-size:8px;opacity:0.4;"></i></span>
-                                            </button>
-                                        </th>
-                                        <th class="pb-3 text-[10px] tracking-wider" style="width:20%">
-                                            <button id="sortHead-status" onclick="toggleSort('status')" class="flex items-center gap-1 font-semibold uppercase hover:text-red-800 transition-colors" style="color:#94a3b8;">
-                                                Status <span class="sort-icon"><i class="fa-solid fa-arrow-up-arrow-down" style="font-size:8px;opacity:0.4;"></i></span>
-                                            </button>
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody id="tableBody"></tbody>
-                            </table>
-                        </div>
+                        <table class="w-full text-left text-sm table-fixed">
+                            <thead class="text-gray-400 border-b">
+                                <tr>
+                                    <th class="pb-3 text-[10px] tracking-wider" style="width:35%">
+                                        <button id="sortHead-mentor" onclick="toggleSort('mentor')" class="flex items-center gap-1 font-semibold uppercase hover:text-red-800 transition-colors" style="color:#94a3b8;">
+                                            Mentor <span class="sort-icon"><i class="fa-solid fa-arrow-up-arrow-down" style="font-size:8px;opacity:0.4;"></i></span>
+                                        </button>
+                                    </th>
+                                    <th class="pb-3 text-[10px] tracking-wider" style="width:30%">
+                                        <button id="sortHead-start" onclick="toggleSort('start')" class="flex items-center gap-1 font-semibold uppercase hover:text-red-800 transition-colors" style="color:#7b1d1d;">
+                                            Time <span class="sort-icon"><i class="fa-solid fa-arrow-up" style="font-size:8px;"></i></span>
+                                        </button>
+                                    </th>
+                                    <th class="pb-3 text-[10px] tracking-wider" style="width:20%">
+                                        <button id="sortHead-subject" onclick="toggleSort('subject')" class="flex items-center gap-1 font-semibold uppercase hover:text-red-800 transition-colors" style="color:#94a3b8;">
+                                            Subject <span class="sort-icon"><i class="fa-solid fa-arrow-up-arrow-down" style="font-size:8px;opacity:0.4;"></i></span>
+                                        </button>
+                                    </th>
+                                    <th class="pb-3 text-[10px] tracking-wider" style="width:20%">
+                                        <button id="sortHead-status" onclick="toggleSort('status')" class="flex items-center justify-center gap-1 font-semibold uppercase hover:text-red-800 transition-colors w-full" style="color:#94a3b8;">
+                                            Status <span class="sort-icon"><i class="fa-solid fa-arrow-up-arrow-down" style="font-size:8px;opacity:0.4;"></i></span>
+                                        </button>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody id="tableBody"></tbody>
+                        </table>
 
-                        <div class="mt-6 pt-4 border-t border-gray-50 flex items-center justify-between">
+                        <div class="mt-4 pt-4 border-t border-gray-50 flex items-center justify-between">
                             <div class="text-[11px] text-gray-400 font-medium" id="pageIndicator">Showing 0 results</div>
                             <div class="flex gap-2">
                                 <button id="prevBtn" class="pagination-btn"><i class="fa-solid fa-chevron-left"></i></button>
@@ -501,22 +570,33 @@ $dismissSuccessMessage = action(function () {
                         </div>
                     </div>
 
-                    <!-- WEEKLY SCHEDULE -->
+                    <!-- WEEKLY SCHEDULE (grid-based, from mentor dashboard) -->
                     <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                        <div class="flex justify-between items-center mb-4">
-                            <h2 class="text-lg font-bold text-slate-800">Weekly Schedule</h2>
-                            <span class="text-xs text-gray-400" id="weeklyScheduleRange">8:00 AM – 6:00 PM</span>
+                        <div class="flex justify-between items-center mb-3">
+                            <div class="flex items-center gap-2">
+                                <h2 class="text-lg font-bold text-slate-800">Weekly Schedule</h2>
+                                <span class="text-[10px] text-gray-400 bg-gray-50 border border-gray-100 px-2 py-0.5 rounded-full" id="weeklyScheduleRange">8:00 AM – 6:00 PM</span>
+                            </div>
                         </div>
+
+                        <!-- Status legend -->
+                        <div class="sched-legend mb-4 pb-3 border-b border-gray-50">
+                            <span class="sched-legend-item"><span class="sched-legend-dot" style="background:#eab308;"></span>Pending</span>
+                            <span class="sched-legend-item"><span class="sched-legend-dot" style="background:#10b981;"></span>Accepted</span>
+                            <span class="sched-legend-item"><span class="sched-legend-dot" style="background:#94a3b8;"></span>Completed</span>
+                        </div>
+
                         <div class="overflow-x-auto">
-                            <table class="weekly-table text-xs text-center border">
+                            <!-- The old table is kept as anchor; JS will hide it and inject the grid -->
+                            <table class="weekly-table text-xs text-center border" id="weeklyTableEl" style="display:none;">
                                 <thead class="bg-gray-50">
                                     <tr>
-                                        <th class="p-2 border">Time</th>
-                                        <th class="p-2 border" id="monHead"></th>
-                                        <th class="p-2 border" id="tueHead"></th>
-                                        <th class="p-2 border" id="wedHead"></th>
-                                        <th class="p-2 border" id="thuHead"></th>
-                                        <th class="p-2 border" id="friHead"></th>
+                                        <th class="p-2 border text-[10px] font-bold text-gray-500 uppercase tracking-wider">Time</th>
+                                        <th class="p-2 border text-[10px] font-bold text-gray-500 uppercase" id="monHead"></th>
+                                        <th class="p-2 border text-[10px] font-bold text-gray-500 uppercase" id="tueHead"></th>
+                                        <th class="p-2 border text-[10px] font-bold text-gray-500 uppercase" id="wedHead"></th>
+                                        <th class="p-2 border text-[10px] font-bold text-gray-500 uppercase" id="thuHead"></th>
+                                        <th class="p-2 border text-[10px] font-bold text-gray-500 uppercase" id="friHead"></th>
                                     </tr>
                                 </thead>
                                 <tbody id="weeklyScheduleBody"></tbody>
@@ -529,30 +609,49 @@ $dismissSuccessMessage = action(function () {
                 <!-- RIGHT COLUMN -->
                 <div class="flex flex-col gap-6">
 
-                    <!-- CALENDAR + CLOCK -->
-                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                        <div class="flex justify-between items-center mb-6">
-                            <div class="flex gap-4">
-                                <button onclick="changeMonth(-1)" class="text-gray-400 hover:text-maroon-800"><i class="fa-solid fa-chevron-left text-xs"></i></button>
-                                <span id="monthDisplay" class="text-sm font-bold w-24 text-center"></span>
-                                <button onclick="changeMonth(1)" class="text-gray-400 hover:text-maroon-800"><i class="fa-solid fa-chevron-right text-xs"></i></button>
-                            </div>
+                    <!-- CALENDAR with clock bar on top (from mentor dashboard) -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                        <!-- Clock bar -->
+                        <div class="bg-slate-900 px-4 py-3 flex items-center justify-between">
+                            <div id="liveDate" class="text-[10px] font-medium text-slate-400 uppercase tracking-widest">Saturday, March 14</div>
+                            <div id="liveClock" class="text-sm font-mono font-bold text-white tracking-widest">00:00:00</div>
                         </div>
-                        <div class="grid grid-cols-7 gap-1 mb-2">
-                            <div class="cal-header-day">S</div><div class="cal-header-day">M</div><div class="cal-header-day">T</div>
-                            <div class="cal-header-day">W</div><div class="cal-header-day">T</div><div class="cal-header-day">F</div><div class="cal-header-day">S</div>
-                        </div>
-                        <div id="calendarGrid" class="grid grid-cols-7 gap-1"></div>
 
-                        <div class="mt-6 pt-6 border-t border-gray-50">
-                            <div class="bg-slate-900 rounded-xl p-4 shadow-inner">
-                                <div id="liveClock" class="text-3xl font-mono font-black text-white tracking-widest text-center">00:00:00</div>
-                                <div id="liveDate" class="text-[10px] font-medium text-slate-400 text-center mt-1 uppercase">Saturday, March 14</div>
+                        <!-- Calendar -->
+                        <div class="p-4">
+                            <div class="flex items-center justify-center gap-3 mb-4">
+                                <!-- Previous -->
+                                <button onclick="changeMonth(-1)"
+                                    class="w-6 h-6 flex items-center justify-center rounded-md hover:bg-gray-100 text-gray-400 hover:text-slate-700 transition">
+                                    <i class="fa-solid fa-chevron-left text-[10px]"></i>
+                                </button>
+
+                                <!-- Month -->
+                                <span id="monthDisplay"
+                                    class="text-sm font-bold text-slate-800 text-center min-w-[120px]">
+                                </span>
+
+                                <!-- Next -->
+                                <button onclick="changeMonth(1)"
+                                    class="w-6 h-6 flex items-center justify-center rounded-md hover:bg-gray-100 text-gray-400 hover:text-slate-700 transition">
+                                    <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                                </button>
                             </div>
+
+                            <div class="grid grid-cols-7 gap-1 mb-1">
+                                <div class="cal-header-day">S</div>
+                                <div class="cal-header-day">M</div>
+                                <div class="cal-header-day">T</div>
+                                <div class="cal-header-day">W</div>
+                                <div class="cal-header-day">T</div>
+                                <div class="cal-header-day">F</div>
+                                <div class="cal-header-day">S</div>
+                            </div>
+                            <div id="calendarGrid" class="grid grid-cols-7 gap-1"></div>
                         </div>
                     </div>
 
-                    <!-- MY UPCOMING SESSIONS (replaces Pending Requests + Quick Actions) -->
+                    <!-- MY UPCOMING SESSIONS -->
                     <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
                         <div class="flex justify-between items-center mb-4">
                             <h3 class="font-bold text-slate-800 text-sm tracking-tight">My Upcoming Sessions</h3>
@@ -593,12 +692,13 @@ $dismissSuccessMessage = action(function () {
 </div><!-- end app-wrapper -->
 
 <script>
-// ─── DATA FROM SERVER ───────────────────────────────────────────────────────
+// ─── DATA FROM SERVER ────────────────────────────────────────────────────────
 const allSessions = @json($this->sessions);
 
-// ─── STATE ──────────────────────────────────────────────────────────────────
+// ─── STATE ───────────────────────────────────────────────────────────────────
 const today = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Manila" }));
-let selectedDateStr = today.toISOString().split("T")[0];
+const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+let selectedDateStr = todayStr;
 let viewDate = new Date(today.getFullYear(), today.getMonth(), 1);
 
 let tablePage = 0;
@@ -608,16 +708,16 @@ let sortDirection = 'asc';
 let upcomingPage = 0;
 const UPCOMING_PER_PAGE = 5;
 
-// ─── DOM ELEMENTS ───────────────────────────────────────────────────────────
-const sidebar          = document.getElementById('sidebar');
-const profileTrigger   = document.getElementById('profileTrigger');
-const profileDropdown  = document.getElementById('profileDropdown');
-const searchInput      = document.getElementById('liveSearchInput');
-const statusFilter     = document.getElementById('statusFilter');
+// ─── DOM ELEMENTS ────────────────────────────────────────────────────────────
+const sidebar             = document.getElementById('sidebar');
+const profileTrigger      = document.getElementById('profileTrigger');
+const profileDropdown     = document.getElementById('profileDropdown');
+const searchInput         = document.getElementById('liveSearchInput');
+const statusFilter        = document.getElementById('statusFilter');
 const globalSearchInput   = document.getElementById('globalSearchInput');
 const globalSearchResults = document.getElementById('globalSearchResults');
 
-// ─── SIDEBAR TOGGLE ─────────────────────────────────────────────────────────
+// ─── SIDEBAR TOGGLE ──────────────────────────────────────────────────────────
 document.getElementById('sidebarToggle').addEventListener('click', () => {
     sidebar.classList.toggle('collapsed');
 });
@@ -626,20 +726,21 @@ profileTrigger.addEventListener('click', (e) => {
     e.stopPropagation();
     profileDropdown.classList.toggle('show');
 });
-window.addEventListener('click', () => {
+
+window.addEventListener('click', (e) => {
     if (profileDropdown.classList.contains('show')) profileDropdown.classList.remove('show');
-    if (!globalSearchInput.contains(event.target)) globalSearchResults.classList.add('hidden');
+    if (!globalSearchInput.contains(e.target)) globalSearchResults.classList.add('hidden');
 });
 
-// ─── CLOCK ──────────────────────────────────────────────────────────────────
+// ─── CLOCK ───────────────────────────────────────────────────────────────────
 function updateClock() {
-    const now = new Date();
+    const now = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Manila" }));
     document.getElementById('liveClock').innerText = now.toLocaleTimeString('en-US', { hour12: false });
     document.getElementById('liveDate').innerText  = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 }
 setInterval(updateClock, 1000);
 
-// ─── HELPERS ────────────────────────────────────────────────────────────────
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
 function formatTimeTo12Hour(timeStr) {
     const [hour, minute] = timeStr.split(':');
     let h = parseInt(hour);
@@ -650,13 +751,13 @@ function formatTimeTo12Hour(timeStr) {
 
 function getStatusColor(status) {
     switch (status) {
-        case 'accepted':  return 'text-green-900 bg-green-100 border-green-400';
-        case 'completed': return 'text-gray-600 bg-gray-100 border-gray-300';
-        case 'pending':   return 'text-yellow-700 bg-yellow-100 border-yellow-300';
-        case 'rejected':  return 'text-red-700 bg-red-100 border-red-300';
-        case 'cancelled': return 'text-red-700 bg-red-100 border-red-300';
-        case 'no_show':   return 'text-orange-700 bg-orange-100 border-orange-300';
-        default:          return 'text-gray-500 bg-gray-50 border-gray-200';
+        case 'pending':   return 'bg-yellow-100 text-yellow-800';
+        case 'accepted':  return 'bg-green-100 text-green-800';
+        case 'completed': return 'text-gray-900 bg-gray-100';
+        case 'rejected':  return 'bg-red-100 text-red-800';
+        case 'cancelled': return 'bg-red-100 text-red-800';
+        case 'no_show':   return 'bg-red-100 text-red-800';
+        default:          return 'bg-gray-100 text-gray-800';
     }
 }
 
@@ -672,57 +773,38 @@ function getStatusLabel(status) {
     }
 }
 
-function timeToMinutes(t) {
-    const [h, m] = t.split(':').map(Number);
-    return h * 60 + m;
-}
-
-function fmtHour(h) {
-    const display = h > 12 ? h - 12 : h;
-    const ampm = h >= 12 ? 'PM' : 'AM';
-    return `${display}:00 ${ampm}`;
-}
-
-// ─── TOGGLE NAME HELPER ─────────────────────────────────────────────────────
+// ─── TOGGLE NAME HELPERS ─────────────────────────────────────────────────────
 function toggleName(id) {
-    const nameEl  = document.getElementById('name-' + id);
-    const btn     = document.getElementById('toggle-' + id);
+    const nameEl = document.getElementById('name-' + id);
+    const btn    = document.getElementById('toggle-' + id);
     if (!nameEl || !btn) return;
     if (btn.innerText === 'Show more') {
-        nameEl.style.whiteSpace   = 'normal';
-        nameEl.style.overflow     = 'visible';
-        nameEl.style.textOverflow = 'unset';
-        nameEl.style.wordBreak    = 'break-all';
+        nameEl.style.whiteSpace = 'normal'; nameEl.style.overflow = 'visible';
+        nameEl.style.textOverflow = 'unset'; nameEl.style.wordBreak = 'break-all';
         btn.innerText = 'Show less';
     } else {
-        nameEl.style.whiteSpace   = 'nowrap';
-        nameEl.style.overflow     = 'hidden';
-        nameEl.style.textOverflow = 'ellipsis';
-        nameEl.style.wordBreak    = 'normal';
+        nameEl.style.whiteSpace = 'nowrap'; nameEl.style.overflow = 'hidden';
+        nameEl.style.textOverflow = 'ellipsis'; nameEl.style.wordBreak = 'normal';
         btn.innerText = 'Show more';
     }
 }
 
 function toggleUpcomingName(id) {
-    const nameEl  = document.getElementById('uname-' + id);
-    const btn     = document.getElementById('utoggle-' + id);
+    const nameEl = document.getElementById('uname-' + id);
+    const btn    = document.getElementById('utoggle-' + id);
     if (!nameEl || !btn) return;
     if (btn.innerText === 'Show more') {
-        nameEl.style.whiteSpace   = 'normal';
-        nameEl.style.overflow     = 'visible';
-        nameEl.style.textOverflow = 'unset';
-        nameEl.style.wordBreak    = 'break-all';
+        nameEl.style.whiteSpace = 'normal'; nameEl.style.overflow = 'visible';
+        nameEl.style.textOverflow = 'unset'; nameEl.style.wordBreak = 'break-all';
         btn.innerText = 'Show less';
     } else {
-        nameEl.style.whiteSpace   = 'nowrap';
-        nameEl.style.overflow     = 'hidden';
-        nameEl.style.textOverflow = 'ellipsis';
-        nameEl.style.wordBreak    = 'normal';
+        nameEl.style.whiteSpace = 'nowrap'; nameEl.style.overflow = 'hidden';
+        nameEl.style.textOverflow = 'ellipsis'; nameEl.style.wordBreak = 'normal';
         btn.innerText = 'Show more';
     }
 }
 
-// ─── GLOBAL SEARCH ──────────────────────────────────────────────────────────
+// ─── GLOBAL SEARCH ───────────────────────────────────────────────────────────
 globalSearchInput.addEventListener('input', function () {
     const value = this.value.trim();
     if (value === '') { globalSearchResults.classList.add('hidden'); return; }
@@ -731,7 +813,9 @@ globalSearchInput.addEventListener('input', function () {
         (s.mentor  || '').toLowerCase().includes(q) ||
         (s.subject || '').toLowerCase().includes(q) ||
         (s.status  || '').toLowerCase().includes(q) ||
-        (s.date    || '').includes(q)
+        (s.date    || '').includes(q) ||
+        formatTimeTo12Hour(s.start).toLowerCase().includes(q) ||
+        formatTimeTo12Hour(s.end).toLowerCase().includes(q)
     );
     if (!results.length) {
         globalSearchResults.innerHTML = `<div class="p-4 text-xs text-gray-400 text-center">No matching sessions found</div>`;
@@ -744,9 +828,7 @@ globalSearchInput.addEventListener('input', function () {
                         <p class="text-xs text-gray-400">${r.subject} • ${formatTimeTo12Hour(r.start)} – ${formatTimeTo12Hour(r.end)}</p>
                         <p class="text-[10px] text-gray-400">${r.date}</p>
                     </div>
-                    <span class="${getStatusColor(r.status)} text-[10px] px-2 py-1 rounded font-bold border">
-                        ${getStatusLabel(r.status)}
-                    </span>
+                    <span class="${getStatusColor(r.status)} font-bold text-xs px-2.5 py-1 rounded-full capitalize">${getStatusLabel(r.status)}</span>
                 </div>
             </div>
         `).join('');
@@ -754,7 +836,7 @@ globalSearchInput.addEventListener('input', function () {
     globalSearchResults.classList.remove('hidden');
 });
 
-// ─── SORT ────────────────────────────────────────────────────────────────────
+// ─── SORT ─────────────────────────────────────────────────────────────────────
 function toggleSort(col) {
     if (sortColumn === col) {
         sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
@@ -766,7 +848,7 @@ function toggleSort(col) {
     applyFilters();
 }
 
-// ─── TODAY'S TABLE ───────────────────────────────────────────────────────────
+// ─── TODAY'S TABLE ────────────────────────────────────────────────────────────
 function applyFilters() {
     const tbody          = document.getElementById('tableBody');
     const searchTerm     = searchInput.value.toLowerCase();
@@ -779,13 +861,12 @@ function applyFilters() {
         return matchesDate && matchesMentor && matchesStatus;
     });
 
-    // Sort
     filtered.sort((a, b) => {
         let aVal, bVal;
-        if      (sortColumn === 'start')   { aVal = a.start;            bVal = b.start;            }
+        if      (sortColumn === 'start')   { aVal = a.start;               bVal = b.start;               }
         else if (sortColumn === 'mentor')  { aVal = a.mentor.toLowerCase(); bVal = b.mentor.toLowerCase(); }
-        else if (sortColumn === 'subject') { aVal = a.subject.toLowerCase(); bVal = b.subject.toLowerCase(); }
-        else if (sortColumn === 'status')  { aVal = a.status;            bVal = b.status;            }
+        else if (sortColumn === 'subject') { aVal = a.subject.toLowerCase();bVal = b.subject.toLowerCase();}
+        else if (sortColumn === 'status')  { aVal = a.status;               bVal = b.status;               }
         if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
         if (aVal > bVal) return sortDirection === 'asc' ?  1 : -1;
         return 0;
@@ -799,33 +880,26 @@ function applyFilters() {
     const visible = filtered.slice(start, start + TABLE_PER_PAGE);
 
     if (!total) {
-        tbody.innerHTML = `<tr><td colspan="4" class="py-12 text-center text-gray-400 italic text-sm">No sessions found for this date.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="4" class="py-12 text-center text-gray-400 italic">No sessions for this date.</td></tr>`;
     } else {
         tbody.innerHTML = visible.map(row => `
             <tr class="border-b last:border-0 hover:bg-slate-50 transition">
-                <td class="py-4 font-bold text-slate-700" style="width:35%">
-                    <div style="max-width:260px;">
-                        <div id="name-${row.id}" style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis;max-width:100%;" title="${row.mentor}">${row.mentor}</div>
-                        <button onclick="toggleName('${row.id}')" id="toggle-${row.id}" style="font-size:9px;color:#7b1d1d;font-weight:600;margin-top:2px;background:none;border:none;cursor:pointer;padding:0;display:none;">Show more</button>
+                <td class="py-4 text-slate-700" style="width:35%">
+                    <div class="hover-tooltip" data-full="${row.mentor}" style="max-width:260px;">
+                        <div id="name-${row.id}" style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis;max-width:90%;">${row.mentor}</div>
                     </div>
                 </td>
-                <td class="text-slate-500" style="width:25%;white-space:nowrap;">${formatTimeTo12Hour(row.start)} – ${formatTimeTo12Hour(row.end)}</td>
+                <td class="text-slate-500" style="width:30%;white-space:nowrap;">${formatTimeTo12Hour(row.start)} - ${formatTimeTo12Hour(row.end)}</td>
                 <td class="text-slate-600 truncate" style="width:20%">${row.subject}</td>
                 <td style="width:20%">
-                    <span class="${getStatusColor(row.status)} font-bold text-[10px] px-2 py-1 rounded border">
-                        ${getStatusLabel(row.status)}
-                    </span>
+                    <div class="flex items-center justify-center">
+                        <span class="${getStatusColor(row.status)} font-bold text-xs px-2.5 py-1 rounded-full capitalize">
+                            ${getStatusLabel(row.status)}
+                        </span>
+                    </div>
                 </td>
             </tr>
         `).join('');
-
-        visible.forEach(row => {
-            const nameEl   = document.getElementById('name-' + row.id);
-            const toggleEl = document.getElementById('toggle-' + row.id);
-            if (nameEl && toggleEl && nameEl.scrollWidth > nameEl.clientWidth) {
-                toggleEl.style.display = 'block';
-            }
-        });
     }
 
     // Sort header indicators
@@ -860,7 +934,7 @@ document.getElementById('nextBtn').addEventListener('click', () => { tablePage++
 searchInput.addEventListener('input',   () => { tablePage = 0; applyFilters(); });
 statusFilter.addEventListener('change', () => { tablePage = 0; applyFilters(); });
 
-// ─── WEEKLY SCHEDULE ─────────────────────────────────────────────────────────
+// ─── WEEKLY SCHEDULE (grid-based, from mentor dashboard) ─────────────────────
 function getCurrentWeekRange() {
     const selected = new Date(selectedDateStr);
     const day  = selected.getDay();
@@ -882,132 +956,205 @@ function updateWeekHeaders() {
     });
 }
 
-function generateWeeklySchedule(){
+function generateWeeklySchedule() {
+    const ALLOWED_STATUSES = ['accepted', 'pending', 'completed'];
 
-    const tbody=document.getElementById("weeklyScheduleBody");
-    tbody.innerHTML="";
+    const container = document.getElementById("weeklyScheduleBody");
+    container.innerHTML = "";
 
-    const startHour=8;
-    const week=getCurrentWeekRange();
+    const tableEl = container.closest('table');
+    if (!tableEl) return;
+    const wrapper = tableEl.parentElement;
 
-    function timeToMinutes(t){
-    const [h,m]=t.split(":").map(Number);
-    return h*60+m;
+    let gridWrap = document.getElementById('weeklyGridWrap');
+    if (gridWrap) gridWrap.remove();
+
+    const week = getCurrentWeekRange();
+    const SLOT_HEIGHT = 28;
+    const TIME_COL_W  = 52;
+
+    function timeToMinutes(t) {
+        const [h, m] = t.split(":").map(Number);
+        return h * 60 + m;
     }
 
-    // Compute dynamic end hour from the latest session end in this week
     const weekSessions = allSessions.filter(s => {
-        if(!s.date || !s.end) return false;
-        if(!['accepted','pending','completed'].includes(s.status)) return false;
+        if (!s.date || !s.start || !s.end) return false;
+        if (!ALLOWED_STATUSES.includes(s.status)) return false;
         const d = new Date(s.date + "T00:00:00").setHours(0,0,0,0);
         return d >= week.monday.getTime() && d <= week.friday.getTime();
     });
 
-    let endHour = 10;
-    if(weekSessions.length) {
-        const latestEndMinutes = Math.max(...weekSessions.map(s => timeToMinutes(s.end)));
-        endHour = Math.ceil(latestEndMinutes / 60);
-    }
-    endHour = Math.max(endHour, startHour + 2);
-    endHour = Math.min(endHour, 22);
+    let startHour = 8, endHour = 18;
 
-    // Update the header range label dynamically
+    const totalSlots  = (endHour - startHour) * 2;
+    const totalHeight = totalSlots * SLOT_HEIGHT;
+
     const fmtHour = h => {
         const ampm = h >= 12 ? 'PM' : 'AM';
         const display = h % 12 || 12;
         return `${display}:00 ${ampm}`;
     };
     const rangeEl = document.getElementById('weeklyScheduleRange');
-    if(rangeEl) rangeEl.innerText = `${fmtHour(startHour)} – ${fmtHour(endHour)}`;
+    if (rangeEl) rangeEl.innerText = `${fmtHour(startHour)} – ${fmtHour(endHour)}`;
 
-    const days=["Monday","Tuesday","Wednesday","Thursday","Friday"];
-    for(let hour=startHour;hour<endHour;hour++){
+    const days     = ["Monday","Tuesday","Wednesday","Thursday","Friday"];
+    const dayCount = days.length;
 
-    for(let min of [0,30]){
-
-    const row=document.createElement("tr");
-
-    const timeCell=document.createElement("td");
-    timeCell.className="p-3 text-gray-500 font-semibold";
-
-    const displayHour = hour>12 ? hour-12 : hour;
-    const ampm = hour>=12 ? "PM":"AM";
-
-    timeCell.innerText=`${displayHour}:${min===0?'00':'30'} ${ampm}`;
-
-    row.appendChild(timeCell);
-
-    days.forEach(day=>{
-
-    const cell=document.createElement("td");
-    cell.className="p-2";
-
-    const slotStart=hour*60+min;
-    const slotEnd=slotStart+30;
-
-const sessions = allSessions.filter(s => {
-
-    // ❌ ignore invalid or old injected data
-    if(!s.date || !s.start || !s.end) return false;
-
-    const date = new Date(s.date + "T00:00:00");
-    const dayName = date.toLocaleDateString('en-US',{weekday:'long'});
-
-    const d = new Date(date).setHours(0,0,0,0);
-    const m = week.monday.getTime();
-    const f = week.friday.getTime();
-
-    if(!(d >= m && d <= f)) return false;
-    if(dayName !== day) return false;
-
-    // ✅ ONLY show real statuses
-    if(!['accepted','pending','completed'].includes(s.status)) return false;
-
-    const sessionStart = timeToMinutes(s.start);
-    const sessionEnd = timeToMinutes(s.end);
-
-    return sessionStart < slotEnd && sessionEnd > slotStart;
-
-});
-
-    if(sessions.length){
-
-cell.innerHTML = sessions.map(s => {
-
-    let colorClass = '';
-
-    if(s.status === 'pending'){
-        colorClass = 'bg-yellow-100 text-yellow-700 border border-yellow-300';
-    }else if(s.status === 'accepted'){
-        colorClass = 'bg-green-100 text-green-700 border border-green-300';
-    }else if(s.status === 'completed'){
-        colorClass = 'bg-gray-100 text-gray-600 border border-gray-300';
-    }
-
-    return `
-    <div class="schedule-block ${colorClass}">
-        ${s.subject}<br>
-        ${formatTimeTo12Hour(s.start)} - ${formatTimeTo12Hour(s.end)}
-    </div>
+    gridWrap = document.createElement('div');
+    gridWrap.id = 'weeklyGridWrap';
+    gridWrap.style.cssText = `
+        position:relative;
+        display:grid;
+        grid-template-columns:${TIME_COL_W}px repeat(${dayCount},1fr);
+        width:100%;
+        min-width:480px;
+        border:1px solid #c9c9c9;
+        border-radius:6px;
+        overflow:hidden;
+        background:#fff;
+        font-size:9px;
     `;
-}).join("");
 
-    }
+    // Header row — time cell
+    const hdrTime = document.createElement('div');
+    hdrTime.style.cssText = `background:#f8fafc;border-bottom:1px solid #e5e7eb;border-right:1px solid #e5e7eb;padding:6px 4px;font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;text-align:center;`;
+    hdrTime.innerText = 'Time';
+    gridWrap.appendChild(hdrTime);
 
-    row.appendChild(cell);
-
+    // Header row — day cells
+    days.forEach((day, i) => {
+        const d = new Date(week.monday);
+        d.setDate(week.monday.getDate() + i);
+        const label = d.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' });
+        const hdrDay = document.createElement('div');
+        hdrDay.style.cssText = `background:#f8fafc;border-bottom:1px solid #e5e7eb;${i < dayCount-1?'border-right:1px solid #e5e7eb;':''}padding:6px 4px;font-size:9px;font-weight:700;color:#64748b;text-transform:uppercase;text-align:center;`;
+        hdrDay.innerText = label;
+        gridWrap.appendChild(hdrDay);
+        // Keep th elements in sync for updateWeekHeaders compatibility
+        const thId = ['monHead','tueHead','wedHead','thuHead','friHead'][i];
+        const th = document.getElementById(thId);
+        if (th) th.innerText = label;
     });
 
-    tbody.appendChild(row);
+    // Time label column
+    const timeCol = document.createElement('div');
+    timeCol.style.cssText = `position:relative;height:${totalHeight}px;border-right:1px solid #e5e7eb;background:#fafafa;`;
 
-    }
-    }
-    }
+    for (let slot = 0; slot < totalSlots; slot++) {
+        const totalMins = startHour * 60 + slot * 30;
+        const h = Math.floor(totalMins / 60);
+        const m = totalMins % 60;
+        const displayH = h > 12 ? h - 12 : (h === 0 ? 12 : h);
+        const ampm = h >= 12 ? 'PM' : 'AM';
+        const label = `${displayH}:${m === 0 ? '00' : '30'} ${ampm}`;
 
+        const tick = document.createElement('div');
+        const isHour = slot % 2 === 0;
+        tick.style.cssText = `
+            position:absolute;
+            top:${slot * SLOT_HEIGHT}px;
+            left:0;right:0;
+            height:${SLOT_HEIGHT}px;
+            border-top:1px solid ${isHour ? '#afafaf' : '#d8d8d8'};
+            padding:2px 4px;
+            color:#94a3b8;
+            font-size:8px;
+            font-weight:600;
+            white-space:nowrap;
+            display:flex;
+            align-items:flex-start;
+        `;
+        if (m === 0) tick.innerText = label;
+        timeCol.appendChild(tick);
+    }
+    gridWrap.appendChild(timeCol);
 
-// ─── CALENDAR ────────────────────────────────────────────────────────────────
+    // Day columns
+    const statusLabel = { pending: 'Pending', accepted: 'Accepted', completed: 'Completed' };
+
+    days.forEach((day, di) => {
+        const dayCol = document.createElement('div');
+        dayCol.style.cssText = `
+            position:relative;
+            height:${totalHeight}px;
+            ${di < dayCount-1 ? 'border-right:1px solid #e5e7eb;' : ''}
+            background:#fff;
+        `;
+
+        // Grid lines
+        for (let slot = 0; slot < totalSlots; slot++) {
+            const isHour = slot % 2 === 0;
+            const line = document.createElement('div');
+            line.style.cssText = `
+                position:absolute;
+                top:${slot * SLOT_HEIGHT}px;
+                left:0;right:0;
+                height:${SLOT_HEIGHT}px;
+                border-top:1px solid ${isHour ? '#afafaf' : '#d8d8d8'};
+                pointer-events:none;
+            `;
+            dayCol.appendChild(line);
+        }
+
+        // Sessions for this day
+        const daySessions = weekSessions.filter(s => {
+            const date    = new Date(s.date + "T00:00:00");
+            const dayName = date.toLocaleDateString('en-US', { weekday:'long' });
+            return dayName === day;
+        });
+
+        daySessions.forEach(s => {
+            const sStart   = timeToMinutes(s.start);
+            const sEnd     = timeToMinutes(s.end);
+            const topPx    = ((sStart - startHour * 60) / 30) * SLOT_HEIGHT;
+            const heightPx = Math.max(((sEnd - sStart) / 30) * SLOT_HEIGHT - 2, 16);
+
+            const sk  = (s.status || 'pending').toLowerCase().replace(/[^a-z_]/g, '');
+            const lbl = statusLabel[sk] || s.status;
+
+            const block = document.createElement('div');
+            block.className = `schedule-block status-${sk}`;
+            // Tooltip shows mentor name instead of student name
+            block.title = `${s.mentor}\n${s.subject} • ${formatTimeTo12Hour(s.start)}–${formatTimeTo12Hour(s.end)}`;
+            block.style.cssText = `
+                position:absolute;
+                top:${topPx + 1}px;
+                left:2px;
+                right:2px;
+                height:${heightPx}px;
+                overflow:hidden;
+                border-radius:4px;
+                padding:2px 4px;
+                display:flex;
+                flex-direction:column;
+                justify-content:flex-start;
+                z-index:2;
+                cursor:default;
+                margin-bottom:0;
+            `;
+
+            const showTime  = heightPx >= 28;
+            const showLabel = heightPx >= 42;
+
+            block.innerHTML = `
+                <div style="font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.3;">${s.subject}</div>
+                ${showTime  ? `<div style="opacity:0.75;line-height:1.3;">${formatTimeTo12Hour(s.start)}–${formatTimeTo12Hour(s.end)}</div>` : ''}
+                ${showLabel ? `<div style="font-size:8px;font-weight:700;opacity:0.65;text-transform:uppercase;letter-spacing:0.04em;">${lbl}</div>` : ''}
+            `;
+
+            dayCol.appendChild(block);
+        });
+
+        gridWrap.appendChild(dayCol);
+    });
+
+    tableEl.style.display = 'none';
+    wrapper.appendChild(gridWrap);
+}
+
+// ─── CALENDAR ─────────────────────────────────────────────────────────────────
 function hasSessionOnDate(dateStr) {
-    const todayStr = new Date().toISOString().split('T')[0];
     return allSessions.some(s =>
         s.date === dateStr &&
         s.status === 'accepted' &&
@@ -1030,17 +1177,17 @@ function renderCalendar() {
     for (let i = 0; i < startDay; i++) grid.innerHTML += '<div></div>';
 
     for (let i = 1; i <= lastDay; i++) {
-        const dateStr = `${viewDate.getFullYear()}-${String(viewDate.getMonth() + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+        const dateStr = `${viewDate.getFullYear()}-${String(viewDate.getMonth()+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;
         const dateObj = new Date(viewDate.getFullYear(), viewDate.getMonth(), i);
         const dayEl   = document.createElement('div');
         dayEl.className = 'cal-day';
 
         if (dateObj < localToday) dayEl.style.color = '#9ca3af';
-        if (dateObj.toDateString() === localToday.toDateString()) dayEl.classList.add('cal-today');
-        if (dateStr === selectedDateStr) dayEl.classList.add('cal-selected');
+        if (dateStr === todayStr)          dayEl.classList.add('cal-today');
+        if (dateStr === selectedDateStr)   dayEl.classList.add('cal-selected');
 
         const hasSession = hasSessionOnDate(dateStr);
-        dayEl.innerHTML = `<span>${i}</span>${hasSession ? `<div class="notif-dot"></div>` : ''}`;
+        dayEl.innerHTML = `<span style="position:relative;z-index:1;">${i}</span>${hasSession ? `<div class="notif-dot"></div>` : ''}`;
 
         dayEl.onclick = () => {
             selectedDateStr = dateStr;
@@ -1065,7 +1212,7 @@ function updateTableDate() {
     document.getElementById('tableSubtitle').innerText = date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 }
 
-// ─── MY UPCOMING SESSIONS PANEL ──────────────────────────────────────────────
+// ─── MY UPCOMING SESSIONS PANEL ───────────────────────────────────────────────
 function renderUpcomingSessions() {
     const container  = document.getElementById('upcomingSessionsList');
     const badge      = document.getElementById('upcomingBadge');
@@ -1074,9 +1221,6 @@ function renderUpcomingSessions() {
     const prevBtn    = document.getElementById('upcomingPrevBtn');
     const nextBtn    = document.getElementById('upcomingNextBtn');
 
-    const todayStr = new Date().toISOString().split('T')[0];
-
-    // Upcoming = accepted sessions from today onward, sorted by date then time
     const upcoming = allSessions
         .filter(s => s.status === 'accepted' && s.date >= todayStr)
         .sort((a, b) => {
@@ -1084,7 +1228,7 @@ function renderUpcomingSessions() {
             return a.start > b.start ? 1 : -1;
         });
 
-    const total   = upcoming.length;
+    const total = upcoming.length;
     badge.innerText = `${total} ${total === 1 ? 'Session' : 'Sessions'}`;
 
     if (!total) {
@@ -1117,13 +1261,12 @@ function renderUpcomingSessions() {
                     <p class="text-[9px] text-gray-400">${new Date(s.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
                 </div>
             </div>
-            <span class="${getStatusColor(s.status)} font-bold text-[10px] px-2 py-1 rounded border flex-shrink-0">
+            <span class="${getStatusColor(s.status)} font-bold text-xs px-2.5 py-1 rounded-full capitalize flex-shrink-0">
                 ${getStatusLabel(s.status)}
             </span>
         </div>
     `).join('');
 
-    // Check for truncated mentor names
     visible.forEach(s => {
         const nameEl   = document.getElementById('uname-' + s.id);
         const toggleEl = document.getElementById('utoggle-' + s.id);
@@ -1132,7 +1275,6 @@ function renderUpcomingSessions() {
         }
     });
 
-    // Pagination
     if (total > UPCOMING_PER_PAGE) {
         pagination.classList.remove('hidden');
         pageInfo.innerText = `${start + 1}–${Math.min(start + UPCOMING_PER_PAGE, total)} of ${total}`;
@@ -1150,7 +1292,7 @@ function renderUpcomingSessions() {
 document.getElementById('upcomingPrevBtn').addEventListener('click', () => { upcomingPage--; renderUpcomingSessions(); });
 document.getElementById('upcomingNextBtn').addEventListener('click', () => { upcomingPage++; renderUpcomingSessions(); });
 
-// ─── REFRESH ALL ─────────────────────────────────────────────────────────────
+// ─── REFRESH ALL ──────────────────────────────────────────────────────────────
 function refreshSchedules() {
     applyFilters();
     generateWeeklySchedule();
