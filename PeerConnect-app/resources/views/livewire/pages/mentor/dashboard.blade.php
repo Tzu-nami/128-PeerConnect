@@ -86,36 +86,74 @@
         .app-wrapper { display: flex; height: 100vh; width: 100vw; overflow: hidden; }
 
 /* ── SIDEBAR ── */
-        .sidebar { width: var(--sidebar-width); background: var(--sidebar-green); flex-shrink: 0; display: flex; flex-direction: column; color: white; height: 100vh; transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1); z-index: 30; position: relative; overflow: visible; }
+        .sidebar {
+            width: var(--sidebar-width);
+            background: var(--sidebar-green);
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            color: white;
+            height: 100vh;
+            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 30;
+            position: relative;
+            overflow: visible;
+        }
+        .sidebar.collapsed { width: var(--sidebar-collapsed-width); }
 
-/* ── Logo row ── */
-        .sidebar-logo-container { height: var(--header-height); display: flex; align-items: center; justify-content: center; padding: 0 20px; gap: 12px; flex-shrink: 0; overflow: hidden; transition: padding 0.3s, justify-content 0.3s; }
+        /* ── Logo row ── */
+        .sidebar-logo-container {
+            height: var(--header-height);
+            display: flex; align-items: center; justify-content: center;
+            padding: 0 20px; gap: 12px; flex-shrink: 0; overflow: hidden;
+            transition: padding 0.3s, justify-content 0.3s;
+        }
         .sidebar:not(.collapsed) .sidebar-logo-container { justify-content: flex-start; }
         .logo-icon { flex-shrink: 0; font-size: 27px; width: auto; text-align: center; }
         .logo-text { font-size: 1.24rem; font-weight: 700; white-space: nowrap; overflow: hidden; opacity: 1; max-width: 200px; transition: opacity 0.2s, max-width 0.3s; }
         .logo-content { display: flex; align-items: center; gap: 12px; white-space: nowrap; }
+        .sidebar.collapsed .logo-text { opacity: 0; max-width: 0; pointer-events: none; }
+        .sidebar.collapsed .sidebar-logo-container { justify-content: center; padding: 0; width: 100%; }
+        .sidebar.collapsed .logo-content { gap: 0; justify-content: center; width: 100%; }
 
-/* ── Nav items ── */
-        .nav-item { display: flex; align-items: center; gap: 14px; padding: 18px 20px; color: rgba(255,255,255,0.7); text-decoration: none; transition: background 0.2s, color 0.2s, padding 0.3s, justify-content 0.3s; white-space: nowrap; position: relative; text-align: left; background: transparent; border: none; width: 100%; cursor: pointer; font-size: 0.95rem; justify-content: flex-start; }
+        /* ── Nav items ── */
+        .nav-item {
+            display: flex; align-items: center; gap: 14px; padding: 16px 20px;
+            color: rgba(255,255,255,0.7); text-decoration: none;
+            transition: background 0.2s, color 0.2s, padding 0.3s, justify-content 0.3s;
+            white-space: nowrap; position: relative; text-align: left;
+            background: transparent; border: none; width: 100%;
+            cursor: pointer; font-size: 0.95rem; justify-content: flex-start;
+        }
         .nav-item i { width: 32px; text-align: center; flex-shrink: 0; font-size: 22px; transition: width 0.3s; }
         .nav-item span { overflow: hidden; opacity: 1; max-width: 200px; transition: opacity 0.2s, max-width 0.3s; }
         .nav-item:hover, .nav-item.active { background: rgba(255,255,255,0.1); color: white; }
         .nav-item.active { background: var(--bg-light); color: var(--header-maroon); font-weight: 700; border-radius: 0; width: calc(100% + 1px); z-index: 10; }
-        
-        .sidebar.collapsed { width: var(--sidebar-collapsed-width); }
-        .sidebar.collapsed .sidebar-logo-container { justify-content: center; padding: 0; width: 100%; }
-        .sidebar.collapsed .logo-content { gap: 0; justify-content: center; width: 100%; }
-        .sidebar.collapsed .logo-icon { font-size: 22px; width: auto; margin: 0; }
-        .sidebar.collapsed .nav-item { display: flex; align-items: center; justify-content: center; padding: 18px 0; width: 100%; gap: 0; }
+
+        .sidebar.collapsed .nav-item { display: flex; align-items: center; justify-content: center; padding: 16px 0; width: 100%; gap: 0; }
         .sidebar.collapsed .nav-item i { margin: 0; width: auto; text-align: center; flex-shrink: 0; }
-        .sidebar.collapsed .nav-item span, .sidebar.collapsed .logo-content span { opacity: 0; max-width: 0; pointer-events: none; }
-        .sidebar.collapsed .nav-item.active { border-left: none; }
+        .sidebar.collapsed .nav-item span { opacity: 0; max-width: 0; pointer-events: none; }
 
-        .nav-item::after { content: attr(data-tooltip); position: absolute; left: 100%; top: 50%; transform: translateY(-50%); margin-left: 14px; background: rgba(0,0,0,0.85); color: white; padding: 5px 12px; border-radius: 4px; font-size: 12px; font-weight: 500; white-space: nowrap; opacity: 0; visibility: hidden; transition: opacity 0.2s; pointer-events: none; z-index: 100; }
+        .nav-item::after {
+            content: attr(data-tooltip);
+            position: absolute; left: 100%; top: 50%; transform: translateY(-50%);
+            margin-left: 14px; background: rgba(0,0,0,0.85); color: white;
+            padding: 5px 12px; border-radius: 4px; font-size: 12px; font-weight: 500;
+            white-space: nowrap; opacity: 0; visibility: hidden; transition: opacity 0.2s;
+            pointer-events: none; z-index: 100;
+        }
         .sidebar.collapsed .nav-item:hover::after { opacity: 1; visibility: visible; }
-        .sidebar-footer { padding: 0px 0; border-top: 1px solid rgba(255,255,255,0.1); }
 
-        .sidebar-toggle-btn { position: absolute; right: -16px; top: 50%; width: 32px; height: 32px; border-radius: 50%; background: var(--header-maroon); border: 2px solid white; cursor: pointer; display: flex; align-items: center; justify-content: center; color: white; font-size: 13px; z-index: 50; box-shadow: 0 2px 8px rgba(0,0,0,0.25); transition: background 0.2s; flex-shrink: 0; }
+        .sidebar-footer { padding: 0; border-top: 1px solid rgba(255,255,255,0.1); }
+
+        .sidebar-toggle-btn {
+            position: absolute; right: -16px; top: 50%;
+            width: 32px; height: 32px; border-radius: 50%;
+            background: var(--header-maroon); border: 2px solid white;
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+            color: white; font-size: 13px; z-index: 50;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.25); transition: background 0.2s; flex-shrink: 0;
+        }
         .sidebar-toggle-btn:hover { background: #dfcece; }
         .sidebar-toggle-btn .toggle-icon { transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); display: flex; align-items: center; justify-content: center; }
         .sidebar:not(.collapsed) .sidebar-toggle-btn .toggle-icon { transform: rotate(180deg); }
@@ -221,7 +259,36 @@
     overflow-wrap: anywhere;
     white-space: normal;
 }
-
+.hover-tooltip {
+    position: relative;
+    cursor: pointer;
+}
+.hover-tooltip::after {
+    content: attr(data-full);
+    position: absolute;
+    left: 0;
+    top: 110%;
+    background: rgba(0,0,0,0.85);
+    color: #fff;
+    padding: 8px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    line-height: 1.4;
+    white-space: normal;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    width: 320px;          /* fixed width instead of min/max */
+    max-width: 320px;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(5px);
+    transition: 0.15s ease;
+    z-index: 9999;         /* bump this up */
+}
+.hover-tooltip:hover::after {
+    opacity: 1;
+    transform: translateY(0);
+}
 .topic-text.line-clamp-1 {
     display: -webkit-box;
     -webkit-line-clamp: 1;
@@ -315,7 +382,7 @@
 
             <div class="main-content">
                 <header class="top-header relative">
-                    <div class="text-lg">Welcome, {{ auth()->user()->user_roles}} <span class="font-bold">{{ auth()->user()->name }}</span></div>
+                    <div class="text-lg">Welcome, <span class="font-bold">{{ auth()->user()->name }}</span></div>
                     
                     <button id="profileTrigger" class="flex items-center gap-2 px-3 py-1 bg-white rounded-full hover:bg-gray-100 transition shadow-sm border-2 border-white/20 group">
                         <div class="w-8 h-8 bg-red-900 text-white rounded-full flex items-center justify-center text-xs font-bold">
@@ -387,7 +454,7 @@
                                                     Student <span class="sort-icon"><i class="fa-solid fa-arrow-up-arrow-down" style="font-size:8px;opacity:0.4;"></i></span>
                                                 </button>
                                             </th>
-                                            <th class="pb-3 text-[10px] tracking-wider" style="width:25%">
+                                            <th class="pb-3 text-[10px] tracking-wider" style="width:30%">
                                                 <button id="sortHead-start" onclick="toggleSort('start')" class="flex items-center gap-1 font-semibold uppercase hover:text-red-800 transition-colors" style="color:#7b1d1d;">
                                                     Time <span class="sort-icon"><i class="fa-solid fa-arrow-up" style="font-size:8px;"></i></span>
                                                 </button>
@@ -397,11 +464,11 @@
                                                     Subject <span class="sort-icon"><i class="fa-solid fa-arrow-up-arrow-down" style="font-size:8px;opacity:0.4;"></i></span>
                                                 </button>
                                             </th>
-                                            <th class="pb-3 text-[10px] tracking-wider" style="width:20%">
-                                                <button id="sortHead-status" onclick="toggleSort('status')" class="flex items-center gap-1 font-semibold uppercase hover:text-red-800 transition-colors" style="color:#94a3b8;">
-                                                    &nbsp;&nbsp;&nbsp;&nbsp;Status <span class="sort-icon"><i class="fa-solid fa-arrow-up-arrow-down" style="font-size:8px;opacity:0.4;"></i></span>
-                                                </button>
-                                            </th>
+<th class="pb-3 text-[10px] tracking-wider" style="width:20%">
+    <button id="sortHead-status" onclick="toggleSort('status')" class="flex items-center justify-center gap-1 font-semibold uppercase hover:text-red-800 transition-colors w-full" style="color:#94a3b8;">
+        Status <span class="sort-icon"><i class="fa-solid fa-arrow-up-arrow-down" style="font-size:8px;opacity:0.4;"></i></span>
+    </button>
+</th>
                                         </tr>
                                     </thead>
                                     <tbody id="tableBody"></tbody>
@@ -495,7 +562,10 @@
                                     <div id="calendarGrid" class="grid grid-cols-7 gap-1"></div>
                                 </div>
                             </div>
-
+    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+        <h3 class="font-bold text-slate-800 text-sm mb-4">Quick Actions</h3>
+        <div id="quickActionsList" class="flex flex-col gap-3"></div>
+    </div>
                             <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
                                 <div class="flex justify-between items-center mb-4">
                                     <h3 class="font-bold text-slate-800 text-sm tracking-tight">Pending Requests</h3>
@@ -522,10 +592,7 @@
                                 </div>
                             </div>
 
-    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-        <h3 class="font-bold text-slate-800 text-sm mb-4">Quick Actions</h3>
-        <div id="quickActionsList" class="flex flex-col gap-3"></div>
-    </div>
+
                         </div>
                     </div>
 </main>
@@ -733,20 +800,22 @@ return merged.filter(item =>
             tbody.innerHTML = `<tr><td colspan="4" class="py-12 text-center text-gray-400 italic">No sessions for this date.</td></tr>`;
         } else {
             tbody.innerHTML = visible.map(row => `
-                <tr class="border-b last:border-0 hover:bg-slate-50 transition">
-                    <td class="py-4 font-bold text-slate-700" style="width:35%">
-                        <div style="max-width:260px;">
-                            <div id="name-${row.id}" style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis;max-width:100%;" title="${row.student}">${row.student}</div>
-                            <button onclick="toggleName('${row.id}','${row.student.replace(/'/g,"\\'")}')" id="toggle-${row.id}" style="font-size:9px;color:#7b1d1d;font-weight:600;margin-top:2px;background:none;border:none;cursor:pointer;padding:0;display:none;">Show more</button>
-                        </div>
-                    </td>
+<tr class="border-b last:border-0 hover:bg-slate-50 transition">
+    <td class="py-4 text-slate-700" style="width:35%">
+        <div class="hover-tooltip" data-full="${row.student}" style="max-width:260px;">
+            <div id="name-${row.id}" style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis;max-width:90%;">${row.student}</div>
+        </div>
+    </td>
+                </div>
                     <td class="text-slate-500" style="width:25%;white-space:nowrap;">${formatTimeTo12Hour(row.start)} - ${formatTimeTo12Hour(row.end)}</td>
                     <td class="text-slate-600 truncate" style="width:20%">${row.subject}</td>
-                    <td style="width:20%">
-                        <span class="${getStatusColor(row.status)} font-bold text-xs px-2.5 py-1 rounded-full capitalize">
-                            ${getStatusLabel(row.status)}
-                        </span>
-                    </td>
+<td style="width:20%">
+    <div class="flex items-center justify-center">
+        <span class="${getStatusColor(row.status)} font-bold text-xs px-2.5 py-1 rounded-full capitalize">
+            ${getStatusLabel(row.status)}
+        </span>
+    </div>
+</td>
                 </tr>
             `).join('');
 
@@ -1032,7 +1101,7 @@ return merged.filter(item =>
         switch (status) {
             case 'pending':   return 'bg-yellow-100 text-yellow-800';
             case 'accepted':  return 'bg-green-100 text-green-800';
-            case 'completed': return 'bg-green-100 text-green-800';
+            case 'completed': return 'text-gray-900 bg-gray-100';
             case 'rejected':  return 'bg-red-100 text-red-800';
             case 'cancelled': return 'bg-red-100 text-red-800';
             case 'closed':    return 'bg-purple-100 text-purple-800';
@@ -1211,7 +1280,7 @@ return merged.filter(item =>
         const container = document.getElementById('pendingRequestsList');
         const badge     = document.getElementById('pendingBadge');
         const toggleBtn = document.getElementById('toggleRequestsBtn');
-        const sorted = [...allSessions].filter(s => s.status === 'pending').sort((a,b) => b.id - a.id);
+        const sorted = [...allSessions].filter(s => s.status === 'pending').sort((a,b) => new Date(b.date) - new Date(a.date));
         const total  = sorted.length;
         badge.innerText = `${total} ${total===1?'Request':'Requests'}`;
         if (!total) { container.innerHTML = `<p class="text-xs text-gray-400 italic">No pending requests.</p>`; toggleBtn.style.display = 'none'; return; }
