@@ -1051,7 +1051,7 @@ $dismissFeedbackSubmitted = action(function () {
             {{-- ══ BOOKING FORM ══ --}}
             @elseif(!$completedBooking)
             <div class="flex-1 min-w-0 items-center gap-4 rounded-lg pb-6 pt-0">
-                <h1 class="text-3xl font-extrabold tracking-tight text-transparent bg-clip-text bg-up-maroon flex items-center gap-3">
+                <h1 class="text-3xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-[#7b1d1d] to-[#b91c1c] flex items-center gap-3">
                     <i class="fa-solid fa-calendar-check"></i>
                     Request An Enrichment Session
                 </h1>
