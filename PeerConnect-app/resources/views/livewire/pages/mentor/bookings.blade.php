@@ -427,36 +427,74 @@ $dismissFeedbackSubmitted = action(function () {
         .app-wrapper { display: flex; height: 100vh; width: 100vw; overflow: hidden; }
 
 /* ── SIDEBAR ── */
-        .sidebar { width: var(--sidebar-width); background: var(--sidebar-green); flex-shrink: 0; display: flex; flex-direction: column; color: white; height: 100vh; transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1); z-index: 30; position: relative; overflow: visible; }
+        .sidebar {
+            width: var(--sidebar-width);
+            background: var(--sidebar-green);
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            color: white;
+            height: 100vh;
+            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 30;
+            position: relative;
+            overflow: visible;
+        }
+        .sidebar.collapsed { width: var(--sidebar-collapsed-width); }
 
-/* ── Logo row ── */
-        .sidebar-logo-container { height: var(--header-height); display: flex; align-items: center; justify-content: center; padding: 0 20px; gap: 12px; flex-shrink: 0; overflow: hidden; transition: padding 0.3s, justify-content 0.3s; }
+        /* ── Logo row ── */
+        .sidebar-logo-container {
+            height: var(--header-height);
+            display: flex; align-items: center; justify-content: center;
+            padding: 0 20px; gap: 12px; flex-shrink: 0; overflow: hidden;
+            transition: padding 0.3s, justify-content 0.3s;
+        }
         .sidebar:not(.collapsed) .sidebar-logo-container { justify-content: flex-start; }
         .logo-icon { flex-shrink: 0; font-size: 27px; width: auto; text-align: center; }
         .logo-text { font-size: 1.24rem; font-weight: 700; white-space: nowrap; overflow: hidden; opacity: 1; max-width: 200px; transition: opacity 0.2s, max-width 0.3s; }
         .logo-content { display: flex; align-items: center; gap: 12px; white-space: nowrap; }
+        .sidebar.collapsed .logo-text { opacity: 0; max-width: 0; pointer-events: none; }
+        .sidebar.collapsed .sidebar-logo-container { justify-content: center; padding: 0; width: 100%; }
+        .sidebar.collapsed .logo-content { gap: 0; justify-content: center; width: 100%; }
 
-/* ── Nav items ── */
-        .nav-item { display: flex; align-items: center; gap: 14px; padding: 18px 20px; color: rgba(255,255,255,0.7); text-decoration: none; transition: background 0.2s, color 0.2s, padding 0.3s, justify-content 0.3s; white-space: nowrap; position: relative; text-align: left; background: transparent; border: none; width: 100%; cursor: pointer; font-size: 0.95rem; justify-content: flex-start; }
+        /* ── Nav items ── */
+        .nav-item {
+            display: flex; align-items: center; gap: 14px; padding: 16px 20px;
+            color: rgba(255,255,255,0.7); text-decoration: none;
+            transition: background 0.2s, color 0.2s, padding 0.3s, justify-content 0.3s;
+            white-space: nowrap; position: relative; text-align: left;
+            background: transparent; border: none; width: 100%;
+            cursor: pointer; font-size: 0.95rem; justify-content: flex-start;
+        }
         .nav-item i { width: 32px; text-align: center; flex-shrink: 0; font-size: 22px; transition: width 0.3s; }
         .nav-item span { overflow: hidden; opacity: 1; max-width: 200px; transition: opacity 0.2s, max-width 0.3s; }
         .nav-item:hover, .nav-item.active { background: rgba(255,255,255,0.1); color: white; }
         .nav-item.active { background: var(--bg-light); color: var(--header-maroon); font-weight: 700; border-radius: 0; width: calc(100% + 1px); z-index: 10; }
-        
-        .sidebar.collapsed { width: var(--sidebar-collapsed-width); }
-        .sidebar.collapsed .sidebar-logo-container { justify-content: center; padding: 0; width: 100%; }
-        .sidebar.collapsed .logo-content { gap: 0; justify-content: center; width: 100%; }
-        .sidebar.collapsed .logo-icon { font-size: 22px; width: auto; margin: 0; }
-        .sidebar.collapsed .nav-item { display: flex; align-items: center; justify-content: center; padding: 18px 0; width: 100%; gap: 0; }
+
+        .sidebar.collapsed .nav-item { display: flex; align-items: center; justify-content: center; padding: 16px 0; width: 100%; gap: 0; }
         .sidebar.collapsed .nav-item i { margin: 0; width: auto; text-align: center; flex-shrink: 0; }
-        .sidebar.collapsed .nav-item span, .sidebar.collapsed .logo-content span { opacity: 0; max-width: 0; pointer-events: none; }
-        .sidebar.collapsed .nav-item.active { border-left: none; }
+        .sidebar.collapsed .nav-item span { opacity: 0; max-width: 0; pointer-events: none; }
 
-        .nav-item::after { content: attr(data-tooltip); position: absolute; left: 100%; top: 50%; transform: translateY(-50%); margin-left: 14px; background: rgba(0,0,0,0.85); color: white; padding: 5px 12px; border-radius: 4px; font-size: 12px; font-weight: 500; white-space: nowrap; opacity: 0; visibility: hidden; transition: opacity 0.2s; pointer-events: none; z-index: 100; }
+        .nav-item::after {
+            content: attr(data-tooltip);
+            position: absolute; left: 100%; top: 50%; transform: translateY(-50%);
+            margin-left: 14px; background: rgba(0,0,0,0.85); color: white;
+            padding: 5px 12px; border-radius: 4px; font-size: 12px; font-weight: 500;
+            white-space: nowrap; opacity: 0; visibility: hidden; transition: opacity 0.2s;
+            pointer-events: none; z-index: 100;
+        }
         .sidebar.collapsed .nav-item:hover::after { opacity: 1; visibility: visible; }
-        .sidebar-footer { padding: 0px 0; border-top: 1px solid rgba(255,255,255,0.1); }
 
-        .sidebar-toggle-btn { position: absolute; right: -16px; top: 50%; width: 32px; height: 32px; border-radius: 50%; background: var(--header-maroon); border: 2px solid white; cursor: pointer; display: flex; align-items: center; justify-content: center; color: white; font-size: 13px; z-index: 50; box-shadow: 0 2px 8px rgba(0,0,0,0.25); transition: background 0.2s; flex-shrink: 0; }
+        .sidebar-footer { padding: 0; border-top: 1px solid rgba(255,255,255,0.1); }
+
+        .sidebar-toggle-btn {
+            position: absolute; right: -16px; top: 50%;
+            width: 32px; height: 32px; border-radius: 50%;
+            background: var(--header-maroon); border: 2px solid white;
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+            color: white; font-size: 13px; z-index: 50;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.25); transition: background 0.2s; flex-shrink: 0;
+        }
         .sidebar-toggle-btn:hover { background: #dfcece; }
         .sidebar-toggle-btn .toggle-icon { transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); display: flex; align-items: center; justify-content: center; }
         .sidebar:not(.collapsed) .sidebar-toggle-btn .toggle-icon { transform: rotate(180deg); }
@@ -668,7 +706,7 @@ $dismissFeedbackSubmitted = action(function () {
 
         <div class="main-content">
             <header class="top-header relative">
-                <div class="text-lg">Welcome, {{ auth()->user()->user_roles }} <span class="font-bold">{{ auth()->user()->name }}</span></div>
+                <div class="text-lg">Welcome, <span class="font-bold">{{ auth()->user()->name }}</span></div>
                 
                 <button id="profileTrigger" class="flex items-center gap-2 px-3 py-1 bg-white rounded-full hover:bg-gray-100 transition shadow-sm border-2 border-white/20 group">
                     <div class="w-8 h-8 bg-red-900 text-white rounded-full flex items-center justify-center text-xs font-bold">
@@ -1010,8 +1048,8 @@ $dismissFeedbackSubmitted = action(function () {
             {{-- ══ BOOKING FORM ══ --}}
             @elseif(!$completedBooking)
             <div class="flex-1 min-w-0 items-center gap-4 rounded-lg pb-6 pt-0">
-                <h1 class="text-3xl font-extrabold tracking-tight text-transparent bg-clip-text bg-up-maroon flex items-center gap-3">
-                    <i class="fa-solid fa-calendar-plus text-up-maroon text-2xl drop-shadow-sm"></i>
+                <h1 class="text-3xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-[#7b1d1d] to-[#b91c1c] flex items-center gap-3">
+                    <i class="fa-solid fa-calendar-check"></i>
                     Request An Enrichment Session
                 </h1>
                 <p class="text-sm font-medium text-slate-500 leading-snug mt-1">Please fill out the details below. Your request will be reviewed by the peer mentor.</p>
