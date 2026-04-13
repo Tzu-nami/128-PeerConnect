@@ -220,15 +220,6 @@ $submitBooking = action(function () {
         return;
     }
 
-    /*$hasPendingFeedback = Bookings::where('student_id', $profile->id)
-        ->whereRaw("booking_status::text = 'completed'")
-        ->exists();
-
-    if ($hasPendingFeedback) {
-        session()->flash('error', 'Please submit your session feedback before making a new booking.');
-        return;
-    }*/
-
     $validated = $this->validate([
         'mentor_id' => ['required'],
         'subject_id' => ['required', 'exists:subjects,id'],
@@ -342,9 +333,6 @@ $submitFeedback = action(function () {
         'q10' => ['required', 'in:0,1'],
     ]);
 
-    /*$booking = Bookings::with(['subject'])
-        ->where('student_id', $profile->id)
-        ->whereRaw("booking_status::text = 'completed'")*/
     $booking = Bookings::with(['subject'])
         ->where('student_id', $profile->id)
         ->where('booking_status', 'completed')
@@ -376,11 +364,52 @@ $submitFeedback = action(function () {
         'q10'            => \DB::raw($this->q10 == '1' ? 'true' : 'false'),
     ]);
 
-    //$booking->update(['booking_status' => 'closed']);
-
     $this->reset(['feedbackText','q1','q2','q3','q4','q5','q6','q7','q8','q9','q10']);
     $this->feedbackStep = 1;
     $this->feedbackSubmitted = true;
+});
+
+// ── NEW: Skip feedback — inserts a null-answer row so the student is never prompted again for this booking ──
+$skipFeedback = action(function () {
+    abort_if(!auth()->user()->isStudent(), 403, 'Unauthorized Access');
+
+    $profile = StudentProfiles::where('user_id', auth()->id())->first();
+    abort_if(!$profile, 422);
+
+    $booking = Bookings::with(['subject'])
+        ->where('student_id', $profile->id)
+        ->where('booking_status', 'completed')
+        ->where('completed_at', '>=', now()->subDays(2))
+        ->whereNotIn('id', function($query) {
+            $query->select('booking_id')->from('feedback');
+        })
+        ->latest()
+        ->first();
+
+    // If no booking found (already handled or expired), silently do nothing
+    if (!$booking) return;
+
+    \DB::table('feedback')->insert([
+        'id'             => (string) \Illuminate\Support\Str::uuid(),
+        'booking_id'     => $booking->id,
+        'feedback'       => null,
+        'subject'        => $booking->subject->code ?? null,
+        'topic'          => $booking->topic ?? null,
+        'date_submitted' => now(),
+        'q1'             => null,
+        'q2'             => null,
+        'q3'             => null,
+        'q4'             => null,
+        'q5'             => null,
+        'q6'             => null,
+        'q7'             => null,
+        'q8'             => null,
+        'q9'             => null,
+        'q10'            => null,
+    ]);
+
+    // Dispatch event so the JS modal can close and UI can refresh
+    $this->dispatch('feedback-skipped');
 });
 
 $dismissFeedbackSubmitted = action(function () {
@@ -398,9 +427,6 @@ $dismissFeedbackSubmitted = action(function () {
         .app-wrapper { display: flex; height: 100vh; width: 100vw; overflow: hidden; }
 
 /* ── SIDEBAR ── */
-        .sidebar { width: var(--sidebar-width); background: var(--sidebar-green); flex-shrink: 0; display: flex; flex-direction: column; color: white; height: 100vh; transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1); z-index: 30; position: relative; overflow: visible; }
-
-/* ── Logo row ── */
         .sidebar {
             width: var(--sidebar-width);
             background: var(--sidebar-green);
@@ -503,22 +529,22 @@ $dismissFeedbackSubmitted = action(function () {
         .booking-detail-item p { font-size: 14px; font-weight: 600; color: #1f2937; margin: 0; }
         .booking-detail-item.full { grid-column: 1 / -1; }
 
-        /* ── FEEDBACK CARD ── */
-        .feedback-card { background: white; border-radius: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.07); overflow: hidden; border: 2px solid #93c5fd; }
-        .feedback-banner { display: flex; align-items: center; gap: 12px; padding: 16px 24px; background: linear-gradient(135deg,#eff6ff,#dbeafe); border-bottom: 1px solid #bfdbfe; }
-        .feedback-banner-icon { width: 40px; height: 40px; border-radius: 50%; background: #93c5fd; color: #1e3a8a; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 16px; }
+        /* ── FEEDBACK CARD (now GREEN) ── */
+        .feedback-card { background: white; border-radius: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.07); overflow: hidden; border: 2px solid #86efac; }
+        .feedback-banner { display: flex; align-items: center; gap: 12px; padding: 16px 24px; background: linear-gradient(135deg,#f0fdf4,#dcfce7); border-bottom: 1px solid #bbf7d0; }
+        .feedback-banner-icon { width: 40px; height: 40px; border-radius: 50%; background: #86efac; color: #14532d; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 16px; }
         .feedback-body { padding: 24px; }
 
-        /* ── PROGRESS BAR ── */
+        /* ── PROGRESS BAR (green) ── */
         .feedback-progress { display: flex; align-items: center; gap: 8px; margin-bottom: 22px; }
         .feedback-progress-step { flex: 1; height: 5px; border-radius: 3px; background: #e2e8f0; transition: background 0.3s; }
-        .feedback-progress-step.done { background: #2563eb; }
-        .feedback-progress-step.active { background: #93c5fd; }
+        .feedback-progress-step.done { background: #16a34a; }
+        .feedback-progress-step.active { background: #86efac; }
         .feedback-progress-label { font-size: 11px; font-weight: 700; color: #64748b; white-space: nowrap; }
 
         /* ── SESSION SUMMARY ── */
         .feedback-session-summary {
-            background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px;
+            background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px;
             padding: 12px 16px; margin-bottom: 20px;
             display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
         }
@@ -526,13 +552,13 @@ $dismissFeedbackSubmitted = action(function () {
         .feedback-session-summary .fs-item p { font-size: 12px; font-weight: 600; color: #1f2937; margin: 0; }
         .feedback-session-summary .fs-item.full { grid-column: 1 / -1; }
 
-        /* ── LIKERT QUESTION ── */
+        /* ── LIKERT QUESTION (green accent) ── */
         .likert-question {
             background: #fff; border: 1.5px solid #e2e8f0; border-radius: 12px;
             padding: 16px 18px; margin-bottom: 10px; transition: border-color 0.2s, box-shadow 0.2s;
         }
-        .likert-question.answered { border-color: #93c5fd; box-shadow: 0 0 0 3px rgba(147,197,253,0.15); }
-        .likert-question-num { font-size: 10px; font-weight: 700; color: #3b82f6; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; }
+        .likert-question.answered { border-color: #86efac; box-shadow: 0 0 0 3px rgba(134,239,172,0.2); }
+        .likert-question-num { font-size: 10px; font-weight: 700; color: #16a34a; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; }
         .likert-question-text { font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 14px; line-height: 1.5; }
         .likert-scale-labels { display: flex; justify-content: space-between; margin-bottom: 6px; }
         .likert-scale-labels span { font-size: 9px; color: #94a3b8; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
@@ -543,15 +569,15 @@ $dismissFeedbackSubmitted = action(function () {
             border: 1.5px solid #e2e8f0; font-size: 13px; font-weight: 700;
             color: #94a3b8; cursor: pointer; transition: all 0.15s; background: #f8fafc; user-select: none;
         }
-        .likert-options label:hover { border-color: #93c5fd; color: #2563eb; background: #eff6ff; }
-        .likert-options input[type="radio"]:checked + label { background: #2563eb; border-color: #2563eb; color: white; box-shadow: 0 2px 6px rgba(37,99,235,0.3); }
+        .likert-options label:hover { border-color: #86efac; color: #16a34a; background: #f0fdf4; }
+        .likert-options input[type="radio"]:checked + label { background: #16a34a; border-color: #16a34a; color: white; box-shadow: 0 2px 6px rgba(22,163,74,0.3); }
 
         /* ── BOOL QUESTION ── */
         .bool-question {
             background: #fff; border: 1.5px solid #e2e8f0; border-radius: 12px;
             padding: 16px 18px; margin-bottom: 10px; transition: border-color 0.2s, box-shadow 0.2s;
         }
-        .bool-question.answered { border-color: #93c5fd; box-shadow: 0 0 0 3px rgba(147,197,253,0.15); }
+        .bool-question.answered { border-color: #86efac; box-shadow: 0 0 0 3px rgba(134,239,172,0.2); }
         .bool-options { display: flex; gap: 10px; margin-top: 12px; }
         .bool-options input[type="radio"] { display: none; }
         .bool-options label {
@@ -570,9 +596,9 @@ $dismissFeedbackSubmitted = action(function () {
             padding: 12px 14px; font-size: 14px; font-family: inherit; color: #374151;
             resize: vertical; transition: border-color 0.2s; outline: none;
         }
-        .feedback-textarea:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
+        .feedback-textarea:focus { border-color: #16a34a; box-shadow: 0 0 0 3px rgba(22,163,74,0.1); }
 
-        /* ── NAV BUTTONS ── */
+        /* ── NAV BUTTONS (green) ── */
         .feedback-nav { display: flex; gap: 10px; margin-top: 18px; }
         .feedback-btn-back {
             flex: 0 0 auto; padding: 10px 20px; border-radius: 8px; border: 1.5px solid #e2e8f0;
@@ -582,10 +608,10 @@ $dismissFeedbackSubmitted = action(function () {
         .feedback-btn-back:hover { background: #f1f5f9; border-color: #94a3b8; }
         .feedback-btn-next {
             flex: 1; padding: 10px 20px; border-radius: 8px; border: none;
-            background: #2563eb; font-size: 13px; font-weight: 700; color: white;
+            background: #16a34a; font-size: 13px; font-weight: 700; color: white;
             cursor: pointer; transition: background 0.15s;
         }
-        .feedback-btn-next:hover { background: #1d4ed8; }
+        .feedback-btn-next:hover { background: #15803d; }
         .feedback-btn-next:disabled { opacity: 0.6; cursor: not-allowed; }
         .feedback-btn-submit {
             flex: 1; padding: 10px 20px; border-radius: 8px; border: none;
@@ -594,52 +620,96 @@ $dismissFeedbackSubmitted = action(function () {
         }
         .feedback-btn-submit:hover { background: #15803d; }
         .feedback-btn-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+
+        /* ── COMPLETED SESSION NOTIFICATION MODAL (green variant) ── */
+        #sessionCompleteModal { display: none; }
+        #sessionCompleteModal.show { display: flex; }
+        .session-complete-modal-box {
+            background: #fff; border-radius: 16px; padding: 28px;
+            max-width: 420px; width: 100%; margin: 16px;
+            box-shadow: 0 20px 60px -10px rgba(0,0,0,0.3);
+            border-top: 4px solid #16a34a;
+        }
+        .scm-icon-wrap {
+            width: 52px; height: 52px; border-radius: 50%;
+            background: #dcfce7; display: flex; align-items: center; justify-content: center;
+            margin-bottom: 16px; font-size: 22px; color: #15803d;
+        }
+        .scm-title { font-size: 18px; font-weight: 800; color: #14532d; margin-bottom: 6px; }
+        .scm-subtitle { font-size: 13px; color: #6b7280; line-height: 1.6; margin-bottom: 20px; }
+        .scm-session-info {
+            background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px;
+            padding: 12px 16px; margin-bottom: 20px;
+        }
+        .scm-session-info .si-row { display: flex; justify-content: space-between; gap: 8px; padding: 4px 0; font-size: 12px; }
+        .scm-session-info .si-row .si-label { color: #9ca3af; font-weight: 600; flex-shrink: 0; }
+        .scm-session-info .si-row .si-value { color: #1f2937; font-weight: 700; text-align: right; }
+        .scm-badge {
+            display: inline-flex; align-items: center; gap: 6px;
+            background: #dcfce7; color: #15803d; font-size: 11px; font-weight: 700;
+            padding: 4px 10px; border-radius: 20px; margin-bottom: 20px;
+            border: 1px solid #86efac;
+        }
+        .scm-actions { display: flex; gap: 10px; }
+        .scm-btn-skip {
+            flex: 1; padding: 11px 16px; border-radius: 9px;
+            border: 1.5px solid #d1d5db; background: white;
+            font-size: 13px; font-weight: 600; color: #6b7280;
+            cursor: pointer; transition: all 0.15s;
+        }
+        .scm-btn-skip:hover { background: #f9fafb; border-color: #9ca3af; color: #374151; }
+        .scm-btn-answer {
+            flex: 2; padding: 11px 16px; border-radius: 9px; border: none;
+            background: #16a34a; font-size: 13px; font-weight: 700; color: white;
+            cursor: pointer; transition: background 0.15s;
+        }
+        .scm-btn-answer:hover { background: #15803d; }
     </style>
 
     <div class="app-wrapper">
-        <aside class="sidebar" id="sidebar">
-            <div class="sidebar-logo-container">
-                <div class="logo-content">
-                <i class="fa-solid fa-graduation-cap logo-icon"></i>
-                <span class="logo-text">LRC PeerConnect</span>
-                </div>
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-logo-container">
+            <div class="logo-content">
+            <i class="fa-solid fa-graduation-cap logo-icon"></i>
+            <span class="logo-text">LRC PeerConnect</span>
             </div>
+        </div>
 
-            <button class="sidebar-toggle-btn" id="sidebarToggle" aria-label="Toggle sidebar">
-                <span class="toggle-icon"><i class="fa-solid fa-chevron-right"></i></span>
-            </button>
+        <button class="sidebar-toggle-btn" id="sidebarToggle" aria-label="Toggle sidebar">
+            <span class="toggle-icon"><i class="fa-solid fa-chevron-right"></i></span>
+        </button>
 
-            <nav class="flex-grow">
-                <a href="{{ route('student.dashboard') }}" class="nav-item" data-tooltip="Dashboard">
-                    <i class="fa-solid fa-gauge w-5"></i><span>Dashboard</span>
-                </a>
-                <a href="{{ route('student.mentors') }}" class="nav-item" data-tooltip="Mentors">
-                    <i class="fa-solid fa-chalkboard-user w-5"></i><span>Mentors</span>
-                </a>
-                <a href="{{ route('student.bookings') }}" class="nav-item active" data-tooltip="Bookings">
-                    <i class="fa-solid fa-calendar-check w-5"></i><span>Bookings</span>
-                </a>
-                <a href="{{ route('student.history') }}" class="nav-item" data-tooltip="History">
-                    <i class="fa-solid fa-clock-rotate-left w-5"></i><span>History</span>
-                </a>
-                <a href="{{ route('student.about') }}" class="nav-item" data-tooltip="About Us">
-                    <i class="fa-solid fa-circle-info w-5"></i><span>About Us</span>
-                </a>
-            </nav>
+        <nav class="flex-grow">
+            <a href="{{ route('student.dashboard') }}" class="nav-item" data-tooltip="Dashboard">
+                <i class="fa-solid fa-gauge"></i><span>Dashboard</span>
+            </a>
+            <a href="{{ route('student.mentors') }}" class="nav-item" data-tooltip="Mentors">
+                <i class="fa-solid fa-chalkboard-user"></i><span>Mentors</span>
+            </a>
+            <a href="{{ route('student.bookings') }}" class="nav-item active" data-tooltip="Bookings">
+                <i class="fa-solid fa-calendar-check"></i><span>Bookings</span>
+            </a>
+            <a href="{{ route('student.history') }}" class="nav-item" data-tooltip="History">
+                <i class="fa-solid fa-clock-rotate-left"></i><span>History</span>
+            </a>
+            <a href="{{ route('student.about') }}" class="nav-item" data-tooltip="About Us">
+                <i class="fa-solid fa-circle-info"></i><span>About Us</span>
+            </a>
+        </nav>
 
-            <div class="sidebar-footer">
-                <form method="POST" action="{{ route('logout') }}">
-                    @csrf
-                    <button type="submit" class="nav-item" data-tooltip="Logout">
-                        <i class="fa-solid fa-right-from-bracket"></i><span>Logout</span>
-                    </button>
-                </form>
-            </div>
-        </aside>
+        <div class="sidebar-footer">
+            <form method="POST" action="{{ route('logout') }}">
+                @csrf
+                <button type="submit" class="nav-item" data-tooltip="Logout">
+                    <i class="fa-solid fa-right-from-bracket"></i><span>Logout</span>
+                </button>
+            </form>
+        </div>
+    </aside>
 
         <div class="main-content">
             <header class="top-header relative">
-                <div class="text-lg">Welcome, {{ auth()->user()->user_roles }} <span class="font-bold">{{ auth()->user()->name }}</span></div>
+                <div class="text-lg">Welcome, <span class="font-bold">{{ auth()->user()->name }}</span></div>
                 
                 <button id="profileTrigger" class="flex items-center gap-2 px-3 py-1 bg-white rounded-full hover:bg-gray-100 transition shadow-sm border-2 border-white/20 group">
                     <div class="w-8 h-8 bg-red-900 text-white rounded-full flex items-center justify-center text-xs font-bold">
@@ -679,9 +749,9 @@ $dismissFeedbackSubmitted = action(function () {
         @endif
 
         @if($feedbackSubmitted)
-            <div class="mb-6 flex items-center justify-between bg-blue-50 border border-blue-300 text-blue-800 px-4 py-3 rounded">
+            <div class="mb-6 flex items-center justify-between bg-green-50 border border-green-300 text-green-800 px-4 py-3 rounded">
                 <span><i class="fa-solid fa-circle-check mr-2"></i>Thank you for your feedback! You may now request a new session.</span>
-                <button wire:click="dismissFeedbackSubmitted" class="text-blue-500 hover:text-blue-700 font-bold ml-4">X</button>
+                <button wire:click="dismissFeedbackSubmitted" class="text-green-500 hover:text-green-700 font-bold ml-4">X</button>
             </div>
         @endif
 
@@ -705,7 +775,7 @@ $dismissFeedbackSubmitted = action(function () {
                     : null;
                 $completedBooking = null;
                     if($studentProfileForCheck) {
-                        // If student no answer feedback forms within 2 days
+                        // If student has not answered feedback form within 2 days
                         $completedBooking = \App\Models\Bookings::with(['mentor.user', 'subject', 'tutorialMode'])->where('student_id', $studentProfileForCheck->id)->where('booking_status', 'completed')
                         ->where('completed_at', '>=', now()->subDays(2))->whereNotIn('id', function($query) {
                             $query->select('booking_id')->from('feedback');
@@ -730,22 +800,26 @@ $dismissFeedbackSubmitted = action(function () {
 
             {{-- ══════════════════════════════════
                  MULTI-STEP FEEDBACK FORM
+                 (shown when student has already acknowledged the completed session notification)
                  ══════════════════════════════════ --}}
             @if($completedBooking)
                 @php $cb = $completedBooking; @endphp
 
-                <div class="feedback-card">
+                <div class="feedback-card" id="feedbackFormCard">
                     <div class="feedback-banner">
                         <div class="feedback-banner-icon">
-                            <i class="fa-solid fa-comment-dots"></i>
+                            <i class="fa-solid fa-clipboard-list"></i>
                         </div>
                         <div class="flex-1 min-w-0">
-                            <p class="text-sm font-bold text-blue-900 mb-0.5">
-                                Your session is complete
-                            </p>
-                            <p class="text-xs text-blue-700 leading-snug">
-                                Please rate your experience of the enrichment session. Step {{ $feedbackStep }} of 3.
-                            </p>
+                            <div class="flex flex-wrap items-center gap-3 mb-1">
+                                <h2 class="text-xl font-extrabold tracking-tight text-green-900">
+                                    Feedback Form
+                                </h2>
+                                <span class="inline-flex items-center gap-1 text-l font-bold px-3 py-0.5 rounded-full bg-green-200 text-green-800">
+                                    Step {{ $feedbackStep }} of 3
+                                </span>
+                            </div>
+                            <p class="text-sm text-green-800 leading-snug">Please rate your enrichment session experience. Your feedback helps improve our peer mentoring program.</p>
                         </div>
                     </div>
 
@@ -778,8 +852,8 @@ $dismissFeedbackSubmitted = action(function () {
 
                         {{-- ── STEP 1: Q1–Q5 ── --}}
                         @if($feedbackStep === 1)
-                            <p class="text-xs font-semibold text-blue-700 mb-3 flex items-center gap-1">
-                                <i class="fa-solid fa-circle-info text-blue-300"></i>
+                            <p class="text-xs font-semibold text-green-700 mb-3 flex items-center gap-1">
+                                <i class="fa-solid fa-circle-info text-green-400"></i>
                                 Rate each statement from 1 (Strongly Disagree) to 5 (Strongly Agree).
                             </p>
 
@@ -815,8 +889,8 @@ $dismissFeedbackSubmitted = action(function () {
 
                         {{-- ── STEP 2: Q6–Q10 ── --}}
                         @elseif($feedbackStep === 2)
-                            <p class="text-xs font-semibold text-blue-700 mb-3 flex items-center gap-1">
-                                <i class="fa-solid fa-circle-info text-blue-300"></i>
+                            <p class="text-xs font-semibold text-green-700 mb-3 flex items-center gap-1">
+                                <i class="fa-solid fa-circle-info text-green-400"></i>
                                 Continue rating (1 = Strongly Disagree, 5 = Strongly Agree). Q10 is Yes/No.
                             </p>
 
@@ -869,7 +943,7 @@ $dismissFeedbackSubmitted = action(function () {
                         {{-- ── STEP 3: Remarks + Submit ── --}}
                         @elseif($feedbackStep === 3)
                             <p class="text-sm font-bold text-gray-700 mb-1 flex items-center gap-2">
-                                <i class="fa-solid fa-pen-to-square text-blue-400 text-xs"></i>
+                                <i class="fa-solid fa-pen-to-square text-green-500 text-xs"></i>
                                 Additional Remarks
                                 <span class="font-normal text-gray-400 text-xs">(optional)</span>
                             </p>
@@ -978,7 +1052,7 @@ $dismissFeedbackSubmitted = action(function () {
             @elseif(!$completedBooking)
             <div class="flex-1 min-w-0 items-center gap-4 rounded-lg pb-6 pt-0">
                 <h1 class="text-3xl font-extrabold tracking-tight text-transparent bg-clip-text bg-up-maroon flex items-center gap-3">
-                    <i class="fa-solid fa-calendar-plus text-up-maroon text-2xl drop-shadow-sm"></i>
+                    <i class="fa-solid fa-calendar-check"></i>
                     Request An Enrichment Session
                 </h1>
                 <p class="text-sm font-medium text-slate-500 leading-snug mt-1">Please fill out the details below. Your request will be reviewed by the peer mentor.</p>
@@ -1328,21 +1402,102 @@ $dismissFeedbackSubmitted = action(function () {
         </div>
     </div>
 
-<!-- CONFIRMATION MODAL -->
-    <div id="confirmModal" style="display:none;" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-        <div class="bg-[#ffffff] rounded-xl p-6 max-w-sm w-full mx-4 shadow-2xl" id="confirmModalBox">
-            <div class="flex items-center gap-3 mb-3">
-                <div id="confirmIconWrap" class="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0"></div>
-                <h3 id="confirmTitle" class="text-base font-bold text-gray-900"></h3>
+{{-- ══════════════════════════════════════════════════════════════════
+     SESSION COMPLETE NOTIFICATION MODAL
+     Shows once when a completed booking without feedback is detected.
+     Student can choose to answer the feedback form or skip.
+     Skipping inserts a null-answer feedback row so they won't be prompted again.
+     ══════════════════════════════════════════════════════════════════ --}}
+@if($completedBooking)
+@php $cb = $completedBooking; @endphp
+<div id="sessionCompleteModal"
+     class="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+    <div class="session-complete-modal-box" id="sessionCompleteModalBox">
+
+        {{-- Icon --}}
+        <div class="scm-icon-wrap">
+            <i class="fa-solid fa-clipboard-check"></i>
+        </div>
+
+        {{-- Badge --}}
+        <div class="scm-badge">
+            <i class="fa-solid fa-clipboard-list text-xs"></i>
+            Feedback Form
+        </div>
+
+        {{-- Title & description --}}
+        <div class="scm-title">Your session has been completed!</div>
+        <p class="scm-subtitle">
+            Great news — your enrichment session has ended. We'd love to hear how it went!
+            Your feedback helps us improve the peer mentoring program.
+            <br><br>
+            <span class="font-semibold text-gray-700">Would you like to answer the Feedback Form?</span>
+            It only takes a minute, and it's completely optional.
+        </p>
+
+        {{-- Session info summary --}}
+        <div class="scm-session-info">
+            <div class="si-row">
+                <span class="si-label">Subject</span>
+                <span class="si-value">{{ ($cb->subject->code ?? '—') . ($cb->subject->name ? ' — '.$cb->subject->name : '') }}</span>
             </div>
-            <p id="confirmBody" class="text-sm text-gray-600 mb-1 leading-relaxed"></p>
-            <div id="confirmMeta" class="mt-3 mb-5 bg-gray-50 border border-gray-100 rounded-lg px-4 py-3 text-xs text-gray-600 space-y-1"></div>
-            <div class="flex justify-end gap-3">
-                <button id="confirmCancelBtn" class="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">Cancel</button>
-                <button id="confirmOkBtn" class="px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors">Confirm</button>
+            <div class="si-row">
+                <span class="si-label">Mentor</span>
+                <span class="si-value">{{ strtoupper($cb->mentor->user->lastName ?? 'UNKNOWN') }}, {{ $cb->mentor->user->firstName ?? '' }}</span>
+            </div>
+            <div class="si-row">
+                <span class="si-label">Date</span>
+                <span class="si-value">{{ \Carbon\Carbon::parse($cb->date)->format('F j, Y') }}</span>
+            </div>
+            <div class="si-row">
+                <span class="si-label">Topic</span>
+                <span class="si-value truncate" style="max-width:180px;" title="{{ $cb->topic }}">{{ $cb->topic }}</span>
             </div>
         </div>
+
+        {{-- Actions --}}
+        <div class="scm-actions">
+            {{-- Skip: calls Livewire skipFeedback, then closes modal --}}
+            <button type="button" class="scm-btn-skip" id="scmSkipBtn"
+                    wire:loading.attr="disabled" wire:target="skipFeedback">
+                <span wire:loading.remove wire:target="skipFeedback">
+                    <i class="fa-solid fa-forward-step mr-1 text-xs"></i> Skip for now
+                </span>
+                <span wire:loading wire:target="skipFeedback">
+                    <i class="fa-solid fa-spinner fa-spin mr-1 text-xs"></i> Skipping...
+                </span>
+            </button>
+
+            {{-- Answer: closes the modal and scrolls to the feedback form below --}}
+            <button type="button" class="scm-btn-answer" id="scmAnswerBtn">
+                <i class="fa-solid fa-clipboard-list mr-1.5 text-xs"></i> Answer Feedback Form
+            </button>
+        </div>
+
+        <p class="text-[10px] text-gray-400 text-center mt-4 leading-snug">
+            Skipping will dismiss this prompt permanently for this session.<br>
+            You will not be asked again for this specific session.
+        </p>
+
     </div>
+</div>
+@endif
+
+{{-- ══ EXISTING CONFIRMATION MODAL (unchanged) ══ --}}
+<div id="confirmModal" style="display:none;" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+    <div class="bg-[#ffffff] rounded-xl p-6 max-w-sm w-full mx-4 shadow-2xl" id="confirmModalBox">
+        <div class="flex items-center gap-3 mb-3">
+            <div id="confirmIconWrap" class="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0"></div>
+            <h3 id="confirmTitle" class="text-base font-bold text-gray-900"></h3>
+        </div>
+        <p id="confirmBody" class="text-sm text-gray-600 mb-1 leading-relaxed"></p>
+        <div id="confirmMeta" class="mt-3 mb-5 bg-gray-50 border border-gray-100 rounded-lg px-4 py-3 text-xs text-gray-600 space-y-1"></div>
+        <div class="flex justify-end gap-3">
+            <button id="confirmCancelBtn" class="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">Cancel</button>
+            <button id="confirmOkBtn" class="px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors">Confirm</button>
+        </div>
+    </div>
+</div>
 
 
 
@@ -1375,7 +1530,7 @@ $dismissFeedbackSubmitted = action(function () {
             accept:  { iconHtml: iconCheck('#059669'), iconBg: '#d1fae5', btnClass: 'bg-emerald-600 hover:bg-emerald-700', label: 'Confirm' },
             reject:  { iconHtml: iconX('#dc2626'),     iconBg: '#fee2e2', btnClass: 'bg-red-600 hover:bg-red-700',         label: 'Reject'  },
             neutral: { iconHtml: iconInfo('#64748b'),  iconBg: '#f1f5f9', btnClass: 'bg-gray-700 hover:bg-gray-800',       label: 'Confirm' },
-            cancel: { iconHtml: iconX('#dc2626'), iconBg: '#fee2e2', btnClass: 'bg-red-700 hover:bg-red-800', label: 'Cancel'  },
+            cancel:  { iconHtml: iconX('#dc2626'),     iconBg: '#fee2e2', btnClass: 'bg-red-700 hover:bg-red-800',         label: 'Cancel'  },
         };
         const v = variants[variant] || variants.neutral;
         confirmIconWrap.style.background = v.iconBg;
@@ -1387,7 +1542,6 @@ $dismissFeedbackSubmitted = action(function () {
         confirmOkBtn.className   = `px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors ${v.btnClass}`;
         confirmOkBtn.textContent = confirmText || v.label;
         confirmOkBtn.onclick = async () => { 
-                // 1. Trigger visual loading state
                 const originalText = confirmOkBtn.textContent;
                 confirmOkBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i>${loadingText || 'Processing...'}`;
                 confirmOkBtn.classList.add('opacity-70', 'cursor-not-allowed');
@@ -1419,6 +1573,61 @@ $dismissFeedbackSubmitted = action(function () {
     function iconX(color)     { return `<svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M5 5l10 10M15 5L5 15" stroke="${color}" stroke-width="2" stroke-linecap="round"/></svg>`; }
     function iconInfo(color)  { return `<svg width="18" height="18" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="8.5" stroke="${color}" stroke-width="1.5"/><path d="M10 9v5" stroke="${color}" stroke-width="1.5" stroke-linecap="round"/><circle cx="10" cy="6.5" r="0.8" fill="${color}"/></svg>`; }
 
+    /* ══════════════════════════════════════════════════════════════
+       SESSION COMPLETE NOTIFICATION MODAL LOGIC
+       ══════════════════════════════════════════════════════════════ */
+    (function () {
+        const modal    = document.getElementById('sessionCompleteModal');
+        const skipBtn  = document.getElementById('scmSkipBtn');
+        const answerBtn = document.getElementById('scmAnswerBtn');
+
+        if (!modal) return; // no completed booking, nothing to do
+
+        // Show the modal immediately on page load (it's a one-time notification)
+        modal.style.display = 'flex';
+
+        // ── SKIP: call Livewire, then hide modal (Livewire inserts null-answer row) ──
+        skipBtn.addEventListener('click', async () => {
+            skipBtn.disabled = true;
+            answerBtn.disabled = true;
+
+            try {
+                // Find the Livewire component and call skipFeedback
+                const componentEl = modal.closest('[wire\\:id]') || document.querySelector('[wire\\:id]');
+                if (componentEl) {
+                    const wire = Livewire.find(componentEl.getAttribute('wire:id'));
+                    if (wire) {
+                        await wire.skipFeedback();
+                    }
+                }
+            } catch (e) {
+                console.error('skipFeedback error:', e);
+            } finally {
+                modal.style.display = 'none';
+                skipBtn.disabled = false;
+                answerBtn.disabled = false;
+            }
+        });
+
+        // ── ANSWER: close modal and scroll to the feedback form card ──
+        answerBtn.addEventListener('click', () => {
+            modal.style.display = 'none';
+            const feedbackCard = document.getElementById('feedbackFormCard');
+            if (feedbackCard) {
+                feedbackCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                // Brief highlight pulse so the student knows where to look
+                feedbackCard.style.transition = 'box-shadow 0.3s';
+                feedbackCard.style.boxShadow = '0 0 0 4px rgba(22,163,74,0.35)';
+                setTimeout(() => { feedbackCard.style.boxShadow = ''; }, 1800);
+            }
+        });
+
+        // ── Listen for feedback-skipped Livewire event (fallback) ──
+        window.addEventListener('feedback-skipped', () => {
+            modal.style.display = 'none';
+        });
+    })();
+
     /* ── BOOKING SUBMIT INTERCEPT ── */
     document.addEventListener('click', function (e) {
         const bookingSubmitBtn = e.target.closest('#bookingSubmitBtn');
@@ -1440,7 +1649,6 @@ $dismissFeedbackSubmitted = action(function () {
         if(mentorEl && mentorEl.selectedIndex >= 0 && mentorEl.options[mentorEl.selectedIndex].value !== "") {
             mentorText = mentorEl.options[mentorEl.selectedIndex].text;
         } else {
-            // Find submit component
             const componentElement = bookingSubmitBtn.closest('[wire\\:id]');
             if(componentElement) {
                 const livewireComponent = Livewire.find(componentElement.getAttribute('wire:id'));
