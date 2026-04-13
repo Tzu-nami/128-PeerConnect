@@ -228,7 +228,7 @@ color:#065f46;
                 <span class="block w-8 h-px bg-up-yellow-dark"></span>
                 About Us
             </div>
-            <h1 class="font-heading text-up-maroon text-5xl font-semibold tracking-wider">
+            <h1 class="font-heading text-up-maroon text-5xl font-semibold tracking-wider text-3xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-[#7b1d1d] to-[#b91c1c] flex items-center gap-3">
                 What is PeerConnect?
             </h1>
         </div>
