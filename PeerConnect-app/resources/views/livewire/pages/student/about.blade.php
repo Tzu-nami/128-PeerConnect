@@ -170,7 +170,7 @@ color:#065f46;
                 <a href="{{ route('student.dashboard') }}" class="nav-item" data-tooltip="Dashboard">
                     <i class="fa-solid fa-gauge w-5"></i><span>Dashboard</span>
                 </a>
-                <a href="{{ route('student.mentors') }}" class="nav-item active" data-tooltip="Mentors">
+                <a href="{{ route('student.mentors') }}" class="nav-item" data-tooltip="Mentors">
                     <i class="fa-solid fa-chalkboard-user w-5"></i><span>Mentors</span>
                 </a>
                 <a href="{{ route('student.bookings') }}" class="nav-item" data-tooltip="Bookings">
@@ -179,7 +179,7 @@ color:#065f46;
                 <a href="{{ route('student.history') }}" class="nav-item" data-tooltip="History">
                     <i class="fa-solid fa-clock-rotate-left w-5"></i><span>History</span>
                 </a>
-                <a href="{{ route('student.about') }}" class="nav-item" data-tooltip="About Us">
+                <a href="{{ route('student.about') }}" class="nav-item active" data-tooltip="About Us">
                     <i class="fa-solid fa-circle-info w-5"></i><span>About Us</span>
                 </a>
             </nav>
@@ -220,132 +220,202 @@ color:#065f46;
 
 <main class="scroll-container">
 
-    <!-- Header -->
-    <div class="mb-5">
-        <h1 class="text-3xl font-black text-slate-800">About Us</h1>
-        <p class="text-base text-gray-600 mt-1">Learn more about the LRC PeerConnect platform.</p>
-    </div>
 
-    <!-- Hero -->
-    <div class="bg-white rounded-xl p-6 shadow-sm border flex items-center gap-6 mb-5">
-        <div class="w-16 h-16 bg-[#1a3c2f] rounded-xl flex items-center justify-center">
-            <i class="fa-solid fa-graduation-cap text-white text-2xl"></i>
+    {{-- Hero --}}
+    <section class="grid grid-cols-2 px-6 md:px-20 py-10">
+        <div class="flex flex-col gap-4 animate-fade-up">
+            <div class="flex items-center gap-3 text-up-yellow-dark text-xs tracking-widest font-bold uppercase">
+                <span class="block w-8 h-px bg-up-yellow-dark"></span>
+                About Us
+            </div>
+            <h1 class="font-heading text-up-maroon text-5xl font-semibold tracking-wider">
+                What is PeerConnect?
+            </h1>
         </div>
-        <div>
-            <h2 class="text-xl font-extrabold text-slate-800">LRC PeerConnect</h2>
-            <p class="text-base text-gray-500">
-                Connecting UPB students with mentors for academic success.
-            </p>
+
+        <div class="text-text-brown leading-7 border-l border-up-yellow-dark pl-5 self-center animate-fade-up">
+            LRC PeerConnect connects UPB students with trained peer mentors for enrichment sessions and academic support — simple, organized, and easy to book.
         </div>
-    </div>
+    </section>
 
-    <!-- MAIN GRID -->
-    <div class="grid grid-cols-3 gap-5">
+    {{-- Main Content --}}
+    <section class="animate-fade-up [animation-delay:1ms]">
 
-        <!-- LEFT SIDE -->
-        <div class="col-span-2 flex flex-col gap-5 h-full">
+            {{-- Stats --}}
+            <div class="grid grid-cols-3 border border-cream-border">
+                <div class="border-r border-cream-border text-center py-5">
+                    <div class="font-heading text-3xl text-up-maroon mb-2">12</div>
+                    <div class="text-text-brown-light text-xs font-bold tracking-widest uppercase">Mentors</div>
+                </div>
+                <div class="border-r border-cream-border text-center py-5">
+                    <div class="font-heading text-3xl text-up-maroon mb-2">84</div>
+                    <div class="text-text-brown-light text-xs font-bold tracking-widest uppercase">Sessions Held</div>
+                </div>
+                <div class="text-center py-5">
+                    <div class="font-heading text-3xl text-up-maroon mb-2">10</div>
+                    <div class="text-text-brown-light text-xs font-bold tracking-widest uppercase">Subjects Covered</div>
+                </div>
+            </div>
 
-            <!-- WHAT IS PEERCONNECT (ENHANCED) -->
-            <div class="bg-white rounded-xl border shadow-sm p-5 flex flex-col">
+            <br><br>
 
-                <div>
-                    <h2 class="text-lg font-bold text-slate-800 mb-3">What is PeerConnect?</h2>
+            {{-- Mission --}}
+            <div class="flex flex-col gap-3">
+                <div class="text-xs text-up-yellow-dark font-bold tracking-widest uppercase text-center" style="font-size:1.3rem">Our Mission</div>
+                <p class="text-text-brown leading-7 text-center">
+                    The Learning Resource Center exists to empower every UPB student with the academic tools, guidance, and peer support they need to succeed — making quality learning assistance accessible to all.
+                </p>
+            </div>
 
-                    <p class="text-base text-gray-600 leading-relaxed mb-4">
-                        LRC PeerConnect is a peer mentoring platform that connects UPB students with trained
-                        student-mentors for enrichment sessions and academic support.
-                    </p>
+            <br>
 
-                    <!-- Feature Highlights -->
-                    <div class="grid grid-cols-3 gap-4 mt-4">
+            {{-- Quote --}}
+            <div class="bg-cream-dark border border-cream-border px-7 py-5">
+                <i class="fa-solid fa-quote-left text-3xl mb-3 text-cream-border"></i>
+                <p class="italic text-text-brown mb-3 leading-7">
+                    "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+                </p>
+                <p class="text-text-brown-light text-xs text-right tracking-widest uppercase">— LRC Head</p>
+            </div>
 
-                        <div class="flex flex-col items-center text-center">
-                            <div class="w-10 h-10 bg-[#1a3c2f]/10 text-[#1a3c2f] rounded-lg flex items-center justify-center mb-2">
-                                <i class="fa-solid fa-calendar-check"></i>
-                            </div>
-                            <p class="text-sm font-semibold">Easy Booking</p>
+            <br><br>
+
+            {{-- Common FAQs --}}
+            <div class="flex flex-col gap-3">
+                <div class="text-xs text-up-yellow-dark font-bold tracking-widest uppercase">Common Questions</div>
+
+                <div class="border border-cream-border divide-y divide-cream-border">
+                    <div class="px-5 py-4">
+                        <div class="font-medium text-text-brown mb-1">Who can use PeerConnect?</div>
+                        <div class="text-sm text-text-brown-light leading-6">Any currently enrolled UPB student can book a mentoring session through PeerConnect.</div>
+                    </div>
+                    <div class="px-5 py-4">
+                        <div class="font-medium text-text-brown mb-1">Is it free?</div>
+                        <div class="text-sm text-text-brown-light leading-6">Yes, all sessions are completely free for UPB students.</div>
+                    </div>
+                    <div class="px-5 py-4">
+                        <div class="font-medium text-text-brown mb-1">How long is a session?</div>
+                        <div class="text-sm text-text-brown-light leading-6">Sessions typically run for one hour, depending on the subject and mentor availability.</div>
+                    </div>
+                </div>
+
+                <a href="{{ route('public.services') }}#faqs" class="text-xs text-up-maroon font-bold tracking-widest uppercase self-end hover:underline">
+                    See all FAQs →
+                </a>
+            </div>
+
+            {{-- How it Works --}}
+            <div>
+                <div class="text-xs text-up-yellow-dark font-bold tracking-widest uppercase mb-4">How it Works</div>
+
+                <div class="border border-cream-border divide-y divide-cream-border">
+                    <div class="py-4 px-5 flex items-start gap-5">
+                        <div class="flex justify-center items-center flex-shrink-0 w-8 h-8 bg-up-maroon rounded-full text-cream text-xs font-semibold mt-[1px]">1</div>
+                        <div>
+                            <div class="font-bold mb-1">Log in</div>
+                            <div class="text-text-brown-light text-sm leading-6">Sign in using your UP email account.</div>
                         </div>
-
-                        <div class="flex flex-col items-center text-center">
-                            <div class="w-10 h-10 bg-[#1a3c2f]/10 text-[#1a3c2f] rounded-lg flex items-center justify-center mb-2">
-                                <i class="fa-solid fa-user-group"></i>
-                            </div>
-                            <p class="text-sm font-semibold">Peer Mentors</p>
+                    </div>
+                    <div class="py-4 px-5 flex items-start gap-5">
+                        <div class="flex justify-center items-center flex-shrink-0 w-8 h-8 bg-up-maroon rounded-full text-cream text-xs font-semibold mt-[1px]">2</div>
+                        <div>
+                            <div class="font-bold mb-1">Book a session</div>
+                            <div class="text-text-brown-light text-sm leading-6">Pick a mentor, subject, date, and time that works for you.</div>
                         </div>
+                    </div>
+                    <div class="py-4 px-5 flex items-start gap-5">
+                        <div class="flex justify-center items-center flex-shrink-0 w-8 h-8 bg-up-maroon rounded-full text-cream text-xs font-semibold mt-[1px]">3</div>
+                        <div>
+                            <div class="font-bold mb-1">Wait for approval</div>
+                            <div class="text-text-brown-light text-sm leading-6">Your booking is reviewed and confirmed by the LRC staff.</div>
+                        </div>
+                    </div>
+                    <div class="py-4 px-5 flex items-start gap-5">
+                        <div class="flex justify-center items-center flex-shrink-0 w-8 h-8 bg-up-maroon rounded-full text-cream text-xs font-semibold mt-[1px]">4</div>
+                        <div>
+                            <div class="font-bold mb-1">Attend your session</div>
+                            <div class="text-text-brown-light text-sm leading-6">Show up, ask questions, and learn actively.</div>
+                        </div>
+                    </div>
+                    <div class="py-4 px-5 flex items-start gap-5">
+                        <div class="flex justify-center items-center flex-shrink-0 w-8 h-8 bg-up-maroon rounded-full text-cream text-xs font-semibold mt-[1px]">5</div>
+                        <div>
+                            <div class="font-bold mb-1">Leave a review</div>
+                            <div class="text-text-brown-light text-sm leading-6">Rate your session to help improve the program for everyone.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-                        <div class="flex flex-col items-center text-center">
-                            <div class="w-10 h-10 bg-[#1a3c2f]/10 text-[#1a3c2f] rounded-lg flex items-center justify-center mb-2">
-                                <i class="fa-solid fa-clock-rotate-left"></i>
-                            </div>
-                            <p class="text-sm font-semibold">Track History</p>
+            <br>
+
+            {{-- Get in Touch --}}
+            <div class="border border-cream-border">
+                <div class="text-cream font-bold tracking-widest uppercase border-b border-cream-border bg-up-maroon py-2 px-4">
+                    Get in Touch
+                </div>
+                <div class="divide-y divide-cream-border">
+                    <div class="flex gap-5 items-center py-4 px-4">
+                        <span class="material-symbols-outlined text-up-maroon text-2xl w-8 h-8 flex justify-center items-center flex-shrink-0">location_on</span>
+                        <div class="flex flex-col text-sm leading-6">
+                            <div>Learning Resource Center, University of the Philippines Baguio</div>
+                            <div class="text-text-brown-light">2nd Floor, University Library</div>
+                        </div>
+                    </div>
+                    <div class="flex gap-5 items-center py-4 px-4">
+                        <span class="material-symbols-outlined text-up-maroon text-2xl w-8 h-8 flex justify-center items-center flex-shrink-0">schedule</span>
+                        <div class="flex flex-col text-sm leading-6">
+                            <div>Monday to Friday</div>
+                            <div class="text-text-brown-light">8:00 AM – 5:00 PM</div>
+                        </div>
+                    </div>
+                    <div class="flex gap-5 items-center py-4 px-4">
+                        <span class="material-symbols-outlined text-up-maroon text-2xl w-8 h-8 flex justify-center items-center flex-shrink-0">mail</span>
+                        <div class="text-sm">lrc.upbaguio@up.edu.ph</div>
+                    </div>
+                    <div class="flex gap-5 items-center py-4 px-4">
+                        <span class="material-symbols-outlined text-up-maroon text-2xl w-8 h-8 flex justify-center items-center flex-shrink-0">call</span>
+                        <div class="text-sm">(074) 444 8720</div>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Developers --}}
+            <div class="border-t border-cream-border pt-7">
+                <div class="text-xs text-up-yellow-dark font-bold tracking-widest uppercase mb-4">Developed By</div>
+
+                <div class="border border-cream-border">
+                    <div class="grid grid-cols-2 divide-x divide-cream-border">
+                        <div class="flex flex-col justify-center px-4 py-3">
+                            <div class="font-medium">Ax'l Jhone David P. Conchada</div>
+                            <div class="text-xs text-text-brown-light mt-1">3rd Year BS Computer Science</div>
+                        </div>
+                        <div class="flex flex-col justify-center px-4 py-3">
+                            <div class="font-medium">Daniel Joco B. Dyoco</div>
+                            <div class="text-xs text-text-brown-light mt-1">3rd Year BS Computer Science</div>
+                        </div>
+                    </div>
+                    <div class="border-t border-cream-border grid grid-cols-2 divide-x divide-cream-border">
+                        <div class="flex flex-col justify-center px-4 py-3">
+                            <div class="font-medium">Rhona Shayne B. Lopez</div>
+                            <div class="text-xs text-text-brown-light mt-1">3rd Year BS Computer Science</div>
+                        </div>
+                        <div class="flex flex-col justify-center px-4 py-3">
+                            <div class="font-medium">Frian Karl C. Nabo</div>
+                            <div class="text-xs text-text-brown-light mt-1">3rd Year BS Computer Science</div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Bottom subtle highlight -->
-                <div class="mt-5 bg-gray-50 border rounded-lg p-3 text-sm text-gray-500">
-                    All-in-one platform for booking, tracking, and connecting with mentors.
+                <div class="text-xs text-text-brown-light tracking-wide mt-2">
+                    University of the Philippines Baguio | 2025 – 2026
                 </div>
-
             </div>
 
-            <!-- HOW IT WORKS -->
-            <div class="bg-white rounded-xl border shadow-sm p-6 flex flex-col justify-center">
 
-                <h2 class="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-                    <i class="fa-solid fa-route text-[#7b1d1d]"></i> How It Works
-                </h2>
 
-                <div class="grid grid-cols-2 gap-4">
-                    @foreach([
-                        ['1', 'Complete Profile'],
-                        ['2', 'Book Session'],
-                        ['3', 'Wait Approval'],
-                        ['4', 'Attend Session'],
-                    ] as [$num, $title])
-                        <div class="flex items-center gap-3">
-                            <div class="w-9 h-9 bg-[#7b1d1d] text-white rounded-full flex items-center justify-center text-sm font-bold">
-                                {{ $num }}
-                            </div>
-                            <p class="text-sm font-semibold text-slate-700">{{ $title }}</p>
-                        </div>
-                    @endforeach
-                </div>
+    </section>
 
-            </div>
-
-        </div>
-
-        <!-- RIGHT SIDE -->
-        <div class="flex flex-col gap-5 h-full">
-
-            <!-- CONTACT -->
-            <div class="bg-white rounded-xl border shadow-sm p-5">
-                <h2 class="text-base font-bold text-slate-800 mb-3">Contact</h2>
-
-                <ul class="space-y-3 text-sm text-gray-600">
-                    <li>📍 Learning Resource Center, UPB</li>
-                    <li>🕒 Mon – Fri, 8:00 AM – 5:00 PM</li>
-                    <li>✉ lrc@up.edu.ph</li>
-                    <li></li>
-                </ul>
-            </div>
-
-            <!-- TIPS -->
-            <div class="bg-yellow-50 border border-yellow-200 p-5 rounded-xl">
-                <h2 class="text-sm font-bold text-yellow-800 mb-2">Student Tips</h2>
-                <ul class="text-sm text-yellow-700 space-y-1">
-                    <li>• Book early</li>
-                    <li>• Be specific with topics</li>
-                    <li>• Arrive on time</li>
-                    <li>• Prepare questions</li>
-                    <li></li>
-                </ul>
-            </div>
-
-        </div>
-
-    </div>
 </main>
 
 
