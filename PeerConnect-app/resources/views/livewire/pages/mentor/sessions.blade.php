@@ -32,7 +32,8 @@
 
         $allBookings = Bookings::with([
             'student.user',
-            'subject'
+            'subject',
+            'tutorialMode',
         ])
         ->where(function($query) use ($mentorProfile) 
         {
@@ -77,19 +78,22 @@
             : rtrim(rtrim(number_format($durationHours, 2), '0'), '.') . ' hrs';
 
         return [
-            'id'       => $b->id,
-            'student'  => optional(optional($b->student)->user)->firstName
-                        ? $b->student->user->firstName . ' ' . $b->student->user->lastName
-                        : 'Unknown',
-            'subject'  => optional($b->subject)->code ?? 'N/A',
-            'topic'    => $b->topic ?? '—',
-            'date'     => $b->date ? \Carbon\Carbon::parse($b->date)->format('M d, Y') : '—',
+            'id'            => $b->id,
+            'student'       => optional(optional($b->student)->user)->firstName
+                            ? $b->student->user->firstName . ' ' . $b->student->user->lastName
+                            : 'Unknown',
+            'subject'       => optional($b->subject)->code ?? 'N/A',
+            'subjectName'   => optional($b->subject)->name ?? '',
+            'topic'         => $b->topic ?? '—',
+            'date'          => $b->date ? \Carbon\Carbon::parse($b->date)->format('M d, Y') : '—',
+            'mode'          => optional($b->tutorialMode)->mode ?? '—',
 
-            // ✅ KEEP THESE (important!)
-    'start' => $start->format('H:i'),
-    'end'   => $end->format('H:i'),
+            'start' => $start->format('H:i'),
+            'end'   => $end->format('H:i'),
 
-    'duration' => $start->format('h:i A') . ' - ' . $end->format('h:i A') . ' (' . $durationText . ')',
+            'time'     => $start->format('g:i A') . ' – ' . $end->format('g:i A'),
+            'duration' => $start->format('h:i A') . ' - ' . $end->format('h:i A') . ' (' . $durationText . ')',
+            'durationHours' => $durationHours,
 
             'status'   => $b->booking_status,
             'is_open' => is_null($b->mentor_id),
@@ -97,6 +101,29 @@
     })
         ->values()
         ->toArray();
+    });
+
+    $summaryCounts = computed(function () {
+        $sessions = $this->sessions;
+        $statuses = array_column($sessions, 'status');
+
+        $total     = count($sessions);
+        $accepted  = count(array_filter($statuses, fn($s) => $s === 'accepted'));
+        $pending   = count(array_filter($statuses, fn($s) => $s === 'pending'));
+        $completed = count(array_filter($statuses, fn($s) => $s === 'completed'));
+        $completedSessions = array_filter($sessions, fn($s) => $s['status'] === 'completed');
+        $totalHours = array_sum(array_column($completedSessions, 'durationHours'));
+
+        $hoursFormatted = number_format($totalHours, 2) . ' hrs';   
+
+        return [
+            'total'          => $total,
+            'accepted'       => $accepted,
+            'pending'        => $pending,
+            'completed'      => $completed,
+            'totalHoursRaw'  => $totalHours,
+            'totalHours'     => $hoursFormatted,
+        ];
     });
 
     ?>
@@ -118,92 +145,128 @@
         .app-wrapper { display: flex; height: 100vh; width: 100vw; overflow: hidden; }
 
 /* ── SIDEBAR ── */
-        .sidebar { width: var(--sidebar-width); background: var(--sidebar-green); flex-shrink: 0; display: flex; flex-direction: column; color: white; height: 100vh; transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1); z-index: 30; position: relative; overflow: visible; }
+        .sidebar {
+            width: var(--sidebar-width);
+            background: var(--sidebar-green);
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            color: white;
+            height: 100vh;
+            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 30;
+            position: relative;
+            overflow: visible;
+        }
+        .sidebar.collapsed { width: var(--sidebar-collapsed-width); }
 
-/* ── Logo row ── */
-        .sidebar-logo-container { height: var(--header-height); display: flex; align-items: center; justify-content: center; padding: 0 20px; gap: 12px; flex-shrink: 0; overflow: hidden; transition: padding 0.3s, justify-content 0.3s; }
+        /* ── Logo row ── */
+        .sidebar-logo-container {
+            height: var(--header-height);
+            display: flex; align-items: center; justify-content: center;
+            padding: 0 20px; gap: 12px; flex-shrink: 0; overflow: hidden;
+            transition: padding 0.3s, justify-content 0.3s;
+        }
         .sidebar:not(.collapsed) .sidebar-logo-container { justify-content: flex-start; }
         .logo-icon { flex-shrink: 0; font-size: 27px; width: auto; text-align: center; }
         .logo-text { font-size: 1.24rem; font-weight: 700; white-space: nowrap; overflow: hidden; opacity: 1; max-width: 200px; transition: opacity 0.2s, max-width 0.3s; }
         .logo-content { display: flex; align-items: center; gap: 12px; white-space: nowrap; }
+        .sidebar.collapsed .logo-text { opacity: 0; max-width: 0; pointer-events: none; }
+        .sidebar.collapsed .sidebar-logo-container { justify-content: center; padding: 0; width: 100%; }
+        .sidebar.collapsed .logo-content { gap: 0; justify-content: center; width: 100%; }
 
-/* ── Nav items ── */
-        .nav-item { display: flex; align-items: center; gap: 14px; padding: 18px 20px; color: rgba(255,255,255,0.7); text-decoration: none; transition: background 0.2s, color 0.2s, padding 0.3s, justify-content 0.3s; white-space: nowrap; position: relative; text-align: left; background: transparent; border: none; width: 100%; cursor: pointer; font-size: 0.95rem; justify-content: flex-start; }
+        /* ── Nav items ── */
+        .nav-item {
+            display: flex; align-items: center; gap: 14px; padding: 16px 20px;
+            color: rgba(255,255,255,0.7); text-decoration: none;
+            transition: background 0.2s, color 0.2s, padding 0.3s, justify-content 0.3s;
+            white-space: nowrap; position: relative; text-align: left;
+            background: transparent; border: none; width: 100%;
+            cursor: pointer; font-size: 0.95rem; justify-content: flex-start;
+        }
         .nav-item i { width: 32px; text-align: center; flex-shrink: 0; font-size: 22px; transition: width 0.3s; }
         .nav-item span { overflow: hidden; opacity: 1; max-width: 200px; transition: opacity 0.2s, max-width 0.3s; }
         .nav-item:hover, .nav-item.active { background: rgba(255,255,255,0.1); color: white; }
         .nav-item.active { background: var(--bg-light); color: var(--header-maroon); font-weight: 700; border-radius: 0; width: calc(100% + 1px); z-index: 10; }
-        
-        .sidebar.collapsed { width: var(--sidebar-collapsed-width); }
-        .sidebar.collapsed .sidebar-logo-container { justify-content: center; padding: 0; width: 100%; }
-        .sidebar.collapsed .logo-content { gap: 0; justify-content: center; width: 100%; }
-        .sidebar.collapsed .logo-icon { font-size: 22px; width: auto; margin: 0; }
-        .sidebar.collapsed .nav-item { display: flex; align-items: center; justify-content: center; padding: 18px 0; width: 100%; gap: 0; }
+
+        .sidebar.collapsed .nav-item { display: flex; align-items: center; justify-content: center; padding: 16px 0; width: 100%; gap: 0; }
         .sidebar.collapsed .nav-item i { margin: 0; width: auto; text-align: center; flex-shrink: 0; }
-        .sidebar.collapsed .nav-item span, .sidebar.collapsed .logo-content span { opacity: 0; max-width: 0; pointer-events: none; }
-        .sidebar.collapsed .nav-item.active { border-left: none; }
+        .sidebar.collapsed .nav-item span { opacity: 0; max-width: 0; pointer-events: none; }
 
-        .nav-item::after { content: attr(data-tooltip); position: absolute; left: 100%; top: 50%; transform: translateY(-50%); margin-left: 14px; background: rgba(0,0,0,0.85); color: white; padding: 5px 12px; border-radius: 4px; font-size: 12px; font-weight: 500; white-space: nowrap; opacity: 0; visibility: hidden; transition: opacity 0.2s; pointer-events: none; z-index: 100; }
+        .nav-item::after {
+            content: attr(data-tooltip);
+            position: absolute; left: 100%; top: 50%; transform: translateY(-50%);
+            margin-left: 14px; background: rgba(0,0,0,0.85); color: white;
+            padding: 5px 12px; border-radius: 4px; font-size: 12px; font-weight: 500;
+            white-space: nowrap; opacity: 0; visibility: hidden; transition: opacity 0.2s;
+            pointer-events: none; z-index: 100;
+        }
         .sidebar.collapsed .nav-item:hover::after { opacity: 1; visibility: visible; }
-        .sidebar-footer { padding: 0px 0; border-top: 1px solid rgba(255,255,255,0.1); }
 
-        .sidebar-toggle-btn { position: absolute; right: -16px; top: 50%; width: 32px; height: 32px; border-radius: 50%; background: var(--header-maroon); border: 2px solid white; cursor: pointer; display: flex; align-items: center; justify-content: center; color: white; font-size: 13px; z-index: 50; box-shadow: 0 2px 8px rgba(0,0,0,0.25); transition: background 0.2s; flex-shrink: 0; }
+        .sidebar-footer { padding: 0; border-top: 1px solid rgba(255,255,255,0.1); }
+
+        .sidebar-toggle-btn {
+            position: absolute; right: -16px; top: 50%;
+            width: 32px; height: 32px; border-radius: 50%;
+            background: var(--header-maroon); border: 2px solid white;
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+            color: white; font-size: 13px; z-index: 50;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.25); transition: background 0.2s; flex-shrink: 0;
+        }
         .sidebar-toggle-btn:hover { background: #dfcece; }
         .sidebar-toggle-btn .toggle-icon { transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); display: flex; align-items: center; justify-content: center; }
         .sidebar:not(.collapsed) .sidebar-toggle-btn .toggle-icon { transform: rotate(180deg); }
-            /* lahat ng may sidebar copy paste*/
-            .main-content { flex: 1; min-width: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
-            .top-header { background: var(--header-maroon); height: var(--header-height); padding: 0 40px; display: flex; align-items: center; justify-content: space-between; color: white; flex-shrink: 0; }
-            .scroll-container { flex-grow: 1; overflow-y: auto; padding: 32px; width: 100%; }
 
-            .profile-dropdown {
-                position: absolute; top: 70px; right: 40px; background: white; border-radius: 12px;
-                box-shadow: 0 10px 25px -5px rgba(0,0,0,0.2); width: 220px; display: none;
-                flex-direction: column; z-index: 50; border: 1px solid #e2e8f0; overflow: hidden;
-            }
-            .profile-dropdown.show { display: flex; }
-            .dropdown-item { padding: 12px 20px; font-size: 13px; color: #475569; display: flex; align-items: center; gap: 10px; transition: background 0.2s; }
-            .dropdown-item:hover { background: #f8fafc; color: var(--header-maroon); }
+        .main-content { flex: 1; min-width: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        .top-header { background: var(--header-maroon); height: var(--header-height); padding: 0 40px; display: flex; align-items: center; justify-content: space-between; color: white; flex-shrink: 0; }
+        .scroll-container { flex-grow: 1; overflow-y: auto; padding: 32px; width: 100%; }
 
-            .table-filter-select { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 12px; font-size: 0.75rem; color: #475569; outline: none; cursor: pointer; }
-            .pagination-btn { padding: 4px 10px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 11px; font-weight: 600; color: #64748b; transition: all 0.2s; background: white; cursor: pointer; }
-            .pagination-btn:hover:not(:disabled) { background: #f1f5f9; color: #7b1d1d; border-color: #7b1d1d; }
-            .tabular-nums {font-variant-numeric: tabular-nums;}
-            .topic-text {word-break: break-word;overflow-wrap: anywhere;white-space: normal;}
-            .topic-text.line-clamp-1 {display: -webkit-box;-webkit-line-clamp: 1;-webkit-box-orient: vertical;overflow: hidden;white-space: normal;word-break: break-all;}
-            @keyframes slideDown {from { opacity: 0; transform: translateY(-6px); }to   { opacity: 1; transform: translateY(0); }}
-            @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-.scroll-cell-wrap { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.scroll-cell {
-    max-height: 1.4em;
-    overflow: hidden;
-    transition: max-height 0.3s ease;
-    word-break: break-word;
-    overflow-wrap: anywhere;
-    line-height: 1.4;
-}
-.scroll-cell.expanded {
-    max-height: 80px;
-    overflow-y: auto;
-}
-.scroll-cell::-webkit-scrollbar { width: 3px; }
-.scroll-cell::-webkit-scrollbar-track { background: transparent; }
-.scroll-cell::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 99px; }
-.scroll-toggle-btn {
-    display: none;
-    font-size: 10px;
-    color: #94a3b8;
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 0;
-    text-align: left;
-    line-height: 1;
-}
-.scroll-toggle-btn:hover { color: #7b1d1d; }
-.scroll-cell-wrap.overflowing .scroll-toggle-btn { display: inline-block; }
-            #confirmMeta {max-height: 200px;overflow-y: auto;}
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border: 1px solid #f1f5f9;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+        }
 
+        .profile-dropdown {
+            position: absolute; top: 70px; right: 40px; background: white; border-radius: 12px;
+            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.2); width: 220px; display: none;
+            flex-direction: column; z-index: 50; border: 1px solid #e2e8f0; overflow: hidden;
+        }
+        .profile-dropdown.show { display: flex; }
+        .dropdown-item { padding: 12px 20px; font-size: 13px; color: #475569; display: flex; align-items: center; gap: 10px; transition: background 0.2s; }
+        .dropdown-item:hover { background: #f8fafc; color: var(--header-maroon); }
+
+        .table-filter-select { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 12px; font-size: 0.75rem; color: #475569; outline: none; cursor: pointer; }
+
+        /* Pagination button */
+        .pagination-btn { padding: 4px 10px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 11px; font-weight: 600; color: #64748b; transition: all 0.2s; background: white; cursor: pointer; }
+        .pagination-btn:hover:not(:disabled) { background: #f1f5f9; color: #7b1d1d; border-color: #7b1d1d; }
+
+        .tabular-nums { font-variant-numeric: tabular-nums; }
+        .topic-text { word-break: break-word; overflow-wrap: anywhere; white-space: normal; }
+        .topic-text.line-clamp-1 { display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; white-space: normal; word-break: break-all; }
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+        .hover-tooltip { position: relative; cursor: pointer; }
+        .hover-tooltip::after {
+            content: attr(data-full);
+            position: absolute; left: 0; top: 110%;
+            background: rgba(0,0,0,0.85); color: #fff;
+            padding: 8px 10px; border-radius: 6px; font-size: 11px; line-height: 1.4;
+            white-space: normal; word-break: break-word; overflow-wrap: anywhere;
+            width: 320px; max-width: 320px;
+            opacity: 0; pointer-events: none;
+            transform: translateY(5px); transition: 0.15s ease; z-index: 9999;
+        }
+        .hover-tooltip:hover::after { opacity: 1; transform: translateY(0); }
+
+        #confirmMeta { max-height: 200px; overflow-y: auto; }
         </style>
     </head>
 
@@ -211,7 +274,6 @@
 
     <div class="app-wrapper">
 
-        <!-- ito navbar copy paste mo -->
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-logo-container">
                 <div class="logo-content">
@@ -250,11 +312,10 @@
                 </form>
             </div>
         </aside>
-        <!-- hanggang dito navbar copy paste mo -->
 
         <div class="main-content">
             <header class="top-header relative">
-                <div class="text-lg">Welcome, {{ auth()->user()->user_roles}} <span class="font-bold">{{ auth()->user()->name }}</span></div>
+                <div class="text-lg">Welcome, <span class="font-bold">{{ auth()->user()->name }}</span></div>
                 <button id="profileTrigger" class="flex items-center gap-2 px-3 py-1 bg-white rounded-full hover:bg-gray-100 transition shadow-sm border-2 border-white/20 group">
                     <div class="w-8 h-8 bg-red-900 text-white rounded-full flex items-center justify-center text-xs font-bold">
                         {{ strtoupper(substr(auth()->user()->name, 0, 2)) }}
@@ -277,104 +338,222 @@
             </header>
 
             <main class="scroll-container">
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-<div class="flex justify-between items-center mb-6">
-    <div>
-        <h2 class="text-lg font-bold text-slate-800">All Sessions</h2>
-        <p class="text-xs text-gray-400">All student-selected mentor sessions</p>
-    </div>
-    <div class="flex gap-2 items-center">
 
-        {{-- Wrap icon + input in a relative container --}}
-        <div class="relative">
-            <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-300 text-xs"></i>
-            <input type="text" id="searchInput" placeholder="Search..."
-                class="pl-8 pr-3 py-1.5 text-xs font-medium text-slate-700 placeholder-gray-400 border border-gray-200 rounded-lg bg-white outline-none focus:ring-1 focus:border-up-maroon focus:ring-up-maroon w-56 h-[34px] transition-shadow">
-        </div>
+                {{-- Page heading --}}
+                <div class="mb-6 pb-4 border-b border-gray-200 flex flex-wrap items-center justify-between gap-4">
+                    <div>
+                        <h1 class="text-3xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-[#7b1d1d] to-[#b91c1c] flex items-center gap-3">
+                            <i class="fa-solid fa-clock text-[#7b1d1d] text-2xl drop-shadow-sm"></i>
+                            Tutorial Sessions
+                        </h1>
+                        <p class="text-sm font-medium text-slate-500 mt-1">All student-selected mentor sessions</p>
+                    </div>
+                </div>
 
-        <select id="statusFilter" class="table-filter-select">
-            <option value="All">All</option>
-            <option value="pending">Pending</option>
-            <option value="accepted">Accepted</option>
-            <option value="completed">Completed</option>
-            <option value="rejected">Rejected</option>
-            <option value="cancelled">Cancelled</option>
-            <option value="no_show">No Show</option>
-        </select>
+                {{-- Summary Stat Cards --}}
+                <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-6">
+                    <div class="stat-card">
+                        <div class="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0">
+                            <i class="fa-solid fa-list-check text-slate-600"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs font-bold text-gray-400 uppercase tracking-wide">Total</p>
+                            <p class="text-xl font-black text-slate-800" id="statTotal">{{ $this->summaryCounts['total'] }}</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center flex-shrink-0">
+                            <i class="fa-solid fa-circle-check text-green-600"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs font-bold text-gray-400 uppercase tracking-wide">Accepted</p>
+                            <p class="text-xl font-black text-slate-800" id="statAccepted">{{ $this->summaryCounts['accepted'] }}</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="w-10 h-10 rounded-lg bg-yellow-50 flex items-center justify-center flex-shrink-0">
+                            <i class="fa-solid fa-hourglass-half text-yellow-500"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs font-bold text-gray-400 uppercase tracking-wide">Pending</p>
+                            <p class="text-xl font-black text-slate-800" id="statPending">{{ $this->summaryCounts['pending'] }}</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
+                            <i class="fa-solid fa-flag-checkered text-blue-600"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs font-bold text-gray-400 uppercase tracking-wide">Completed</p>
+                            <p class="text-xl font-black text-slate-800" id="statCompleted">{{ $this->summaryCounts['completed'] }}</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="w-10 h-10 rounded-lg bg-purple-50 flex items-center justify-center flex-shrink-0">
+                            <i class="fa-solid fa-stopwatch text-purple-600"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs font-bold text-gray-400 uppercase tracking-wide">Total Hours</p>
+                            <p class="text-xl font-black text-slate-800" id="statHours">{{ $this->summaryCounts['totalHours'] }}</p>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Sessions Table Card --}}
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-visible">
+
+                    <div class="p-5 border-b border-gray-100 flex flex-wrap gap-3 items-center justify-between">
+                        <div>
+                            <h2 class="font-bold text-slate-800 text-sm">All Sessions</h2>
+                            <p class="text-xs text-gray-400 font-medium" id="sessionCountLabel">— sessions found</p>
+                        </div>
+                        <div class="flex gap-2 items-center flex-wrap">
+                            <div class="relative">
+                                <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-300 text-xs"></i>
+                                <input type="text" id="searchInput" placeholder="Search..."
+                                    class="pl-8 pr-3 py-1.5 text-xs font-medium text-slate-700 placeholder-gray-400 border border-gray-200 rounded-lg bg-white outline-none focus:ring-1 focus:border-up-maroon focus:ring-up-maroon w-56 h-[34px] transition-shadow">
+                            </div>
+<div class="relative" id="statusDropdownWrap">
+    <button id="statusDropdownBtn"
+        class="table-filter-select flex items-center gap-2 min-w-[120px] justify-between"
+        onclick="toggleStatusDropdown(event)">
+        <span class="flex items-center gap-1.5">
+            <i class="fa-solid fa-filter text-gray-400"></i> Status
+        </span>
+        <span id="statusBadge" class="hidden bg-red-900 text-white rounded-full px-1.5 text-[10px] font-bold"></span>
+    </button>
+    <div id="statusDropdown"
+        class="hidden absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-xl shadow-xl z-20 overflow-hidden py-1"
+        onclick="event.stopPropagation()">
+        <label class="flex items-center gap-2 px-4 py-2.5 hover:bg-gray-50 cursor-pointer text-xs text-slate-700 font-medium transition">
+            <input type="checkbox" id="filterAll" checked onchange="handleAllFilter(this)"
+                class="rounded border-gray-300 w-4 h-4">
+            <span>All</span>
+        </label>
+        <div class="border-t border-gray-100 my-1"></div>
+        <label class="flex items-center gap-2 px-4 py-2.5 hover:bg-gray-50 cursor-pointer text-xs text-slate-700 font-medium capitalize transition" data-status="pending">
+            <input type="checkbox" value="pending" onchange="handleStatusFilter()" class="status-filter-cb rounded border-gray-300 w-4 h-4"> Pending
+        </label>
+        <label class="flex items-center gap-2 px-4 py-2.5 hover:bg-gray-50 cursor-pointer text-xs text-slate-700 font-medium capitalize transition" data-status="accepted">
+            <input type="checkbox" value="accepted" onchange="handleStatusFilter()" class="status-filter-cb rounded border-gray-300 w-4 h-4"> Accepted
+        </label>
+        <label class="flex items-center gap-2 px-4 py-2.5 hover:bg-gray-50 cursor-pointer text-xs text-slate-700 font-medium capitalize transition" data-status="completed">
+            <input type="checkbox" value="completed" onchange="handleStatusFilter()" class="status-filter-cb rounded border-gray-300 w-4 h-4"> Completed
+        </label>
+        <label class="flex items-center gap-2 px-4 py-2.5 hover:bg-gray-50 cursor-pointer text-xs text-slate-700 font-medium capitalize transition" data-status="rejected">
+            <input type="checkbox" value="rejected" onchange="handleStatusFilter()" class="status-filter-cb rounded border-gray-300 w-4 h-4"> Rejected
+        </label>
+        <label class="flex items-center gap-2 px-4 py-2.5 hover:bg-gray-50 cursor-pointer text-xs text-slate-700 font-medium capitalize transition" data-status="cancelled">
+            <input type="checkbox" value="cancelled" onchange="handleStatusFilter()" class="status-filter-cb rounded border-gray-300 w-4 h-4"> Cancelled
+        </label>
+        <label class="flex items-center gap-2 px-4 py-2.5 hover:bg-gray-50 cursor-pointer text-xs text-slate-700 font-medium capitalize transition" data-status="no_show">
+            <input type="checkbox" value="no_show" onchange="handleStatusFilter()" class="status-filter-cb rounded border-gray-300 w-4 h-4"> No Show
+        </label>
     </div>
 </div>
-
-                    <div id="sessionsBannerArea" class="flex flex-col gap-2 mb-4"></div>
-                    
-                    <table class="w-full text-left text-sm table-fixed">
-<thead class="text-gray-400 border-b">
-    <tr>
-<th onclick="setSort('student')"  class="cursor-pointer pb-3 text-[13px] select-none" style="width:16%;"><div class="flex items-center gap-1 hover:text-red-800 transition">Student<span id="sort-student" class="text-[10px]"></span></div></th>
-<th onclick="setSort('subject')"  class="cursor-pointer pb-3 text-[13px] select-none" style="width:9%;"><div class="flex items-center gap-1 hover:text-red-800 transition">Subject<span id="sort-subject" class="text-[10px]"></span></div></th>
-<th onclick="setSort('topic')"    class="cursor-pointer pb-3 text-[13px] select-none" style="width:17%;"><div class="flex items-center gap-1 hover:text-red-800 transition">Topic<span id="sort-topic" class="text-[10px]"></span></div></th>
-<th onclick="setSort('date')"     class="cursor-pointer pb-3 text-[13px] select-none" style="width:11%;"><div class="flex items-center gap-1 hover:text-red-800 transition">Date<span id="sort-date" class="text-[10px]"></span></div></th>
-<th onclick="setSort('duration')" class="cursor-pointer pb-3 text-[13px] select-none" style="width:17%;"><div class="flex items-center gap-1 hover:text-red-800 transition">Duration<span id="sort-duration" class="text-[10px]"></span></div></th>
-<th onclick="setSort('status')"   class="cursor-pointer pb-3 text-[13px] select-none" style="width:9%;"><div class="flex justify-center gap-1 hover:text-red-800 transition">Status<span id="sort-status" class="text-[10px]"></span></div></th>
-<th class="pb-3 text-[13px] select-none" style="width:16%;"><div class="flex justify-end gap-1">Actions</div></th>
-                            </tr>
-                        </thead>
-                        <tbody id="sessionsTable">
-                            <tr>
-                                <td colspan="7" class="text-center py-10 text-gray-400 text-xs">Loading sessions…</td>
-                            </tr>
-                        </tbody>
-    </table>
-
-                    <!-- SESSIONS PAGINATION -->
-                    <div id="sessionsPaginationFooter" style="display:none;"
-                        class="mt-5 pt-4 border-t border-gray-50 flex items-center justify-between">
-                        <span id="sessionsPageInfo" class="text-[11px] text-gray-400 font-medium"></span>
-                        <div class="flex gap-2">
-                            <button id="sessionsPrevBtn" class="pagination-btn opacity-30 cursor-not-allowed" disabled>
-                                <i class="fa-solid fa-chevron-left text-[10px]"></i>
-                            </button>
-                            <button id="sessionsNextBtn" class="pagination-btn">
-                                <i class="fa-solid fa-chevron-right text-[10px]"></i>
-                            </button>
                         </div>
                     </div>
 
-    </div>
+                    <div id="sessionsBannerArea" class="flex flex-col gap-2 px-5 pt-3"></div>
+
+                    <div style="overflow:visible;">
+                        <table class="w-full text-left text-sm table-fixed" style="overflow:visible;">
+                            <thead class="bg-slate-50 border-b border-gray-100">
+                                <tr>
+                                    <th onclick="setSort('student')" class="cursor-pointer px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider select-none" style="width:18%;">
+                                        <div class="flex items-center gap-1 hover:text-red-800 transition">Student<span id="sort-student" class="text-[10px]"></span></div>
+                                    </th>
+                                    <th onclick="setSort('subject')" class="cursor-pointer px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider select-none" style="width:13%;">
+                                        <div class="flex items-center gap-1 hover:text-red-800 transition">Subject<span id="sort-subject" class="text-[10px]"></span></div>
+                                    </th>
+                                    <th onclick="setSort('topic')" class="cursor-pointer px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider select-none" style="width:17%;">
+                                        <div class="flex items-center gap-1 hover:text-red-800 transition">Topic<span id="sort-topic" class="text-[10px]"></span></div>
+                                    </th>
+                                    <th onclick="setSort('date')" class="cursor-pointer px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider select-none" style="width:15%;">
+                                        <div class="flex items-center gap-1 hover:text-red-800 transition">Date & Time<span id="sort-date" class="text-[10px]"></span></div>
+                                    </th>
+                                    <th class="px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider select-none" style="width:10%;">Mode</th>
+                                    <th onclick="setSort('status')" class="cursor-pointer px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider select-none" style="width:10%;">
+                                        <div class="flex items-center gap-1 hover:text-red-800 transition">Status<span id="sort-status" class="text-[10px]"></span></div>
+                                    </th>
+                                    <th class="px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider select-none text-right" style="width:17%;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="sessionsTable">
+                                <tr>
+                                    <td colspan="7" class="text-center py-10 text-gray-400 text-xs">Loading sessions…</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- PAGINATION FOOTER (numbered style, centered) -->
+                    <div id="sessionsPaginationFooter" style="display:none;"
+                        class="pb-4 pt-3 flex flex-col items-center gap-2">
+                        <div id="sessionsPaginationButtons" class="flex items-center gap-2"></div>
+                        <span id="sessionsPageInfo" class="text-[11px] text-gray-400 font-medium"></span>
+                    </div>
+
+                </div>
+
             </main>
         </div>
 
-        <!-- CONFIRMATION MODAL — inside app-wrapper, single root satisfied -->
+        <!-- CONFIRMATION MODAL -->
         <div id="confirmModal" style="display:none;" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
             <div class="bg-[#fffffa] rounded-xl p-6 max-w-sm w-full mx-4 shadow-2xl" id="confirmModalBox">
-
                 <div class="flex items-center gap-3 mb-3">
-                    <div id="confirmIconWrap" class="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0">
-                        <!-- icon injected by JS -->
-                    </div>
+                    <div id="confirmIconWrap" class="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0"></div>
                     <h3 id="confirmTitle" class="text-base font-bold text-gray-900"></h3>
                 </div>
-
                 <p id="confirmBody" class="text-sm text-gray-600 mb-1 leading-relaxed"></p>
-
                 <div id="confirmMeta" class="mt-3 mb-5 bg-gray-50 border border-gray-100 rounded-lg px-4 py-3 text-xs text-gray-600 space-y-1"></div>
-
                 <div class="flex justify-end gap-3">
-                    <button id="confirmCancelBtn"
-                        class="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">
-                        Cancel
-                    </button>
-                    <button id="confirmOkBtn"
-                        class="px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors">
-                        Confirm
-                    </button>
+                    <button id="confirmCancelBtn" class="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">Cancel</button>
+                    <button id="confirmOkBtn" class="px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors">Confirm</button>
                 </div>
-
             </div>
         </div>
 
     </div>
 
     <script>
+
+let activeStatusFilters = [];
+
+function toggleStatusDropdown(e) {
+    e.stopPropagation();
+    document.getElementById('statusDropdown').classList.toggle('hidden');
+}
+
+function handleAllFilter(cb) {
+    if (cb.checked) {
+        document.querySelectorAll('.status-filter-cb').forEach(c => c.checked = false);
+        activeStatusFilters = [];
+    }
+    updateStatusBadge();
+    sessionsPage = 0;
+    renderSessions();
+}
+
+function handleStatusFilter() {
+    activeStatusFilters = [...document.querySelectorAll('.status-filter-cb:checked')].map(c => c.value);
+    document.getElementById('filterAll').checked = activeStatusFilters.length === 0;
+    updateStatusBadge();
+    sessionsPage = 0;
+    renderSessions();
+}
+
+function updateStatusBadge() {
+    const badge = document.getElementById('statusBadge');
+    if (activeStatusFilters.length > 0) {
+        badge.textContent = activeStatusFilters.length;
+        badge.classList.remove('hidden');
+    } else {
+        badge.classList.add('hidden');
+    }
+}       
+
         const allSessions = @json($this->sessions);
 
         /* =========================
@@ -419,7 +598,7 @@
             if (!banner) {
                 banner = document.createElement('div');
                 banner.id = id;
-                banner.style.cssText = 'border-radius:8px; overflow:hidden; font-size:11px; animation:slideDown 0.2s ease;';
+                banner.style.cssText = 'border-radius:8px; overflow:hidden; font-size:11px; animation:slideDown 0.2s ease; margin-bottom:4px;';
                 area.appendChild(banner);
             }
             banner.innerHTML = html;
@@ -469,7 +648,8 @@
                 </div>
             `);
         }
-    function showLoadingBanner() {
+
+        function showLoadingBanner() {
             showBanner('loadingBanner', `
                 <div style="border:1px solid #bfdbfe; background:#eff6ff; border-radius:8px;">
                     <div style="display:flex; align-items:center; gap:8px; padding:10px 12px;">
@@ -485,7 +665,6 @@
                     </div>
                 </div>
             `);
-            // Prevent auto-dismiss while loading
             const banner = document.getElementById('loadingBanner');
             if (banner) clearTimeout(banner._timer);
         }
@@ -501,23 +680,16 @@
         /* =========================
         UTILS
         ========================= */
-        function calculateHours(start, end) {
-            const [sh, sm] = start.split(':').map(Number);
-            const [eh, em] = end.split(':').map(Number);
-            const diff = ((eh * 60 + em) - (sh * 60 + sm)) / 60;
-            return parseFloat(diff.toFixed(2));
-        }
-
         function getStatusColor(status) {
             switch (status) {
-                case 'accepted':  return 'text-green-900 bg-green-100 border-green-400';
-                case 'completed': return 'text-gray-900 bg-gray-100 border-gray-400';
-                case 'closed':    return 'text-gray-500 bg-gray-100 border-gray-300';
-                case 'pending':   return 'text-yellow-700 bg-yellow-100 border-yellow-300';
-                case 'rejected':  return 'text-red-700 bg-red-100 border-red-300';
-                case 'cancelled': return 'text-red-700 bg-red-100 border-red-300';
-                case 'no_show':   return 'text-orange-700 bg-orange-100 border-orange-300';
-                default:          return 'text-gray-500 bg-gray-50 border-gray-200';
+            case 'pending':   return 'bg-yellow-100 text-yellow-800';
+            case 'accepted':  return 'bg-green-100 text-green-800';
+            case 'completed': return 'text-gray-900 bg-gray-100';
+            case 'rejected':  return 'bg-red-100 text-red-800';
+            case 'cancelled': return 'bg-red-100 text-red-800';
+            case 'closed':    return 'bg-purple-100 text-purple-800';
+            case 'no_show':   return 'bg-red-100 text-red-800';
+            default:          return 'bg-gray-100 text-gray-800';
             }
         }
         
@@ -534,7 +706,7 @@
             }
         }
 
-    function renderActions(s) {
+        function renderActions(s) {
             const btn = (action, status, color) =>
                 `<button onclick="updateStatus('${s.id}','${status}')"
                     class="text-[10px] px-2 py-1 ${color} rounded font-semibold whitespace-nowrap">
@@ -542,17 +714,16 @@
                 </button>`;
 
             if (s.status === 'pending') {
-                // If free for all
-            if (s.is_open) {
-                return btn('<i class="fa-solid fa-triangle-exclamation mr-1"></i> Claim Session', 'accepted', 'bg-purple-600 text-white hover:bg-purple-700')
-            }
+                if (s.is_open) {
+                    return btn('<i class="fa-solid fa-triangle-exclamation mr-1"></i> Claim Session', 'accepted', 'bg-purple-600 text-white hover:bg-purple-700');
+                }
                 return btn('Accept', 'accepted', 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200')
-                    + btn('Reject', 'rejected', 'bg-red-100 text-red-700 hover:bg-red-200');
+                     + btn('Reject', 'rejected', 'bg-red-100 text-red-700 hover:bg-red-200');
             }
             if (s.status === 'accepted') {
                 return btn('Complete', 'completed', 'bg-gray-100 text-gray-700 hover:bg-gray-200')
-                    + btn('No-show',  'no_show',   'bg-orange-100 text-orange-700 hover:bg-orange-200')
-                    + btn('Cancel',   'cancelled',  'bg-red-100 text-red-700 hover:bg-red-200');
+                     + btn('No-show',  'no_show',   'bg-orange-100 text-orange-700 hover:bg-orange-200')
+                     + btn('Cancel',   'cancelled',  'bg-red-100 text-red-700 hover:bg-red-200');
             }
             if (s.status === 'completed') {
                 return btn('Uncomplete', 'accepted', 'bg-gray-100 text-gray-500 hover:bg-gray-200');
@@ -562,7 +733,7 @@
 
         function formatTimeRange(s) {
             const [start, end] = s.duration.split(' (')[0].split(' - ');
-            return `${start} - ${end}`;
+            return `${start} – ${end}`;
         }
 
         function formatHours(s) {
@@ -571,50 +742,65 @@
         }
 
         function setSort(column) {
-    if (sortColumn === column) {
-        sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
-    } else {
-        sortColumn = column;
-        sortDirection = 'asc';
-    }
+            if (sortColumn === column) {
+                sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+            } else {
+                sortColumn = column;
+                sortDirection = 'asc';
+            }
+            sessionsPage = 0;
+            renderSessions();
+        }
 
-    sessionsPage = 0;
-    renderSessions();
-}
+        function updateSortIcons() {
+            document.querySelectorAll('[id^="sort-"]').forEach(el => el.innerHTML = '');
+            if (sortColumn) {
+                const icon = sortDirection === 'asc' ? '↑' : '↓';
+                const el = document.getElementById(`sort-${sortColumn}`);
+                if (el) el.innerHTML = icon;
+            }
+        }
 
-function updateSortIcons() {
-    document.querySelectorAll('[id^="sort-"]').forEach(el => el.innerHTML = '');
-
-    if (sortColumn) {
-        const icon = sortDirection === 'asc' ? '↑' : '↓';
-        const el = document.getElementById(`sort-${sortColumn}`);
-        if (el) el.innerHTML = icon;
-    }
-}
         let sessionsPage = 0;
-        const SESSIONS_PER_PAGE = 10;
-
-        let sortColumn = null;
+        const SESSIONS_PER_PAGE = 5;
+        let sortColumn = 'status';
         let sortDirection = 'asc';
+
+function updateSummaryCounts() {
+    const statuses = allSessions.map(s => s.status);
+
+    const completedHours = allSessions
+        .filter(s => s.status === 'completed')
+        .reduce((sum, s) => sum + s.durationHours, 0);
+
+    document.getElementById('statTotal').textContent     = allSessions.length;
+    document.getElementById('statAccepted').textContent  = statuses.filter(s => s === 'accepted').length;
+    document.getElementById('statPending').textContent   = statuses.filter(s => s === 'pending').length;
+    document.getElementById('statCompleted').textContent = statuses.filter(s => s === 'completed').length;
+    document.getElementById('statHours').textContent     = parseFloat(completedHours.toFixed(2)) + ' hrs';
+}
 
         function renderSessions() {
             updateSortIcons();
             const tbody  = document.getElementById('sessionsTable');
             const search = document.getElementById('searchInput').value.toLowerCase();
-            const filter = document.getElementById('statusFilter').value;
 
             let filtered = allSessions.filter(s => {
-                const searchable = [s.student, s.subject, s.topic, s.date, s.duration, s.status].join(' ').toLowerCase();
+                const searchable = [s.student, s.subject, s.subjectName, s.topic, s.date, s.time, s.mode, s.status].join(' ').toLowerCase();
                 const matchSearch = searchable.includes(search);
-                const matchStatus = filter === 'All' || s.status === filter;
+                const matchStatus = activeStatusFilters.length === 0 || activeStatusFilters.includes(s.status);
                 return matchSearch && matchStatus;
             });
 
             filtered = sortSessions(filtered);
 
+            // Update count label
+            const label = document.getElementById('sessionCountLabel');
+            if (label) label.textContent = filtered.length + ' Session' + (filtered.length !== 1 ? 's' : '') + ' found';
+
             if (!filtered.length) {
-                tbody.innerHTML = `<tr><td colspan="7" class="text-center py-10 text-gray-400 text-xs">No sessions found.</td></tr>`;
-                updateSessionsPagination(0, 0);
+                tbody.innerHTML = `<tr><td colspan="7" class="text-center py-16 text-gray-400 text-xs italic">No sessions found.</td></tr>`;
+                updateSessionsPagination(0, 0, filtered);
                 return;
             }
 
@@ -625,119 +811,157 @@ function updateSortIcons() {
             const start   = sessionsPage * SESSIONS_PER_PAGE;
             const visible = filtered.slice(start, start + SESSIONS_PER_PAGE);
 
-            updateSessionsPagination(total, maxPage);
+            updateSessionsPagination(total, maxPage, filtered);
 
             tbody.innerHTML = visible.map(s => `
-                <tr class="border-b hover:bg-slate-50">
-<td class="py-3 text-sm align-middle pr-4" style="max-width:0; width:16%;">
-    <div class="scroll-cell-wrap" id="wrap-student-${s.id}">
-        <div class="scroll-cell font-bold text-slate-700 text-sm"
-             id="student-${s.id}"
-             title="${s.student}">
-            ${s.student}
-        </div>
-        
-    </div>
-</td>
-                    <td class="text-sm">${s.subject}</td>
-<td class="py-3 text-sm align-middle pr-2" style="max-width:0; width:30%;">
-    <div class="scroll-cell-wrap" id="wrap-topic-${s.id}">
-        <div class="scroll-cell text-slate-600 text-sm"
-             id="topic-${s.id}"
-             title="${s.topic}">
-            ${s.topic}
-        </div>
-        
-    </div>
-</td>
-                    <td class="text-sm pr-0">${s.date}</td>
-                    <td class="text-sm pl-0">
-                        <div class="flex gap-2 font-medium tabular-nums">
-                            <span>${formatTimeRange(s)}</span>
-                            <span class="text-gray-400">${formatHours(s)}</span>
+                <tr class="border-b border-gray-50 hover:bg-slate-50 transition">
+
+                    <td class="px-5 py-4 align-middle" style="width:18%;">
+                        <div class="hover-tooltip" data-full="${s.student}">
+                            <p class="font-bold text-slate-700 text-xs truncate">${s.student}</p>
+                        </div>
+                        <p class="text-[10px] text-gray-400 mt-0.5">${s.mode !== '—' ? s.mode : ''}</p>
+                    </td>
+
+                    <td class="px-5 py-4 align-middle" style="width:13%;">
+                        <div class="hover-tooltip" data-full="${s.subject} – ${s.subjectName}">
+                            <p class="font-bold text-slate-700 text-xs">${s.subject}</p>
+                            <p class="text-[10px] text-gray-400 truncate" title="${s.subjectName}">${s.subjectName}</p>
                         </div>
                     </td>
-    <td class="text-center">
-                        <span class="${getStatusColor(s.status)} text-[10px] px-2 py-1 rounded border font-bold">
+
+                    <td class="px-5 py-4 align-middle" style="width:17%;">
+                        <div class="hover-tooltip" data-full="${s.topic}">
+                            <p class="text-xs text-slate-600 truncate">${s.topic}</p>
+                        </div>
+                    </td>
+
+<td class="px-5 py-4 align-middle" style="width:15%;">
+    <p class="text-xs font-medium text-slate-700">${s.date} ${formatHours(s)}</p>
+    <p class="text-[10px] text-gray-400">${s.time}</p>
+</td>
+
+                    <td class="px-5 py-4 align-middle text-xs text-slate-500" style="width:10%;">${s.mode}</td>
+
+                    <td class="px-5 py-4 align-middle" style="width:10%;">
+                        <span class="${getStatusColor(s.status)} text-[10px] px-2.5 py-1 rounded-full font-bold">
                             ${getStatusLabel(s.status)}
                         </span>
                     </td>
-    <td class="py-4 align-middle">
-                        <div class="flex gap-1 items-center justify-end pr-2">
+
+                    <td class="px-5 py-4 align-middle" style="width:17%;">
+                        <div class="flex gap-1 items-center justify-end">
                             ${renderActions(s)}
                         </div>
                     </td>
                 </tr>
-    `).join('');
-    requestAnimationFrame(checkScrollOverflow);
+            `).join('');
         }
 
-function sortSessions(data) {
-    if (!sortColumn) return data;
+        function sortSessions(data) {
+            if (!sortColumn) return data;
 
-    const statusOrder = {
-        accepted: 1,
-        pending: 2,
-        completed: 3,
-        no_show: 4,
-        cancelled: 5,
-        rejected: 6
-    };
+            const statusOrder = {
+                accepted: 1, pending: 2, completed: 3,
+                cancelled: 4, no_show: 5, rejected: 6
+            };
 
-    return [...data].sort((a, b) => {
-        let valA = a[sortColumn];
-        let valB = b[sortColumn];
+            return [...data].sort((a, b) => {
+                let valA = a[sortColumn];
+                let valB = b[sortColumn];
 
-        if (sortColumn === 'status') {
-            valA = statusOrder[valA] ?? 999;
-            valB = statusOrder[valB] ?? 999;
+                if (sortColumn === 'status') {
+                    valA = statusOrder[valA] ?? 999;
+                    valB = statusOrder[valB] ?? 999;
+                }
+                if (sortColumn === 'date') {
+                    valA = new Date(valA);
+                    valB = new Date(valB);
+                }
+                if (sortColumn === 'duration') {
+                    valA = a.start;
+                    valB = b.start;
+                }
+                if (typeof valA === 'string') valA = valA.toLowerCase();
+                if (typeof valB === 'string') valB = valB.toLowerCase();
+
+                if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
+                if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
+                return 0;
+            });
         }
 
-        if (sortColumn === 'date') {
-            valA = new Date(valA);
-            valB = new Date(valB);
+        /* =========================
+        NUMBERED PAGINATION (from student history style)
+        ========================= */
+        function getPageNumbers(current, totalPages) {
+            if (totalPages <= 8) return Array.from({ length: totalPages }, (_, i) => i + 1);
+            if (current <= 4)    return [1, 2, 3, 4, 5, '...', totalPages];
+            if (current >= totalPages - 3) return [1, '...', totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
+            return [1, '...', current - 1, current, current + 1, '...', totalPages];
         }
 
-        if (sortColumn === 'duration') {
-            valA = a.start;
-            valB = b.start;
-        }
-
-        if (typeof valA === 'string') valA = valA.toLowerCase();
-        if (typeof valB === 'string') valB = valB.toLowerCase();
-
-        if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
-        if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
-        return 0;
-    });
-}
-
-
-        function updateSessionsPagination(total, maxPage) {
-            const info    = document.getElementById('sessionsPageInfo');
-            const prevBtn = document.getElementById('sessionsPrevBtn');
-            const nextBtn = document.getElementById('sessionsNextBtn');
+        function updateSessionsPagination(total, maxPage, filtered) {
             const footer  = document.getElementById('sessionsPaginationFooter');
+            const info    = document.getElementById('sessionsPageInfo');
+            const btnWrap = document.getElementById('sessionsPaginationButtons');
 
             if (!footer) return;
+            if (total === 0) { footer.style.display = 'none'; return; }
 
-            if (total === 0) {
-                footer.style.display = 'none';
-                return;
-            }
+            footer.style.display    = 'flex';
+            footer.style.flexDirection  = 'column';
+            footer.style.alignItems = 'center';
 
-            footer.style.display = 'flex';
-            const start = sessionsPage * SESSIONS_PER_PAGE;
-            info.innerText = `${start + 1}–${Math.min(start + SESSIONS_PER_PAGE, total)} of ${total}`;
+            const currentPageNum = sessionsPage + 1; // 1-based for display
+            const totalPages     = maxPage + 1;
+            const start          = sessionsPage * SESSIONS_PER_PAGE;
+            const end            = Math.min(start + SESSIONS_PER_PAGE, total);
 
-            prevBtn.disabled = sessionsPage === 0;
-            nextBtn.disabled = sessionsPage >= maxPage;
-            prevBtn.classList.toggle('opacity-30', sessionsPage === 0);
-            prevBtn.classList.toggle('cursor-not-allowed', sessionsPage === 0);
-            nextBtn.classList.toggle('opacity-30', sessionsPage >= maxPage);
-            nextBtn.classList.toggle('cursor-not-allowed', sessionsPage >= maxPage);
+            info.textContent = `${start + 1}–${end} of ${total}`;
+
+            const pages = getPageNumbers(currentPageNum, totalPages);
+
+            btnWrap.innerHTML = '';
+
+            // Prev button
+            const prevBtn = document.createElement('button');
+            prevBtn.className = 'pagination-btn' + (sessionsPage === 0 ? ' opacity-40 cursor-not-allowed' : '');
+            prevBtn.disabled  = sessionsPage === 0;
+            prevBtn.innerHTML = '<i class="fa-solid fa-chevron-left text-[10px]"></i>';
+            prevBtn.addEventListener('click', () => { if (sessionsPage > 0) { sessionsPage--; renderSessions(); } });
+            btnWrap.appendChild(prevBtn);
+
+            // Numbered page buttons
+            pages.forEach(page => {
+                const btn = document.createElement('button');
+                btn.textContent = page;
+
+                if (page === '...') {
+                    btn.className = 'w-8 h-8 text-xs font-bold rounded-lg bg-white border border-gray-200 text-gray-400 cursor-default';
+                    btn.disabled  = true;
+                } else if (page === currentPageNum) {
+                    btn.className = 'w-8 h-8 text-xs font-bold rounded-lg bg-[#1a3c2f] text-white shadow-sm border border-[#1a3c2f]';
+                } else {
+                    btn.className = 'w-8 h-8 text-xs font-bold rounded-lg bg-white border border-gray-200 text-slate-500 hover:bg-gray-100 transition';
+                    btn.addEventListener('click', () => { sessionsPage = page - 1; renderSessions(); });
+                }
+
+                btnWrap.appendChild(btn);
+            });
+
+            // Next button
+            const nextBtn = document.createElement('button');
+            nextBtn.className = 'pagination-btn' + (sessionsPage >= maxPage ? ' opacity-40 cursor-not-allowed' : '');
+            nextBtn.disabled  = sessionsPage >= maxPage;
+            nextBtn.innerHTML = '<i class="fa-solid fa-chevron-right text-[10px]"></i>';
+            nextBtn.addEventListener('click', () => { if (sessionsPage < maxPage) { sessionsPage++; renderSessions(); } });
+            btnWrap.appendChild(nextBtn);
         }
 
+        /* =========================
+        CONFIRMATION MODAL
+        ========================= */
         const confirmModal    = document.getElementById('confirmModal');
         const confirmModalBox = document.getElementById('confirmModalBox');
         const confirmTitle    = document.getElementById('confirmTitle');
@@ -765,76 +989,47 @@ function sortSessions(data) {
             };
 
             const v = variants[variant] || variants.neutral;
-
             confirmIconWrap.className = `w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${v.iconBg}`;
             confirmIconWrap.innerHTML = v.icon(v.iconColor);
             confirmTitle.textContent  = title;
             confirmBody.innerHTML     = body;
             confirmMeta.innerHTML     = meta || '';
             confirmMeta.style.display = meta ? 'block' : 'none';
-
             confirmOkBtn.className = `px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors ${v.btnBg}`;
             confirmOkBtn.textContent = v.label;
             confirmOkBtn.onclick = () => { closeConfirmModal(); onConfirm(); };
-
             confirmModal.style.display = 'flex';
         }
 
-        function iconCheck() {
-            return (color) => `<svg width="18" height="18" viewBox="0 0 20 20" fill="none">
-                <path d="M4 10l4.5 4.5L16 6" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>`;
+        function iconCheck() { return (color) => `<svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M4 10l4.5 4.5L16 6" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`; }
+        function iconX()     { return (color) => `<svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M5 5l10 10M15 5L5 15" stroke="${color}" stroke-width="2" stroke-linecap="round"/></svg>`; }
+        function iconInfo()  { return (color) => `<svg width="18" height="18" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="8.5" stroke="${color}" stroke-width="1.5"/><path d="M10 9v5" stroke="${color}" stroke-width="1.5" stroke-linecap="round"/><circle cx="10" cy="6.5" r="0.8" fill="${color}"/></svg>`; }
+
+        function toggleModalText(id) {
+            const textEl = document.getElementById(`modal-text-${id}`);
+            const moreBtn = document.getElementById(`modal-more-${id}`);
+            const lessBtn = document.getElementById(`modal-less-${id}`);
+            const isCollapsed = textEl.classList.contains('line-clamp-1');
+            if (isCollapsed) {
+                textEl.classList.remove('line-clamp-1');
+                textEl.classList.add('line-clamp-none');
+                moreBtn?.classList.add('hidden');
+                lessBtn?.classList.remove('hidden');
+            } else {
+                textEl.classList.add('line-clamp-1');
+                textEl.classList.remove('line-clamp-none');
+                lessBtn?.classList.add('hidden');
+                moreBtn?.classList.remove('hidden');
+            }
         }
-        function iconX() {
-            return (color) => `<svg width="18" height="18" viewBox="0 0 20 20" fill="none">
-                <path d="M5 5l10 10M15 5L5 15" stroke="${color}" stroke-width="2" stroke-linecap="round"/>
-            </svg>`;
-        }
-        function iconInfo() {
-            return (color) => `<svg width="18" height="18" viewBox="0 0 20 20" fill="none">
-                <circle cx="10" cy="10" r="8.5" stroke="${color}" stroke-width="1.5"/>
-                <path d="M10 9v5" stroke="${color}" stroke-width="1.5" stroke-linecap="round"/>
-                <circle cx="10" cy="6.5" r="0.8" fill="${color}"/>
-            </svg>`;
-        }
-
-function truncateText(text, maxLength = 25) {
-    if (!text) return '—';
-    return text.length > maxLength
-        ? text.substring(0, maxLength) + '...'
-        : text;
-}
-
-function toggleModalText(id) {
-    const textEl = document.getElementById(`modal-text-${id}`);
-    const moreBtn = document.getElementById(`modal-more-${id}`);
-    const lessBtn = document.getElementById(`modal-less-${id}`);
-
-    const isCollapsed = textEl.classList.contains('line-clamp-1');
-
-    if (isCollapsed) {
-        textEl.classList.remove('line-clamp-1');
-        textEl.classList.add('line-clamp-none');
-        moreBtn?.classList.add('hidden');
-        lessBtn?.classList.remove('hidden');
-    } else {
-        textEl.classList.add('line-clamp-1');
-        textEl.classList.remove('line-clamp-none');
-        lessBtn?.classList.add('hidden');
-        moreBtn?.classList.remove('hidden');
-    }
-}
 
         function updateStatus(id, status) {
-
             const req = allSessions.find(s => s.id == id);
             if (!req) return;
 
             if (status === 'accepted' && req.status !== 'completed' && hasConflict(req)) {
                 const conflict = allSessions.find(s =>
-                    s.id !== req.id &&
-                    s.status === 'accepted' &&
-                    s.date === req.date
+                    s.id !== req.id && s.status === 'accepted' && s.date === req.date
                 );
                 const conflictInfo = conflict
                     ? `Conflicts with <strong>${conflict.student}</strong> (${conflict.duration.split(' (')[0]}) on ${conflict.date}.`
@@ -844,133 +1039,72 @@ function toggleModalText(id) {
             }
 
             const isUncomplete = status === 'accepted' && req.status === 'completed';
-            const isClaiming = status === 'accepted' && req.status === 'pending' && req.is_open;
+            const isClaiming   = status === 'accepted' && req.status === 'pending' && req.is_open;
 
             const dialogConfig = {
                 accepted: isUncomplete ? {
-                    title:   'Revert to accepted?',
-                    body:    'This will mark the session as accepted again, reversing the completed status.',
+                    title: 'Revert to accepted?',
+                    body:  'This will mark the session as accepted again, reversing the completed status.',
                     variant: 'neutral',
                 } : isClaiming ? {
                     title: 'Claim Open Session?',
-                    body: 'You are about to claim this session. It will be permanently assigned to you.',
+                    body:  'You are about to claim this session. It will be permanently assigned to you.',
                     variant: 'accept',
                 } : {
-                    title:   'Accept booking?',
-                    body:    'The student will be notified that their session has been approved.',
+                    title: 'Accept booking?',
+                    body:  'The student will be notified that their session has been approved.',
                     variant: 'accept',
                 },
-                rejected: {
-                    title:   'Reject booking?',
-                    body:    'The student will be notified that their session request was declined.',
-                    variant: 'reject',
-                },
-                completed: {
-                    title:   'Mark as completed?',
-                    body:    'This will mark the session as done.',
-                    variant: 'neutral',
-                },
-                no_show: {
-                    title:   'Mark as no-show?',
-                    body:    'This will record that the student did not attend the session.',
-                    variant: 'reject',
-                },
-                cancelled: {
-                    title:   'Cancel session?',
-                    body:    'This will cancel the accepted session.',
-                    variant: 'reject',
-                },
+                rejected:  { title: 'Reject booking?',    body: 'The student will be notified that their session request was declined.',       variant: 'reject'  },
+                completed: { title: 'Mark as completed?', body: 'This will mark the session as done.',                                         variant: 'neutral' },
+                no_show:   { title: 'Mark as no-show?',   body: 'This will record that the student did not attend the session.',               variant: 'reject'  },
+                cancelled: { title: 'Cancel session?',    body: 'This will cancel the accepted session.',                                      variant: 'reject'  },
             };
 
-            const cfg = dialogConfig[status] || {
-                title: 'Confirm action',
-                body: 'Are you sure you want to proceed?',
-                variant: 'neutral',
-            };
+            const cfg = dialogConfig[status] || { title: 'Confirm action', body: 'Are you sure you want to proceed?', variant: 'neutral' };
 
-const metaHtml = `
-    <!-- STUDENT -->
-    <div>
-        <div class="flex justify-between items-start gap-2">
-            <span class="text-gray-400">Student</span>
-
-            <div class="flex flex-col items-end max-w-[160px]">
-                <span id="modal-text-student-${req.id}"
-                    class="font-medium text-gray-700 text-right topic-text line-clamp-1">
-                    ${req.student}
-                </span>
-
-                ${req.student.length > 25 ? `
-                    <button onclick="toggleModalText('student-${req.id}')"
-                        id="modal-more-student-${req.id}"
-                        class="text-[10px] text-gray-400 hover:text-gray-600">
-                        see more
-                    </button>
-
-                    <button onclick="toggleModalText('student-${req.id}')"
-                        id="modal-less-student-${req.id}"
-                        class="hidden text-[10px] text-gray-400 hover:text-gray-600">
-                        view less
-                    </button>
-                ` : ''}
-            </div>
-        </div>
-    </div>
-
-    <!-- SUBJECT -->
-    <div class="flex justify-between gap-2">
-        <span class="text-gray-400">Subject</span>
-        <span class="font-medium text-gray-700 text-right truncate max-w-[140px]">
-            ${req.subject}
-        </span>
-    </div>
-
-    <!-- TOPIC -->
-    <div>
-        <div class="flex justify-between items-start gap-2">
-            <span class="text-gray-400">Topic</span>
-
-            <div class="flex flex-col items-end max-w-[180px]">
-                <span id="modal-text-topic-${req.id}"
-                    class="font-medium text-gray-700 text-right topic-text line-clamp-1">
-                    ${req.topic}
-                </span>
-
-                ${req.topic.length > 40 ? `
-                    <button onclick="toggleModalText('topic-${req.id}')"
-                        id="modal-more-topic-${req.id}"
-                        class="text-[10px] text-gray-400 hover:text-gray-600">
-                        see more
-                    </button>
-
-                    <button onclick="toggleModalText('topic-${req.id}')"
-                        id="modal-less-topic-${req.id}"
-                        class="hidden text-[10px] text-gray-400 hover:text-gray-600">
-                        view less
-                    </button>
-                ` : ''}
-            </div>
-        </div>
-    </div>
-
-    <!-- DATE -->
-    <div class="flex justify-between gap-2">
-        <span class="text-gray-400">Date</span>
-        <span class="font-medium text-gray-700 text-right">
-            ${req.date}
-        </span>
-    </div>
-
-    <!-- TIME -->
-    <div class="flex justify-between gap-2">
-        <span class="text-gray-400">Time</span>
-        <span class="font-medium text-gray-700 text-right">
-            ${formatTimeRange(req)}
-        </span>
-    </div>
-`;
-
-
+            const metaHtml = `
+                <div>
+                    <div class="flex justify-between items-start gap-2">
+                        <span class="text-gray-400">Student</span>
+                        <div class="flex flex-col items-end max-w-[160px]">
+                            <span id="modal-text-student-${req.id}" class="font-medium text-gray-700 text-right topic-text line-clamp-1">${req.student}</span>
+                            ${req.student.length > 25 ? `
+                                <button onclick="toggleModalText('student-${req.id}')" id="modal-more-student-${req.id}" class="text-[10px] text-gray-400 hover:text-gray-600">see more</button>
+                                <button onclick="toggleModalText('student-${req.id}')" id="modal-less-student-${req.id}" class="hidden text-[10px] text-gray-400 hover:text-gray-600">view less</button>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+                <div class="flex justify-between gap-2">
+                    <span class="text-gray-400">Subject</span>
+                    <span class="font-medium text-gray-700 text-right truncate max-w-[140px]">${req.subject}${req.subjectName ? ' – ' + req.subjectName : ''}</span>
+                </div>
+                <div>
+                    <div class="flex justify-between items-start gap-2">
+                        <span class="text-gray-400">Topic</span>
+                        <div class="flex flex-col items-end max-w-[180px]">
+                            <span id="modal-text-topic-${req.id}" class="font-medium text-gray-700 text-right topic-text line-clamp-1">${req.topic}</span>
+                            ${req.topic.length > 40 ? `
+                                <button onclick="toggleModalText('topic-${req.id}')" id="modal-more-topic-${req.id}" class="text-[10px] text-gray-400 hover:text-gray-600">see more</button>
+                                <button onclick="toggleModalText('topic-${req.id}')" id="modal-less-topic-${req.id}" class="hidden text-[10px] text-gray-400 hover:text-gray-600">view less</button>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+                <div class="flex justify-between gap-2">
+                    <span class="text-gray-400">Date</span>
+                    <span class="font-medium text-gray-700 text-right">${req.date}</span>
+                </div>
+                <div class="flex justify-between gap-2">
+                    <span class="text-gray-400">Time</span>
+                    <span class="font-medium text-gray-700 text-right">${req.time}</span>
+                </div>
+                <div class="flex justify-between gap-2">
+                    <span class="text-gray-400">Mode</span>
+                    <span class="font-medium text-gray-700 text-right">${req.mode}</span>
+                </div>
+            `;
 
             openConfirmModal({
                 title:     cfg.title,
@@ -981,7 +1115,7 @@ const metaHtml = `
             });
         }
 
-    function commitStatus(id, status, target) {
+        function commitStatus(id, status, target) {
             showLoadingBanner();
 
             const formData = new FormData();
@@ -997,24 +1131,22 @@ const metaHtml = `
 
                     if (status === 'accepted') {
                         const conflictingIds = getConflictingPendingIds(target);
-
                         if (conflictingIds.length > 0) {
                             let completed = 0;
                             conflictingIds.forEach(conflictId => {
                                 const conflictSession = allSessions.find(s => s.id == conflictId);
                                 if (conflictSession) conflictSession.status = 'rejected';
-
                                 const fd = new FormData();
                                 fd.append('_token', csrfToken);
                                 fd.append('booking_id', conflictId);
                                 fd.append('booking_status', 'rejected');
-
                                 fetch(sessionsUrl, { method: 'POST', body: fd })
                                     .then(() => {
                                         completed++;
                                         if (completed === conflictingIds.length) {
                                             hideLoadingBanner();
                                             renderSessions();
+                                            updateSummaryCounts();
                                             showAutoRejectBanner(conflictingIds.length);
                                         }
                                     })
@@ -1024,11 +1156,13 @@ const metaHtml = `
                                     });
                             });
                             renderSessions();
+                            updateSummaryCounts();
                             return;
                         }
                     }
 
                     hideLoadingBanner();
+                    updateSummaryCounts();
                     renderSessions();
                 })
                 .catch(err => {
@@ -1055,48 +1189,30 @@ const metaHtml = `
                 });
         }
 
-function toggleScrollCell(id, btn) {
-    const el = document.getElementById(id);
-    if (!el || !btn) return;
-    const expanded = el.classList.toggle('expanded');
-    btn.textContent = expanded ? 'view less' : 'see more';
-}
+/* =========================
+INIT
+========================= */
+document.addEventListener('DOMContentLoaded', () => {
 
-function checkScrollOverflow() {
-    document.querySelectorAll('.scroll-cell-wrap').forEach(wrap => {
-        const cell = wrap.querySelector('.scroll-cell');
-        if (!cell) return;
-        // Compare natural scroll height vs the clamped max-height (1.4em ≈ ~20px)
-        if (cell.scrollHeight > cell.clientHeight + 2) {
-            wrap.classList.add('overflowing');
-        } else {
-            wrap.classList.remove('overflowing');
-        }
+    document.getElementById('sidebarToggle').addEventListener('click', () => {
+        document.getElementById('sidebar').classList.toggle('collapsed');
     });
-}
 
-        document.addEventListener('DOMContentLoaded', () => {
+    const profileTrigger  = document.getElementById('profileTrigger');
+    const profileDropdown = document.getElementById('profileDropdown');
+    profileTrigger.addEventListener('click', e => {
+        e.stopPropagation();
+        profileDropdown.classList.toggle('show');
+    });
 
-            document.getElementById('sidebarToggle').addEventListener('click', () => {
-                document.getElementById('sidebar').classList.toggle('collapsed');
-            });
+    window.addEventListener('click', () => {
+        profileDropdown.classList.remove('show');
+        document.getElementById('statusDropdown')?.classList.add('hidden');
+    });
 
-            const profileTrigger  = document.getElementById('profileTrigger');
-            const profileDropdown = document.getElementById('profileDropdown');
+    document.getElementById('searchInput').addEventListener('input', () => { sessionsPage = 0; renderSessions(); });
 
-            profileTrigger.addEventListener('click', e => {
-                e.stopPropagation();
-                profileDropdown.classList.toggle('show');
-            });
-            window.addEventListener('click', () => profileDropdown.classList.remove('show'));
-
-            document.getElementById('searchInput').addEventListener('input', () => { sessionsPage = 0; renderSessions(); });
-            document.getElementById('statusFilter').addEventListener('change', () => { sessionsPage = 0; renderSessions(); });
-
-            document.getElementById('sessionsPrevBtn').addEventListener('click', () => { sessionsPage--; renderSessions(); });
-            document.getElementById('sessionsNextBtn').addEventListener('click', () => { sessionsPage++; renderSessions(); });
-
-            renderSessions();
-        });
+    renderSessions();
+});
     </script>
     </body>
