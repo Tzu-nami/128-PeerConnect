@@ -12,14 +12,22 @@ mount(function () {
 
 $summaryCount = computed(function () {
     $profile = StudentProfiles::where('user_id', auth()->id())->first();
-    if(!$profile) return ['total' => 0, 'completed' => 0, 'ongoing' => 0, 'cancelled' => 0];
+    if(!$profile) return ['total' => 0, 'completed' => 0, 'totalHours' => '0.00 hrs', 'cancelled' => 0];
 
     $allInfo = Bookings::where('student_id', $profile->id)->get();
+
+    $completedSessions = $allInfo->where('booking_status', 'completed');
+    $totalMinutes = $completedSessions->sum(function ($b) {
+        return \Carbon\Carbon::parse($b->schedule_start)->diffInMinutes(\Carbon\Carbon::parse($b->schedule_end));
+    });
+    $totalHours = $totalMinutes / 60;
+    $hoursFormatted = number_format($totalHours, 2) . ' hrs';
+
     return [
-        'total' => $allInfo->count(),
-        'completed' => $allInfo->whereIn('booking_status', 'completed')->count(),
-        'ongoing' => $allInfo->whereIn('booking_status', ['pending', 'accepted'])->count(),
-        'cancelled' => $allInfo->whereIn('booking_status', 'cancelled')->count(),
+        'total'      => $allInfo->count(),
+        'completed'  => $completedSessions->count(),
+        'totalHours' => $hoursFormatted,
+        'cancelled'  => $allInfo->whereIn('booking_status', ['cancelled'])->count(),
     ];
 });
 // Get data from database
@@ -48,6 +56,14 @@ $studentHistory = computed(function () {
         };
         $statusLabel = ucfirst(str_replace('_', ' ', $session->booking_status));
 
+        $startCarbon = \Carbon\Carbon::parse($session->schedule_start);
+        $endCarbon   = \Carbon\Carbon::parse($session->schedule_end);
+        $durationMinutes = $startCarbon->diffInMinutes($endCarbon);
+        $durationHours   = $durationMinutes / 60;
+        $durationText = $durationHours == 1
+            ? '1 hr'
+            : rtrim(rtrim(number_format($durationHours, 2), '0'), '.') . ' hrs';
+        
         return [
             'id' => $session->id,
             'subject' => $session->subject->code,
@@ -61,6 +77,8 @@ $studentHistory = computed(function () {
             'raw_status' => strtolower($session->booking_status),
             'statusLabel' => $statusLabel,
             'statusClass' => $statusClass,
+            'durationHours' => $durationHours,
+            'durationText'  => $durationText,
         ];
     })->toArray();
 });
@@ -152,13 +170,10 @@ $studentHistory = computed(function () {
         .sidebar-toggle-btn .toggle-icon { transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); display: flex; align-items: center; justify-content: center; }
         .sidebar:not(.collapsed) .sidebar-toggle-btn .toggle-icon { transform: rotate(180deg); }
 
-/* ───────── KEEP YOUR OTHER STYLES ───────── */
-
 .main-content { flex: 1; min-width: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
 .top-header { background: var(--header-maroon); height: var(--header-height); padding: 0 40px; display: flex; align-items: center; justify-content: space-between; color: white; flex-shrink: 0; }
-.scroll-container { flex-grow: 1; overflow-y: scroll; padding: 32px; width: 100%; }
+.scroll-container { flex-grow: 1; overflow-y: auto; padding: 32px; width: 100%; }
 
-/* (UNCHANGED BELOW) */
 .profile-dropdown {
     position: absolute; top: 70px; right: 40px; background: white; border-radius: 12px;
     box-shadow: 0 10px 25px -5px rgba(0,0,0,0.2); width: 220px; display: none;
@@ -180,7 +195,23 @@ $studentHistory = computed(function () {
     box-shadow: 0 1px 3px rgba(0,0,0,0.04);
 }
 
-/* keep rest of your styles unchanged */
+/* Hover tooltip */
+.hover-tooltip { position: relative; cursor: default; }
+.hover-tooltip::after {
+    content: attr(data-full);
+    position: absolute; left: 0; top: 110%;
+    background: rgba(0,0,0,0.85); color: #fff;
+    padding: 8px 10px; border-radius: 6px; font-size: 11px; line-height: 1.4;
+    white-space: normal; word-break: break-word; overflow-wrap: anywhere;
+    width: 240px; max-width: 240px;
+    opacity: 0; pointer-events: none;
+    transform: translateY(5px); transition: 0.15s ease; z-index: 9999;
+}
+.hover-tooltip:hover::after { opacity: 1; transform: translateY(0); }
+
+/* Pagination button */
+.pagination-btn { padding: 4px 10px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 11px; font-weight: 600; color: #64748b; transition: all 0.2s; background: white; cursor: pointer; }
+.pagination-btn:hover:not(:disabled) { background: #f1f5f9; color: #7b1d1d; border-color: #7b1d1d; }
 </style>
 </head>
 
@@ -256,7 +287,7 @@ $studentHistory = computed(function () {
 
             <div class="mb-6 pb-4 border-b border-gray-200 flex flex-wrap items-center justify-between gap-4 animate-[slideDown_0.3s_ease]">
                 <div>
-                    <h1 class="text-3xl font-extrabold tracking-tight text-transparent bg-clip-text bg-up-maroon flex items-center gap-3">
+                    <h1 class="text-3xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-[#7b1d1d] to-[#b91c1c] flex items-center gap-3">
                         <i class="fa-solid fa-history text-up-maroon text-2xl drop-shadow-sm"></i>
                         Session History
                     </h1>
@@ -284,15 +315,15 @@ $studentHistory = computed(function () {
                             <p class="text-xl font-black text-slate-800">{{ $this->summaryCount['completed'] }}</p>
                         </div>
                     </div>
-                    <div class="stat-card">
-                        <div class="w-10 h-10 rounded-lg bg-yellow-50 flex items-center justify-center">
-                            <i class="fa-solid fa-clock text-yellow-500"></i>
-                        </div>
-                        <div>
-                            <p class="text-xs font-bold text-gray-400 uppercase tracking-wide">Ongoing</p>
-                            <p class="text-xl font-black text-slate-800">{{ $this->summaryCount['ongoing'] }}</p>
-                        </div>
-                    </div>
+<div class="stat-card">
+    <div class="w-10 h-10 rounded-lg bg-purple-50 flex items-center justify-center">
+        <i class="fa-solid fa-stopwatch text-purple-600"></i>
+    </div>
+    <div>
+        <p class="text-xs font-bold text-gray-400 uppercase tracking-wide">Total Hours</p>
+        <p class="text-xl font-black text-slate-800">{{ $this->summaryCount['totalHours'] }}</p>
+    </div>
+</div>
                     <div class="stat-card">
                         <div class="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center">
                             <i class="fa-solid fa-ban text-red-500"></i>
@@ -305,91 +336,121 @@ $studentHistory = computed(function () {
                 </div>
 
                 {{-- Table --}}
-                <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden" x-data="{
-                search: '',
-                filterStatuses: [],
-                currentPage: 1,
-                perPage: 5,
-                bookings: @js($this->studentHistory),
-                
-                get filteredBookings() {
-                    const term = this.search.toLowerCase();
-                    return this.bookings.filter(session => {
-                        const matchSearch = session.subject.toLowerCase().includes(term) ||
-                        session.subjectName.toLowerCase().includes(term) ||
-                        session.topic.toLowerCase().includes(term) ||
-                        session.mentor.toLowerCase().includes(term) ||
-                        session.date.toLowerCase().includes(term);
-                        const matchStatus = this.filterStatuses.length === 0 || this.filterStatuses.includes(session.raw_status);
-                        return matchSearch && matchStatus;
-                    });
-                },
-                
-                get paginatedBookings() {
-                    const start = (this.currentPage - 1) * this.perPage;
-                    return this.filteredBookings.slice(start, start + this.perPage);
-                },
-                
-                get totalPages() {
-                    return Math.ceil(this.filteredBookings.length / this.perPage) || 1;
-                },
-                
-                get pageStart() {
-                    return this.filteredBookings.length === 0 ? 0 : (this.currentPage - 1) * this.perPage + 1;
-                },
-                
-                get pageEnd() {
-                    return Math.min(this.currentPage * this.perPage, this.filteredBookings.length);
-                },
+<div class="bg-white rounded-xl shadow-sm border border-gray-100" x-data="{
+    search: '',
+    filterStatuses: [],
+    currentPage: 1,
+    perPage: 5,
+    bookings: @js($this->studentHistory),
 
-                get pages() {
-                    const total = this.totalPages;
-                    const current = this.currentPage;
+    statusOrder: { accepted: 1, pending: 2, completed: 3, cancelled: 4, rejected: 5, no_show: 6 },
 
-                    if(total <= 8) {
-                        return Array.from({ length: total }, (_, i) => i + 1);
-                    }
-                    if(current <= 4) {
-                        return [1, 2, 3, 4,, 5, '...', total];
-                    }
-                    if(current >= total - 3) {
-                        return [1, '...', total - 3, total - 2, total - 1, total];
-                    }
-                    return [1, '...', current - 1, current, current + 1, '...', total];
-                }
-                }">
+    get filteredBookings() {
+        const term = this.search.toLowerCase();
+        const filtered = this.bookings.filter(session => {
+            const matchSearch = session.subject.toLowerCase().includes(term) ||
+                session.subjectName.toLowerCase().includes(term) ||
+                session.topic.toLowerCase().includes(term) ||
+                session.mentor.toLowerCase().includes(term) ||
+                session.date.toLowerCase().includes(term);
+            const matchStatus = this.filterStatuses.length === 0 || this.filterStatuses.includes(session.raw_status);
+            return matchSearch && matchStatus;
+        });
+        const order = this.statusOrder;
+        return filtered.sort((a, b) => (order[a.raw_status] ?? 99) - (order[b.raw_status] ?? 99));
+    },
+
+    get paginatedBookings() {
+        const start = (this.currentPage - 1) * this.perPage;
+        return this.filteredBookings.slice(start, start + this.perPage);
+    },
+
+    get totalPages() {
+        return Math.ceil(this.filteredBookings.length / this.perPage) || 1;
+    },
+
+    get pageStart() {
+        return this.filteredBookings.length === 0 ? 0 : (this.currentPage - 1) * this.perPage + 1;
+    },
+
+    get pageEnd() {
+        return Math.min(this.currentPage * this.perPage, this.filteredBookings.length);
+    },
+
+    get pages() {
+        const total = this.totalPages;
+        const current = this.currentPage;
+        if (total <= 8) return Array.from({ length: total }, (_, i) => i + 1);
+        if (current <= 4) return [1, 2, 3, 4, 5, '...', total];
+        if (current >= total - 3) return [1, '...', total - 3, total - 2, total - 1, total];
+        return [1, '...', current - 1, current, current + 1, '...', total];
+    },
+
+    toggleAll(checked) {
+        this.filterStatuses = [];
+        this.currentPage = 1;
+    },
+
+    handleStatusChange() {
+        this.currentPage = 1;
+    }
+}">
                     <div class="p-5 border-b border-gray-100 flex flex-wrap gap-3 items-center justify-between">
                         <div>
                             <h2 class="font-bold text-slate-800 text-sm">All Bookings</h2>
                             <p class="text-xs text-gray-400 font-medium" x-text="filteredBookings.length + ' Session' + (filteredBookings.length !==1 ? 's' : '') + ' found'"></p>
                         </div>
-                        <div class="flex gap-3 flex-wrap">
-                            <div class="relative">
-                                <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-300 text-sm"></i>
-                                <input type="text" placeholder="Search subject, topic, or date..." class="pl-8 pr-3 py-1.5 text-xs font-medium text-slate-700 placeholder-gray-400 border border-gray-200 rounded-lg bg-white outline-none focus:ring-1 focus:border-up-maroon focus:ring-up-maroon w-56 h-[34px] transition-shadow" x-model="search" @input="currentPage = 1">
-                            </div>
-                            <div class="relative" x-data="{ openFilter: false }">
-                                <button @click="openFilter = !openFilter" @click.outside="openFilter = false" class="w-32 bg-white border border-gray-200 rounded-lg px-4 py-2 text-xs font-bold text-slate-600 outline-none flex items-center justify-between hover:bg-gray-50 transition">
-                                    <div class="flex items-center gap-2">
-                                        <i class="fa-solid fa-filter text-gray-400"></i> Status
-                                    </div>
-                                    <span x-show="filterStatuses.length > 0" class="bg-red-900 text-white rounded-full px-1.5 text-[10px] ml-1" x-text="filterStatuses.length"></span>
-                                </button>
-                                
-                                <div x-show="openFilter" x-transition class="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-xl shadow-xl z-20 overflow-hidden py-1">
-                                    <template x-for="status in ['pending', 'accepted', 'completed', 'cancelled', 'rejected', 'no_show']">
-                                        <label class="flex items-center gap-2 px-4 py-2.5 hover:bg-gray-50 cursor-pointer text-xs text-slate-700 font-medium capitalize transition">
-                                            <input type="checkbox" :value="status" x-model="filterStatuses" @change="currentPage = 1" class="rounded border-gray-300 text-red-900 focus:ring-red-900 w-4 h-4 transition">
-                                            <span x-text="status.replace('_', ' ')"></span>
-                                        </label>
-                                    </template>
-                                </div>
-                            </div>
-                        </div>
+<div class="flex gap-3 flex-wrap">
+    <div class="relative">
+        <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-300 text-sm"></i>
+        <input type="text" placeholder="Search subject, topic, or date..."
+            class="pl-8 pr-3 py-1.5 text-xs font-medium text-slate-700 placeholder-gray-400 border border-gray-200 rounded-lg bg-white outline-none focus:ring-1 focus:border-up-maroon focus:ring-up-maroon w-56 h-[34px] transition-shadow"
+            x-model="search" @input="currentPage = 1">
+    </div>
+
+    <div class="relative" x-data="{ openFilter: false }">
+        <button @click="openFilter = !openFilter"
+            class="bg-white border border-gray-200 rounded-lg px-4 py-2 text-xs font-bold text-slate-600 outline-none flex items-center gap-2 hover:bg-gray-50 transition h-[34px]">
+            <i class="fa-solid fa-filter text-gray-400"></i>
+            Status
+            <span x-show="filterStatuses.length > 0"
+                class="bg-red-900 text-white rounded-full px-1.5 text-[10px] font-bold"
+                x-text="filterStatuses.length"></span>
+        </button>
+
+        <div x-show="openFilter"
+            x-transition
+            @click.outside="openFilter = false"
+            @click.stop
+            class="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-xl shadow-xl z-20 py-1">
+
+            {{-- All option --}}
+            <label class="flex items-center gap-2 px-4 py-2.5 hover:bg-gray-50 cursor-pointer text-xs text-slate-700 font-medium transition">
+                <input type="checkbox"
+                    :checked="filterStatuses.length === 0"
+                    @change="toggleAll($event.target.checked)"
+                    class="rounded border-gray-300 w-4 h-4">
+                <span>All</span>
+            </label>
+            <div class="border-t border-gray-100 my-1"></div>
+
+            <template x-for="status in ['pending', 'accepted', 'completed', 'cancelled', 'rejected', 'no_show']" :key="status">
+                <label class="flex items-center gap-2 px-4 py-2.5 hover:bg-gray-50 cursor-pointer text-xs text-slate-700 font-medium capitalize transition">
+                    <input type="checkbox"
+                        :value="status"
+                        x-model="filterStatuses"
+                        @change="handleStatusChange()"
+                        class="rounded border-gray-300 text-red-900 focus:ring-red-900 w-4 h-4 transition">
+                    <span x-text="status.replace('_', ' ')"></span>
+                </label>
+            </template>
+        </div>
+    </div>
+</div>
                         
                     </div>
 
-                    <div class="overflow-x-auto">
+                    <div>
                         <table class="w-full text-sm text-left table-fixed">
                             <thead class="bg-slate-50 border-b border-gray-100">
                             <tr>
@@ -406,16 +467,29 @@ $studentHistory = computed(function () {
                                 <template x-for="(booking, index) in paginatedBookings" :key="booking.id">
                                     <tr class="border-b border-gray-50 hover:bg-slate-50 transition">
                                         <td class="px-5 py-4 text-gray-400 text-xs" x-text="(currentPage - 1) * perPage + index + 1"></td>
+
+                                        {{-- Subject with hover tooltip --}}
                                         <td class="px-5 py-4">
-                                            <p class="font-bold text-slate-700 text-xs" x-text="booking.subject"></p>
-                                            <p class="text-gray-400 text-[10px]" x-text="booking.subjectName"></p>
-                                        </td>
-                                        <td class="px-5 py-4 text-slate-600 text-xs truncate" :title="booking.topic" x-text="booking.topic"></td>
-                                        <td class="px-5 py-4">
-                                            <div class="flex items-center">
-                                                <span class="text-xs font-medium text-slate-700" x-text="booking.mentor"></span>
+                                            <div class="hover-tooltip" :data-full="booking.subject + ' – ' + booking.subjectName">
+                                                <p class="font-bold text-slate-700 text-xs" x-text="booking.subject"></p>
+                                                <p class="text-gray-400 text-[10px] truncate" :title="booking.subjectName" x-text="booking.subjectName"></p>
                                             </div>
                                         </td>
+
+                                        {{-- Topic with hover tooltip --}}
+                                        <td class="px-5 py-4">
+                                            <div class="hover-tooltip" :data-full="booking.topic">
+                                                <p class="text-slate-600 text-xs truncate" x-text="booking.topic"></p>
+                                            </div>
+                                        </td>
+
+                                        {{-- Mentor with hover tooltip --}}
+                                        <td class="px-5 py-4">
+                                            <div class="hover-tooltip" :data-full="booking.mentor">
+                                                <span class="text-xs font-medium text-slate-700 truncate block" x-text="booking.mentor"></span>
+                                            </div>
+                                        </td>
+
                                         <td class="px-5 py-4">
                                             <p class="text-xs font-medium text-slate-700" x-text="booking.date"></p>
                                             <p class="text-[10px] text-gray-400" x-text="booking.time"></p>
@@ -436,16 +510,36 @@ $studentHistory = computed(function () {
                     </div>
 
                     {{-- Pagination --}}
-                    <div class="mt-4 flex justify-center items-center gap-2 pb-3" x-show="totalPages >= 1" x-cloak>
-                        <button @click="currentPage--" :disabled="currentPage === 1" class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-slate-500 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition">
-                            <i class="fa-solid fa-chevron-left text-[10px]"></i>
-                        </button>
-                        <template x-for="page in pages" :key="page">
-                            <button @click="currentPage = page" :class="currentPage === page ? 'bg-[#1a3c2f] text-white shadow-sm' : 'bg-white border border-gray-200 text-slate-500 hover:bg-gray-100'" class="w-8 h-8 text-xs font-bold rounded-lg transition" x-text="page"></button>
-                        </template>
-                        <button @click="currentPage++" :disabled="currentPage === totalPages" class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-slate-500 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition">
-                            <i class="fa-solid fa-chevron-right text-[10px]"></i>
-                        </button>
+                    <div class="mt-3 pb-4 flex flex-col items-center gap-2" x-show="totalPages >= 1" x-cloak>
+                        {{-- Page info --}}
+
+                        {{-- Page buttons (centered) --}}
+                        <div class="flex items-center gap-2">
+                            <button @click="currentPage--" :disabled="currentPage === 1" class="pagination-btn disabled:opacity-40 disabled:cursor-not-allowed">
+                                <i class="fa-solid fa-chevron-left text-[10px]"></i>
+                            </button>
+                            <template x-for="page in pages" :key="page">
+                                <button
+                                    @click="if (page !== '...') currentPage = page"
+                                    :disabled="page === '...'"
+                                    :class="currentPage === page
+                                        ? 'bg-[#1a3c2f] text-white shadow-sm border-[#1a3c2f]'
+                                        : page === '...'
+                                            ? 'bg-white border border-gray-200 text-gray-400 cursor-default'
+                                            : 'bg-white border border-gray-200 text-slate-500 hover:bg-gray-100'"
+                                    class="w-8 h-8 text-xs font-bold rounded-lg transition"
+                                    x-text="page">
+                                </button>
+                            </template>
+                            <button @click="currentPage++" :disabled="currentPage === totalPages" class="pagination-btn disabled:opacity-40 disabled:cursor-not-allowed">
+                                <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                            </button>
+                        </div>
+
+                        <span class="text-[11px] text-gray-400 font-medium"
+                            x-text="filteredBookings.length === 0 ? '' : pageStart + '–' + pageEnd + ' of ' + filteredBookings.length">
+                        </span>
+
                     </div>
                 </div>
 </div>
