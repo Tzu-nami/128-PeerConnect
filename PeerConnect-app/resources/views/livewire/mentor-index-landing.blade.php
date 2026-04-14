@@ -9,8 +9,8 @@
         box-shadow: 0 1px 3px rgba(0,0,0,0.06);
     }
     .mentor-card:hover {
-        border-color: #1a3c2f;
-        box-shadow: 0 8px 24px rgba(30,49,61,0.15);
+        border-color: #aeaeae;
+        box-shadow: 0 4px 12px #797979;
         transform: translateY(-3px);
     }
     .day-pill {
@@ -105,11 +105,11 @@
                     </div>
                     <div class="flex-1 flex flex-col justify-center min-w-0 overflow-hidden">
                         <p class="font-black text-slate-800 text-lg leading-none uppercase tracking-tighter truncate w-full"
-                           x-text="mentor.lastName"></p>
+                           x-text="mentor.lastName" :title="mentor.lastName"></p>
                         <p class="font-bold text-slate-600 text-sm leading-tight mt-1 truncate w-full"
-                           x-text="mentor.firstName + ' ' + mentor.middleInitial"></p>
+                           x-text="mentor.firstName + ' ' + mentor.middleInitial" :title="mentor.firstName + ' ' + mentor.middleInitial"></p>
                         <p class="font-bold text-slate-400 text-xs leading-tight mt-1 truncate w-full"
-                           x-text="mentor.email"></p>
+                           x-text="mentor.email" :title="mentor.email"></p>
                         <template x-if="mentor.yearLevel && mentor.degreeProgram">
                             <p class="text-gray-400 text-[10px] mt-2 leading-tight line-clamp-2 break-words"
                                x-html="mentor.yearLevel + '<br>' + mentor.degreeProgram"></p>
@@ -185,8 +185,8 @@
                                 <img :src="selectedMentor.avatar" class="w-full h-full object-cover">
                             </div>
                             <div class="flex-1 min-w-0 pt-1">
-                                <p class="text-white font-black text-2xl leading-tight tracking-tight"
-                                   x-text="selectedMentor.lastName + ', ' + selectedMentor.firstName + ' ' + selectedMentor.middleInitial"></p>
+                                <p class="text-white font-black text-2xl leading-tight tracking-tight truncate"
+                                   x-text="selectedMentor.lastName + ', ' + selectedMentor.firstName + ' ' + selectedMentor.middleInitial" :title="selectedMentor.lastName + ', ' + selectedMentor.firstName + ' ' + selectedMentor.middleInitial"></p>
                                 <template x-if="selectedMentor.yearLevel && selectedMentor.degreeProgram">
                                     <p class="text-white/60 text-xs mt-1"
                                        x-text="selectedMentor.yearLevel + ' — ' + selectedMentor.degreeProgram"></p>
