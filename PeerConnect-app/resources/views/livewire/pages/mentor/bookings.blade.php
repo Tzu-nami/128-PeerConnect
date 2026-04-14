@@ -664,20 +664,60 @@ $dismissFeedbackSubmitted = action(function () {
             cursor: pointer; transition: background 0.15s;
         }
         .scm-btn-answer:hover { background: #15803d; }
+/* Hover tooltip */
+/* Hover tooltip */
+.hover-tooltip {
+    position: relative;
+    cursor: pointer;
+}
+.hover-tooltip::after {
+    content: attr(data-full);
+    position: absolute;
+    left: 0;
+    top: 110%;
+    background: rgba(0,0,0,0.85);
+    color: #fff;
+    padding: 8px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    line-height: 1.4;
+    white-space: normal;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    width: 320px;
+    max-width: 320px;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(5px);
+    transition: 0.15s ease;
+    z-index: 9999;
+}
+.hover-tooltip:hover::after { opacity: 1; transform: translateY(0); }
+/* Allow hover-tooltip inside confirmation modal to escape clipping */
+#confirmMeta { overflow: visible; position: relative; }
+#confirmModalBox { overflow: visible; }
+#confirmMeta .hover-tooltip::after {
+    top: auto;
+    bottom: 110%;
+    transform: translateY(-5px);
+}
+#confirmMeta .hover-tooltip:hover::after {
+    transform: translateY(0);
+}
     </style>
 
     <div class="app-wrapper">
-        <aside class="sidebar" id="sidebar">
-            <div class="sidebar-logo-container">
-                <div class="logo-content">
-                <i class="fa-solid fa-graduation-cap logo-icon"></i>
-                <span class="logo-text">LRC PeerConnect</span>
-                </div>
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-logo-container">
+            <div class="logo-content">
+            <i class="fa-solid fa-graduation-cap logo-icon"></i>
+            <span class="logo-text">LRC PeerConnect</span>
             </div>
+        </div>
 
-            <button class="sidebar-toggle-btn" id="sidebarToggle" aria-label="Toggle sidebar">
-                <span class="toggle-icon"><i class="fa-solid fa-chevron-right"></i></span>
-            </button>
+        <button class="sidebar-toggle-btn" id="sidebarToggle" aria-label="Toggle sidebar">
+            <span class="toggle-icon"><i class="fa-solid fa-chevron-right"></i></span>
+        </button>
 
             <nav class="flex-grow">
                 <a href="{{ route('mentor.dashboard') }}" class="nav-item" data-tooltip="Dashboard">
@@ -685,6 +725,9 @@ $dismissFeedbackSubmitted = action(function () {
                 </a>
                 <a href="{{ route('mentor.bookings') }}" class="nav-item active" data-tooltip="Booking Form">
                     <i class="fa-solid fa-calendar-check"></i><span>Booking Form</span>
+                </a>
+                <a href="{{ route('mentor.history') }}" class="nav-item" data-tooltip="History">
+                    <i class="fa-solid fa-clock-rotate-left w-5"></i></i><span>History</span>
                 </a>
                 <a href="{{ route('mentor.sessions') }}" class="nav-item" data-tooltip="Tutorial Sessions">
                     <i class="fa-solid fa-clock"></i><span>Tutorial Sessions</span>
@@ -694,15 +737,15 @@ $dismissFeedbackSubmitted = action(function () {
                 </a>
             </nav>
 
-            <div class="sidebar-footer">
-                <form method="POST" action="{{ route('logout') }}">
-                    @csrf
-                    <button type="submit" class="nav-item" data-tooltip="Logout">
-                        <i class="fa-solid fa-right-from-bracket"></i><span>Logout</span>
-                    </button>
-                </form>
-            </div>
-        </aside>
+        <div class="sidebar-footer">
+            <form method="POST" action="{{ route('logout') }}">
+                @csrf
+                <button type="submit" class="nav-item" data-tooltip="Logout">
+                    <i class="fa-solid fa-right-from-bracket"></i><span>Logout</span>
+                </button>
+            </form>
+        </div>
+    </aside>
 
         <div class="main-content">
             <header class="top-header relative">
@@ -1048,8 +1091,7 @@ $dismissFeedbackSubmitted = action(function () {
             {{-- ══ BOOKING FORM ══ --}}
             @elseif(!$completedBooking)
             <div class="flex-1 min-w-0 items-center gap-4 rounded-lg pb-6 pt-0">
-                <h1 class="text-3xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-[#7b1d1d] to-[#b91c1c] flex items-center gap-3">
-                    <i class="fa-solid fa-calendar-check"></i>
+                <h1 class="text-3xl font-extrabold tracking-tight text-transparent bg-clip-text bg-up-maroon flex items-center gap-3">
                     Request An Enrichment Session
                 </h1>
                 <p class="text-sm font-medium text-slate-500 leading-snug mt-1">Please fill out the details below. Your request will be reviewed by the peer mentor.</p>
@@ -1360,11 +1402,38 @@ $dismissFeedbackSubmitted = action(function () {
                     @forelse($this->studentBookings as $booking)
                         <div class="mb-4 pb-4 border-b border-gray-100 last:border-0 last:mb-0 last:pb-0">
                             <div class="flex items-start justify-between gap-3">
-                                <div class="flex-1 min-w-0">
-                                    <p class="text-sm font-bold text-gray-800">{{ strtoupper($booking->subject->code) }}</p>
-                                    <p class="text-xs font-medium text-gray-500 mt-0.5">Mentor: {{ strtoupper($booking->mentor->user->lastName ?? 'MENTOR') }}, {{ $booking->mentor->user->firstName ?? 'TBD' }}</p>
-                                    <p class="text-xs font-medium text-gray-500 truncate mt-0.5" title="{{ $booking->topic }}">Topic: {{ $booking->topic }}</p>
-                                </div>
+<div class="flex-1 min-w-0"
+    x-data="{
+        mentor: '{{ addslashes(strtoupper($booking->mentor->user->lastName ?? 'MENTOR') . ', ' . ($booking->mentor->user->firstName ?? 'TBD')) }}',
+        topic: '{{ addslashes($booking->topic) }}',
+        mentorTruncated: false,
+    }"
+    x-init="$nextTick(() => {
+        const el = $el.querySelector('.mentor-name');
+        if (el) mentorTruncated = el.scrollWidth > el.clientWidth;
+    })"
+>
+    <p class="text-sm font-bold text-gray-800">{{ strtoupper($booking->subject->code) }}</p>
+
+    {{-- Mentor name: hover-tooltip only when truncated --}}
+    <div :class="mentorTruncated ? 'hover-tooltip' : ''" :data-full="mentorTruncated ? mentor : ''">
+        <p class="mentor-name text-xs font-medium text-gray-500 mt-0.5 truncate">
+            Mentor: {{ strtoupper($booking->mentor->user->lastName ?? 'MENTOR') }}, {{ $booking->mentor->user->firstName ?? 'TBD' }}
+        </p>
+    </div>
+
+    {{-- Topic: always truncated, always has hover-tooltip --}}
+    <div class="hover-tooltip" :data-full="topic">
+        <p class="text-xs font-medium text-gray-500 truncate mt-0.5">
+            Topic: {{ $booking->topic }}
+        </p>
+    </div>
+
+    {{-- Tutorial Mode --}}
+    <p class="text-xs font-medium text-gray-400 mt-0.5">
+        <i class="fa-solid fa-location-dot mr-1 text-gray-300"></i>{{ $booking->tutorialMode->mode ?? '—' }}
+    </p>
+</div>
                                 <div class="flex-shrink-0 mt-1">
                                     @php
                                         $statusColors = match($booking->booking_status) {
@@ -1630,15 +1699,17 @@ $dismissFeedbackSubmitted = action(function () {
         const bookingSubmitBtn = e.target.closest('#bookingSubmitBtn');
         if (!bookingSubmitBtn) return;
 
-        const subjectEl = document.querySelector('[wire\\:model="subject_id"]');
-        const topicEl   = document.querySelector('[wire\\:model="topic"]');
-        const dateEl    = document.querySelector('[wire\\:model="date"]');
-        const startEl   = document.querySelector('[wire\\:model="schedule_start"]');
-        const endEl     = document.querySelector('[wire\\:model="schedule_end"]');
-        const mentorEl  = document.querySelector('[wire\\:model="mentor_id"]');
+const subjectEl      = document.querySelector('[wire\\:model="subject_id"]');
+        const topicEl        = document.querySelector('[wire\\:model="topic"]');
+        const tutorialModeEl = document.querySelector('[wire\\:model="tutorialMode_id"]');
+        const dateEl         = document.querySelector('[wire\\:model="date"]');
+        const startEl        = document.querySelector('[wire\\:model="schedule_start"]');
+        const endEl          = document.querySelector('[wire\\:model="schedule_end"]');
+        const mentorEl       = document.querySelector('[wire\\:model="mentor_id"]');
 
-        const subjectText = subjectEl?.options[subjectEl.selectedIndex]?.text || '—';
-        const topicText   = topicEl?.value || '—';
+        const subjectText      = subjectEl?.options[subjectEl.selectedIndex]?.text || '—';
+        const topicText        = topicEl?.value || '—';
+        const tutorialModeText = tutorialModeEl?.options[tutorialModeEl.selectedIndex]?.text || '—';
         const dateText    = dateEl?.value ? new Date(dateEl.value + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) : '—';
         const startText   = formatTime(startEl?.value) || '—';
         const endText     = formatTime(endEl?.value)   || '—';
@@ -1665,14 +1736,18 @@ $dismissFeedbackSubmitted = action(function () {
             return `${hr}:${String(m).padStart(2,'0')} ${ampm}`;
         }
 
-        const metaHtml = `
+const metaHtml = `
             <div class="flex justify-between items-start gap-4 mb-1">
                 <span class="text-gray-400 shrink-0">Subject</span>
                 <span class="font-semibold text-gray-700 text-right truncate">${subjectText}</span>
             </div>
             <div class="flex justify-between items-start gap-4 mb-1">
                 <span class="text-gray-400 shrink-0">Topic</span>
-                <span class="font-semibold text-gray-700 text-right line-clamp-2 break-all" title="${topicText}">${topicText}</span>
+                <span class="font-semibold text-gray-700 text-right truncate" style="max-width:190px;">${topicText}</span>
+            </div>
+            <div class="flex justify-between items-start gap-4 mb-1">
+                <span class="text-gray-400 shrink-0">Mode</span>
+                <span class="font-semibold text-gray-700 text-right truncate">${tutorialModeText}</span>
             </div>
             <div class="flex justify-between items-start gap-4 mb-1">
                 <span class="text-gray-400 shrink-0">Mentor</span>
