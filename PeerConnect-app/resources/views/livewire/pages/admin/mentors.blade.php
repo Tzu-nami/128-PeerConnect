@@ -673,7 +673,7 @@ mount(function () {
                                             </template>
                                             <template x-if="subs.length > 3">
                                                 <span class="bg-slate-100 text-slate-600 px-2 py-0.5 rounded text-[10px] font-bold border border-slate-200 whitespace-nowrap" 
-                                                    x-text="'+' + (subs.length - 3)"></span>
+                                                    x-text="'+' + (subs.length - 3)" :title="mentor.subjects.slice(3, 10).map(s => s.code).join('\n') + (mentor.subjects.length > 8 ? '\n...and more' : '')"></span>
                                             </template>
                                         </div>
                                     </td>
@@ -696,12 +696,15 @@ mount(function () {
                 </div>
 
                     {{-- Pagination --}}
-                <div class="mt-8 flex justify-center items-center gap-2" x-show="totalPages > 1" x-cloak>
+                <div class="mt-4 flex justify-center items-center gap-2" x-show="totalPages >= 1" x-cloak>
                     <button @click="currentPage--" :disabled="currentPage === 1" class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-slate-500 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition">
                         <i class="fa-solid fa-chevron-left text-[10px]"></i>
                     </button>
-                    <template x-for="page in pages" :key="page">
-                        <button @click="currentPage = page" :class="currentPage === page ? 'bg-[#1a3c2f] text-white shadow-sm' : 'bg-white border border-gray-200 text-slate-500 hover:bg-gray-100'" class="w-8 h-8 text-xs font-bold rounded-lg transition" x-text="page"></button>
+                    <template x-for="(page, index) in pages" :key="index">
+                        <div class="contents">
+                        <button @click="currentPage = page" :class="currentPage === page ? 'bg-[#1a3c2f] text-white shadow-sm' : 'bg-white border border-gray-200 text-slate-500 hover:bg-gray-100'" class="w-8 h-8 text-xs font-bold rounded-lg transition" x-text="page" x-show="page !== '...'"></button>
+                        <span x-show="page === '...'" class="w-7 h-7 flex items-center justify-center text-[11px] font-bold text-gray-400 tracking-widest shrink-0">...</span>
+                        </div>
                     </template>
                     <button @click="currentPage++" :disabled="currentPage === totalPages" class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-slate-500 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition">
                         <i class="fa-solid fa-chevron-right text-[10px]"></i>
@@ -711,14 +714,14 @@ mount(function () {
                 {{-- View More --}}
                 <template x-teleport="body">
                     <div class="modal-overlay" x-show="showViewModal" @click.self="showViewModal = false" x-cloak>
-                        <div class="bg-[#fffffa] w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col" style="max-height: 90vh;">
+                        <div class="bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col" style="max-height: 90vh;">
 
                             <template x-if="selectedMentor">
                                 <div class="contents">
                                     {{-- Modal Header --}}
                                     <div class="flex-shrink-0 flex items-start gap-5 p-6 bg-[#1a3c2f]">
                                         <div class="w-36 h-36 rounded-2xl overflow-hidden flex-shrink-0 border-2 border-white/20 shadow-lg bg-gray-200">
-                                            <img :src="selectedMentor.avatar" alt="selectedMentor.lastName" class="w-full h-full object-cover bg-[#fffffa]" />
+                                            <img :src="selectedMentor.avatar" alt="selectedMentor.lastName" class="w-full h-full object-cover bg-white" />
                                         </div>
 
                                     <div class="flex-1 min-w-0 pt-1">
@@ -740,7 +743,7 @@ mount(function () {
                             </div>
 
                             {{-- Modal Body --}}
-                            <div class="overflow-y-auto flex-1 p-6 space-y-6 bg-[#fffffa]">
+                            <div class="overflow-y-auto flex-1 p-6 space-y-6 bg-white">
                                 <div>
                                     <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Teachable Subjects</p>
                                     <div class="flex flex-wrap gap-2">
@@ -797,7 +800,7 @@ mount(function () {
         <div class="bg w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col" style="max-height: 90vh;">
 
             {{-- Header --}}
-            <div class="px-8 py-6 border-b flex justify-between items-center flex-shrink-0 bg-[#fffffa]">
+            <div class="px-8 py-6 border-b flex justify-between items-center flex-shrink-0 bg-white">
                 <div>
                     <h2 class="text-xl font-black text-slate-800">Register Mentor</h2>
                     <p class="text-sm text-gray-400 mt-0.5">Add their email, assign their subjects, then set their availabilities.</p>
@@ -807,7 +810,7 @@ mount(function () {
                 </button>
             </div>
 
-            <div class="px-8 py-6 space-y-5 overflow-y-auto bg-[#fffffa]">
+            <div class="px-8 py-6 space-y-5 overflow-y-auto bg-white">
                 
                 {{-- Student Email --}}
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -854,7 +857,7 @@ mount(function () {
                 @if($avatar)
                     <img src="{{ $avatar->temporaryUrl() }}" class="w-32 h-32 rounded-xl object-cover border border-gray-200 shadow-sm">
                 @else
-                    <div class="w-32 h-32 rounded-xl bg-[#fffffa] border border-dashed border-gray-300 flex items-center justify-center text-gray-400 shadow-sm">
+                    <div class="w-32 h-32 rounded-xl bg-white border border-dashed border-gray-300 flex items-center justify-center text-gray-400 shadow-sm">
                         <i class="fa-solid fa-image text-2xl" wire:loading.remove wire:target="avatar"></i>
                         <i class="fa-solid fa-circle-notch fa-spin text-2xl text-slate-800" wire:loading wire:target="avatar"></i>
                     </div>
@@ -886,7 +889,7 @@ mount(function () {
 
                     <div>
                         <div class="border border-gray-200 rounded-xl overflow-hidden">
-                            <div class="max-h-44 overflow-y-auto divide-y divide-gray-50 bg-[#fffffa]">
+                            <div class="max-h-44 overflow-y-auto divide-y divide-gray-50 bg-white">
                                 @forelse($this->allSubjects as $subject)
                                     <div class="flex items-center px-4 hover:bg-gray-50" wire:key="sub-{{ $subject['id'] }}">
                                         
@@ -979,7 +982,7 @@ mount(function () {
             </div> 
             
             {{-- Save Button --}}
-            <div class="px-8 py-5 bg-[#fffffa] border-t flex-shrink-0">
+            <div class="px-8 py-5 bg-white border-t flex-shrink-0">
                 <div class="flex gap-3">
                     <button type="button" wire:click="closeModal" @click="$wire.showModal = false" class="flex-1 py-3 text-xs font-bold text-gray-800 bg-gray-200 hover:bg-gray-300 rounded-xl transition">
                         Cancel
@@ -994,7 +997,7 @@ mount(function () {
     </div>
 
     <div x-show="$wire.showConfirm" x-cloak class="modal-overlay flex items-center justify-center" style="z-index: 1100;" wire:click.self="$set('showConfirm', false)">
-        <div class="bg-[#fffffa] w-full max-w-sm rounded-2xl shadow-2xl p-8 text-center m-4">
+        <div class="bg-white w-full max-w-sm rounded-2xl shadow-2xl p-8 text-center m-4">
             <div class="w-16 h-16 bg-amber-100 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-5">
                 <i class="fa-solid fa-user-plus text-3xl"></i>
             </div>
@@ -1020,7 +1023,7 @@ mount(function () {
     <div x-show="showEditModal" x-cloak class="modal-overlay">
         <div class="bg w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col" style="max-height: 90vh;">
             {{-- Header --}}
-            <div class="px-8 py-6 bg-[#fffffa] border-b flex justify-between items-center flex-shrink-0">
+            <div class="px-8 py-6 bg-white border-b flex justify-between items-center flex-shrink-0">
                 <div>
                     <h2 class="text-xl font-black text-slate-800">Edit Mentor Profile</h2>
                     <p class="text-sm text-gray-400 mt-0.5">Update their profile picture, teachable subjects, or their availabilities.</p>
@@ -1030,7 +1033,7 @@ mount(function () {
                 </button>
             </div>
 
-            <div id="editModalScroll" class="px-8 py-6 space-y-5 overflow-y-auto bg-[#fffffa]">
+            <div id="editModalScroll" class="px-8 py-6 space-y-5 overflow-y-auto bg-white">
                 
                 {{-- Student Info --}}
                 <template x-if="editingMentor">
@@ -1041,7 +1044,7 @@ mount(function () {
                             <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest m-0">Student Information</h3>
                         </div>
             
-                        <div class="bg-[#fffffa] border border-gray-200 rounded-lg px-4 py-4 flex items-center gap-4">
+                        <div class="bg-white border border-gray-200 rounded-lg px-4 py-4 flex items-center gap-4">
                             <div class="min-w-0">
                                 <p class="text-sm font-bold text-slate-800 truncate" x-text="editingMentor.lastName + ', ' + editingMentor.firstName"></p>
                                 <p class="text-xs text-gray-500 truncate" x-text="editingMentor.email"></p>
@@ -1093,7 +1096,7 @@ mount(function () {
 
                     <div>
                         <div class="border border-gray-200 rounded-xl overflow-hidden" wire:ignore>
-                            <div class="max-h-44 overflow-y-auto divide-y divide-gray-50 bg-[#fffffa]" x-data="{ availableSubjects: @js($this->allSubjects) }">
+                            <div class="max-h-44 overflow-y-auto divide-y divide-gray-50 bg-white" x-data="{ availableSubjects: @js($this->allSubjects) }">
                                 <template x-for="subject in availableSubjects" :key="subject.id">
                                     <div class="flex items-center px-4 hover:bg-gray-50" wire:key="edit-sub-{{ $subject['id'] }}">
                                         
@@ -1189,7 +1192,7 @@ mount(function () {
             </div> 
             
             {{-- Save Button --}}
-            <div class="px-8 py-5 bg-[#fffffa] border-t flex-shrink-0">
+            <div class="px-8 py-5 bg-white border-t flex-shrink-0">
                 <div class="flex gap-3">
                     <button type="button" @click="showEditModal = false; $wire.closeEditModal()" class="flex-1 py-3 text-xs font-bold text-gray-800 bg-gray-200 hover:bg-gray-300 rounded-xl transition">
                         Cancel
@@ -1204,7 +1207,7 @@ mount(function () {
     </div>
 
     <div x-show="$wire.showEditConfirm" x-cloak class="modal-overlay flex items-center justify-center" style="z-index: 1100;" wire:click.self="$set('showEditConfirm', false)">
-        <div class="bg-[#fffffa] w-full max-w-sm rounded-2xl shadow-2xl p-8 text-center m-4">
+        <div class="bg-white w-full max-w-sm rounded-2xl shadow-2xl p-8 text-center m-4">
             <div class="w-16 h-16 bg-blue-100 text-blue-500 rounded-full flex items-center justify-center mx-auto mb-5">
                 <i class="fa-solid fa-pen-to-square text-3xl"></i>
             </div>
@@ -1228,10 +1231,10 @@ mount(function () {
 
     {{-- Subject Modal --}}
     <div x-show="$wire.showSubjectModal" x-cloak class="modal-overlay">
-        <div class="bg-[#fffffa] w-full max-w-md rounded-2xl shadow-2xl overflow-hidden">
+        <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden">
 
             {{-- Header --}}
-            <div class="px-8 py-5 bg-[#fffffa] border-b flex justify-between items-center">
+            <div class="px-8 py-5 bg-white border-b flex justify-between items-center">
                 <div>
                     <h2 class="text-lg font-black text-slate-800">Add New Subject</h2>
                     <p class="text-xs text-gray-400 mt-0.5">This subject will become available for mentor assignments.</p>
@@ -1244,7 +1247,7 @@ mount(function () {
             {{-- Body --}}
             <div class="px-8 py-4 space-y-4">
                 <div>
-                    <label class="form-label">Subject Code</label>
+                    <label class="form-label">Subject Code <span class="text-red-500">*</span></label>
                     <input type="text" wire:model="newSubjectCode"
                         placeholder="e.g. Math 54"
                         class="form-input" />
@@ -1253,7 +1256,7 @@ mount(function () {
                     @enderror
                 </div>
                 <div>
-                    <label class="form-label">Subject Name</label>
+                    <label class="form-label">Subject Name <span class="text-red-500">*</span></label>
                     <input type="text" wire:model="newSubjectName"
                         placeholder="e.g. Elementary Analysis II"
                         class="form-input" />
@@ -1264,7 +1267,7 @@ mount(function () {
             </div>
 
             {{-- Save button --}}
-            <div class="px-8 py-5 bg-[#fffffa] border-t">
+            <div class="px-8 py-5 bg-white border-t">
                 <div class="flex gap-3">
                     <button type="button" wire:click="closeSubjectModal" @click="$wire.showSubjectModal = false" class="flex-1 py-3 text-xs font-bold text-gray-800 bg-gray-200 hover:bg-gray-300 rounded-xl transition">
                         Cancel
@@ -1279,7 +1282,7 @@ mount(function () {
     </div>
 
     <div x-show="$wire.showSubjectConfirm" x-cloak class="modal-overlay flex items-center justify-center" style="z-index: 1100;" wire:click.self="$set('showSubjectConfirm', false)">
-        <div class="bg-[#fffffa] w-full max-w-sm rounded-2xl shadow-2xl p-8 text-center m-4">
+        <div class="bg-white w-full max-w-sm rounded-2xl shadow-2xl p-8 text-center m-4">
             <div class="w-16 h-16 bg-amber-100 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-5">
                 <i class="fa-solid fa-book text-3xl"></i>
             </div>
@@ -1304,7 +1307,7 @@ mount(function () {
     {{-- Delete Modal --}}
     <template x-teleport="body">
         <div x-show="showDeleteConfirm" x-cloak class="modal-overlay flex items-center justify-center" style="z-index: 1100;" @click.self="showDeleteConfirm = false">
-            <div class="bg-[#fffffa] w-full max-w-sm rounded-2xl shadow-2xl p-8 text-center m-4">
+            <div class="bg-white w-full max-w-sm rounded-2xl shadow-2xl p-8 text-center m-4">
                 <div class="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center mx-auto mb-5">
                     <i class="fa-solid fa-triangle-exclamation text-3xl"></i>
                 </div>
@@ -1383,13 +1386,23 @@ mount(function () {
                 },
 
                 get totalPages() {
-                    return Math.ceil(this.filteredMentors.length / this.perPage);
+                    return Math.ceil(this.filteredMentors.length / this.perPage) || 1;
                 },
 
                 get pages() {
-                    return Array.from({
-                        length: this.totalPages
-                    }, (_, i) => i + 1);
+                    const total = this.totalPages;
+                    const current = this.currentPage;
+
+                    if(total <= 8) {
+                        return Array.from({ length: total }, (_, i) => i + 1);
+                    }
+                    if(current <= 4) {
+                        return [1, 2, 3, 4, 5, '...', total];
+                    }
+                    if(current >= total - 3) {
+                        return [1, '...', total - 3, total - 2, total - 1, total];
+                    }
+                    return [1, '...', current - 1, current, current + 1, '...', total];
                 },
 
                 openViewModal(mentor) {
