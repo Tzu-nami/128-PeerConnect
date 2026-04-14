@@ -466,16 +466,21 @@ $studentHistory = computed(function () {
                                 <template x-for="(booking, index) in paginatedBookings" :key="booking.id">
                                     <tr class="border-b border-gray-50 hover:bg-slate-50 transition">
                                         <td class="px-5 py-4 text-gray-400 text-xs" x-text="(currentPage - 1) * perPage + index + 1"></td>
-
-                                        {{-- Subject with hover tooltip --}}
+{{-- Subject with hover tooltip --}}
                                         <td class="px-5 py-4">
-                                            <p class="font-bold text-slate-700 text-xs" x-text="booking.subject"></p>
-                                            <p class="text-gray-400 text-[10px] truncate" :title="booking.subjectName" x-text="booking.subjectName"></p>
+                                            <div class="hover-tooltip" :data-full="booking.subject + ' – ' + booking.subjectName">
+                                                <p class="font-bold text-slate-700 text-xs" x-text="booking.subject"></p>
+                                                <p class="text-gray-400 text-[10px] truncate" x-text="booking.subjectName"></p>
+                                            </div>
                                         </td>
-                                        <td class="px-5 py-4 text-slate-600 text-xs truncate" :title="booking.topic" x-text="booking.topic"></td>
                                         <td class="px-5 py-4">
-                                            <div class="flex items-center">
-                                                <span class="text-xs font-medium text-slate-700 truncate" :title="booking.mentor"  x-text="booking.mentor"></span>
+                                            <div class="hover-tooltip" :data-full="booking.topic">
+                                                <p class="text-slate-600 text-xs truncate" x-text="booking.topic"></p>
+                                            </div>
+                                        </td>
+                                        <td class="px-5 py-4">
+                                            <div class="hover-tooltip" :data-full="booking.mentor">
+                                                <span class="text-xs font-medium text-slate-700 truncate" x-text="booking.mentor"></span>
                                             </div>
                                         </td>
 
