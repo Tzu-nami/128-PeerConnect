@@ -210,8 +210,8 @@ color:#065f46;
 }
 
 .mentor-card:hover {
-    border-color: #1a3c2f;
-    box-shadow: 0 8px 24px #1e313d;
+    border-color: #aeaeae;
+    box-shadow: 0 4px 12px #797979;
     transform: translateY(-3px);
 }
 
@@ -318,7 +318,7 @@ color:#065f46;
 
         <div class="main-content">
             <header class="top-header relative">
-                <div class="text-lg">Welcome, {{ auth()->user()->user_roles }} <span class="font-bold">{{ auth()->user()->name }}</span></div>
+                <div class="text-lg">Welcome, <span class="font-bold">{{ auth()->user()->name }}</span></div>
                 <button id="profileTrigger" class="flex items-center gap-2 px-3 py-1 bg-white rounded-full hover:bg-gray-100 transition shadow-sm border-2 border-white/20 group">
                     <div class="w-8 h-8 bg-red-900 text-white rounded-full flex items-center justify-center text-xs font-bold">
                         {{ strtoupper(substr(auth()->user()->name, 0, 2)) }}
@@ -345,8 +345,7 @@ color:#065f46;
                 <div class="mb-3 pb-4 border-b border-gray-200 flex flex-wrap items-center justify-between gap-4 animate-[slideDown_0.3s_ease]">
     
     <div>
-        <h1 class="text-3xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-[#7b1d1d] to-[#b91c1c] flex items-center gap-3"> {{-- class="text-3xl font-extrabold tracking-tight text-transparent bg-clip-text bg-up-maroon flex items-center gap-3" --}}
-            <i class="fa-solid fa-users text-up-maroon text-2xl drop-shadow-sm"></i> 
+        <h1 class="text-3xl font-extrabold tracking-tight text-transparent bg-clip-text bg-up-maroon flex items-center gap-3">
             Our Peer Mentors
         </h1>
         <p class="text-sm font-medium text-slate-500 mt-1">Browse available mentors and their expertise.</p>
@@ -417,11 +416,11 @@ color:#065f46;
                     </div>
                     <div class="flex-1 flex flex-col justify-center min-w-0 overflow-hidden">
                         <p class="font-black text-slate-800 text-lg leading-none uppercase tracking-tighter truncate w-full"
-                           x-text="mentor.lastName"></p>
+                           x-text="mentor.lastName" :title="mentor.lastName"></p>
                         <p class="font-bold text-slate-600 text-sm leading-tight mt-1 truncate w-full"
-                           x-text="mentor.firstName + ' ' + mentor.middleInitial"></p>
+                           x-text="mentor.firstName + ' ' + mentor.middleInitial" :title="mentor.firstName + ' ' + mentor.middleInitial"></p>
                         <p class="font-bold text-slate-400 text-xs leading-tight mt-1 truncate w-full"
-                           x-text="mentor.email"></p>
+                           x-text="mentor.email" :title="mentor.email"></p>
                         <template x-if="mentor.yearLevel && mentor.degreeProgram">
                             <p class="text-gray-400 text-[10px] mt-2 leading-tight line-clamp-2 break-words"
                                x-html="mentor.yearLevel + '<br>' + mentor.degreeProgram"></p>
@@ -497,7 +496,7 @@ color:#065f46;
                                         </div>
 
                                     <div class="flex-1 min-w-0 pt-1">
-                                    <p class="text-white font-black text-2xl leading-tight tracking-tight" x-text="selectedMentor.lastName + ', ' + selectedMentor.firstName + ' ' + selectedMentor.middleInitial">
+                                    <p class="text-white font-black text-2xl leading-tight tracking-tight truncate" x-text="selectedMentor.lastName + ', ' + selectedMentor.firstName + ' ' + selectedMentor.middleInitial" :title="selectedMentor.lastName + ', ' + selectedMentor.firstName + ' ' + selectedMentor.middleInitial">
                                     </p>
 
                                     <template x-if="selectedMentor.yearLevel && selectedMentor.degreeProgram">
