@@ -627,7 +627,7 @@ mount(function () {
 
                 <div class="flex justify-between items-end mb-8">
                     <div>
-                        <h1 class="text-2xl font-black text-slate-800">Mentor Management</h1>
+                        <h1 class="text-2xl font-extrabold tracking-tight text-transparent bg-clip-text bg-up-maroon flex items-center gap-3">Mentor Management</h1>
                         <p class="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">LRC Registry of Peer Mentors</p>
                     </div>
                     <div class="flex gap-4">
