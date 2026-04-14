@@ -48,7 +48,7 @@ $studentHistory = computed(function () {
             'pending' => 'bg-yellow-100 text-yellow-800',
             'accepted' => 'bg-green-100 text-green-800',
             'rejected' => 'bg-red-100 text-red-800',
-            'completed' => 'bg-blue-100 text-blue-800',
+            'completed' => 'bg-green-100 text-green-800',
             'cancelled' => 'bg-red-100 text-red-800',
             'closed'    => 'bg-purple-100 text-purple-800',
             'no_show'   => 'bg-red-100 text-red-800',
@@ -261,7 +261,7 @@ $studentHistory = computed(function () {
 
         <div class="main-content">
             <header class="top-header relative">
-                <div class="text-lg">Welcome, {{ auth()->user()->user_roles }} <span class="font-bold">{{ auth()->user()->name }}</span></div>
+                <div class="text-lg">Welcome, <span class="font-bold">{{ auth()->user()->name }}</span></div>
                 <button id="profileTrigger" class="flex items-center gap-2 px-3 py-1 bg-white rounded-full hover:bg-gray-100 transition shadow-sm border-2 border-white/20 group">
                     <div class="w-8 h-8 bg-red-900 text-white rounded-full flex items-center justify-center text-xs font-bold">
                         {{ strtoupper(substr(auth()->user()->name, 0, 2)) }}
@@ -287,11 +287,10 @@ $studentHistory = computed(function () {
 
             <div class="mb-6 pb-4 border-b border-gray-200 flex flex-wrap items-center justify-between gap-4 animate-[slideDown_0.3s_ease]">
                 <div>
-                    <h1 class="text-3xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-[#7b1d1d] to-[#b91c1c] flex items-center gap-3">
-                        <i class="fa-solid fa-history text-up-maroon text-2xl drop-shadow-sm"></i>
+                    <h1 class="text-3xl font-extrabold tracking-tight text-transparent bg-clip-text bg-up-maroon flex items-center gap-3">
                         Session History
                     </h1>
-                    <p class="text-sm font-medium text-slate-500 mt-1">View your past and current bookings</p>
+                    <p class="text-sm font-medium text-slate-500 mt-1">View your past and current bookings.</p>
                 </div>
             </div>
 
@@ -470,23 +469,13 @@ $studentHistory = computed(function () {
 
                                         {{-- Subject with hover tooltip --}}
                                         <td class="px-5 py-4">
-                                            <div class="hover-tooltip" :data-full="booking.subject + ' – ' + booking.subjectName">
-                                                <p class="font-bold text-slate-700 text-xs" x-text="booking.subject"></p>
-                                                <p class="text-gray-400 text-[10px] truncate" :title="booking.subjectName" x-text="booking.subjectName"></p>
-                                            </div>
+                                            <p class="font-bold text-slate-700 text-xs" x-text="booking.subject"></p>
+                                            <p class="text-gray-400 text-[10px] truncate" :title="booking.subjectName" x-text="booking.subjectName"></p>
                                         </td>
-
-                                        {{-- Topic with hover tooltip --}}
+                                        <td class="px-5 py-4 text-slate-600 text-xs truncate" :title="booking.topic" x-text="booking.topic"></td>
                                         <td class="px-5 py-4">
-                                            <div class="hover-tooltip" :data-full="booking.topic">
-                                                <p class="text-slate-600 text-xs truncate" x-text="booking.topic"></p>
-                                            </div>
-                                        </td>
-
-                                        {{-- Mentor with hover tooltip --}}
-                                        <td class="px-5 py-4">
-                                            <div class="hover-tooltip" :data-full="booking.mentor">
-                                                <span class="text-xs font-medium text-slate-700 truncate block" x-text="booking.mentor"></span>
+                                            <div class="flex items-center">
+                                                <span class="text-xs font-medium text-slate-700 truncate" :title="booking.mentor"  x-text="booking.mentor"></span>
                                             </div>
                                         </td>
 
