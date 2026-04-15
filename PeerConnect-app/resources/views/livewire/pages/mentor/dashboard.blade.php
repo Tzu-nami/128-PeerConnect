@@ -55,6 +55,7 @@
                     ? $b->student->user->firstName . ' ' . $b->student->user->lastName
                     : 'Unknown',
                 'subject' => optional($b->subject)->code ?? 'N/A',
+                'subjectName'   => optional($b->subject)->name ?? '',
                 'date' => $b->date
                     ? \Carbon\Carbon::parse($b->date)->format('Y-m-d')
                     : null,
@@ -808,7 +809,11 @@ return merged.filter(item =>
     </td>
                 </div>
                     <td class="text-slate-500" style="width:25%;white-space:nowrap;">${formatTimeTo12Hour(row.start)} - ${formatTimeTo12Hour(row.end)}</td>
-                    <td class="text-slate-600 truncate" style="width:20%">${row.subject}</td>
+                    <td class="text-slate-600" style="width:20%">
+    <div class="hover-tooltip" data-full="${row.subject} – ${row.subjectName}"" style="max-width:160px;">
+        <div style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis;max-width:90%;">${row.subject}</div>
+    </div>
+</td>
 <td style="width:20%">
     <div class="flex items-center justify-center">
         <span class="${getStatusColor(row.status)} font-bold text-xs px-2.5 py-1 rounded-full capitalize">
@@ -1101,7 +1106,7 @@ return merged.filter(item =>
         switch (status) {
             case 'pending':   return 'bg-yellow-100 text-yellow-800';
             case 'accepted':  return 'bg-green-100 text-green-800';
-            case 'completed': return 'text-gray-900 bg-gray-100';
+            case 'completed': return 'bg-green-100 text-green-800';
             case 'rejected':  return 'bg-red-100 text-red-800';
             case 'cancelled': return 'bg-red-100 text-red-800';
             case 'closed':    return 'bg-purple-100 text-purple-800';

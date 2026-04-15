@@ -295,6 +295,9 @@
                 <a href="{{ route('mentor.bookings') }}" class="nav-item {{ request()->routeIs('mentor.bookings') ? 'active' : '' }}" data-tooltip="Booking Form">
                     <i class="fa-solid fa-calendar-check"></i><span>Booking Form</span>
                 </a>
+                <a href="{{ route('mentor.history') }}" class="nav-item {{ request()->routeIs('mentor.history') ? 'active' : '' }}" data-tooltip="History">
+                    <i class="fa-solid fa-clock-rotate-left w-5"></i></i><span>History</span>
+                </a>
                 <a href="{{ route('mentor.sessions') }}" class="nav-item {{ request()->routeIs('mentor.sessions') ? 'active' : '' }}" data-tooltip="Tutorial Sessions">
                     <i class="fa-solid fa-clock"></i><span>Tutorial Sessions</span>
                 </a>
@@ -342,8 +345,7 @@
                 {{-- Page heading --}}
                 <div class="mb-6 pb-4 border-b border-gray-200 flex flex-wrap items-center justify-between gap-4">
                     <div>
-                        <h1 class="text-3xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-[#7b1d1d] to-[#b91c1c] flex items-center gap-3">
-                            <i class="fa-solid fa-clock text-[#7b1d1d] text-2xl drop-shadow-sm"></i>
+                        <h1 class="text-3xl font-extrabold tracking-tight text-transparent bg-clip-text bg-up-maroon flex items-center gap-3">
                             Tutorial Sessions
                         </h1>
                         <p class="text-sm font-medium text-slate-500 mt-1">All student-selected mentor sessions</p>
@@ -684,7 +686,7 @@ function updateStatusBadge() {
             switch (status) {
             case 'pending':   return 'bg-yellow-100 text-yellow-800';
             case 'accepted':  return 'bg-green-100 text-green-800';
-            case 'completed': return 'text-gray-900 bg-gray-100';
+            case 'completed': return 'bg-green-100 text-green-800';
             case 'rejected':  return 'bg-red-100 text-red-800';
             case 'cancelled': return 'bg-red-100 text-red-800';
             case 'closed':    return 'bg-purple-100 text-purple-800';
@@ -1068,27 +1070,19 @@ function updateSummaryCounts() {
                     <div class="flex justify-between items-start gap-2">
                         <span class="text-gray-400">Student</span>
                         <div class="flex flex-col items-end max-w-[160px]">
-                            <span id="modal-text-student-${req.id}" class="font-medium text-gray-700 text-right topic-text line-clamp-1">${req.student}</span>
-                            ${req.student.length > 25 ? `
-                                <button onclick="toggleModalText('student-${req.id}')" id="modal-more-student-${req.id}" class="text-[10px] text-gray-400 hover:text-gray-600">see more</button>
-                                <button onclick="toggleModalText('student-${req.id}')" id="modal-less-student-${req.id}" class="hidden text-[10px] text-gray-400 hover:text-gray-600">view less</button>
-                            ` : ''}
+                            <span id="modal-text-student-${req.id}" class="font-medium text-gray-700 text-right topic-text line-clamp-1 truncate" style="max-width:190px">${req.student}</span>
                         </div>
                     </div>
                 </div>
                 <div class="flex justify-between gap-2">
                     <span class="text-gray-400">Subject</span>
-                    <span class="font-medium text-gray-700 text-right truncate max-w-[140px]">${req.subject}${req.subjectName ? ' – ' + req.subjectName : ''}</span>
+                    <span class="font-medium text-gray-700 text-right truncate max-w-[90%]">${req.subject}${req.subjectName ? ' – ' + req.subjectName : ''}</span>
                 </div>
                 <div>
                     <div class="flex justify-between items-start gap-2">
                         <span class="text-gray-400">Topic</span>
                         <div class="flex flex-col items-end max-w-[180px]">
-                            <span id="modal-text-topic-${req.id}" class="font-medium text-gray-700 text-right topic-text line-clamp-1">${req.topic}</span>
-                            ${req.topic.length > 40 ? `
-                                <button onclick="toggleModalText('topic-${req.id}')" id="modal-more-topic-${req.id}" class="text-[10px] text-gray-400 hover:text-gray-600">see more</button>
-                                <button onclick="toggleModalText('topic-${req.id}')" id="modal-less-topic-${req.id}" class="hidden text-[10px] text-gray-400 hover:text-gray-600">view less</button>
-                            ` : ''}
+                            <span id="modal-text-topic-${req.id}" class="font-medium text-gray-700 text-right topic-text line-clamp-1 truncate" style="max-width:190px">${req.topic}</span>
                         </div>
                     </div>
                 </div>

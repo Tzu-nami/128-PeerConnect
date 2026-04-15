@@ -423,6 +423,9 @@ $totalPages = computed(function () {
         <nav class="flex-grow">
             <a href="{{ route('mentor.dashboard') }}" class="nav-item {{ request()->routeIs('mentor.dashboard') ? 'active' : '' }}" data-tooltip="Dashboard"><i class="fa-solid fa-gauge"></i><span>Dashboard</span></a>
             <a href="{{ route('mentor.bookings') }}"  class="nav-item {{ request()->routeIs('mentor.bookings')  ? 'active' : '' }}" data-tooltip="Booking Form"><i class="fa-solid fa-calendar-check"></i><span>Booking Form</span></a>
+                <a href="{{ route('mentor.history') }}" class="nav-item {{ request()->routeIs('mentor.history') ? 'active' : '' }}" data-tooltip="History">
+                    <i class="fa-solid fa-clock-rotate-left w-5"></i></i><span>History</span>
+                </a>
             <a href="{{ route('mentor.sessions') }}"  class="nav-item {{ request()->routeIs('mentor.sessions')  ? 'active' : '' }}" data-tooltip="Tutorial Sessions"><i class="fa-solid fa-clock"></i><span>Tutorial Sessions</span></a>
             <a href="{{ route('mentor.feedbacks') }}" class="nav-item {{ request()->routeIs('mentor.feedbacks') ? 'active' : '' }}" data-tooltip="Student Feedbacks"><i class="fa-solid fa-comment-dots"></i><span>Student Feedbacks</span></a>
         </nav>
@@ -461,8 +464,7 @@ $totalPages = computed(function () {
         <main class="scroll-container">
                 <div class="mb-6 pb-4 border-b border-gray-200 flex flex-wrap items-center justify-between gap-4">
                     <div>
-                        <h1 class="text-3xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-[#7b1d1d] to-[#b91c1c] flex items-center gap-3">
-                            <i class="fa-solid fa-comment-dots"></i>
+                        <h1 class="text-3xl font-extrabold tracking-tight text-transparent bg-clip-text bg-up-maroon flex items-center gap-3">
                             Student Feedbacks
                         </h1>
                         <p class="text-sm font-medium text-slate-500 mt-1">All student feedbacks collected</p>
@@ -475,12 +477,11 @@ $totalPages = computed(function () {
                     {{-- Header bar --}}
                     <div class="p-6 border-b border-gray-100 flex flex-wrap gap-4 justify-between items-center bg-white">
                         <div>
-                            <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2">
-                                <i class="fa-solid fa-comment-dots text-gray-400"></i>
-                                Feedbacks
+                            <h2 class="font-bold text-slate-800 text-sm">
+                                All Feedbacks
                             </h2>
-                            <p class="text-xs text-gray-500 mt-0.5">
-                                {{ count($this->feedbacks) }} {{ count($this->feedbacks) === 1 ? 'response' : 'responses' }} from your sessions
+                            <p class="text-xs text-gray-400 font-medium">
+                                {{ count($this->feedbacks) }} {{ count($this->feedbacks) === 1 ? 'feedback' : 'feedbacks' }} found
                             </p>
                         </div>
                         <div class="flex gap-3 flex-wrap items-center">
@@ -575,7 +576,7 @@ $totalPages = computed(function () {
 
                                 {{-- Subject --}}
                                 <td class="px-5 py-5 align-top col-subject">
-                                    <span class="cell-text text-slate-700 text-[14px] font-semibold">
+                                    <span class="bg-red-50 text-red-700 px-2 py-0.5 rounded text-[10px] font-bold border border-red-100 whitespace-nowrap">
                                         {{ $fb->subject ?? '—' }}
                                     </span>
                                 </td>
