@@ -26,7 +26,7 @@
         </main>
 
         <footer>
-{{--            <livewire:welcome.footer/>--}}
+            <livewire:welcome.footer/>
         </footer>
     </body>
 </html>

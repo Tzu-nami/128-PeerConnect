@@ -1,6 +1,6 @@
-<div class="text-cream/60 bg-up-maroon-dark px-20 py-10">
+<div class="text-cream/60 bg-up-maroon-dark px-6 sm:px-12 lg:px-20 py-10">
     {{-- Main row --}}
-    <div class="flex justify-between mb-7">
+    <div class="flex flex-col lg:flex-row justify-between mb-7 gap-10">
         {{-- Left Side --}}
         <div class="flex flex-col gap-4 max-w-sm">
             <a href="#" class="font-heading font-bold text-xl text-cream tracking-widest">
@@ -20,7 +20,7 @@
         </div>
 
         {{-- Right Side --}}
-        <div class="flex gap-16 text-sm">
+        <div class="flex flex-wrap gap-10 text-sm">
             {{-- Navigate --}}
             <div class="flex flex-col gap-3">
                 <div class="font-bold text-up-yellow-dark tracking-widest uppercase mb-1">Navigate</div>
@@ -69,7 +69,7 @@
     </div>
 
     {{-- Bottom row --}}
-    <div class="flex justify-between border-t border-cream/20 text-xs pt-5">
+    <div class="flex flex-col sm:flex-row justify-between border-t border-cream/20 text-xs pt-5 gap-3">
         <div>&copy; {{ date('Y') }} LRC PeerConnect · University of the Philippines Baguio. All rights reserved.</div>
         <div class="flex gap-6">
             <a href="#" class="hover:text-cream transition-colors">Privacy Policy</a>
