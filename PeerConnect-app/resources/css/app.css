@@ -18,7 +18,7 @@
         scroll-behavior: smooth;
     }
     body {
-        @apply antialiased font-body bg-gray-50 text-up-black overflow-x-hidden;
+        @apply antialiased font-body text-base bg-gray-50 text-up-black overflow-x-hidden;
     }
 }
 
@@ -75,7 +75,7 @@
         .nav-item span { overflow: hidden; opacity: 1; max-width: 200px; transition: opacity 0.2s, max-width 0.3s; }
         .nav-item:hover, .nav-item.active { background: rgba(255,255,255,0.1); color: white; }
         .nav-item.active { background: var(--bg-light); color: var(--header-maroon); font-weight: 700; border-radius: 0; width: calc(100% + 1px); z-index: 10; }
-        
+
         .sidebar.collapsed { width: var(--sidebar-collapsed-width); }
         .sidebar.collapsed .sidebar-logo-container { justify-content: center; padding: 0; width: 100%; }
         .sidebar.collapsed .logo-content { gap: 0; justify-content: center; width: 100%; }
@@ -200,6 +200,7 @@
     border-radius: 10px;
     overflow: hidden;
     aspect-ratio: 16/9;
+    min-height: 180px;
     background: #f0f0f0;
 }
 
