@@ -1,19 +1,29 @@
 import './bootstrap';
 
 import Swiper from 'swiper';
-import { Navigation, Pagination } from 'swiper/modules';
+import { Pagination } from 'swiper/modules';
 
 const swiper = new Swiper('#activities-swiper', {
     modules: [Pagination],
     loop: true,
     centeredSlides: true,
-    slidesPerView: 3,
+    slidesPerView: 1,
     spaceBetween: 16,
-    initialSlide: 2,
+    initialSlide: 0,
     watchSlidesProgress: true,
     pagination: {
         el: '.swiper-pagination',
         clickable: true,
+    },
+    breakpoints: {
+        640: {
+            slidesPerView: 2,
+            initialSlide: 1,
+        },
+        1024: {
+            slidesPerView: 3,
+            initialSlide: 2,
+        },
     },
 });
 
