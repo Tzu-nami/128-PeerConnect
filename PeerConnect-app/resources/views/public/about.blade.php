@@ -56,28 +56,28 @@
             </div>
 
             {{-- Common FAQs --}}
-            <div class="flex flex-col gap-3">
-                <div class="text-xs text-up-yellow-dark font-bold tracking-widest uppercase">Common Questions</div>
+{{--            <div class="flex flex-col gap-3">--}}
+{{--                <div class="text-xs text-up-yellow-dark font-bold tracking-widest uppercase">Common Questions</div>--}}
 
-                <div class="border border-cream-border divide-y divide-cream-border">
-                    <div class="px-5 py-4">
-                        <div class="font-medium text-text-brown mb-1">Who can use PeerConnect?</div>
-                        <div class="text-sm text-text-brown-light leading-6">Any currently enrolled UPB student can book a mentoring session through PeerConnect.</div>
-                    </div>
-                    <div class="px-5 py-4">
-                        <div class="font-medium text-text-brown mb-1">Is it free?</div>
-                        <div class="text-sm text-text-brown-light leading-6">Yes, all sessions are completely free for UPB students.</div>
-                    </div>
-                    <div class="px-5 py-4">
-                        <div class="font-medium text-text-brown mb-1">How long is a session?</div>
-                        <div class="text-sm text-text-brown-light leading-6">Sessions typically run for one hour, depending on the subject and mentor availability.</div>
-                    </div>
-                </div>
+{{--                <div class="border border-cream-border divide-y divide-cream-border">--}}
+{{--                    <div class="px-5 py-4">--}}
+{{--                        <div class="font-medium text-text-brown mb-1">Who can use PeerConnect?</div>--}}
+{{--                        <div class="text-sm text-text-brown-light leading-6">Any currently enrolled UPB student can book a mentoring session through PeerConnect.</div>--}}
+{{--                    </div>--}}
+{{--                    <div class="px-5 py-4">--}}
+{{--                        <div class="font-medium text-text-brown mb-1">Is it free?</div>--}}
+{{--                        <div class="text-sm text-text-brown-light leading-6">Yes, all sessions are completely free for UPB students.</div>--}}
+{{--                    </div>--}}
+{{--                    <div class="px-5 py-4">--}}
+{{--                        <div class="font-medium text-text-brown mb-1">How long is a session?</div>--}}
+{{--                        <div class="text-sm text-text-brown-light leading-6">Sessions typically run for one hour, depending on the subject and mentor availability.</div>--}}
+{{--                    </div>--}}
+{{--                </div>--}}
 
-                <a href="{{ route('public.services') }}#faqs" class="text-xs text-up-maroon font-bold tracking-widest uppercase self-end hover:underline">
-                    See all FAQs →
-                </a>
-            </div>
+{{--                <a href="{{ route('public.services') }}#faqs" class="text-xs text-up-maroon font-bold tracking-widest uppercase self-end hover:underline">--}}
+{{--                    See all FAQs →--}}
+{{--                </a>--}}
+{{--            </div>--}}
 
             {{-- Developers --}}
             <div class="border-t border-cream-border pt-7">
@@ -116,46 +116,71 @@
         <div class="flex flex-col gap-7 animate-fade-up [animation-delay:250ms]">
 
             {{-- How it Works --}}
-            <div>
-                <div class="text-xs text-up-yellow-dark font-bold tracking-widest uppercase mb-4">How it Works</div>
+{{--            <div>--}}
+{{--                <div class="text-xs text-up-yellow-dark font-bold tracking-widest uppercase mb-4">How it Works</div>--}}
+
+{{--                <div class="border border-cream-border divide-y divide-cream-border">--}}
+{{--                    <div class="py-4 px-5 flex items-start gap-5">--}}
+{{--                        <div class="flex justify-center items-center flex-shrink-0 w-8 h-8 bg-up-maroon rounded-full text-cream text-xs font-semibold mt-[1px]">1</div>--}}
+{{--                        <div>--}}
+{{--                            <div class="font-bold mb-1">Log in</div>--}}
+{{--                            <div class="text-text-brown-light text-sm leading-6">Sign in using your UP email account.</div>--}}
+{{--                        </div>--}}
+{{--                    </div>--}}
+{{--                    <div class="py-4 px-5 flex items-start gap-5">--}}
+{{--                        <div class="flex justify-center items-center flex-shrink-0 w-8 h-8 bg-up-maroon rounded-full text-cream text-xs font-semibold mt-[1px]">2</div>--}}
+{{--                        <div>--}}
+{{--                            <div class="font-bold mb-1">Book a session</div>--}}
+{{--                            <div class="text-text-brown-light text-sm leading-6">Pick a mentor, subject, date, and time that works for you.</div>--}}
+{{--                        </div>--}}
+{{--                    </div>--}}
+{{--                    <div class="py-4 px-5 flex items-start gap-5">--}}
+{{--                        <div class="flex justify-center items-center flex-shrink-0 w-8 h-8 bg-up-maroon rounded-full text-cream text-xs font-semibold mt-[1px]">3</div>--}}
+{{--                        <div>--}}
+{{--                            <div class="font-bold mb-1">Wait for approval</div>--}}
+{{--                            <div class="text-text-brown-light text-sm leading-6">Your booking is reviewed and confirmed by the LRC staff.</div>--}}
+{{--                        </div>--}}
+{{--                    </div>--}}
+{{--                    <div class="py-4 px-5 flex items-start gap-5">--}}
+{{--                        <div class="flex justify-center items-center flex-shrink-0 w-8 h-8 bg-up-maroon rounded-full text-cream text-xs font-semibold mt-[1px]">4</div>--}}
+{{--                        <div>--}}
+{{--                            <div class="font-bold mb-1">Attend your session</div>--}}
+{{--                            <div class="text-text-brown-light text-sm leading-6">Show up, ask questions, and learn actively.</div>--}}
+{{--                        </div>--}}
+{{--                    </div>--}}
+{{--                    <div class="py-4 px-5 flex items-start gap-5">--}}
+{{--                        <div class="flex justify-center items-center flex-shrink-0 w-8 h-8 bg-up-maroon rounded-full text-cream text-xs font-semibold mt-[1px]">5</div>--}}
+{{--                        <div>--}}
+{{--                            <div class="font-bold mb-1">Leave a review</div>--}}
+{{--                            <div class="text-text-brown-light text-sm leading-6">Rate your session to help improve the program for everyone.</div>--}}
+{{--                        </div>--}}
+{{--                    </div>--}}
+{{--                </div>--}}
+{{--            </div>--}}
+
+
+            {{-- Common FAQs --}}
+            <div class="flex flex-col gap-3">
+                <div class="text-xs text-up-yellow-dark font-bold tracking-widest uppercase">Common Questions</div>
 
                 <div class="border border-cream-border divide-y divide-cream-border">
-                    <div class="py-4 px-5 flex items-start gap-5">
-                        <div class="flex justify-center items-center flex-shrink-0 w-8 h-8 bg-up-maroon rounded-full text-cream text-xs font-semibold mt-[1px]">1</div>
-                        <div>
-                            <div class="font-bold mb-1">Log in</div>
-                            <div class="text-text-brown-light text-sm leading-6">Sign in using your UP email account.</div>
-                        </div>
+                    <div class="px-5 py-4">
+                        <div class="font-medium text-text-brown mb-1">Who can use PeerConnect?</div>
+                        <div class="text-sm text-text-brown-light leading-6">Any currently enrolled UPB student can book a mentoring session through PeerConnect.</div>
                     </div>
-                    <div class="py-4 px-5 flex items-start gap-5">
-                        <div class="flex justify-center items-center flex-shrink-0 w-8 h-8 bg-up-maroon rounded-full text-cream text-xs font-semibold mt-[1px]">2</div>
-                        <div>
-                            <div class="font-bold mb-1">Book a session</div>
-                            <div class="text-text-brown-light text-sm leading-6">Pick a mentor, subject, date, and time that works for you.</div>
-                        </div>
+                    <div class="px-5 py-4">
+                        <div class="font-medium text-text-brown mb-1">Is it free?</div>
+                        <div class="text-sm text-text-brown-light leading-6">Yes, all sessions are completely free for UPB students.</div>
                     </div>
-                    <div class="py-4 px-5 flex items-start gap-5">
-                        <div class="flex justify-center items-center flex-shrink-0 w-8 h-8 bg-up-maroon rounded-full text-cream text-xs font-semibold mt-[1px]">3</div>
-                        <div>
-                            <div class="font-bold mb-1">Wait for approval</div>
-                            <div class="text-text-brown-light text-sm leading-6">Your booking is reviewed and confirmed by the LRC staff.</div>
-                        </div>
-                    </div>
-                    <div class="py-4 px-5 flex items-start gap-5">
-                        <div class="flex justify-center items-center flex-shrink-0 w-8 h-8 bg-up-maroon rounded-full text-cream text-xs font-semibold mt-[1px]">4</div>
-                        <div>
-                            <div class="font-bold mb-1">Attend your session</div>
-                            <div class="text-text-brown-light text-sm leading-6">Show up, ask questions, and learn actively.</div>
-                        </div>
-                    </div>
-                    <div class="py-4 px-5 flex items-start gap-5">
-                        <div class="flex justify-center items-center flex-shrink-0 w-8 h-8 bg-up-maroon rounded-full text-cream text-xs font-semibold mt-[1px]">5</div>
-                        <div>
-                            <div class="font-bold mb-1">Leave a review</div>
-                            <div class="text-text-brown-light text-sm leading-6">Rate your session to help improve the program for everyone.</div>
-                        </div>
+                    <div class="px-5 py-4">
+                        <div class="font-medium text-text-brown mb-1">How long is a session?</div>
+                        <div class="text-sm text-text-brown-light leading-6">Sessions typically run for one hour, depending on the subject and mentor availability.</div>
                     </div>
                 </div>
+
+                <a href="{{ route('public.services') }}#faqs" class="text-xs text-up-maroon font-bold tracking-widest uppercase self-end hover:underline">
+                    See all FAQs →
+                </a>
             </div>
 
             {{-- Get in Touch --}}
