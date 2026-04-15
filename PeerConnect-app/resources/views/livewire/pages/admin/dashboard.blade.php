@@ -475,13 +475,29 @@ updateDate();
                             </div>
 
 <div>
-    <table class="w-full text-left text-sm table-fixed">
+                                <table class="w-full text-left text-sm table-fixed">
                                     <thead class="text-gray-400 border-b">
                                         <tr>
-                                            <th class="pb-3 font-semibold uppercase text-[10px] tracking-wider">Mentor</th>
-                                            <th class="pb-3 font-semibold uppercase text-[10px] tracking-wider">Mentee</th>
-                                            <th class="pb-3 font-semibold uppercase text-[10px] tracking-wider">Time</th>
-                                            <th class="pb-3 font-semibold uppercase text-[10px] tracking-wider">Status</th>
+                                            <th class="pb-3 text-[10px] tracking-wider" style="width:35%">
+                                                <button id="sortHead-student" onclick="toggleSort('student')" class="flex items-center gap-1 font-semibold uppercase hover:text-red-800 transition-colors" style="color:#94a3b8;">
+                                                    Student <span class="sort-icon"><i class="fa-solid fa-arrow-up-arrow-down" style="font-size:8px;opacity:0.4;"></i></span>
+                                                </button>
+                                            </th>
+                                            <th class="pb-3 text-[10px] tracking-wider" style="width:30%">
+                                                <button id="sortHead-start" onclick="toggleSort('start')" class="flex items-center gap-1 font-semibold uppercase hover:text-red-800 transition-colors" style="color:#7b1d1d;">
+                                                    Time <span class="sort-icon"><i class="fa-solid fa-arrow-up" style="font-size:8px;"></i></span>
+                                                </button>
+                                            </th>
+                                            <th class="pb-3 text-[10px] tracking-wider" style="width:20%">
+                                                <button id="sortHead-subject" onclick="toggleSort('subject')" class="flex items-center gap-1 font-semibold uppercase hover:text-red-800 transition-colors" style="color:#94a3b8;">
+                                                    Subject <span class="sort-icon"><i class="fa-solid fa-arrow-up-arrow-down" style="font-size:8px;opacity:0.4;"></i></span>
+                                                </button>
+                                            </th>
+<th class="pb-3 text-[10px] tracking-wider" style="width:20%">
+    <button id="sortHead-status" onclick="toggleSort('status')" class="flex items-center justify-center gap-1 font-semibold uppercase hover:text-red-800 transition-colors w-full" style="color:#94a3b8;">
+        Status <span class="sort-icon"><i class="fa-solid fa-arrow-up-arrow-down" style="font-size:8px;opacity:0.4;"></i></span>
+    </button>
+</th>
                                         </tr>
                                     </thead>
                                     <tbody id="tableBody"></tbody>
@@ -542,32 +558,41 @@ updateDate();
         <div id="liveClock" class="text-sm font-mono font-bold text-white tracking-widest"></div>
     </div>
 
-    {{-- Calendar --}}
-    <div class="p-4">
-        <div class="flex justify-between items-center mb-4">
-            <span id="monthDisplay" class="text-sm font-bold text-slate-800"></span>
-            <div class="flex gap-2">
-                <button onclick="changeMonth(-1)" class="w-6 h-6 flex items-center justify-center rounded-md hover:bg-gray-100 text-gray-400 hover:text-slate-700 transition">
-                    <i class="fa-solid fa-chevron-left text-[10px]"></i>
-                </button>
-                <button onclick="changeMonth(1)" class="w-6 h-6 flex items-center justify-center rounded-md hover:bg-gray-100 text-gray-400 hover:text-slate-700 transition">
-                    <i class="fa-solid fa-chevron-right text-[10px]"></i>
-                </button>
-            </div>
-        </div>
+                                {{-- Calendar --}}
+                                <div class="p-4">
+<div class="flex items-center justify-center gap-3 mb-4">
 
-        <div class="grid grid-cols-7 gap-1 mb-1">
-            <div class="cal-header-day">S</div>
-            <div class="cal-header-day">M</div>
-            <div class="cal-header-day">T</div>
-            <div class="cal-header-day">W</div>
-            <div class="cal-header-day">T</div>
-            <div class="cal-header-day">F</div>
-            <div class="cal-header-day">S</div>
-        </div>
-        <div id="calendarGrid" class="grid grid-cols-7 gap-1"></div>
-    </div>
+    <!-- Previous -->
+    <button onclick="changeMonth(-1)"
+        class="w-6 h-6 flex items-center justify-center rounded-md hover:bg-gray-100 text-gray-400 hover:text-slate-700 transition">
+        <i class="fa-solid fa-chevron-left text-[10px]"></i>
+    </button>
+
+    <!-- Month -->
+    <span id="monthDisplay"
+        class="text-sm font-bold text-slate-800 text-center min-w-[120px]">
+    </span>
+
+    <!-- Next -->
+    <button onclick="changeMonth(1)"
+        class="w-6 h-6 flex items-center justify-center rounded-md hover:bg-gray-100 text-gray-400 hover:text-slate-700 transition">
+        <i class="fa-solid fa-chevron-right text-[10px]"></i>
+    </button>
+
 </div>
+
+                                    <div class="grid grid-cols-7 gap-1 mb-1">
+                                        <div class="cal-header-day">S</div>
+                                        <div class="cal-header-day">M</div>
+                                        <div class="cal-header-day">T</div>
+                                        <div class="cal-header-day">W</div>
+                                        <div class="cal-header-day">T</div>
+                                        <div class="cal-header-day">F</div>
+                                        <div class="cal-header-day">S</div>
+                                    </div>
+                                    <div id="calendarGrid" class="grid grid-cols-7 gap-1"></div>
+                                </div>
+                            </div>
                         <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
                             <div class="flex justify-between items-center mb-4">
                                 <h3 class="font-bold text-slate-800 text-sm tracking-tight">Pending Approvals</h3>
@@ -653,11 +678,11 @@ updateDate();
         const allSessions = @json($todaySessions).map(s => ({
     ...s,
     color: {
-        'Active':    'text-green-600',
-        'Completed': 'text-blue-600',
+        'Accepted':    'text-green-600',
+        'Completed': 'text-green-600',
         'Pending':   'text-yellow-500',
         'Upcoming':  'text-orange-500',
-    }[s.status] ?? 'text-gray-500'
+    }[s.status] ?? 'text-red-800'
 }));
 
 const _now = new Date();
