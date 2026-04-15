@@ -27,6 +27,7 @@ mount(function () {
         $this->degreeProgram_id = $profile->degreeProgram_id;
         $this->yearLevel_id = $profile->yearLevel_id;
         $this->toggleProfileOpen = false;
+        $this->isProfileLocked = true; 
     }
     if(request()->has('mentor')) {
         $this->mentor_id = (string) request('mentor');
@@ -118,6 +119,7 @@ $studentBookings = computed(function () {
 // For student profile inputs
 state([
     'toggleProfileOpen' => true,
+    'isProfileLocked' => false,
     'profileSaved' => false,
     'student_num' => '',
     'college_id' => '',
@@ -164,8 +166,44 @@ $saveProfile = action(function () {
     );
 
     $this->profileSaved = true;
+    $this->isProfileLocked = true;
     $this->toggleProfileOpen = false;
     $this->dispatch('profile-updated');
+});
+
+// Check if there is input in forms
+$validateBooking = action(function () {
+    abort_if(!auth()->user()->isStudent(), 403, 'Unauthorized Access');
+
+    $this->validate([
+        'subject_id' => ['required', 'exists:subjects,id'],
+        'topic' => ['required', 'string', 'max:255'],
+        'tutorialMode_id' => ['required', 'exists:tutorial_modes,id'],
+        'date' => ['required', 'date', 'after:today', function($attribute, $value, $fail) {
+            $sessionDate = \Carbon\Carbon::parse($value)->format('l, F j, Y');
+            if ($sessionDate === 'Sunday') {
+                $fail('The session cannot be on a Sunday. Please select another date.');
+            }
+        }],
+        'schedule_start' => ['required', 'date_format:H:i'],
+        'schedule_end' => ['required', 'date_format:H:i'],
+        'mentor_id' => ['required'],
+    ],  attributes: [
+        'subject_id' => 'subject',
+        'topic' => 'topic',
+        'tutorialMode_id' => 'mode of tutorial',
+        'date' => 'date',
+        'schedule_start' => 'start time',
+        'schedule_end' => 'end time',
+        'mentor_id' => 'mentor',
+    ]);
+    if ($this->schedule_end <= $this->schedule_start) {
+        $this->addError('schedule_end', 'End time must be later than start time.');
+        return;
+    }
+
+    // If validation passes, open the confirmation modal
+    $this->dispatch('show-booking-confirm');
 });
 
 // Advance feedback step with per-step validation
@@ -1100,6 +1138,8 @@ $dismissFeedbackSubmitted = action(function () {
                 x-data="{
                     // Validation of data
                     subject_id: $wire.entangle('subject_id'),
+                    topic: $wire.entangle('topic'),
+                    tutorialMode_id: $wire.entangle('tutorialMode_id'),
                     date: $wire.entangle('date'),
                     start_time: $wire.entangle('schedule_start'),
                     end_time: $wire.entangle('schedule_end'),
@@ -1107,15 +1147,22 @@ $dismissFeedbackSubmitted = action(function () {
                     isMentorLocked: $wire.entangle('isMentorLocked'),
                     dateError: '',
                     timeError: '',
+                    clearedErrors: [],
 
                     init() {
                         this.$watch('subject_id', () => { 
                             if (!this.isMentorLocked) this.mentor_id = ''; 
+                            this.clearError('subject_id');
                         });
+                        this.$watch('topic', () => this.clearError('topic'));
+                        this.$watch('tutorialMode_id', () => this.clearError('tutorialMode_id'));
+                        this.$watch('mentor_id', () => this.clearError('mentor_id'));
+
                         // Check unavailable days for locked mentors
                         this.$watch('date', value => {
                             if (!this.isMentorLocked) this.mentor_id = '';
                             this.dateError = '';
+                            this.clearError('date');
                             if(!value) {
                                 this.validateTime();
                                 return;
@@ -1142,12 +1189,24 @@ $dismissFeedbackSubmitted = action(function () {
                         // Check time inputs
                         this.$watch('start_time', () => {
                             if (!this.isMentorLocked) this.mentor_id = '';
+                            this.clearError('schedule_start');
                             this.validateTime()
                         });
                         this.$watch('end_time', () => {
                             if (!this.isMentorLocked) this.mentor_id = '';
+                            this.clearError('schedule_end');
                             this.validateTime()
                         });
+                    },
+
+                    clearError(field) {
+                        if (!this.clearedErrors.includes(field)) {
+                            this.clearedErrors.push(field);
+                        }
+                    },
+                    
+                    showError(field) {
+                        return !this.clearedErrors.includes(field);
                     },
 
                     validateTime() {
@@ -1214,52 +1273,52 @@ $dismissFeedbackSubmitted = action(function () {
                 <form id="bookingForm" wire:submit.prevent="submitBooking" class="space-y-3">
                     <div>
                         <label class="block text-base font-medium text-gray-700 mb-1">Subject<span class="text-red-500">*</span></label>
-                        <select wire:model="subject_id" class="w-full rounded-lg border-gray-300 shadow-sm text-base px-2 py-1">
+                        <select wire:model="subject_id" class="w-full rounded-lg border-gray-300 shadow-sm text-base px-2 py-1 transition-colors">
                             <option value="" disabled>--- Select a Subject ---</option>
                             @foreach($this->subjects as $subject)
                                 <option value="{{ $subject['id'] }}">{{ strtoupper($subject['code']) }} - {{ $subject['name'] }}</option>
                             @endforeach
                         </select>
-                        @error('subject_id') <span class="mt-1 text-xs text-red-600">{{ $message }}</span> @enderror
+                        @error('subject_id') <span x-show="showError('subject_id')" x-cloak class="mt-1 text-xs text-red-600 block">{{ $message }}</span> @enderror
                     </div>
                     <div>
                         <label class="block text-base font-medium text-gray-700 mb-1">Topic<span class="text-red-500">*</span></label>
-                        <input type="text" wire:model="topic" class="w-full rounded-lg border-gray-300 shadow-sm text-base px-2 py-1" placeholder="e.g. Integration by Parts." maxlength="255">
-                        @error('topic') <span class="mt-1 text-xs text-red-600">{{ $message }}</span> @enderror
+                        <input type="text" wire:model="topic" class="w-full rounded-lg border-gray-300 shadow-sm text-base px-2 py-1 transition-colors" placeholder="e.g. Integration by Parts." maxlength="255">
+                        @error('topic') <span x-show="showError('topic')" x-cloak class="mt-1 text-xs text-red-600 block">{{ $message }}</span> @enderror
                     </div>
                     <div>
                         <label class="block text-base font-medium text-gray-700 mb-1">Tutorial Mode<span class="text-red-500">*</span></label>
-                        <select wire:model="tutorialMode_id" class="w-full rounded-lg border-gray-300 shadow-sm text-base px-2 py-1">
+                        <select wire:model="tutorialMode_id" class="w-full rounded-lg border-gray-300 shadow-sm text-base px-2 py-1 transition-colors">
                             <option value="" disabled>--- Select Mode of Tutoring ---</option>
                             @foreach($this->tutorialModes as $mode)
                                 <option value="{{ $mode['id'] }}">{{ $mode['mode'] }}</option>
                             @endforeach
                         </select>
-                        @error('tutorialMode_id') <span class="mt-1 text-xs text-red-600">{{ $message }}</span> @enderror
+                        @error('tutorialMode_id') <span x-show="showError('tutorialMode_id')" x-cloak class="mt-1 text-xs text-red-600 block">{{ $message }}</span> @enderror
                     </div>
                     <div class="grid grid-cols-3 gap-4">
                         <div>
                             <label class="block text-base font-medium text-gray-700 mb-1">Preferred Day<span class="text-red-500">*</span></label>
-                            <input type="date" wire:model="date" class="w-full rounded-lg border-gray-300 shadow-sm text-base px-2 py-1" min="{{ \Carbon\Carbon::tomorrow()->format('Y-m-d') }}">
-                            @error('date') <span class="mt-1 text-xs text-red-600">{{ $message }}</span> @enderror
-                            <span x-show="dateError" x-cloak class="mt-1 text-xs text-red-600" x-text="dateError"></span>
+                            <input type="date" wire:model="date" class="w-full rounded-lg border-gray-300 shadow-sm text-base px-2 py-1 transition-colors" min="{{ \Carbon\Carbon::tomorrow()->format('Y-m-d') }}">
+                            @error('date') <span x-show="showError('date')" x-cloak class="mt-1 text-xs text-red-600 block">{{ $message }}</span> @enderror
+                            <span x-show="dateError" x-cloak class="mt-1 text-xs text-red-600 block" x-text="dateError"></span>
                         </div>
                     
                         <div>
                             <label class="block text-base font-medium text-gray-700 mb-1">Start Time<span class="text-red-500">*</span></label>
-                            <input type="time" wire:model="schedule_start" class="w-full rounded-lg border-gray-300 shadow-sm text-base px-2 py-1">
-                            @error('schedule_start') <span class="mt-1 text-xs text-red-600">{{ $message }}</span> @enderror
+                            <input type="time" wire:model="schedule_start" class="w-full rounded-lg border-gray-300 shadow-sm text-base px-2 py-1 transition-colors">
+                            @error('schedule_start') <span x-show="showError('schedule_start')" x-cloak class="mt-1 text-xs text-red-600 block">{{ $message }}</span> @enderror
                         </div>
                         <div>
                             <label class="block text-base font-medium text-gray-700 mb-1">End Time<span class="text-red-500">*</span></label>
-                            <input type="time" wire:model="schedule_end" class="w-full rounded-lg border-gray-300 shadow-sm text-base px-2 py-1">
-                            @error('schedule_end') <span class="mt-1 text-xs text-red-600">{{ $message }}</span> @enderror
-                            <span x-show="timeError" x-cloak class="mt-1 text-xs text-red-600" x-text="timeError"></span>
+                            <input type="time" wire:model="schedule_end" class="w-full rounded-lg border-gray-300 shadow-sm text-base px-2 py-1 transition-colors">
+                            @error('schedule_end') <span x-show="showError('schedule_end')" x-cloak class="mt-1 text-xs text-red-600 block">{{ $message }}</span> @enderror
+                            <span x-show="timeError" x-cloak class="mt-1 text-xs text-red-600 block" x-text="timeError"></span>
                         </div>
                     </div>
                     <div>
                         <label class="block text-base font-medium text-gray-700 mb-1">Preferred Mentor<span class="text-red-500">*</span></label>
-                        <select wire:model="mentor_id" :disabled="isMentorLocked" class="w-full rounded-lg border-gray-300 shadow-sm text-base px-2 py-1 disabled:bg-gray-100 disabled:text-gray-900 disabled:cursor-not-allowed">
+                        <select wire:model="mentor_id" :disabled="isMentorLocked" class="w-full rounded-lg border-gray-300 shadow-sm text-base px-2 py-1 disabled:bg-gray-100 disabled:text-gray-900 disabled:cursor-not-allowed transition-colors">
                             <option value="" x-text="filteredMentors.length === 0 ? '--- No mentors available. Please select a different date or time slot. ---' : '--- Select a mentor ---'" disabled></option>
                             <template x-if="filteredMentors.length > 0 && !isMentorLocked">
                                 <option value="any" class="bg-blue-100">ANY (Alerts all available mentors)</option>
@@ -1274,7 +1333,7 @@ $dismissFeedbackSubmitted = action(function () {
                             <span class="text-[11px] text-blue-600 font-bold"><i class="fa-solid fa-lock mr-1"></i> Mentor Locked.</span>
                             <a href="{{ route('student.bookings') }}" class="text-[10px] text-gray-400 hover:text-red-600 underline">Unlock & Clear</a>
                         </div>
-                        @error('mentor_id') <span class="mt-1 text-xs text-red-600">{{ $message }}</span> @enderror
+                        @error('mentor_id') <span x-show="showError('mentor_id')" x-cloak class="mt-1 text-xs text-red-600 block">{{ $message }}</span> @enderror
                     </div>
                     <div x-show="mentor_id === 'any' && filteredMentors.length > 0" x-cloak class="mt-3 bg-blue-50 border border-blue-200 rounded-lg p-3 animate-[slideDown_0.2s_ease]">
                         <p class="text-xs font-bold text-blue-800 mb-1">
@@ -1293,12 +1352,12 @@ $dismissFeedbackSubmitted = action(function () {
                         </ul>
                     </div>
                     <div class="pt-4">
-                        <button type="button" id="bookingSubmitBtn"
+                        <button type="button" id="bookingSubmitBtn" wire:click="validateBooking" @click="clearedErrors = []"
                             @if(!auth()->user()->studentProfile) disabled @endif :disabled="dateError !== '' || timeError !== ''"
                             class="w-full bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium py-2 px-4 rounded-lg text-sm transition-colors"
-                            wire:loading.attr="disabled" wire:loading.class="opacity-60 cursor-not-allowed" wire:target="submitBooking">
-                            <span wire:loading.remove wire:target="submitBooking">Submit Booking Request</span>
-                            <span wire:loading wire:target="submitBooking">Submitting...</span>
+                            wire:loading.attr="disabled" wire:loading.class="opacity-60 cursor-not-allowed" wire:target="validateBooking">
+                            <span wire:loading.remove wire:target="validateBooking">Submit Booking Request</span>
+                            <span wire:loading wire:target="validateBooking"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Validating...</span>
                         </button>
                     </div>
                 </form>
@@ -1313,6 +1372,7 @@ $dismissFeedbackSubmitted = action(function () {
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden" 
                 x-data="{ 
                     open: $wire.entangle('toggleProfileOpen'),
+                    isLocked: $wire.entangle('isProfileLocked'),
                     college: $wire.entangle('college_id'),
                     degree: $wire.entangle('degreeProgram_id'),
                     showSuccess: false,
@@ -1347,12 +1407,12 @@ $dismissFeedbackSubmitted = action(function () {
                     <form wire:submit.prevent="saveProfile" class="space-y-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Student Number<span class="text-red-500">*</span></label>
-                            <input type="text" wire:model="student_num" class="w-full rounded-lg border-gray-300 shadow-sm text-sm px-3 py-2" placeholder="e.g 2023-00000" maxlength="10">
+                            <input type="text" wire:model="student_num" :disabled="isLocked" class="w-full rounded-lg border-gray-200 shadow-sm text-sm px-3 py-2 disabled:bg-gray-100 disabled:text-gray-500" placeholder="e.g 2023-00000" maxlength="10">
                             @error('student_num') <span class="mt-1 text-xs text-red-600">{{ $message }}</span> @enderror
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">College<span class="text-red-500">*</span></label>
-                            <select x-model="college" class="w-full rounded-lg border-gray-300 shadow-sm text-sm px-3 py-2">
+                            <select x-model="college" :disabled="isLocked" class="w-full rounded-lg border-gray-200 shadow-sm text-sm px-3 py-2 disabled:bg-gray-100 disabled:text-gray-500">
                                 <option value="">--- College ---</option>
                                 @foreach($this->colleges as $c)
                                     <option value="{{ $c['id'] }}">{{ $c['name'] }}</option>
@@ -1362,7 +1422,7 @@ $dismissFeedbackSubmitted = action(function () {
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Degree Program<span class="text-red-500">*</span></label>
-                            <select x-model="degree" x-bind:disabled="!college" class="w-full rounded-lg border-gray-300 shadow-sm text-sm px-3 py-2 disabled:bg-gray-100">
+                            <select x-model="degree" x-bind:disabled="!college || isLocked" class="w-full rounded-lg border-gray-200 shadow-sm text-sm px-3 py-2 disabled:bg-gray-100 disabled:text-gray-500">
                                 <option value="">--- Degree Program ---</option>
                                 <template x-for="deprog in filteredDeProgs" :key="deprog.id">
                                     <option :value="deprog.id" x-text="deprog.name"></option>
@@ -1372,7 +1432,7 @@ $dismissFeedbackSubmitted = action(function () {
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Year Level<span class="text-red-500">*</span></label>
-                            <select wire:model="yearLevel_id" class="w-full rounded-lg border-gray-300 shadow-sm text-sm px-3 py-2">
+                            <select wire:model="yearLevel_id" :disabled="isLocked" class="w-full rounded-lg border-gray-200 shadow-sm text-sm px-3 py-2 disabled:bg-gray-100 disabled:text-gray-500">
                                 <option value="">--- Year Level ---</option>
                                 @foreach($this->yearLevels as $level)
                                     <option value="{{ $level['id'] }}">{{ $level['name'] }}</option>
@@ -1380,11 +1440,21 @@ $dismissFeedbackSubmitted = action(function () {
                             </select>
                             @error('yearLevel_id') <span class="mt-1 text-xs text-red-600">{{ $message }}</span> @enderror
                         </div>
-                        <button type="submit" class="w-full bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white font-bold py-2.5 px-4 rounded-lg text-sm transition-colors mt-2"
-                            wire:loading.attr="disabled" wire:loading.class="opacity-60 cursor-not-allowed" wire:target="saveProfile">
-                            <span wire:loading.remove wire:target="saveProfile">{{ auth()->user()->studentProfile ? 'Update Profile' : 'Save Profile' }}</span>
-                            <span wire:loading wire:target="saveProfile"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Saving...</span>
-                        </button>
+                        
+                        <div class="mt-2">
+                            <template x-if="isLocked">
+                                <button type="button" @click="isLocked = false" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-4 rounded-lg text-sm transition-colors">
+                                    Edit Profile
+                                </button>
+                            </template>
+                            <template x-if="!isLocked">
+                                <button type="submit" class="w-full bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white font-bold py-2.5 px-4 rounded-lg text-sm transition-colors"
+                                    wire:loading.attr="disabled" wire:loading.class="opacity-60 cursor-not-allowed" wire:target="saveProfile">
+                                    <span wire:loading.remove wire:target="saveProfile">{{ auth()->user()->studentProfile ? 'Update Profile' : 'Save Profile' }}</span>
+                                    <span wire:loading wire:target="saveProfile"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Saving...</span>
+                                </button>
+                            </template>
+                        </div>
                     </form>
                 </div>
             </div>
@@ -1695,11 +1765,8 @@ $dismissFeedbackSubmitted = action(function () {
     })();
 
     /* ── BOOKING SUBMIT INTERCEPT ── */
-    document.addEventListener('click', function (e) {
-        const bookingSubmitBtn = e.target.closest('#bookingSubmitBtn');
-        if (!bookingSubmitBtn) return;
-
-const subjectEl      = document.querySelector('[wire\\:model="subject_id"]');
+    window.addEventListener('show-booking-confirm', function () {
+        const subjectEl      = document.querySelector('[wire\\:model="subject_id"]');
         const topicEl        = document.querySelector('[wire\\:model="topic"]');
         const tutorialModeEl = document.querySelector('[wire\\:model="tutorialMode_id"]');
         const dateEl         = document.querySelector('[wire\\:model="date"]');
@@ -1714,12 +1781,13 @@ const subjectEl      = document.querySelector('[wire\\:model="subject_id"]');
         const startText   = formatTime(startEl?.value) || '—';
         const endText     = formatTime(endEl?.value)   || '—';
         let mentorText = '—';
+        
         if(mentorEl && mentorEl.selectedIndex >= 0 && mentorEl.options[mentorEl.selectedIndex].value !== "") {
             mentorText = mentorEl.options[mentorEl.selectedIndex].text;
         } else {
-            const componentElement = bookingSubmitBtn.closest('[wire\\:id]');
-            if(componentElement) {
-                const livewireComponent = Livewire.find(componentElement.getAttribute('wire:id'));
+            const rootScope = document.querySelector('.livewire-root-scope') || document.querySelector('[wire\\:id]');
+            if(rootScope) {
+                const livewireComponent = Livewire.find(rootScope.getAttribute('wire:id'));
                 if(livewireComponent && livewireComponent.get('isMentorLocked')) {
                     const lockedId = livewireComponent.get('mentor_id');
                     const mentorObj = livewireComponent.get('mentors').find(m => m.profile_id == lockedId);
@@ -1736,7 +1804,7 @@ const subjectEl      = document.querySelector('[wire\\:model="subject_id"]');
             return `${hr}:${String(m).padStart(2,'0')} ${ampm}`;
         }
 
-const metaHtml = `
+        const metaHtml = `
             <div class="flex justify-between items-start gap-4 mb-1">
                 <span class="text-gray-400 shrink-0">Subject</span>
                 <span class="font-semibold text-gray-700 text-right truncate">${subjectText}</span>
@@ -1768,8 +1836,11 @@ const metaHtml = `
             body:      'Please review your session details before submitting. Your request will be reviewed by the peer mentor.',
             meta:      metaHtml,
             variant:   'accept',
-            onConfirm: () => {
-                document.getElementById('bookingForm').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+            confirmText: 'Submit Booking',
+            loadingText: 'Submitting...',
+            onConfirm: async () => {
+                const component = Livewire.find(document.querySelector('[wire\\:id]').getAttribute('wire:id'));
+                await component.submitBooking();
             },
         });
     });
