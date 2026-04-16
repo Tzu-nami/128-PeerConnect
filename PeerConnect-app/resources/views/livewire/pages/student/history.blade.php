@@ -12,11 +12,12 @@ mount(function () {
 
 $summaryCount = computed(function () {
     $profile = StudentProfiles::where('user_id', auth()->id())->first();
-    if(!$profile) return ['total' => 0, 'completed' => 0, 'totalHours' => '0.00 hrs', 'cancelled' => 0];
+    if(!$profile) return ['total' => 0, 'completed' => 0, 'totalHours' => '0.00 hrs', 'cancelled' => 0, 'pending' => 0];
 
     $allInfo = Bookings::where('student_id', $profile->id)->get();
 
     $completedSessions = $allInfo->where('booking_status', 'completed');
+    $pendingSessions = $allInfo->where('booking_status', 'pending');
     $totalMinutes = $completedSessions->sum(function ($b) {
         return \Carbon\Carbon::parse($b->schedule_start)->diffInMinutes(\Carbon\Carbon::parse($b->schedule_end));
     });
@@ -26,6 +27,7 @@ $summaryCount = computed(function () {
     return [
         'total'      => $allInfo->count(),
         'completed'  => $completedSessions->count(),
+        'pending'    => $pendingSessions->count(),
         'totalHours' => $hoursFormatted,
         'cancelled'  => $allInfo->whereIn('booking_status', ['cancelled'])->count(),
     ];
@@ -71,7 +73,7 @@ $studentHistory = computed(function () {
             'topic' => $session->topic,
             'mentor' => $mentorName,
             'avatar' => $isOpen ? null : ($session->mentor->avatar ?? null),
-            'date' => \Carbon\Carbon::parse($session->date)->format('M j, Y'),
+            'date' => \Carbon\Carbon::parse($session->date)->format('F j, Y'),
             'time' => $start . ' - ' . $end,
             'mode' => $session->tutorialMode->mode,
             'raw_status' => strtolower($session->booking_status),
@@ -295,7 +297,7 @@ $studentHistory = computed(function () {
             </div>
 
                 {{-- Summary Cards --}}
-                <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+                <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-6">
                     <div class="stat-card">
                         <div class="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0">
                             <i class="fa-solid fa-list-check text-slate-600"></i>
@@ -306,11 +308,20 @@ $studentHistory = computed(function () {
                         </div>
                     </div>
                     <div class="stat-card">
+                        <div class="w-10 h-10 rounded-lg bg-yellow-100 flex items-center justify-center flex-shrink-0">
+                            <i class="fa-solid fa-hourglass text-yellow-800"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs font-bold text-gray-400 uppercase tracking-wide">Pending Requests</p>
+                            <p class="text-xl font-black text-slate-800">{{ $this->summaryCount['pending'] }}</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
                         <div class="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center">
                             <i class="fa-solid fa-circle-check text-blue-600"></i>
                         </div>
                         <div>
-                            <p class="text-xs font-bold text-gray-400 uppercase tracking-wide">Completed</p>
+                            <p class="text-xs font-bold text-gray-400 uppercase tracking-wide">Completed Sessions</p>
                             <p class="text-xl font-black text-slate-800">{{ $this->summaryCount['completed'] }}</p>
                         </div>
                     </div>
@@ -328,7 +339,7 @@ $studentHistory = computed(function () {
                             <i class="fa-solid fa-ban text-red-500"></i>
                         </div>
                         <div>
-                            <p class="text-xs font-bold text-gray-400 uppercase tracking-wide">Cancelled</p>
+                            <p class="text-xs font-bold text-gray-400 uppercase tracking-wide">Cancelled Requests</p>
                             <p class="text-xl font-black text-slate-800">{{ $this->summaryCount['cancelled'] }}</p>
                         </div>
                     </div>
@@ -409,7 +420,7 @@ $studentHistory = computed(function () {
 
     <div class="relative" x-data="{ openFilter: false }">
         <button @click="openFilter = !openFilter"
-            class="bg-white border border-gray-200 rounded-lg px-4 py-2 text-xs font-bold text-slate-600 outline-none flex items-center gap-2 hover:bg-gray-50 transition h-[34px]">
+            class="bg-white border border-gray-200 rounded-lg px-4 py-2 text-xs font-bold text-slate-600 outline-none flex items-center gap-2 hover:bg-gray-50 transition h-[34px] w-[110px]">
             <i class="fa-solid fa-filter text-gray-400"></i>
             Status
             <span x-show="filterStatuses.length > 0"
@@ -428,7 +439,7 @@ $studentHistory = computed(function () {
                 <input type="checkbox"
                     :checked="filterStatuses.length === 0"
                     @change="toggleAll($event.target.checked)"
-                    class="rounded border-gray-300 w-4 h-4">
+                    class="rounded border-gray-300 text-red-900 focus:ring-red-900 w-4 h-4">
                 <span>All</span>
             </label>
             <div class="border-t border-gray-100 my-1"></div>
@@ -456,8 +467,8 @@ $studentHistory = computed(function () {
                                 <th class="px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider w-[5%]">#</th>
                                 <th class="px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider w-[15%]">Subject</th>
                                 <th class="px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider w-[18%]">Topic</th>
-                                <th class="px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider w-[20%]">Mentor</th>
-                                <th class="px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider w-[15%]">Date & Time</th>
+                                <th class="px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider w-[18%]">Mentor</th>
+                                <th class="px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider w-[17%]">Date & Time</th>
                                 <th class="px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider w-[15%]">Mode</th>
                                 <th class="px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider w-[12%]">Status</th>
                             </tr>
