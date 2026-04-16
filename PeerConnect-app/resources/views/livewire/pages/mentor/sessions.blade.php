@@ -85,8 +85,10 @@
             'subject'       => optional($b->subject)->code ?? 'N/A',
             'subjectName'   => optional($b->subject)->name ?? '',
             'topic'         => $b->topic ?? '—',
-            'date'          => $b->date ? \Carbon\Carbon::parse($b->date)->format('M d, Y') : '—',
+            'date'          => $b->date ? \Carbon\Carbon::parse($b->date)->format('F j, Y') : '—',
             'mode'          => optional($b->tutorialMode)->mode ?? '—',
+            'yearLevel'     => optional(optional($b->student)->yearLevel)->name ?? 'N/A',
+            'degreeProgram' => optional(optional($b->student)->degreeProgram)->name ?? 'N/A',
 
             'start' => $start->format('H:i'),
             'end'   => $end->format('H:i'),
@@ -259,7 +261,7 @@
             position: absolute; left: 0; top: 110%;
             background: rgba(0,0,0,0.85); color: #fff;
             padding: 8px 10px; border-radius: 6px; font-size: 11px; line-height: 1.4;
-            white-space: normal; word-break: break-word; overflow-wrap: anywhere;
+            white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere;
             width: 320px; max-width: 320px;
             opacity: 0; pointer-events: none;
             transform: translateY(5px); transition: 0.15s ease; z-index: 9999;
@@ -788,7 +790,7 @@ function updateSummaryCounts() {
             const search = document.getElementById('searchInput').value.toLowerCase();
 
             let filtered = allSessions.filter(s => {
-                const searchable = [s.student, s.subject, s.subjectName, s.topic, s.date, s.time, s.mode, s.status].join(' ').toLowerCase();
+                const searchable = [s.student, s.subject, s.subjectName, s.topic, s.date, s.time, s.mode, s.status, s.degreeProgram, s.yearLevel].join(' ').toLowerCase();
                 const matchSearch = searchable.includes(search);
                 const matchStatus = activeStatusFilters.length === 0 || activeStatusFilters.includes(s.status);
                 return matchSearch && matchStatus;
@@ -819,10 +821,10 @@ function updateSummaryCounts() {
                 <tr class="border-b border-gray-50 hover:bg-slate-50 transition">
 
                     <td class="px-5 py-4 align-middle" style="width:18%;">
-                        <div class="hover-tooltip" data-full="${s.student}">
+                        <div class="hover-tooltip" data-full="${s.student} \n${s.yearLevel} - ${s.degreeProgram}">
                             <p class="font-bold text-slate-700 text-xs truncate">${s.student}</p>
+                            <p class="text-[10px] text-gray-400 mt-0.5 truncate">${s.yearLevel !== '—' ? s.yearLevel : ''} - ${s.degreeProgram !== '—' ? s.degreeProgram : ''}</p>
                         </div>
-                        <p class="text-[10px] text-gray-400 mt-0.5">${s.mode !== '—' ? s.mode : ''}</p>
                     </td>
 
                     <td class="px-5 py-4 align-middle" style="width:13%;">
