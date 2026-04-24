@@ -6,6 +6,7 @@ use App\Models\StudentProfiles;
 use App\Models\Bookings;
 use App\Models\Subjects;
 use App\Models\User;
+use App\Models\Feedback;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
@@ -87,6 +88,25 @@ $searchIndex = computed(function () {
             'bg' => '#d1fae5', 'color' => '#065f46',
             'url' => route('admin.sessions'),
             'searchString' => strtolower($b->topic . ' ' . $mentorName . ' ' . $b->booking_status . ' ' . $b->subject->code  . ' ' . $sessionDate)
+        ];
+    }
+
+    // Map feedback
+    $feedbacks = \App\Models\Feedback::with(['booking.subject', 'booking.mentor.user'])->latest('id')->take(50)->get();
+    foreach($feedbacks as $fb) {
+        $subjectCode = $fb->booking->subject->code ?? 'N/A';
+        $mentorName = $fb->booking->mentor->user ? ($fb->booking->mentor->user->lastName . ', ' . $fb->booking->mentor->user->firstName) : 'Unknown Mentor';
+        $comment = $fb->feedback ?? 'No comment provided.';
+        $date = isset($fb->date_submitted) ? \Carbon\Carbon::parse($fb->date_submitted)->format('F j, Y') : '';
+        $topic = $fb->topic ?? 'Session Feedback';
+        $index[] = [
+            'group' => 'Feedback',
+            'label' => \Illuminate\Support\Str::limit($comment, 40),
+            'detail' => "{$date} -- Subject: {$subjectCode} -- Mentor: {$mentorName} -- Topic: {$topic}",
+            'icon' => 'fa-comment-dots',
+            'bg' => '#f3e8ff', 'color' => '#7e22ce',
+            'url' => route('admin.feedbacks'),
+            'searchString' => strtolower($comment . ' ' . $mentorName . ' ' . $subjectCode . ' ' . $topic . ' ' . $date)
         ];
     }
 

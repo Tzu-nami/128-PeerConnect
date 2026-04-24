@@ -125,22 +125,26 @@
     }
 
     // Map feedbacks
-    $feedbacks = \Illuminate\Support\Facades\DB::table('feedback')
-        ->whereIn('booking_id', $bookings->pluck('id'))
+    $mentorProfile = \App\Models\MentorProfiles::where('user_id', auth()->id())->first();
+    $feedbacks = \App\Models\Feedback::with(['booking.subject'])
+        ->whereHas('booking', function ($query) use ($mentorProfile) {
+            $query->where('mentor_id', $mentorProfile->id);
+        })
         ->get();
 
-    foreach($feedbacks as $f) {
-        $date = isset($f->created_at) ? \Carbon\Carbon::parse($f->created_at)->format('M j, Y') : '';
-        $topic = $f->topic ?? 'Session Feedback';
-        
+    foreach($feedbacks as $fb) {
+        $subjectCode = $fb->subject ?? $fb->booking?->subject?->code ?? 'N/A';
+        $comment = $fb->feedback ?? 'No comment provided.';
+        $date = isset($fb->date_submitted) ? \Carbon\Carbon::parse($fb->date_submitted)->format('F j, Y') : '';
+        $topic = $fb->topic ?? 'Session Feedback';
         $index[] = [
             'group' => 'Feedback',
-            'label' => $topic,
-            'detail' => "{$date} -- " . \Illuminate\Support\Str::limit($f->feedback ?? 'No comments provided.', 60),
+            'label' => \Illuminate\Support\Str::limit($comment, 40),
+            'detail' => "{$date} -- Subject: {$subjectCode} -- Topic: {$topic}",
             'icon' => 'fa-comment-dots',
             'bg' => '#d1fae5', 'color' => '#065f46',
             'url' => route('mentor.feedbacks'),
-            'searchString' => strtolower("{$topic} " . ($f->feedback ?? ''))
+            'searchString' => strtolower($comment . ' ' . $subjectCode . ' ' . $topic . ' ' . $date)
         ];
     }
 
