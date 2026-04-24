@@ -25,6 +25,7 @@ class Bookings extends Model
         'rejected',
         'completed',
         'no-show',
+        'closed',
     ];
 
     protected $fillable = [
