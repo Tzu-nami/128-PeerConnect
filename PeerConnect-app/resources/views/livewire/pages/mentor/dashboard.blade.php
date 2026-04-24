@@ -1,8 +1,16 @@
 <?php
 
-    use function Livewire\Volt\{layout, state, mount};
+    use function Livewire\Volt\{layout, state, mount, computed};
     use App\Models\Bookings;
+    use App\Models\Subjects;
+    use App\Models\TutorialMode;
     use App\Models\MentorProfiles;
+    use App\Models\StudentProfiles;
+    use App\Models\Colleges;
+    use App\Models\DegreePrograms;
+    use App\Models\YearLevels;
+    use App\Models\MentorSubjects;
+    use App\Models\MentorAvailabilities;
 
     layout('layouts.app');
 
@@ -67,6 +75,76 @@
         ->values()
         ->toArray();
 
+    });
+
+    $searchIndex = computed(function () {
+    $userId = auth()->id();
+    $index = [];
+    $mentorProfileId = \App\Models\MentorProfiles::where('user_id', $userId)->value('id');
+    $studentProfileId = \App\Models\StudentProfiles::where('user_id', $userId)->value('id');
+
+    // Map History
+    $bookings = \App\Models\Bookings::with('mentor.user',  'subject')->where('student_id', $studentProfileId)->latest()->take(50)->get();
+    foreach($bookings as $b) {
+        $mentorName = $b->mentor ? ($b->mentor->user->lastName . ', ' . $b->mentor->user->firstName ?? 'Unknown Mentor') : 'Unknown Mentor';
+        $sessionDate = \Carbon\Carbon::parse($b->date)->format('F j, Y');
+        $index[] = [
+            'group' => 'Booking History',
+            'label' => $b->topic ?: 'Tutorial Session', // Note: for some reason, naglalag siya kapag hindi topic yung label
+            'detail' => $sessionDate . ' -- Subject: ' . $b->subject->code . ' -- Mentor: ' . $mentorName . ' -- ' . ' -- Status: ' . ucfirst($b->booking_status),
+            'icon' => 'fa-calendar-days',
+            'bg' => '#dbeafe', 'color' => '#1e40af',
+            'url' => route('mentor.history'),
+            'searchString' => strtolower($b->topic . ' ' . $mentorName . ' ' . $b->booking_status . ' ' . $b->subject->code . ' ' . $sessionDate)
+        ];
+    }
+
+    // Map Sessions
+    if ($mentorProfileId) {
+        $teachingSessions = \App\Models\Bookings::with(['student.user', 'subject'])
+            ->where('mentor_id', $mentorProfileId)
+            ->latest()->take(50)->get();
+
+        foreach($teachingSessions as $b) {
+            $studentName = ($b->student && $b->student->user) ? "{$b->student->user->lastName}, {$b->student->user->firstName}" : 'Unknown Student';
+            $subjectCode = $b->subject ? strtoupper($b->subject->code) : 'N/A';
+            $topic = $b->topic ?: 'Tutorial Session';
+            $sessionDate = \Carbon\Carbon::parse($b->date)->format('F j, Y');
+            $status = ucfirst($b->booking_status);
+
+            $index[] = [
+                'group' => 'Sessions',
+                'label' => $studentName, 
+                'detail' => "{$sessionDate} -- Subject: {$subjectCode} -- Topic: {$topic} -- Status: {$status}",
+                'icon' => 'fa-chalkboard-user',
+                'bg' => '#fef3c7', 'color' => '#92400e',
+                'url' => route('mentor.sessions'), 
+                'searchString' => strtolower("{$topic} {$studentName} {$status} {$subjectCode} {$sessionDate}")
+            ];
+        }
+    }
+
+    // Map feedbacks
+    $feedbacks = \Illuminate\Support\Facades\DB::table('feedback')
+        ->whereIn('booking_id', $bookings->pluck('id'))
+        ->get();
+
+    foreach($feedbacks as $f) {
+        $date = isset($f->created_at) ? \Carbon\Carbon::parse($f->created_at)->format('M j, Y') : '';
+        $topic = $f->topic ?? 'Session Feedback';
+        
+        $index[] = [
+            'group' => 'Feedback',
+            'label' => $topic,
+            'detail' => "{$date} -- " . \Illuminate\Support\Str::limit($f->feedback ?? 'No comments provided.', 60),
+            'icon' => 'fa-comment-dots',
+            'bg' => '#d1fae5', 'color' => '#065f46',
+            'url' => route('mentor.feedbacks'),
+            'searchString' => strtolower("{$topic} " . ($f->feedback ?? ''))
+        ];
+    }
+
+    return $index;
     });
 
     ?>
@@ -407,20 +485,70 @@
                 </header>
 
                 <main class="scroll-container">
-    <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-6 relative">
-        <div class="relative">
-            <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-300 text-xs"></i>
-            <input 
-                type="text" 
-                id="globalSearchInput"
-                placeholder="Search ALL sessions (student, subject, date, status)..."
-                class="w-full pl-8 pr-3 py-1.5 text-xs font-medium text-slate-700 placeholder-gray-400 border border-gray-200 rounded-lg bg-white outline-none focus:ring-1 focus:border-up-maroon focus:ring-up-maroon w-56 h-[34px] transition-shadow"
-            >
-        </div>
-        <div id="globalSearchResults"
-            class="absolute left-0 right-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg max-h-72 overflow-y-auto z-50 hidden">
-        </div>
-    </div>
+    <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-6 relative" x-data="{ 
+                query: '',
+                open: false,
+                index: @js($this->searchIndex),
+                
+                get filteredResults() {
+                    const term = this.query.toLowerCase();
+                    const matches = this.index.filter(item => item.searchString.includes(term));
+
+                    const grouped = {};
+                    matches.forEach(m => {
+                        if (!grouped[m.group]) grouped[m.group] = [];
+                        grouped[m.group].push(m);
+                    });
+                    return grouped;
+                }
+            }" 
+            @click.outside="open = false">
+                <div class="relative">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-300 text-xs"></i>
+                    <input
+                        type="text"
+                        x-model="query"
+                        @focus="open = true"
+                        @keydown.escape.window="open = false; query = ''"
+                        placeholder="Search mentors, courses, recent sessions, or feedbacks..."
+                        class="w-full pl-8 pr-3 py-1.5 text-xs font-medium text-slate-700 placeholder-gray-400 border border-gray-200 rounded-lg bg-white outline-none focus:ring-1 focus:border-up-maroon focus:ring-up-maroon h-[34px] transition-shadow"
+                    >
+                </div>
+                <div x-show="open && query.length >= 1" x-cloak x-transition
+                    class="absolute left-0 right-0 bg-white rounded-xl shadow-xl border border-gray-100 overflow-y-auto"
+                    style="top: calc(100% + 6px); max-height: 420px; z-index: 20;">
+                    
+                    <template x-if="Object.keys(filteredResults).length === 0">
+                        <div style="padding:20px;text-align:center;font-size:13px;color:#9ca3af;font-style:italic;">
+                            No matches found for "<strong x-text="query"></strong>"
+                        </div>
+                    </template>
+
+                    <template x-for="(items, group) in filteredResults" :key="group">
+                        <div>
+                            <div x-text="group" style="padding:10px 14px;font-size:10px;font-weight:900;color:#000000;text-transform:uppercase;letter-spacing:.05em; background: #f0f0f0;"></div>
+                            
+                            <template x-for="item in items" :key="item.label + item.detail">
+                                <a :href="item.url" class="block group" style="display:flex;align-items:center;gap:12px;padding:10px 14px;cursor:pointer;border-bottom:1px solid #f1f5f9;transition:background .15s; text-decoration:none;" onmouseover="this.style.background='#f4f5f7'" onmouseout="this.style.background='transparent'">
+                                    
+                                    {{-- Icon Badge --}}
+                                    <span :style="`font-size:11px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:6px;flex-shrink:0;background:${item.bg};color:${item.color};`">
+                                        <i class="fa-solid" :class="item.icon"></i>
+                                    </span>
+                                    
+                                    {{-- Text Content --}}
+                                    <div style="flex:1;min-width:0;">
+                                        <div style="font-size:13px;font-weight:700;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" x-text="item.label"></div>
+                                        <div style="font-size:11px;font-weight:500;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;" x-text="item.detail"></div>
+                                    </div>
+                                    
+                                    <i class="fa-solid fa-arrow-up-right-from-square opacity-0 group-hover:opacity-100 transition-opacity" style="font-size:10px;color:#cbd5e1;flex-shrink:0; transform: translateX(-5px); group-hover:transform: translateX(0);"></i>
+                                </a>
+                            </template>
+                        </div>
+                    </template>
+                </div>
+            </div>
 
                     <div class="grid grid-cols-3 gap-8">
                         <div class="col-span-2 space-y-8">
@@ -623,8 +751,6 @@
         </div>
 
     <script>
-    const globalSearchInput = document.getElementById("globalSearchInput");
-    const globalSearchResults = document.getElementById("globalSearchResults");
 
     function toggleName(id, fullName) {
         const nameEl = document.getElementById('name-' + id);
@@ -652,52 +778,6 @@
         renderPendingRequests();
         updateClock();
     }
-
-    function universalSearch(query) {
-        const q = query.toLowerCase();
-        const merged = [
-            ...allSessions.map(s => ({ ...s, type: "Session" })),
-            ...pendingRequests.map(p => ({ ...p, status: "Pending", type: "Pending" }))
-        ];
-return merged.filter(item =>
-    item.student.toLowerCase().includes(q) ||
-    item.subject.toLowerCase().includes(q) ||
-    item.status.toLowerCase().includes(q) ||
-    item.date.includes(q) ||
-    formatTimeTo12Hour(item.start).toLowerCase().includes(q) ||
-    formatTimeTo12Hour(item.end).toLowerCase().includes(q)
-);
-    }
-
-    function renderGlobalResults(results) {
-        if (!results.length) {
-            globalSearchResults.innerHTML = `<div class="p-4 text-xs text-gray-400 text-center">No matching sessions found</div>`;
-            return;
-        }
-        globalSearchResults.innerHTML = results.map(r => `
-            <div class="p-3 border-b last:border-0 hover:bg-gray-50 cursor-pointer">
-                <div class="flex justify-between items-center">
-                    <div>
-                        <p class="text-sm font-bold text-slate-700">${r.student}</p>
-                        <p class="text-xs text-gray-400">${r.subject} • ${formatTimeTo12Hour(r.start)} - ${formatTimeTo12Hour(r.end)}</p>
-                        <p class="text-[10px] text-gray-400">${r.date}</p>
-                    </div>
-                    <span class="${getStatusColor(r.status)} font-bold text-xs px-2.5 py-1 rounded-full capitalize">${getStatusLabel(r.status)}</span>
-                </div>
-            </div>
-        `).join('');
-    }
-
-    globalSearchInput.addEventListener("input", function () {
-        const value = this.value.trim();
-        if (value === "") { globalSearchResults.classList.add("hidden"); return; }
-        renderGlobalResults(universalSearch(value));
-        globalSearchResults.classList.remove("hidden");
-    });
-
-    window.addEventListener("click", function(e) {
-        if (!e.target.closest("#globalSearchInput")) globalSearchResults.classList.add("hidden");
-    });
 
     function updateWeekHeaders(){
         const {monday} = getCurrentWeekRange();

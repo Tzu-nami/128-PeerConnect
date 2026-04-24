@@ -67,7 +67,70 @@ state([
     'schedule_end' => '',
     'successMessage' => false,
     'sessions' => [],
+    'globalSearchTerm' => '',
 ]);
+
+$searchIndex = computed(function () {
+    $index = [];
+
+    // Map Mentors
+    $mentors = \App\Models\User::where('user_roles', 'mentor')->get();
+    foreach($mentors as $m) {
+        $year = $m->studentProfile->yearLevel->name;
+        $deprog = $m->studentProfile->degreeProgram->name;
+        $index[] = [
+            'group' => 'Mentors',
+            'label' => $m->lastName . ', ' . $m->firstName,
+            'detail' => $m->email . ' -- ' . $year . ' ' . $deprog,
+            'icon' => 'fa-chalkboard-user',
+            'bg' => '#dbeafe', 'color' => '#1e40af',
+            'url' => route('student.mentors'),
+            'searchString' => strtolower($m->firstName . ' ' . $m->lastName . ' ' . $m->email . ' ' . $year . ' ' . $deprog)
+        ];
+    }
+
+    // Map Subjects
+    $subjects = \App\Models\Subjects::all();
+    $allMentorProfiles = \App\Models\MentorProfiles::with(['user', 'subjects'])->get()->sortBy(fn($lName) => $lName->user->lastName);
+    foreach($subjects as $s) {
+        $teachingMentors = $allMentorProfiles->filter(function ($mentor) use ($s) {
+            return $mentor->subjects->contains('id', $s->id);
+        });
+        $mentorNames = $teachingMentors->map(function ($mentor) {
+            return ($mentor->user->lastName);
+            })->filter()->implode(', ');
+
+        $detailText = $mentorNames ? "Mentors: " . $mentorNames : "No mentors assigned yet";
+        $index[] = [
+            'group' => 'Courses',
+            'label' => strtoupper($s->code),
+            'detail' => $detailText,
+            'icon' => 'fa-book-open',
+            'bg' => '#fef3c7', 'color' => '#92400e',
+            'url' => route('student.mentors'),
+            'searchString' => strtolower($s->code . ' ' . $mentorNames)
+        ];
+    }
+
+    // Map Recent Sessions
+    $studentProfileId = \App\Models\StudentProfiles::where('user_id', auth()->id())->value('id');
+    $bookings = \App\Models\Bookings::with('mentor.user',  'subject')->where('student_id', $studentProfileId)->latest()->take(50)->get();
+    foreach($bookings as $b) {
+        $mentorName = $b->mentor ? ($b->mentor->user->lastName . ', ' . $b->mentor->user->firstName ?? 'Unknown Mentor') : 'Unknown Mentor';
+        $sessionDate = \Carbon\Carbon::parse($b->date)->format('F j, Y');
+        $index[] = [
+            'group' => 'Sessions',
+            'label' => $b->topic ?: 'Tutorial Session', // Note: for some reason, naglalag siya kapag hindi topic yung label
+            'detail' => $sessionDate . 'Subject: ' . $b->subject->code . ' -- Mentor: ' . $mentorName . ' -- ' . ' -- Status: ' . ucfirst($b->booking_status),
+            'icon' => 'fa-calendar-days',
+            'bg' => '#d1fae5', 'color' => '#065f46',
+            'url' => route('student.history'),
+            'searchString' => strtolower($b->topic . ' ' . $mentorName . ' ' . $b->booking_status . ' ' . $b->subject->code . ' ' . $sessionDate)
+        ];
+    }
+
+    return $index;
+});
 
 $mentors = computed(function () {
     return MentorProfiles::with('user') -> get() -> sortBy(fn($lName) => $lName->user->lastName)
@@ -490,18 +553,68 @@ $dismissSuccessMessage = action(function () {
         <main class="scroll-container">
 
             <!-- GLOBAL SEARCH -->
-            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-6 relative">
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-6 relative" x-data="{ 
+                query: '',
+                open: false,
+                index: @js($this->searchIndex),
+                
+                get filteredResults() {
+                    const term = this.query.toLowerCase();
+                    const matches = this.index.filter(item => item.searchString.includes(term));
+
+                    const grouped = {};
+                    matches.forEach(m => {
+                        if (!grouped[m.group]) grouped[m.group] = [];
+                        grouped[m.group].push(m);
+                    });
+                    return grouped;
+                }
+            }" 
+            @click.outside="open = false">
                 <div class="relative">
                     <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-300 text-xs"></i>
                     <input
                         type="text"
-                        id="globalSearchInput"
-                        placeholder="Search ALL sessions (mentor, subject, date, status)..."
+                        x-model="query"
+                        @focus="open = true"
+                        @keydown.escape.window="open = false; query = ''"
+                        placeholder="Search mentors, courses, recent sessions, or feedbacks..."
                         class="w-full pl-8 pr-3 py-1.5 text-xs font-medium text-slate-700 placeholder-gray-400 border border-gray-200 rounded-lg bg-white outline-none focus:ring-1 focus:border-up-maroon focus:ring-up-maroon h-[34px] transition-shadow"
                     >
                 </div>
-                <div id="globalSearchResults"
-                    class="absolute left-0 right-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg max-h-72 overflow-y-auto z-50 hidden">
+                <div x-show="open && query.length >= 1" x-cloak x-transition
+                    class="absolute left-0 right-0 bg-white rounded-xl shadow-xl border border-gray-100 overflow-y-auto"
+                    style="top: calc(100% + 6px); max-height: 420px; z-index: 20;">
+                    
+                    <template x-if="Object.keys(filteredResults).length === 0">
+                        <div style="padding:20px;text-align:center;font-size:13px;color:#9ca3af;font-style:italic;">
+                            No matches found for "<strong x-text="query"></strong>"
+                        </div>
+                    </template>
+
+                    <template x-for="(items, group) in filteredResults" :key="group">
+                        <div>
+                            <div x-text="group" style="padding:10px 14px;font-size:10px;font-weight:900;color:#000000;text-transform:uppercase;letter-spacing:.05em; background: #f0f0f0;"></div>
+                            
+                            <template x-for="item in items" :key="item.label + item.detail">
+                                <a :href="item.url" class="block group" style="display:flex;align-items:center;gap:12px;padding:10px 14px;cursor:pointer;border-bottom:1px solid #f1f5f9;transition:background .15s; text-decoration:none;" onmouseover="this.style.background='#f4f5f7'" onmouseout="this.style.background='transparent'">
+                                    
+                                    {{-- Icon Badge --}}
+                                    <span :style="`font-size:11px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:6px;flex-shrink:0;background:${item.bg};color:${item.color};`">
+                                        <i class="fa-solid" :class="item.icon"></i>
+                                    </span>
+                                    
+                                    {{-- Text Content --}}
+                                    <div style="flex:1;min-width:0;">
+                                        <div style="font-size:13px;font-weight:700;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" x-text="item.label"></div>
+                                        <div style="font-size:11px;font-weight:500;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;" x-text="item.detail"></div>
+                                    </div>
+                                    
+                                    <i class="fa-solid fa-arrow-up-right-from-square opacity-0 group-hover:opacity-100 transition-opacity" style="font-size:10px;color:#cbd5e1;flex-shrink:0; transform: translateX(-5px); group-hover:transform: translateX(0);"></i>
+                                </a>
+                            </template>
+                        </div>
+                    </template>
                 </div>
             </div>
 
@@ -714,8 +827,6 @@ const profileTrigger      = document.getElementById('profileTrigger');
 const profileDropdown     = document.getElementById('profileDropdown');
 const searchInput         = document.getElementById('liveSearchInput');
 const statusFilter        = document.getElementById('statusFilter');
-const globalSearchInput   = document.getElementById('globalSearchInput');
-const globalSearchResults = document.getElementById('globalSearchResults');
 
 // ─── SIDEBAR TOGGLE ──────────────────────────────────────────────────────────
 document.getElementById('sidebarToggle').addEventListener('click', () => {
@@ -729,7 +840,6 @@ profileTrigger.addEventListener('click', (e) => {
 
 window.addEventListener('click', (e) => {
     if (profileDropdown.classList.contains('show')) profileDropdown.classList.remove('show');
-    if (!globalSearchInput.contains(e.target)) globalSearchResults.classList.add('hidden');
 });
 
 // ─── CLOCK ───────────────────────────────────────────────────────────────────
@@ -803,38 +913,6 @@ function toggleUpcomingName(id) {
         btn.innerText = 'Show more';
     }
 }
-
-// ─── GLOBAL SEARCH ───────────────────────────────────────────────────────────
-globalSearchInput.addEventListener('input', function () {
-    const value = this.value.trim();
-    if (value === '') { globalSearchResults.classList.add('hidden'); return; }
-    const q = value.toLowerCase();
-    const results = allSessions.filter(s =>
-        (s.mentor  || '').toLowerCase().includes(q) ||
-        (s.subject || '').toLowerCase().includes(q) ||
-        (s.status  || '').toLowerCase().includes(q) ||
-        (s.date    || '').includes(q) ||
-        formatTimeTo12Hour(s.start).toLowerCase().includes(q) ||
-        formatTimeTo12Hour(s.end).toLowerCase().includes(q)
-    );
-    if (!results.length) {
-        globalSearchResults.innerHTML = `<div class="p-4 text-xs text-gray-400 text-center">No matching sessions found</div>`;
-    } else {
-        globalSearchResults.innerHTML = results.map(r => `
-            <div class="p-3 border-b last:border-0 hover:bg-gray-50 cursor-pointer">
-                <div class="flex justify-between items-center">
-                    <div>
-                        <p class="text-sm font-bold text-slate-700">${r.mentor}</p>
-                        <p class="text-xs text-gray-400">${r.subject} • ${formatTimeTo12Hour(r.start)} – ${formatTimeTo12Hour(r.end)}</p>
-                        <p class="text-[10px] text-gray-400">${r.date}</p>
-                    </div>
-                    <span class="${getStatusColor(r.status)} font-bold text-xs px-2.5 py-1 rounded-full capitalize">${getStatusLabel(r.status)}</span>
-                </div>
-            </div>
-        `).join('');
-    }
-    globalSearchResults.classList.remove('hidden');
-});
 
 // ─── SORT ─────────────────────────────────────────────────────────────────────
 function toggleSort(col) {

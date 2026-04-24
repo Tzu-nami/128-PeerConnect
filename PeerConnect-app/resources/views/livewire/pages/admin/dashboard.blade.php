@@ -1,9 +1,13 @@
 <?php
 
-use function Livewire\Volt\{layout, state, mount};
+use function Livewire\Volt\{layout, state, mount, computed};
 use App\Models\MentorProfiles;
 use App\Models\StudentProfiles;
 use App\Models\Bookings;
+use App\Models\Subjects;
+use App\Models\User;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Carbon\Carbon;
 
 layout('layouts.app');
@@ -14,6 +18,7 @@ state([
     'pendingBookings' => 0,
     'totalStudents' => 0,
     'todaySessions' => [],
+    'globalSearchTerm' => '',
 ]);
 
 mount(function () {
@@ -35,6 +40,57 @@ mount(function () {
             'status' => ucfirst($b->booking_status),
         ])
         ->toArray();
+});
+
+$searchIndex = computed(function () {
+    $index = [];
+
+    // Map Mentors
+    $mentors = \App\Models\User::where('user_roles', 'mentor')->get();
+    foreach($mentors as $m) {
+        $year = $m->studentProfile->yearLevel->name;
+        $deprog = $m->studentProfile->degreeProgram->name;
+        $index[] = [
+            'group' => 'Mentors',
+            'label' => $m->lastName . ', ' . $m->firstName,
+            'detail' => $m->email . ' -- ' . $year . ' ' . $deprog,
+            'icon' => 'fa-chalkboard-user',
+            'bg' => '#dbeafe', 'color' => '#1e40af',
+            'url' => route('admin.mentors'),
+            'searchString' => strtolower($m->firstName . ' ' . $m->lastName . ' ' . $m->email . ' ' . $year . ' ' . $deprog)
+        ];
+    }
+
+    // Map Subjects
+    $subjects = \App\Models\Subjects::all();
+    foreach($subjects as $s) {
+        $index[] = [
+            'group' => 'Courses',
+            'label' => strtoupper($s->code),
+            'icon' => 'fa-book-open',
+            'bg' => '#fef3c7', 'color' => '#92400e',
+            'url' => route('admin.courses'),
+            'searchString' => strtolower($s->code)
+        ];
+    }
+
+    // Map Recent Sessions
+    $bookings = \App\Models\Bookings::with('mentor.user',  'subject')->latest()->take(50)->get();
+    foreach($bookings as $b) {
+        $mentorName = $b->mentor ? ($b->mentor->user->lastName . ', ' . $b->mentor->user->firstName ?? 'Unknown Mentor') : 'Unknown Mentor';
+        $sessionDate = \Carbon\Carbon::parse($b->date)->format('F j, Y');
+        $index[] = [
+            'group' => 'Sessions',
+            'label' => $b->topic ?: 'Tutorial Session', // Note: for some reason, naglalag siya kapag hindi topic yung label
+            'detail' => $sessionDate . ' -- Subject: ' . $b->subject->code . ' -- Mentor: ' . $mentorName . ' -- ' . ' -- Status: ' . ucfirst($b->booking_status),
+            'icon' => 'fa-calendar-days',
+            'bg' => '#d1fae5', 'color' => '#065f46',
+            'url' => route('admin.sessions'),
+            'searchString' => strtolower($b->topic . ' ' . $mentorName . ' ' . $b->booking_status . ' ' . $b->subject->code  . ' ' . $sessionDate)
+        ];
+    }
+
+    return $index;
 });
 
 
@@ -363,20 +419,72 @@ mount(function () {
 </header>
 
             <main class="scroll-container">
-<div class="main-search-container mb-8" style="position: relative; z-index: 10;">
-    <div class="main-search-wrapper flex-1" style="position: relative;">
-        <i class="fa-solid fa-magnifying-glass"></i>
-        <input type="text" id="mainDashboardSearch"
-            placeholder="Search dashboard..."
-            class="main-search-input" autocomplete="off">
+    <div class="main-search-container mb-8" style="position: relative; z-index: 10;" 
+        x-data="{ 
+            query: '',
+            open: false,
+            index: @js($this->searchIndex),
+            
+            get filteredResults() {
+                const term = this.query.toLowerCase();
+                const matches = this.index.filter(item => item.searchString.includes(term));
+
+                const grouped = {};
+                matches.forEach(m => {
+                    if (!grouped[m.group]) grouped[m.group] = [];
+                    grouped[m.group].push(m);
+                });
+                return grouped;
+            }
+        }" 
+        @click.outside="open = false">
+        
+        <div class="main-search-wrapper flex-1" style="position: relative;">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            
+            <input type="text" x-model="query"
+                @focus="open = true"
+                @keydown.escape.window="open = false; query = ''"
+                placeholder="Search mentors, courses, recent sessions, or feedbacks..."
+                class="main-search-input" autocomplete="off">
+        </div>
+
+        {{-- Dropdown Results --}}
+        <div x-show="open && query.length >= 1" x-cloak x-transition
+            class="absolute left-0 right-0 bg-white rounded-xl shadow-xl border border-gray-100 overflow-y-auto"
+            style="top: calc(100% + 6px); max-height: 420px; z-index: 20;">
+            
+            <template x-if="Object.keys(filteredResults).length === 0">
+                <div style="padding:20px;text-align:center;font-size:13px;color:#9ca3af;font-style:italic;">
+                    No matches found for "<strong x-text="query"></strong>"
+                </div>
+            </template>
+
+            <template x-for="(items, group) in filteredResults" :key="group">
+                <div>
+                    <div x-text="group" style="padding:10px 14px;font-size:10px;font-weight:900;color:#000000;text-transform:uppercase;letter-spacing:.05em; background: #f0f0f0;"></div>
+                    
+                    <template x-for="item in items" :key="item.label + item.detail">
+                        <a :href="item.url" class="block group" style="display:flex;align-items:center;gap:12px;padding:10px 14px;cursor:pointer;border-bottom:1px solid #f1f5f9;transition:background .15s; text-decoration:none;" onmouseover="this.style.background='#f4f5f7'" onmouseout="this.style.background='transparent'">
+                            
+                            {{-- Icon Badge --}}
+                            <span :style="`font-size:11px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:6px;flex-shrink:0;background:${item.bg};color:${item.color};`">
+                                <i class="fa-solid" :class="item.icon"></i>
+                            </span>
+                            
+                            {{-- Text Content --}}
+                            <div style="flex:1;min-width:0;">
+                                <div style="font-size:13px;font-weight:700;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" x-text="item.label"></div>
+                                <div style="font-size:11px;font-weight:500;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;" x-text="item.detail"></div>
+                            </div>
+                            
+                            <i class="fa-solid fa-arrow-up-right-from-square opacity-0 group-hover:opacity-100 transition-opacity" style="font-size:10px;color:#cbd5e1;flex-shrink:0; transform: translateX(-5px); group-hover:transform: translateX(0);"></i>
+                        </a>
+                    </template>
+                </div>
+            </template>
+        </div>
     </div>
-    <div class="ml-4 flex gap-2">
-    </div>
-    <div id="globalSearchResults"
-        class="hidden absolute left-0 right-0 bg-white rounded-xl shadow-xl border border-gray-100 overflow-y-auto"
-        style="top: calc(100% + 6px); max-height: 420px; z-index: 20;">
-    </div>
-</div>
 
  <div class="grid grid-cols-5 gap-4 mb-8">
   <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-green-600 flex items-center gap-4">
