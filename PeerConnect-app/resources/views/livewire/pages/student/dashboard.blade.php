@@ -121,7 +121,7 @@ $searchIndex = computed(function () {
         $index[] = [
             'group' => 'Sessions',
             'label' => $b->topic ?: 'Tutorial Session', // Note: for some reason, naglalag siya kapag hindi topic yung label
-            'detail' => $sessionDate . 'Subject: ' . $b->subject->code . ' -- Mentor: ' . $mentorName . ' -- ' . ' -- Status: ' . ucfirst($b->booking_status),
+            'detail' => $sessionDate . ' -- Subject: ' . $b->subject->code . ' -- Mentor: ' . $mentorName . ' -- ' . ' -- Status: ' . ucfirst($b->booking_status),
             'icon' => 'fa-calendar-days',
             'bg' => '#d1fae5', 'color' => '#065f46',
             'url' => route('student.history'),
