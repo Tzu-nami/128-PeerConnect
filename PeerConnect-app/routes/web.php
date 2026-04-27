@@ -61,6 +61,21 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Volt::route('/feedbacks', 'pages.admin.feedbacks')
             ->name('admin.feedbacks');
 
+    Route::post('/sessions/update', function () {
+        $booking = \App\Models\Bookings::findOrFail(request('booking_id'));
+        $booking->booking_status = strtolower(request('booking_status'));
+
+        if ($booking->booking_status === 'completed') {
+            $booking->completed_at = now();
+        }
+
+        $booking->save();
+
+        return response()->json(['success' => true]);
+    })->name('admin.sessions.update');
+
+    Volt::route('/feedbacks', 'pages.admin.feedbacks')->name('admin.feedbacks');
+
     });
 
     // Mentor Routes
