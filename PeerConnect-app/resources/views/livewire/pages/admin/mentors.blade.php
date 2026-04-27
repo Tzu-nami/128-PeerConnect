@@ -633,7 +633,7 @@ mount(function () {
                     <div class="flex gap-4">
                         <div class="relative">
                             <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
-                            <input type="text" x-model="searchQuery" @input="currentPage = 1"  placeholder="Search mentors..." class="pl-8 pr-3 py-2 h-12 text-xs border border-gray-200 rounded-lg bg-white outline-none focus:ring-1 focus:ring-red-800 w-64">
+                            <input type="text" x-model="searchQuery" @input="currentPage = 1"  placeholder="Search mentors..." class="pl-8 pr-3 py-2 h-12 text-xs border border-gray-200 rounded-lg bg-white outline-none focus:ring-1 focus:ring-up-maroon focus:border-up-maroon w-64">
                         </div>
                         
                         <button wire:click="openSubjectModal" @click="$wire.showSubjectModal = true" class="bg-slate-800 text-white px-6 py-3 rounded-xl text-xs font-bold flex items-center gap-2 hover:bg-black transition shadow-lg">
@@ -829,7 +829,7 @@ mount(function () {
                     </div>
                     <button wire:click="checkEmail" type="button" class="w-full px-4 py-2.5 bg-slate-800 text-white text-xs font-bold rounded-lg hover:bg-black transition" wire:loading.attr="disabled" wire:target="checkEmail">
                         <span wire:loading.remove wire:target="checkEmail">Find Email</span>
-                        <span wire:loading wire:target="checkEmail">Verifying...</span>
+                        <span wire:loading wire:target="checkEmail"><i class="fa-solid fa-spinner fa-spin mr-1"></i>Verifying...</span>
                     </button>
                 </div>
 
@@ -869,7 +869,7 @@ mount(function () {
                     @change="fileName = $event.target.files[0].name" />
                 <label for="avatar-upload" class="block w-full text-center py-2.5 px-4 rounded-lg text-xs font-bold bg-slate-800 text-white hover:bg-black cursor-pointer transition shadow-sm">
                     <span wire:loading.remove wire:target="avatar">Choose File</span>
-                    <span wire:loading wire:target="avatar">Uploading...</span>
+                    <span wire:loading wire:target="avatar"><i class="fa-solid fa-spinner fa-spin mr-1"></i>Uploading...</span>
                 </label>
                 <div class="mt-3 text-[10px] text-center w-full">
                     <p x-show="fileName" class="text-slate-700 font-bold truncate px-2 block w-full" x-text="fileName"></p>
@@ -989,7 +989,7 @@ mount(function () {
                     </button>
                     <button type="button" wire:click="confirmMentor" class="flex-1 bg-red-900 text-white py-3 rounded-xl text-xs font-bold shadow-lg hover:bg-red-800 transition">
                         <span wire:loading.remove wire:target="confirmMentor">Register Mentor</span>
-                        <span wire:loading wire:target="confirmMentor">Validating...</span>
+                        <span wire:loading wire:target="confirmMentor"><i class="fa-solid fa-spinner fa-spin mr-1"></i>Validating...</span>
                     </button>
                 </div>
             </div>
@@ -1013,7 +1013,7 @@ mount(function () {
                 </button>
                 <button type="button" wire:click="saveMentor" class="flex-1 bg-red-900 text-white py-3 rounded-xl text-xs font-bold shadow-lg hover:bg-red-800 transition" wire:loading.attr="disabled" wire:target="saveMentor">
                     <span wire:loading.remove wire:target="saveMentor">Save</span>
-                    <span wire:loading wire:target="saveMentor">Saving...</span>
+                    <span wire:loading wire:target="saveMentor"><i class="fa-solid fa-spinner fa-spin mr-1"></i>Saving...</span>
                 </button>
             </div>
         </div>
@@ -1075,7 +1075,7 @@ mount(function () {
                                     @change="fileName = $event.target.files[0].name" />
                                 <label for="edit-avatar-upload" class="block w-full text-center py-2.5 px-4 rounded-lg text-xs font-bold bg-slate-800 text-white hover:bg-black cursor-pointer transition shadow-sm">
                                     <span wire:loading.remove wire:target="editAvatar">Upload New Picture</span>
-                                    <span wire:loading.inline-block wire:target="editAvatar">Uploading...</span>
+                                    <span wire:loading.inline-block wire:target="editAvatar"><i class="fa-solid fa-spinner fa-spin mr-1"></i>Uploading...</span>
                                 </label>
                                 <div class="mt-3 text-[10px] text-center w-full">
                                     <p x-show="fileName" class="text-slate-700 font-bold truncate px-2 block w-full" x-text="fileName"></p>
@@ -1199,7 +1199,7 @@ mount(function () {
                     </button>
                     <button type="button" @click="$wire.confirmEdit(editingMentor.id, editForm.subjects, editForm.availabilities)" class="flex-1 bg-red-900 text-white py-3 rounded-xl text-xs font-bold shadow-lg hover:bg-red-800 transition">
                         <span wire:loading.remove wire:target="confirmEdit">Save Changes</span>
-                        <span wire:loading wire:target="confirmEdit">Validating...</span>
+                        <span wire:loading wire:target="confirmEdit"><i class="fa-solid fa-spinner fa-spin mr-1"></i>Validating...</span>
                     </button>
                 </div>
             </div>
@@ -1223,7 +1223,7 @@ mount(function () {
                 </button>
                 <button type="button" wire:click="updateMentor" class="flex-1 bg-blue-600 text-white py-3 rounded-xl text-xs font-bold shadow-lg hover:bg-blue-800 transition" wire:loading.attr="disabled" wire:target="updateMentor">
                     <span wire:loading.remove wire:target="updateMentor">Save</span>
-                    <span wire:loading wire:target="updateMentor">Saving...</span>
+                    <span wire:loading wire:target="updateMentor"><i class="fa-solid fa-spinner fa-spin mr-1"></i>Saving...</span>
                 </button>
             </div>
         </div>
@@ -1274,7 +1274,7 @@ mount(function () {
                     </button>
                     <button type="button" wire:click="confirmSubject" class="flex-1 bg-red-900 text-white py-3 rounded-xl text-xs font-bold shadow-lg hover:bg-red-800 transition" wire:loading.attr="disabled" wire:loading.class="opacity-60" wire:target="confirmSubject">
                         <span wire:loading.remove wire:target="confirmSubject">Add Subject</span>
-                        <span wire:loading wire:target="confirmSubject">Validating...</span>
+                        <span wire:loading wire:target="confirmSubject"><i class="fa-solid fa-spinner fa-spin mr-1"></i>Validating...</span>
                     </button>
                 </div>
             </div>
@@ -1298,7 +1298,7 @@ mount(function () {
                 </button>
                 <button type="button" wire:click="saveSubject" class="flex-1 bg-red-900 text-white py-3 rounded-xl text-xs font-bold shadow-lg hover:bg-red-800 transition" wire:loading.attr="disabled" wire:target="saveSubject">
                     <span wire:loading.remove wire:target="saveSubject">Save</span>
-                    <span wire:loading wire:target="saveSubject">Saving...</span>
+                    <span wire:loading wire:target="saveSubject"><i class="fa-solid fa-spinner fa-spin mr-1"></i>Saving...</span>
                 </button>
             </div>
         </div>
@@ -1323,7 +1323,7 @@ mount(function () {
                     </button>
                     <button type="button" wire:click="deleteMentor(mentorToDelete.id).then(() => showDeleteConfirm = false)" class="flex-1 bg-red-900 text-white py-3 rounded-xl text-xs font-bold shadow-lg hover:bg-red-600 transition" wire:loading.attr="disabled" wire:target="deleteMentor">
                         <span wire:loading.remove wire:target="deleteMentor">Confirm</span>
-                        <span wire:loading wire:target="deleteMentor">Deleting...</span>
+                        <span wire:loading wire:target="deleteMentor"><i class="fa-solid fa-spinner fa-spin mr-1"></i>Deleting...</span>
                     </button>
                 </div>
             </div>
