@@ -136,7 +136,7 @@ $searchIndex = computed(function () {
         }
 
         * { box-sizing: border-box; }
-        body { margin: 0; font-family: 'Inter', sans-serif; background: var(--bg-light); overflow: hidden; }
+        body { margin: 0; font-family: 'Inter', sans-serif; background: var(--bg-light); overflow: hidden; } /* font-family defined here; move to layouts.app once shared */
         .app-wrapper { display: flex; height: 100vh; width: 100vw; overflow: hidden; }
 
         /* ── SIDEBAR ── */
@@ -382,61 +382,33 @@ $searchIndex = computed(function () {
         </aside>
 
         <div class="main-content">
-            <header class="top-header relative flex items-center justify-between px-6 py-4">
-    <div class="text-lg">Welcome, <span class="font-bold">{{ auth()->user()->name }}</span></div>
-
-    <div class="flex items-center gap-3">
-        
-        <div class="relative">
-            <button id="notificationTrigger" class="relative p-2 rounded-full text-gray-400 hover:bg-red-900 hover:text-white transition-all duration-200 focus:outline-none group">
-    <i class="fa-solid fa-bell text-xl"></i>
-    
-    <span class="absolute top-2 right-2 flex h-2.5 w-2.5">
-        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75 group-hover:hidden"></span>
-        <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-600 border border-white"></span>
-    </span>
-</button>
-
-            <div id="notificationDropdown" class="hidden absolute right-0 mt-2 w-72 bg-white rounded-xl shadow-xl border border-gray-100 z-50 overflow-hidden">
-                <div class="p-3 border-b border-gray-100 bg-slate-50">
-                    <p class="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Notifications</p>
-                </div>
-                <div class="max-h-64 overflow-y-auto">
-                    <div class="p-4 border-b border-gray-50 hover:bg-gray-50 transition cursor-pointer">
-                        <p class="text-xs text-gray-800">Your report has been approved.</p>
-                        <p class="text-[10px] text-gray-400 mt-1">2 minutes ago</p>
+            <header class="top-header relative">
+                <div class="text-lg">Welcome, <span class="font-bold">{{ auth()->user()->name }}</span></div>
+                <div class="flex items-center gap-2">
+                <x-admin-notifications />
+                
+                <button id="profileTrigger" class="flex items-center gap-2 px-3 py-1 bg-white rounded-full hover:bg-gray-100 transition shadow-sm border-2 border-white/20 group">
+                    <div class="w-8 h-8 bg-red-900 text-white rounded-full flex items-center justify-center text-xs font-bold">
+                        {{ strtoupper(substr(auth()->user()->name,0,2)) }}
                     </div>
-                </div>
-                <a href="#" class="block p-3 text-center text-xs font-bold text-red-900 hover:bg-gray-50">View All</a>
-            </div>
-        </div>
-
-        <div class="relative">
-            <button id="profileTrigger" class="flex items-center gap-2 px-3 py-1 bg-white rounded-full hover:bg-gray-100 transition shadow-sm border-2 border-white/20 group">
-                <div class="w-8 h-8 bg-red-900 text-white rounded-full flex items-center justify-center text-xs font-bold">
-                    {{ strtoupper(substr(auth()->user()->name, 0, 2)) }}
-                </div>
-                <i class="fa-solid fa-chevron-down text-[10px] text-gray-500 group-hover:text-red-900 transition-transform duration-200" id="dropdownArrow"></i>
-            </button>
-
-            <div id="profileDropdown" class="profile-dropdown absolute right-0 mt-2 hidden">
-                <div class="p-4 border-b border-gray-100 bg-slate-50">
-                    <p class="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1">Signed in as</p>
-                    <p class="text-sm font-bold text-slate-800 truncate">{{ auth()->user()->name }}</p>
-                    <p class="text-xs text-slate-500 truncate">{{ auth()->user()->email }}</p>
+                    <i class="fa-solid fa-chevron-down text-[10px] text-gray-500 group-hover:text-red-900 transition-transform duration-200"></i>
+                </button>
                 </div>
 
-                <form method="POST" action="{{ route('logout') }}" class="m-0">
-                    @csrf
-                    <button type="submit" class="dropdown-item w-full border-t border-gray-50 text-red-600 font-semibold p-3 hover:bg-gray-50 flex items-center gap-2">
-                        <i class="fa-solid fa-right-from-bracket"></i> Logout
-                    </button>
-                </form>
-            </div>
-        </div>
-
-    </div>
-</header>
+                    <div id="profileDropdown" class="profile-dropdown">
+                        <div class="p-4 border-b border-gray-100 bg-slate-50">
+                            <p class="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1">Signed in as</p>
+                            <p class="text-sm font-bold text-slate-800 truncate">{{ auth()->user()->name }}</p>
+                            <p class="text-xs text-slate-500 truncate">{{ auth()->user()->email }}</p>
+                        </div>
+                        <form method="POST" action="{{ route('logout') }}" class="m-0">
+                            @csrf
+                            <button type="submit" class="dropdown-item w-full border-t border-gray-50 text-red-600 font-semibold">
+                                <i class="fa-solid fa-right-from-bracket"></i> Logout
+                            </button>
+                        </form>
+                    </div>
+                </header>
 
             <main class="scroll-container">
     <div class="main-search-container mb-8" style="position: relative; z-index: 10;" 
@@ -683,7 +655,7 @@ updateDate();
     {{-- Clock --}}
     <div class="bg-slate-900 rounded-t-xl px-4 py-3 flex items-center justify-between">
         <div id="liveDate" class="text-[10px] font-medium text-slate-400 uppercase tracking-widest"></div>
-        <div id="liveClock" class="text-sm font-mono font-bold text-white tracking-widest"></div>
+        <div id="liveClock" class="text-sm font-bold text-white tracking-widest" style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;"></div>
     </div>
 
                                 {{-- Calendar --}}
