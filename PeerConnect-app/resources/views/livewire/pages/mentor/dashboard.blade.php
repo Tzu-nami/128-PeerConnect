@@ -41,13 +41,14 @@
     }
         if (!$mentorProfile) return;
 
-        Bookings::where('mentor_id', $mentorProfile->id)
-            ->where('booking_status', 'accepted')
-            ->whereDate('date', '<', today())
-            ->update([
-                'booking_status' => 'completed',
-                'completed_at' => now(),
-            ]);
+Bookings::where('mentor_id', $mentorProfile->id)
+    ->where('booking_status', 'accepted')
+    ->whereDate('date', '<', today())
+    ->whereDate('updated_at', '<', today())
+    ->update([
+        'booking_status' => 'completed',
+        'completed_at' => now(),
+    ]);
 
     $this->sessions = Bookings::with(['student.user','subject'])
         ->where('mentor_id', $mentorProfile->id)
@@ -293,17 +294,6 @@
                 flex-shrink: 0;
             }
 
-            .stats-overview-container { background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); border: 1px solid #e5e7eb; width: 100%; }
-            .stats-header { padding: 12px 24px; background: #f8fafc; font-weight: 700; font-size: 0.9rem; color: #1e293b; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; justify-content: space-between; }
-            .stats-body { display: grid; grid-template-columns: repeat(2, 1fr); background: white; width: 100%; }
-            .stats-column { padding: 24px; border-right: 1px solid #f1f5f9; border-bottom: 1px solid #f1f5f9; min-width: 0; }
-            .stats-column:nth-child(2n) { border-right: none; }
-            .stats-column-title { font-weight: 600; margin-bottom: 15px; font-size: 0.8rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.025em; }
-
-            .stat-card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); transition: all 0.3s ease; border: 1px solid transparent; cursor: pointer; }
-            .stat-card:hover { transform: translateY(-5px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); border-color: var(--sidebar-green); }
-            .stat-card i { font-size: 24px; color: var(--sidebar-green); }
-
             .pagination-btn { padding: 4px 10px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 11px; font-weight: 600; color: #64748b; transition: all 0.2s; }
             .pagination-btn:hover:not(:disabled) { background: #f1f5f9; color: var(--header-maroon); border-color: var(--header-maroon); }
             .table-filter-select, .header-filter { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 12px; font-size: 0.75rem; color: #475569; outline: none; cursor: pointer; }
@@ -348,25 +338,13 @@
 }
 .hover-tooltip::after {
     content: attr(data-full);
-    position: absolute;
-    left: 0;
-    top: 110%;
-    background: rgba(0,0,0,0.85);
-    color: #fff;
-    padding: 8px 10px;
-    border-radius: 6px;
-    font-size: 11px;
-    line-height: 1.4;
-    white-space: normal;
-    word-break: break-word;
-    overflow-wrap: anywhere;
-    width: 320px;          /* fixed width instead of min/max */
-    max-width: 320px;
-    opacity: 0;
-    pointer-events: none;
-    transform: translateY(5px);
-    transition: 0.15s ease;
-    z-index: 9999;         /* bump this up */
+    position: absolute; left: 0; top: 110%;
+    background: rgba(0,0,0,0.85); color: #fff;
+    padding: 6px 10px; border-radius: 6px; font-size: 11px; line-height: 1.4;
+    white-space: normal; word-break: break-word; overflow-wrap: break-word;
+    width: max-content; max-width: 220px;
+    opacity: 0; pointer-events: none;
+    transform: translateY(5px); transition: 0.15s ease; z-index: 9999;
 }
 .hover-tooltip:hover::after {
     opacity: 1;
@@ -438,20 +416,23 @@
                     </span>
                 </button>
 
-                <nav class="flex-grow">
-                    <a href="{{ route('mentor.dashboard') }}" class="nav-item {{ request()->routeIs('mentor.dashboard') ? 'active' : '' }}" data-tooltip="Dashboard">
-                        <i class="fa-solid fa-gauge"></i><span>Dashboard</span>
-                    </a>
-                    <a href="{{ route('mentor.bookings') }}" class="nav-item {{ request()->routeIs('mentor.bookings') ? 'active' : '' }}" data-tooltip="Booking Form">
-                        <i class="fa-solid fa-calendar-check"></i><span>Booking Form</span>
-                    </a>
-                    <a href="{{ route('mentor.sessions') }}" class="nav-item {{ request()->routeIs('mentor.sessions') ? 'active' : '' }}" data-tooltip="Tutorial Sessions">
-                        <i class="fa-solid fa-clock"></i><span>Tutorial Sessions</span>
-                    </a>
-                    <a href="{{ route('mentor.feedbacks') }}" class="nav-item {{ request()->routeIs('mentor.feedbacks') ? 'active' : '' }}" data-tooltip="Student Feedbacks">
-                        <i class="fa-solid fa-comment-dots"></i><span>Student Feedbacks</span>
-                    </a>
-                </nav>
+            <nav class="flex-grow">
+                <a href="{{ route('mentor.dashboard') }}" class="nav-item {{ request()->routeIs('mentor.dashboard') ? 'active' : '' }}" data-tooltip="Dashboard">
+                    <i class="fa-solid fa-gauge"></i><span>Dashboard</span>
+                </a>
+                <a href="{{ route('mentor.bookings') }}" class="nav-item {{ request()->routeIs('mentor.bookings') ? 'active' : '' }}" data-tooltip="Booking Form">
+                    <i class="fa-solid fa-calendar-check"></i><span>Booking Form</span>
+                </a>
+                <a href="{{ route('mentor.history') }}" class="nav-item {{ request()->routeIs('mentor.history') ? 'active' : '' }}" data-tooltip="History">
+                    <i class="fa-solid fa-clock-rotate-left w-5"></i></i><span>History</span>
+                </a>
+                <a href="{{ route('mentor.sessions') }}" class="nav-item {{ request()->routeIs('mentor.sessions') ? 'active' : '' }}" data-tooltip="Tutorial Sessions">
+                    <i class="fa-solid fa-clock"></i><span>Tutorial Sessions</span>
+                </a>
+                <a href="{{ route('mentor.feedbacks') }}" class="nav-item {{ request()->routeIs('mentor.feedbacks') ? 'active' : '' }}" data-tooltip="Student Feedbacks">
+                    <i class="fa-solid fa-comment-dots"></i><span>Student Feedbacks</span>
+                </a>
+            </nav>
 
                 <div class="sidebar-footer">
                     <form method="POST" action="{{ route('logout') }}">
@@ -464,15 +445,19 @@
             </aside>
 
             <div class="main-content">
-                <header class="top-header relative">
-                    <div class="text-lg">Welcome, <span class="font-bold">{{ auth()->user()->name }}</span></div>
-                    
-                    <button id="profileTrigger" class="flex items-center gap-2 px-3 py-1 bg-white rounded-full hover:bg-gray-100 transition shadow-sm border-2 border-white/20 group">
-                        <div class="w-8 h-8 bg-red-900 text-white rounded-full flex items-center justify-center text-xs font-bold">
-                            {{ strtoupper(substr(auth()->user()->name,0,2)) }}
-                        </div>
-                        <i class="fa-solid fa-chevron-down text-[10px] text-gray-500 group-hover:text-red-900 transition-transform duration-200" id="dropdownArrow"></i>
-                    </button>
+            <header class="top-header relative">
+                <div class="text-lg">Welcome, <span class="font-bold">{{ auth()->user()->name }}</span></div>
+                <div class="flex items-center gap-2">
+                <x-mentor-notifications />
+                
+                <button id="profileTrigger" class="flex items-center gap-2 px-3 py-1 bg-white rounded-full hover:bg-gray-100 transition shadow-sm border-2 border-white/20 group">
+                    <div class="w-8 h-8 bg-red-900 text-white rounded-full flex items-center justify-center text-xs font-bold">
+                        {{ strtoupper(substr(auth()->user()->name,0,2)) }}
+                    </div>
+                    <i class="fa-solid fa-chevron-down text-[10px] text-gray-500 group-hover:text-red-900 transition-transform duration-200"></i>
+                </button>
+                </div>
+
                     <div id="profileDropdown" class="profile-dropdown">
                         <div class="p-4 border-b border-gray-100 bg-slate-50">
                             <p class="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1">Signed in as</p>
@@ -569,13 +554,15 @@
                                             <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-300 text-xs"></i>
                                             <input type="text" id="liveSearchInput" placeholder="Search names..." class="w-full pl-8 pr-3 py-1.5 text-xs font-medium text-slate-700 placeholder-gray-400 border border-gray-200 rounded-lg bg-white outline-none focus:ring-1 focus:border-up-maroon focus:ring-up-maroon w-56 h-[34px] transition-shadow">
                                         </div>
-                                        <select id="statusFilter" class="table-filter-select">
-                                            <option value="">All</option>
-                                            <option value="pending">Pending</option>
-                                            <option value="accepted">Accepted</option>
-                                            <option value="completed">Completed</option>
-                                            <option value="cancelled">Cancelled</option>
-                                        </select>
+<select id="statusFilter" class="table-filter-select">
+    <option value="">All</option>
+    <option value="pending">Pending</option>
+    <option value="accepted">Accepted</option>
+    <option value="completed">Completed</option>
+    <option value="cancelled">Cancelled</option>
+    <option value="rejected">Rejected</option>
+    <option value="no_show">No Show</option>
+</select>
                                     </div>
                                 </div>
 
@@ -592,7 +579,7 @@
                                                     Time <span class="sort-icon"><i class="fa-solid fa-arrow-up" style="font-size:8px;"></i></span>
                                                 </button>
                                             </th>
-                                            <th class="pb-3 text-[10px] tracking-wider" style="width:20%">
+                                            <th class="pb-3 text-[10px] tracking-wider" style="width:15%">
                                                 <button id="sortHead-subject" onclick="toggleSort('subject')" class="flex items-center gap-1 font-semibold uppercase hover:text-red-800 transition-colors" style="color:#94a3b8;">
                                                     Subject <span class="sort-icon"><i class="fa-solid fa-arrow-up-arrow-down" style="font-size:8px;opacity:0.4;"></i></span>
                                                 </button>
@@ -618,19 +605,27 @@
 
                             {{-- ── WEEKLY SCHEDULE (mentors.blade avail-grid style + legend) ── --}}
                             <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                                <div class="flex justify-between items-center mb-3">
-                                    <div class="flex items-center gap-2">
-                                        <h2 class="text-lg font-bold text-slate-800">Weekly Schedule</h2>
-                                        <span class="text-[10px] text-gray-400 bg-gray-50 border border-gray-100 px-2 py-0.5 rounded-full" id="weeklyScheduleRange">8:00 AM – 6:00 PM</span>
-                                    </div>
-                                </div>
+<!-- AFTER -->
+<div class="flex justify-between items-center mb-3">
+    <div class="flex items-center gap-2">
+        <h2 class="text-lg font-bold text-slate-800">Weekly Schedule</h2>
+        <span class="text-[10px] text-gray-400 bg-gray-50 border border-gray-100 px-2 py-0.5 rounded-full" id="weeklyScheduleRange">8:00 AM – 6:00 PM</span>
+    </div>
+    <select id="weeklyStatusFilter" class="table-filter-select" onchange="generateWeeklySchedule()">
+        <option value="">All</option>
+        <option value="pending">Pending</option>
+        <option value="accepted">Accepted</option>
+        <option value="completed">Completed</option>
+    </select>
+</div>
 
                                 {{-- Status legend (only 3 shown statuses) --}}
-                                <div class="sched-legend mb-4 pb-3 border-b border-gray-50">
-                                    <span class="sched-legend-item"><span class="sched-legend-dot" style="background:#eab308;"></span>Pending</span>
-                                    <span class="sched-legend-item"><span class="sched-legend-dot" style="background:#10b981;"></span>Accepted</span>
-                                    <span class="sched-legend-item"><span class="sched-legend-dot" style="background:#94a3b8;"></span>Completed</span>
-                                </div>
+<!-- AFTER -->
+<div class="sched-legend mb-4 pb-3 border-b border-gray-50">
+    <span class="sched-legend-item"><span class="sched-legend-dot" style="background:#eab308;"></span>Pending</span>
+    <span class="sched-legend-item"><span class="sched-legend-dot" style="background:#10b981;"></span>Accepted</span>
+    <span class="sched-legend-item"><span class="sched-legend-dot" style="background:#94a3b8;"></span>Completed</span>
+</div>
 
                                 <div class="overflow-x-auto">
                                     <table class="weekly-table text-xs text-center border" id="weeklyTableEl" style="display:none;">
@@ -695,16 +690,19 @@
                                     <div id="calendarGrid" class="grid grid-cols-7 gap-1"></div>
                                 </div>
                             </div>
-    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-        <h3 class="font-bold text-slate-800 text-sm mb-4">Quick Actions</h3>
-        <div id="quickActionsList" class="flex flex-col gap-3"></div>
-    </div>
+<div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+    <h3 class="font-bold text-slate-800 text-sm mb-4">Quick Actions</h3>
+    <div id="quickActionsBannerArea" class="flex flex-col gap-2 mb-2"></div>
+    <div id="quickActionsList" class="flex flex-col gap-3"></div>
+</div>
                             <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
                                 <div class="flex justify-between items-center mb-4">
                                     <h3 class="font-bold text-slate-800 text-sm tracking-tight">Pending Requests</h3>
                                         <span id="pendingBadge" class="bg-red-100 text-red-700 text-[10px] font-bold px-2 py-0.5 rounded-full"></span>
                                 </div>
                                 <div class="flex flex-col gap-4">
+                                    <div id="pendingBannerArea" class="flex flex-col gap-2 mb-2"></div>
+                                    <div id="pendingRequestsList" class="flex flex-col gap-4"></div>
                                     <div id="pendingRequestsList" class="flex flex-col gap-4"></div>
                                     <div class="flex items-center justify-between group">
                                     </div>
@@ -856,12 +854,18 @@
         const searchTerm     = searchInput.value.toLowerCase();
         const selectedStatus = statusFilter.value;
 
-        let filtered = allSessions.filter(item => {
-            const matchesDate   = item.date === selectedDateStr;
-            const matchesSearch = item.student.toLowerCase().includes(searchTerm);
-            const matchesStatus = selectedStatus === '' || item.status === selectedStatus;
-            return matchesDate && matchesSearch && matchesStatus;
-        });
+let filtered = allSessions.filter(item => {
+    const matchesDate   = item.date === selectedDateStr;
+    const matchesSearch = searchTerm === '' || [
+        item.student,
+        item.subject,
+        item.subjectName,
+        item.start,
+        item.end,
+    ].some(val => (val ?? '').toLowerCase().includes(searchTerm));
+    const matchesStatus = selectedStatus === '' || item.status === selectedStatus;
+    return matchesDate && matchesSearch && matchesStatus;
+});
 
         filtered.sort((a, b) => {
             let aVal, bVal;
@@ -900,9 +904,9 @@
 </td>
 <td style="width:20%">
     <div class="flex items-center justify-center">
-        <span class="${getStatusColor(row.status)} font-bold text-xs px-2.5 py-1 rounded-full capitalize">
-            ${getStatusLabel(row.status)}
-        </span>
+<span class="${getStatusColor(row.status)} font-bold text-[10px] bg-gray-50 px-2 py-1 rounded border border-current opacity-80 capitalize">
+    ${getStatusLabel(row.status)}
+</span>
     </div>
 </td>
                 </tr>
@@ -974,8 +978,10 @@
        Only shows: accepted, pending, completed statuses (change 1).
        Each session appears as a single proportionally-sized block (change 2).
     ── */
-    function generateWeeklySchedule(){
-        const ALLOWED_STATUSES = ['accepted', 'pending', 'completed']; // change 1: only these 3
+function generateWeeklySchedule(){
+    const weeklyFilter = document.getElementById('weeklyStatusFilter')?.value || '';
+    const ALL_STATUSES = ['accepted', 'pending', 'completed'];
+    const ALLOWED_STATUSES = weeklyFilter ? [weeklyFilter] : ALL_STATUSES;
 
         const container = document.getElementById("weeklyScheduleBody");
         container.innerHTML = "";
@@ -1098,11 +1104,11 @@
         gridWrap.appendChild(timeCol);
 
         // ── Day columns (one per day) ──
-        const statusLabel = {
-            pending:   'Pending',
-            accepted:  'Accepted',
-            completed: 'Completed',
-        };
+    const statusLabel = {
+        pending:   'Pending',
+        accepted:  'Accepted',
+        completed: 'Completed',
+    };
 
         days.forEach((day, di) => {
             const dayCol = document.createElement('div');
@@ -1185,19 +1191,19 @@
         wrapper.appendChild(gridWrap);
     }
 
-    function getStatusColor(status) {
-        // Unified with bookings.blade.php pill style
-        switch (status) {
-            case 'pending':   return 'bg-yellow-100 text-yellow-800';
-            case 'accepted':  return 'bg-green-100 text-green-800';
-            case 'completed': return 'bg-green-100 text-green-800';
-            case 'rejected':  return 'bg-red-100 text-red-800';
-            case 'cancelled': return 'bg-red-100 text-red-800';
-            case 'closed':    return 'bg-purple-100 text-purple-800';
-            case 'no_show':   return 'bg-red-100 text-red-800';
-            default:          return 'bg-gray-100 text-gray-800';
-        }
+// AFTER
+function getStatusColor(status) {
+    switch (status) {
+        case 'pending':   return 'text-yellow-500';
+        case 'accepted':  return 'text-green-600';
+        case 'completed': return 'text-gray-500';
+        case 'rejected':  return 'text-red-900';
+        case 'cancelled': return 'text-red-600';
+        case 'closed':    return 'text-purple-700';
+        case 'no_show':   return 'text-orange-600';
+        default:          return 'text-gray-500';
     }
+}
     
     function getStatusLabel(status) {
         switch (status) {
@@ -1215,7 +1221,7 @@
     /* ── CALENDAR ── */
     function hasUpcomingOnDate(dateStr) {
         const todayStr = new Date().toISOString().split("T")[0];
-        return allSessions.some(s => s.date === dateStr && s.status === "accepted" && s.date >= todayStr);
+        return allSessions.some(s => s.date === dateStr && s.status === "accepted");
     }
 
     function renderCalendar() {
@@ -1298,64 +1304,200 @@
 
     function hideStatusToast() { document.getElementById('statusToast').classList.remove('show'); }
 
-    function updateStatus(id, status) {
-        const statusLabels = {
-            accepted: 'Accepting booking...', rejected: 'Rejecting booking...',
-            completed: 'Marking as completed...', cancelled: 'Cancelling session...', no_show: 'Marking as no-show...',
-        };
-        showStatusToast(statusLabels[status] || 'Updating status...');
+function updateStatus(id, status, source) {
+    // source = 'qa' (Quick Actions) | 'pending' (Pending Requests) | undefined (defaults to 'qa')
+    const fromPending = source === 'pending';
 
-        fetch('{{ route("mentor.dashboard.update") }}', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' },
-            body: JSON.stringify({ id: id, status: status })
-        })
-        .then(res => res.json())
-        .then(data => {
-            hideStatusToast();
-            if (data.success) {
-                const target = allSessions.find(s => s.id === id);
-                if (target) {
-                    target.status = status;
-                    if (status === 'accepted') {
-                        const conflictingIds = getConflictingPendingIds(target);
-                        conflictingIds.forEach(conflictId => {
-                            const conflictSession = allSessions.find(s => s.id === conflictId);
-                            if (conflictSession) conflictSession.status = 'rejected';
-                            fetch('{{ route("mentor.dashboard.update") }}', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' },
-                                body: JSON.stringify({ id: conflictId, status: 'rejected' })
-                            }).catch(err => console.error('Auto-reject failed for id', conflictId, err));
-                        });
-                        if (conflictingIds.length > 0) {
-                            showAutoRejectBanner(conflictingIds.length);
+    const statusLabels = {
+        accepted:  'Accepting booking',
+        rejected:  'Rejecting booking',
+        completed: 'Marking as completed',
+        cancelled: 'Cancelling session',
+        no_show:   'Marking as no-show',
+    };
+    const successLabels = {
+        accepted:  'Booking accepted successfully.',
+        rejected:  'Booking rejected.',
+        completed: 'Session marked as completed.',
+        cancelled: 'Session cancelled.',
+        no_show:   'Marked as no-show.',
+    };
+
+    const loadingMsg = statusLabels[status] || 'Updating status';
+    const successMsg = successLabels[status] || 'Status updated.';
+
+    if (fromPending) {
+        showPendingLoadingBanner(loadingMsg);
+    } else {
+        showQaLoadingBanner(loadingMsg);
+    }
+
+    fetch('{{ route("mentor.dashboard.update") }}', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' },
+        body: JSON.stringify({ id: id, status: status })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (fromPending) hidePendingLoadingBanner(); else hideQaLoadingBanner();
+
+        if (data.success) {
+            const target = allSessions.find(s => s.id === id);
+            if (target) {
+                target.status = status;
+                if (status === 'accepted') {
+                    const conflictingIds = getConflictingPendingIds(target);
+                    conflictingIds.forEach(conflictId => {
+                        const conflictSession = allSessions.find(s => s.id === conflictId);
+                        if (conflictSession) conflictSession.status = 'rejected';
+                        fetch('{{ route("mentor.dashboard.update") }}', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' },
+                            body: JSON.stringify({ id: conflictId, status: 'rejected' })
+                        }).catch(err => console.error('Auto-reject failed for id', conflictId, err));
+                    });
+                    if (conflictingIds.length > 0) {
+                        showAutoRejectBanner(conflictingIds.length);           // existing pending section banner
+                        if (fromPending) {
+                            showAutoRejectBannerPending(conflictingIds.length);
+                        } else {
                             showAutoRejectBannerQA(conflictingIds.length);
                         }
+                        refreshLocalState();
+                        refreshSchedules();
+                        return;
                     }
                 }
-                refreshLocalState();
-                refreshSchedules();
-            } else {
-                showStatusToast('Update failed. Please try again.', 4000);
             }
-        })
-        .catch(err => {
-            hideStatusToast();
-            showStatusToast('Network error. Please retry.', 4000);
-            console.error(err);
-        });
-    }
+            if (fromPending) {
+                showPendingSuccessBanner(successMsg);
+            } else {
+                showQaSuccessBanner(successMsg);
+            }
+            refreshLocalState();
+            refreshSchedules();
+        } else {
+            if (fromPending) showPendingErrorBanner('Please try again.');
+            else showQaErrorBanner('Please try again.');
+        }
+    })
+    .catch(err => {
+        if (fromPending) hidePendingLoadingBanner(); else hideQaLoadingBanner();
+        if (fromPending) showPendingErrorBanner('Please check your connection and retry.');
+        else showQaErrorBanner('Please check your connection and retry.');
+        console.error(err);
+    });
+}
 
-    function showAutoRejectBannerQA(count) {
-        const container = document.getElementById('quickActionsList');
-        if (!container) return;
-        let banner = document.getElementById('autoRejectBannerQA');
-        if (!banner) { banner = document.createElement('div'); banner.id = 'autoRejectBannerQA'; banner.style.cssText = 'margin-bottom:10px;border-radius:8px;overflow:hidden;border:1px solid #fcd34d;background:#fffbeb;font-size:11px;animation:slideDown 0.2s ease;'; container.insertBefore(banner, container.firstChild); }
-        banner.innerHTML = `<div style="display:flex;align-items:flex-start;gap:8px;padding:10px 12px;"><div style="flex:1;color:#92400e;line-height:1.5;"><span style="font-weight:600;">${count} conflicting ${count===1?'request':'requests'} auto-rejected</span> — overlapping bookings were declined automatically.</div><button onclick="document.getElementById('autoRejectBannerQA').remove()" style="flex-shrink:0;background:none;border:none;cursor:pointer;color:#92400e;font-size:14px;line-height:1;padding:0;">&times;</button></div>`;
-        clearTimeout(banner._timer);
-        banner._timer = setTimeout(() => banner.remove(), 6000);
+// ADD these replacements
+// Generic banner renderer — targetAreaId selects which section gets the notification
+function showBanner(targetAreaId, bannerId, html, duration = 6000) {
+    const area = document.getElementById(targetAreaId);
+    if (!area) return;
+    let banner = document.getElementById(bannerId);
+    if (!banner) {
+        banner = document.createElement('div');
+        banner.id = bannerId;
+        banner.style.cssText = 'border-radius:8px; overflow:hidden; font-size:11px; animation:slideDown 0.2s ease; margin-bottom:4px;';
+        area.appendChild(banner);
     }
+    banner.innerHTML = html;
+    clearTimeout(banner._timer);
+    if (duration > 0) banner._timer = setTimeout(() => banner.remove(), duration);
+}
+
+function showLoadingBanner(areaId, prefix, message) {
+    showBanner(areaId, prefix + 'BannerLoading', `
+        <div style="border:1px solid #bfdbfe; background:#eff6ff; border-radius:8px;">
+            <div style="display:flex; align-items:center; gap:8px; padding:10px 12px;">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style="animation:spin 1s linear infinite;flex-shrink:0;">
+                    <circle cx="7" cy="7" r="6" stroke="#93c5fd" stroke-width="1.5"/>
+                    <path d="M7 1a6 6 0 0 1 6 6" stroke="#2563eb" stroke-width="1.5" stroke-linecap="round"/>
+                </svg>
+                <div style="flex:1; color:#1d4ed8; line-height:1.5;">
+                    <span style="font-weight:600;">${message}</span> — please wait...
+                </div>
+            </div>
+        </div>
+    `, 0);
+}
+
+function hideLoadingBanner(prefix) {
+    const b = document.getElementById(prefix + 'BannerLoading');
+    if (b) b.remove();
+}
+
+function showSuccessBanner(areaId, prefix, message) {
+    showBanner(areaId, prefix + 'BannerSuccess', `
+        <div style="border:1px solid #bbf7d0; background:#f0fdf4; border-radius:8px;">
+            <div style="display:flex; align-items:flex-start; gap:8px; padding:10px 12px;">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" style="flex-shrink:0;margin-top:1px;">
+                    <circle cx="8" cy="8" r="7.5" stroke="#22c55e" stroke-width="1"/>
+                    <path d="M5 8l2.5 2.5L11 5.5" stroke="#22c55e" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <div style="flex:1; color:#15803d; line-height:1.5;">
+                    <span style="font-weight:600;">${message}</span>
+                </div>
+                <button onclick="document.getElementById('${prefix}BannerSuccess').remove()"
+                    style="flex-shrink:0;background:none;border:none;cursor:pointer;color:#15803d;font-size:14px;line-height:1;padding:0;">&times;</button>
+            </div>
+        </div>
+    `);
+}
+
+function showErrorBanner(areaId, prefix, message) {
+    showBanner(areaId, prefix + 'BannerError', `
+        <div style="border:1px solid #fca5a5; background:#fef2f2; border-radius:8px;">
+            <div style="display:flex; align-items:flex-start; gap:8px; padding:10px 12px;">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" style="flex-shrink:0;margin-top:1px;">
+                    <circle cx="8" cy="8" r="7.5" stroke="#ef4444" stroke-width="1"/>
+                    <path d="M8 4.5v4" stroke="#ef4444" stroke-width="1.5" stroke-linecap="round"/>
+                    <circle cx="8" cy="11" r="0.75" fill="#ef4444"/>
+                </svg>
+                <div style="flex:1; color:#b91c1c; line-height:1.5;">
+                    <span style="font-weight:600;">Update failed —</span> ${message}
+                </div>
+                <button onclick="document.getElementById('${prefix}BannerError').remove()"
+                    style="flex-shrink:0;background:none;border:none;cursor:pointer;color:#b91c1c;font-size:14px;line-height:1;padding:0;">&times;</button>
+            </div>
+        </div>
+    `);
+}
+
+function showAutoRejectBannerInSection(areaId, prefix, count) {
+    showBanner(areaId, prefix + 'BannerAutoReject', `
+        <div style="border:1px solid #fcd34d; background:#fffbeb; border-radius:8px;">
+            <div style="display:flex; align-items:flex-start; gap:8px; padding:10px 12px;">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" style="flex-shrink:0;margin-top:1px;">
+                    <path d="M8 1.5L14.5 13H1.5L8 1.5Z" stroke="#d97706" stroke-width="1" stroke-linejoin="round"/>
+                    <path d="M8 6v3.5" stroke="#d97706" stroke-width="1.5" stroke-linecap="round"/>
+                    <circle cx="8" cy="11.5" r="0.75" fill="#d97706"/>
+                </svg>
+                <div style="flex:1; color:#92400e; line-height:1.5;">
+                    <span style="font-weight:600;">${count} conflicting ${count === 1 ? 'request' : 'requests'} auto-rejected</span>
+                    — overlapping bookings were declined automatically.
+                </div>
+                <button onclick="document.getElementById('${prefix}BannerAutoReject').remove()"
+                    style="flex-shrink:0;background:none;border:none;cursor:pointer;color:#92400e;font-size:14px;line-height:1;padding:0;">&times;</button>
+            </div>
+        </div>
+    `);
+}
+
+// Convenience wrappers — kept so existing call sites still work (Quick Actions section)
+function showQaLoadingBanner(message)  { showLoadingBanner('quickActionsBannerArea', 'qa', message); }
+function hideQaLoadingBanner()         { hideLoadingBanner('qa'); }
+function showQaSuccessBanner(message)  { showSuccessBanner('quickActionsBannerArea', 'qa', message); }
+function showQaErrorBanner(message)    { showErrorBanner('quickActionsBannerArea', 'qa', message); }
+function showAutoRejectBannerQA(count) { showAutoRejectBannerInSection('quickActionsBannerArea', 'qa', count); }
+
+// Pending-section-specific wrappers
+function showPendingLoadingBanner(message)  { showLoadingBanner('pendingBannerArea', 'pending', message); }
+function hidePendingLoadingBanner()         { hideLoadingBanner('pending'); }
+function showPendingSuccessBanner(message)  { showSuccessBanner('pendingBannerArea', 'pending', message); }
+function showPendingErrorBanner(message)    { showErrorBanner('pendingBannerArea', 'pending', message); }
+function showAutoRejectBannerPending(count) { showAutoRejectBannerInSection('pendingBannerArea', 'pending', count); }
+
 
     function refreshLocalState(){
         pendingRequests.length = 0;
@@ -1518,7 +1660,7 @@
             showConflictBanner(conflict ? `Conflicts with <strong>${conflict.student}</strong> (${formatTimeTo12Hour(conflict.start)} – ${formatTimeTo12Hour(conflict.end)}) on ${conflict.date}.` : 'This session overlaps with an already-accepted booking.');
             return;
         }
-        openConfirmModal({ title: 'Accept booking?', body: 'The student will be notified that their session has been approved.', meta: buildMetaHtml(req), variant: 'accept', onConfirm: () => updateStatus(id, 'accepted') });
+        openConfirmModal({ title: 'Accept booking?', body: 'The student will be notified that their session has been approved.', meta: buildMetaHtml(req), variant: 'accept', onConfirm: () => updateStatus(id, 'accepted', 'pending') });
     }
 
     function showConflictBanner(message) {
@@ -1540,7 +1682,7 @@
     function rejectRequest(id) {
         const req = allSessions.find(s => s.id == id);
         if (!req) return;
-        openConfirmModal({ title: 'Reject booking?', body: 'The student will be notified that their session request was declined.', meta: buildMetaHtml(req), variant: 'reject', onConfirm: () => updateStatus(id, 'rejected') });
+        openConfirmModal({ title: 'Reject booking?', body: 'The student will be notified that their session request was declined.', meta: buildMetaHtml(req), variant: 'reject', onConfirm: () => updateStatus(id, 'rejected', 'pending') });
     }
 
     function togglePendingName(id, fullName) {
