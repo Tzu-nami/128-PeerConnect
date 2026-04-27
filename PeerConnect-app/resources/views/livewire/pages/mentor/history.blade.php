@@ -46,16 +46,16 @@ $studentHistory = computed(function () {
         $isOpen = is_null($session->mentor_id);
         $mentorName = $isOpen ? 'ANY' : strtoupper($session->mentor->user->lastName ?? 'TBD') . ', ' . ($session->mentor->user->firstName ?? '');
 
-        $statusClass = match($session->booking_status) {
-            'pending' => 'bg-yellow-100 text-yellow-800',
-            'accepted' => 'bg-green-100 text-green-800',
-            'rejected' => 'bg-red-100 text-red-800',
-            'completed' => 'bg-green-100 text-green-800',
-            'cancelled' => 'bg-red-100 text-red-800',
-            'closed'    => 'bg-purple-100 text-purple-800',
-            'no_show'   => 'bg-red-100 text-red-800',
-            default     => 'bg-gray-100 text-gray-800',
-        };
+$statusClass = match($session->booking_status) {
+    'pending'   => 'text-yellow-500',
+    'accepted'  => 'text-green-600',
+    'completed' => 'text-green-600',
+    'rejected'  => 'text-red-900',
+    'cancelled' => 'text-red-600',
+    'closed'    => 'text-purple-700',
+    'no_show'   => 'text-orange-600',
+    default     => 'text-gray-500',
+};
         $statusLabel = ucfirst(str_replace('_', ' ', $session->booking_status));
 
         $startCarbon = \Carbon\Carbon::parse($session->schedule_start);
@@ -96,7 +96,7 @@ $studentHistory = computed(function () {
 <style>
         :root { --sidebar-green: #1a3c2f; --header-maroon: #7b1d1d; --bg-light: #f4f7f6; --header-height: 80px; --sidebar-width: 260px; --sidebar-collapsed-width: 72px; }
         * { box-sizing: border-box; }
-        body { margin: 0; font-family: 'Inter', sans-serif; background: var(--bg-light); overflow: hidden; }
+        body { margin: 0; font-family: 'Inter', sans-serif; background: var(--bg-light); overflow: hidden; } /* font-family defined here; move to layouts.app once shared */
         .app-wrapper { display: flex; height: 100vh; width: 100vw; overflow: hidden; }
 
 /* ── SIDEBAR ── */
@@ -174,7 +174,7 @@ $studentHistory = computed(function () {
 
 .main-content { flex: 1; min-width: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
 .top-header { background: var(--header-maroon); height: var(--header-height); padding: 0 40px; display: flex; align-items: center; justify-content: space-between; color: white; flex-shrink: 0; }
-.scroll-container { flex-grow: 1; overflow-y: auto; padding: 32px; width: 100%; }
+.scroll-container { flex-grow: 1; overflow-y: scroll; padding: 32px; width: 100%; }
 
 .profile-dropdown {
     position: absolute; top: 70px; right: 40px; background: white; border-radius: 12px;
@@ -203,9 +203,9 @@ $studentHistory = computed(function () {
     content: attr(data-full);
     position: absolute; left: 0; top: 110%;
     background: rgba(0,0,0,0.85); color: #fff;
-    padding: 8px 10px; border-radius: 6px; font-size: 11px; line-height: 1.4;
-    white-space: normal; word-break: break-word; overflow-wrap: anywhere;
-    width: 240px; max-width: 240px;
+    padding: 6px 10px; border-radius: 6px; font-size: 11px; line-height: 1.4;
+    white-space: normal; word-break: break-word; overflow-wrap: break-word;
+    width: max-content; max-width: 220px;
     opacity: 0; pointer-events: none;
     transform: translateY(5px); transition: 0.15s ease; z-index: 9999;
 }
@@ -264,12 +264,17 @@ $studentHistory = computed(function () {
         <div class="main-content">
             <header class="top-header relative">
                 <div class="text-lg">Welcome, <span class="font-bold">{{ auth()->user()->name }}</span></div>
+                <div class="flex items-center gap-2">
+                <x-mentor-notifications />
+                
                 <button id="profileTrigger" class="flex items-center gap-2 px-3 py-1 bg-white rounded-full hover:bg-gray-100 transition shadow-sm border-2 border-white/20 group">
                     <div class="w-8 h-8 bg-red-900 text-white rounded-full flex items-center justify-center text-xs font-bold">
-                        {{ strtoupper(substr(auth()->user()->name, 0, 2)) }}
+                        {{ strtoupper(substr(auth()->user()->name,0,2)) }}
                     </div>
-                    <i class="fa-solid fa-chevron-down text-[10px] text-gray-500 group-hover:text-red-900"></i>
+                    <i class="fa-solid fa-chevron-down text-[10px] text-gray-500 group-hover:text-red-900 transition-transform duration-200"></i>
                 </button>
+                </div>
+
                 <div id="profileDropdown" class="profile-dropdown">
                     <div class="p-4 border-b border-gray-100 bg-slate-50">
                         <p class="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1">Signed in as</p>
@@ -346,14 +351,27 @@ $studentHistory = computed(function () {
                 </div>
 
                 {{-- Table --}}
-<div class="bg-white rounded-xl shadow-sm border border-gray-100" x-data="{
+<div class="bg-white rounded-xl shadow-sm border border-gray-100" 
+x-data="{
     search: '',
     filterStatuses: [],
     currentPage: 1,
     perPage: 5,
     bookings: @js($this->studentHistory),
+    sortColumn: 'raw_status',
+    sortDirection: 'asc',
 
     statusOrder: { accepted: 1, pending: 2, completed: 3, cancelled: 4, rejected: 5, no_show: 6 },
+
+    setSort(col) {
+        if (this.sortColumn === col) {
+            this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
+        } else {
+            this.sortColumn = col;
+            this.sortDirection = 'asc';
+        }
+        this.currentPage = 1;
+    },
 
     get filteredBookings() {
         const term = this.search.toLowerCase();
@@ -366,8 +384,33 @@ $studentHistory = computed(function () {
             const matchStatus = this.filterStatuses.length === 0 || this.filterStatuses.includes(session.raw_status);
             return matchSearch && matchStatus;
         });
-        const order = this.statusOrder;
-        return filtered.sort((a, b) => (order[a.raw_status] ?? 99) - (order[b.raw_status] ?? 99));
+
+        const col = this.sortColumn;
+        const dir = this.sortDirection;
+        const statusOrder = this.statusOrder;
+
+        return filtered.sort((a, b) => {
+            let valA = a[col];
+            let valB = b[col];
+
+            if (col === 'raw_status') {
+                valA = statusOrder[valA] ?? 99;
+                valB = statusOrder[valB] ?? 99;
+                return dir === 'asc' ? valA - valB : valB - valA;
+            }
+
+            if (col === 'date') {
+                valA = new Date(a.date);
+                valB = new Date(b.date);
+                return dir === 'asc' ? valA - valB : valB - valA;
+            }
+
+            valA = (valA ?? '').toLowerCase();
+            valB = (valB ?? '').toLowerCase();
+            if (valA < valB) return dir === 'asc' ? -1 : 1;
+            if (valA > valB) return dir === 'asc' ? 1 : -1;
+            return 0;
+        });
     },
 
     get paginatedBookings() {
@@ -465,12 +508,32 @@ $studentHistory = computed(function () {
                             <thead class="bg-slate-50 border-b border-gray-100">
                             <tr>
                                 <th class="px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider w-[5%]">#</th>
-                                <th class="px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider w-[15%]">Subject</th>
-                                <th class="px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider w-[18%]">Topic</th>
-                                <th class="px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider w-[18%]">Mentor</th>
-                                <th class="px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider w-[17%]">Date & Time</th>
-                                <th class="px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider w-[15%]">Mode</th>
-                                <th class="px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider w-[12%]">Status</th>
+<th @click="setSort('subject')" class="px-5 py-3 text-[10px] font-bold uppercase tracking-wider w-[15%] cursor-pointer select-none" :style="sortColumn === 'subject' ? 'color:#7b1d1d' : 'color:#9ca3af'">
+    <div class="flex items-center gap-1 hover:text-red-800 transition">
+        Subject <span x-text="sortColumn === 'subject' ? (sortDirection === 'asc' ? '↑' : '↓') : ''"></span>
+    </div>
+</th>
+<th @click="setSort('topic')" class="px-5 py-3 text-[10px] font-bold uppercase tracking-wider w-[18%] cursor-pointer select-none" :style="sortColumn === 'topic' ? 'color:#7b1d1d' : 'color:#9ca3af'">
+    <div class="flex items-center gap-1 hover:text-red-800 transition">
+        Topic <span x-text="sortColumn === 'topic' ? (sortDirection === 'asc' ? '↑' : '↓') : ''"></span>
+    </div>
+</th>
+<th @click="setSort('mentor')" class="px-5 py-3 text-[10px] font-bold uppercase tracking-wider w-[18%] cursor-pointer select-none" :style="sortColumn === 'mentor' ? 'color:#7b1d1d' : 'color:#9ca3af'">
+    <div class="flex items-center gap-1 hover:text-red-800 transition">
+        Mentor <span x-text="sortColumn === 'mentor' ? (sortDirection === 'asc' ? '↑' : '↓') : ''"></span>
+    </div>
+</th>
+<th @click="setSort('date')" class="px-5 py-3 text-[10px] font-bold uppercase tracking-wider w-[17%] cursor-pointer select-none" :style="sortColumn === 'date' ? 'color:#7b1d1d' : 'color:#9ca3af'">
+    <div class="flex items-center gap-1 hover:text-red-800 transition">
+        Date & Time <span x-text="sortColumn === 'date' ? (sortDirection === 'asc' ? '↑' : '↓') : ''"></span>
+    </div>
+</th>
+<th class="px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider w-[15%]">Mode</th>
+<th @click="setSort('raw_status')" class="px-5 py-3 text-[10px] font-bold uppercase tracking-wider w-[12%] cursor-pointer select-none" :style="sortColumn === 'raw_status' ? 'color:#7b1d1d' : 'color:#9ca3af'">
+    <div class="flex items-center gap-1 hover:text-red-800 transition">
+        Status <span x-text="sortColumn === 'raw_status' ? (sortDirection === 'asc' ? '↑' : '↓') : ''"></span>
+    </div>
+</th>
                             </tr>
                             </thead>
                             <tbody>
@@ -501,7 +564,7 @@ $studentHistory = computed(function () {
                                         </td>
                                         <td class="px-5 py-4 text-xs text-slate-500" x-text="booking.mode"></td>
                                         <td class="px-5 py-4">
-                                            <span :class="'text-xs font-bold px-2.5 py-1 rounded-full ' + booking.statusClass" x-text="booking.statusLabel"></span>
+                                            <span :class="'font-bold text-[10px] bg-gray-50 px-2 py-1 rounded border border-current opacity-80 ' + booking.statusClass" x-text="booking.statusLabel"></span>
                                         </td>
                                     </tr>
                                 </template>
