@@ -293,41 +293,44 @@ $dashboardStats = computed(function () {
         <div class="main-content">
             <header class="top-header relative">
                 <div class="text-lg">Welcome, <span class="font-bold">{{ auth()->user()->name }}</span></div>
+                <div class="flex items-center gap-2">
+                <x-admin-notifications />
                 
-                <button id="profileTrigger" class="flex items-center gap-2 px-3 py-1 bg-white rounded-full hover:bg-gray-100 transition shadow-sm border-2 border-white/20 group text-slate-800">
+                <button id="profileTrigger" class="flex items-center gap-2 px-3 py-1 bg-white rounded-full hover:bg-gray-100 transition shadow-sm border-2 border-white/20 group">
                     <div class="w-8 h-8 bg-red-900 text-white rounded-full flex items-center justify-center text-xs font-bold">
                         {{ strtoupper(substr(auth()->user()->name,0,2)) }}
                     </div>
-                    <i class="fa-solid fa-chevron-down text-[10px] text-gray-500 group-hover:text-red-900 transition-transform duration-200" id="dropdownArrow"></i>
+                    <i class="fa-solid fa-chevron-down text-[10px] text-gray-500 group-hover:text-red-900 transition-transform duration-200"></i>
                 </button>
-                <div id="profileDropdown" class="profile-dropdown">
-                    <div class="p-4 border-b border-gray-100 bg-slate-50 text-slate-800">
-                        <p class="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1">Signed in as</p>
-                        <p class="text-sm font-bold truncate">{{ auth()->user()->name }}</p>
-                        <p class="text-xs text-slate-500 truncate">{{ auth()->user()->email }}</p>
-                    </div>
-                    <form method="POST" action="{{ route('logout') }}" class="m-0">
-                        @csrf
-                        <button type="submit" class="dropdown-item w-full border-t border-gray-50 text-red-600 font-semibold bg-transparent border-none cursor-pointer">
-                            <i class="fa-solid fa-right-from-bracket"></i> Logout
-                        </button>
-                    </form>
                 </div>
-            </header>
+
+                    <div id="profileDropdown" class="profile-dropdown">
+                        <div class="p-4 border-b border-gray-100 bg-slate-50">
+                            <p class="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1">Signed in as</p>
+                            <p class="text-sm font-bold text-slate-800 truncate">{{ auth()->user()->name }}</p>
+                            <p class="text-xs text-slate-500 truncate">{{ auth()->user()->email }}</p>
+                        </div>
+                        <form method="POST" action="{{ route('logout') }}" class="m-0">
+                            @csrf
+                            <button type="submit" class="dropdown-item w-full border-t border-gray-50 text-red-600 font-semibold">
+                                <i class="fa-solid fa-right-from-bracket"></i> Logout
+                            </button>
+                        </form>
+                    </div>
+                </header>
 
             <main class="scroll-container">
+                <div class="mb-6 pb-4 border-b border-gray-200 flex flex-wrap items-center justify-between gap-4">
+                    <div>
+                        <h1 class="text-3xl font-extrabold tracking-tight text-transparent bg-clip-text bg-up-maroon flex items-center gap-3">
+                            Student Feedbacks
+                        </h1>
+                        <p class="text-sm font-medium text-slate-500 mt-1">All student feedbacks collected</p>
+                    </div>
+                </div>
                 <div class="space-y-6">
                     <div class="grid grid-cols-3 gap-4">
-                        <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-green-600">
-                            <div class="flex items-center gap-3">
-                                <i class="fa-solid fa-star text-green-600 text-2xl"></i>
-                                <div>
-                                    <p class="text-xs font-bold text-gray-400 uppercase">Average Rating</p>
-                                    <p class="text-2xl font-black text-slate-800">{{ $this->dashboardStats['avg'] }} <span class="text-lg text-gray-400">/ 5.0</span></p>
-                                </div>
-                            </div>
-                        </div>
-                        
+
                         <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-blue-600">
                             <div class="flex items-center gap-3">
                                 <i class="fa-solid fa-chart-bar text-blue-600 text-2xl"></i>
@@ -337,7 +340,6 @@ $dashboardStats = computed(function () {
                                 </div>
                             </div>
                         </div>
-                        
                         <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-yellow-500">
                             <div class="flex items-center gap-3">
                                 <i class="fa-solid fa-chalkboard-user text-yellow-500 text-2xl"></i>
@@ -347,12 +349,21 @@ $dashboardStats = computed(function () {
                                 </div>
                             </div>
                         </div>
+                        <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-green-600">
+                            <div class="flex items-center gap-3">
+                                <i class="fa-solid fa-star text-green-600 text-2xl"></i>
+                                <div>
+                                    <p class="text-xs font-bold text-gray-400 uppercase">Average Rating</p>
+                                    <p class="text-2xl font-black text-slate-800">{{ $this->dashboardStats['avg'] }} <span class="text-lg text-gray-400">/ 5.0</span></p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-200">
                         <div class="p-6 border-b border-gray-100 flex flex-wrap gap-4 justify-between items-center bg-white">
                             <div>
-                                <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2">
+                                <h2 class="font-bold text-slate-800 text-m">
                                     <i class="fa-solid fa-user-secret text-gray-400"></i> 
                                     Anonymous Student Feedbacks
                                 </h2>
