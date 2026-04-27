@@ -62,7 +62,7 @@ $closeSubjectModal = action(function () {
     $this->reset(['newSubjectCode', 'newSubjectName', 'showSubjectModal']);
 });
 
-$saveSubject = action(function () {
+$validateSubject = action(function () {
     $this->validate([
         'newSubjectCode' => ['required', 'string', 'max:20', 'unique:subjects,code'],
         'newSubjectName' => ['required', 'string', 'max:255'],
@@ -70,6 +70,25 @@ $saveSubject = action(function () {
         'newSubjectCode' => 'subject_code',
         'newSubjectName' => 'subject_name',
     ]);
+    $this->dispatch('validation-passed');
+});
+
+$validateEditSubject = action(function ($id, $code, $name) {
+    $this->editSubjectId = $id;
+    $this->editSubjectCode = $code;
+    $this->editSubjectName = $name;
+
+    $this->validate([
+        'editSubjectCode' => ['required', 'string', 'max:20', Rule::unique('subjects', 'code')->ignore($this->editSubjectId)],
+        'editSubjectName' => ['required', 'string', 'max:255'],
+    ], [], [
+        'editSubjectCode' => 'subject_code',
+        'editSubjectName' => 'subject_name',
+    ]);
+    $this->dispatch('edit-validation-passed');
+});
+
+$saveSubject = action(function () {
 
     Subjects::create([
         'code' => trim($this->newSubjectCode),
@@ -88,17 +107,6 @@ $closeEditModal = action(function () {
 });
 
 $updateSubject = action(function ($id, $code, $name) {
-    $this->editSubjectId = $id;
-    $this->editSubjectCode = $code;
-    $this->editSubjectName = $name;
-
-    $this->validate([
-        'editSubjectCode' => ['required', 'string', 'max:20', Rule::unique('subjects', 'code')->ignore($this->editSubjectId)],
-        'editSubjectName' => ['required', 'string', 'max:255'],
-    ], [], [
-        'editSubjectCode' => 'subject_code',
-        'editSubjectName' => 'subject_name',
-    ]);
 
     $subject = Subjects::findOrFail($this->editSubjectId);
     $subject->update([
@@ -129,7 +137,30 @@ mount(function () {
 
 ?>
 
-<div class="livewire-root-scope" x-data="courseManagement(@js($this->allSubjects), $wire)">
+<div class="livewire-root-scope" 
+     x-data="courseManagement(@js($this->allSubjects), $wire)"
+     @validation-passed.window="openConfirmModal({
+        title: 'Confirm New Subject',
+        body: 'Are you sure you want to add this subject? This will become a teachable subject.',
+        variant: 'accept',
+        confirmText: 'Save Subject',
+        loadingText: 'Saving...',
+        onConfirm: async () => { 
+            await $wire.saveSubject(); 
+            $wire.showSubjectModal = false; 
+        }
+     })"
+     @edit-validation-passed.window="openConfirmModal({
+        title: 'Update Subject?',
+        body: 'Are you sure you want to save the changes made to this subject?',
+        variant: 'accept',
+        confirmText: 'Save Changes',
+        loadingText: 'Saving...',
+        onConfirm: async () => { 
+            await $wire.updateSubject(editingSubject.id, editForm.code, editForm.name);
+            showEditModal = false; 
+        }
+     })">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.tailwindcss.com"></script>
 
@@ -445,17 +476,12 @@ mount(function () {
                         Cancel
                     </button>
                     <button type="button" 
-                            @click="openConfirmModal({
-                                title: 'Confirm New Subject',
-                                body: 'Are you sure you want to add this subject to the system registry?',
-                                variant: 'accept',
-                                confirmText: 'Save Subject',
-                                loadingText: 'Saving...',
-                                onConfirm: async () => { await $wire.saveSubject();
-                                $wire.showSubjectModal = false; }
-                            })" 
+                            @click="$wire.validateSubject"
+                            wire:loading.attr="disabled"
+                            wire:target="validateSubject"
                             class="flex-1 bg-slate-800 text-white py-2.5 rounded-xl text-sm font-bold shadow-md hover:bg-black transition">
-                        Add Subject
+                        <span wire:loading.remove wire:target="validateSubject">Add Subject</span>
+                        <span wire:loading wire:target="validateSubject"><i class="fa-solid fa-spinner fa-spin mr-1"></i>Verifying...</span>
                     </button>
                 </div>
             </div>
@@ -501,17 +527,15 @@ mount(function () {
                         Cancel
                     </button>
                     <button type="button" 
-                            @click="openConfirmModal({
-                                title: 'Update Subject?',
-                                body: 'Are you sure you want to save the changes made to this subject?',
-                                variant: 'accept',
-                                confirmText: 'Save Changes',
-                                loadingText: 'Saving...',
-                                onConfirm: async () => { await $wire.updateSubject(editingSubject.id, editForm.code, editForm.name);
-                                showEditModal = false; }
-                            })" 
-                            class="flex-1 bg-amber-500 text-white py-2.5 rounded-xl text-sm font-bold shadow-md hover:bg-amber-600 transition">
-                        Save Changes
+                            @click="$wire.validateEditSubject(editingSubject.id, editForm.code, editForm.name)"
+                            wire:loading.attr="disabled"
+                            wire:target="validateEditSubject"
+                            class="flex-1 bg-blue-600 text-white py-2.5 rounded-xl text-sm font-bold shadow-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center">
+                        
+                        <span wire:loading.remove wire:target="validateEditSubject">Save Changes</span>
+                        <span wire:loading wire:target="validateEditSubject" class="items-center justify-center gap-1">
+                            <i class="fa-solid fa-spinner fa-spin mr-1"></i> Verifying...
+                        </span>
                     </button>
                 </div>
             </div>
