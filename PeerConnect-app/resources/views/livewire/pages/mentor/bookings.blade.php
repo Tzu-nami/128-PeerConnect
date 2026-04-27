@@ -173,7 +173,7 @@ $saveProfile = action(function () {
 
 // Check if there is input in forms
 $validateBooking = action(function () {
-    abort_if(!auth()->user()->isStudent(), 403, 'Unauthorized Access');
+    abort_if(!auth()->user()->isMentor(), 403, 'Unauthorized Access');
 
     $this->validate([
         'subject_id' => ['required', 'exists:subjects,id'],
@@ -459,10 +459,11 @@ $dismissFeedbackSubmitted = action(function () {
 
 <div>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
         :root { --sidebar-green: #1a3c2f; --header-maroon: #7b1d1d; --bg-light: #f4f7f6; --header-height: 80px; --sidebar-width: 260px; --sidebar-collapsed-width: 72px; }
         * { box-sizing: border-box; }
-        body { margin: 0; font-family: 'Inter', sans-serif; background: var(--bg-light); overflow: hidden; }
+        body { margin: 0; font-family: 'Inter', sans-serif; background: var(--bg-light); overflow: hidden; } /* font-family defined here; move to layouts.app once shared */
         .app-wrapper { display: flex; height: 100vh; width: 100vw; overflow: hidden; }
 
 /* ── SIDEBAR ── */
@@ -632,7 +633,7 @@ $dismissFeedbackSubmitted = action(function () {
         /* ── REMARKS ── */
         .feedback-textarea {
             width: 100%; min-height: 120px; border-radius: 10px; border: 1.5px solid #d1d5db;
-            padding: 12px 14px; font-size: 14px; font-family: inherit; color: #374151;
+            padding: 12px 14px; font-size: 14px; font-family: 'Inter', sans-serif; color: #374151;
             resize: vertical; transition: border-color 0.2s; outline: none;
         }
         .feedback-textarea:focus { border-color: #16a34a; box-shadow: 0 0 0 3px rgba(22,163,74,0.1); }
@@ -789,6 +790,8 @@ $dismissFeedbackSubmitted = action(function () {
         <div class="main-content">
             <header class="top-header relative">
                 <div class="text-lg">Welcome, <span class="font-bold">{{ auth()->user()->name }}</span></div>
+                <div class="flex items-center gap-2">
+                <x-mentor-notifications />
                 
                 <button id="profileTrigger" class="flex items-center gap-2 px-3 py-1 bg-white rounded-full hover:bg-gray-100 transition shadow-sm border-2 border-white/20 group">
                     <div class="w-8 h-8 bg-red-900 text-white rounded-full flex items-center justify-center text-xs font-bold">
@@ -796,6 +799,8 @@ $dismissFeedbackSubmitted = action(function () {
                     </div>
                     <i class="fa-solid fa-chevron-down text-[10px] text-gray-500 group-hover:text-red-900 transition-transform duration-200"></i>
                 </button>
+                </div>
+
                 <div id="profileDropdown" class="profile-dropdown">
                     <div class="p-4 border-b border-gray-100 bg-slate-50">
                         <p class="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1">Signed in as</p>
