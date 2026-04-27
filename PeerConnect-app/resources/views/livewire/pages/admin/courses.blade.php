@@ -28,7 +28,7 @@ $allSubjects = computed(function () {
 
     return $subjects->map(function ($subject) use ($mentorSubjects) {
         $mentors = [];
-        
+
         if ($mentorSubjects->has($subject->id)) {
             $mentors = $mentorSubjects[$subject->id]->map(function ($ms) {
                 $user = $ms->mentor->user;
@@ -51,7 +51,7 @@ $allSubjects = computed(function () {
 });
 
 
-// Add subject
+// ── ADD SUBJECT ──────────────────────────────────────────────
 $openSubjectModal = action(function () {
     $this->reset(['newSubjectCode', 'newSubjectName']);
     $this->showSubjectModal = true;
@@ -62,6 +62,7 @@ $closeSubjectModal = action(function () {
     $this->reset(['newSubjectCode', 'newSubjectName', 'showSubjectModal']);
 });
 
+// Validate only — dispatches event to JS so confirmation modal can open first
 $validateSubject = action(function () {
     $this->validate([
         'newSubjectCode' => ['required', 'string', 'max:20', 'unique:subjects,code'],
@@ -73,6 +74,24 @@ $validateSubject = action(function () {
     $this->dispatch('validation-passed');
 });
 
+$saveSubject = action(function () {
+    Subjects::create([
+        'code' => trim($this->newSubjectCode),
+        'name' => trim($this->newSubjectName),
+    ]);
+    session()->flash('successMessage', "{$this->newSubjectCode} has been successfully added.");
+    $this->closeSubjectModal();
+    $this->redirect(route('admin.courses'), navigate: true);
+});
+
+
+// ── EDIT SUBJECT ─────────────────────────────────────────────
+$closeEditModal = action(function () {
+    $this->showEditModal = false;
+    $this->reset(['editSubjectId', 'editSubjectCode', 'editSubjectName', 'showEditModal']);
+});
+
+// Validate only — dispatches event to JS so confirmation modal can open first
 $validateEditSubject = action(function ($id, $code, $name) {
     $this->editSubjectId = $id;
     $this->editSubjectCode = $code;
@@ -88,26 +107,7 @@ $validateEditSubject = action(function ($id, $code, $name) {
     $this->dispatch('edit-validation-passed');
 });
 
-$saveSubject = action(function () {
-
-    Subjects::create([
-        'code' => trim($this->newSubjectCode),
-        'name' => trim($this->newSubjectName),
-    ]);
-    session()->flash('successMessage', "{$this->newSubjectCode} has been successfully added.");
-    $this->closeSubjectModal();
-    $this->redirect(route('admin.courses'), navigate: true);
-});
-
-
-// Edit subject
-$closeEditModal = action(function () {
-    $this->showEditModal = false;
-    $this->reset(['editSubjectId', 'editSubjectCode', 'editSubjectName', 'showEditModal']);
-});
-
-$updateSubject = action(function ($id, $code, $name) {
-
+$updateSubject = action(function () {
     $subject = Subjects::findOrFail($this->editSubjectId);
     $subject->update([
         'code' => trim($this->editSubjectCode),
@@ -118,12 +118,11 @@ $updateSubject = action(function ($id, $code, $name) {
 });
 
 
-// Delete subject
+// ── DELETE SUBJECT ────────────────────────────────────────────
 $deleteSubject = action(function ($id) {
     $subject = Subjects::findOrFail($id);
     $code = $subject->code;
 
-    // Clear pivot table relationships before deleting
     MentorSubjects::where('subject_id', $subject->id)->delete();
     $subject->delete();
 
@@ -137,311 +136,534 @@ mount(function () {
 
 ?>
 
-<div class="livewire-root-scope" 
+<div class="app-wrapper"
      x-data="courseManagement(@js($this->allSubjects), $wire)"
      @validation-passed.window="openConfirmModal({
-        title: 'Confirm New Subject',
-        body: 'Are you sure you want to add this subject? This will become a teachable subject.',
-        variant: 'accept',
-        confirmText: 'Save Subject',
-        loadingText: 'Saving...',
-        onConfirm: async () => { 
-            await $wire.saveSubject(); 
-            $wire.showSubjectModal = false; 
-        }
+         title: 'Confirm New Subject',
+         body: 'Are you sure you want to add this subject to the system registry?',
+         variant: 'accept',
+         confirmText: 'Save Subject',
+         loadingText: 'Saving...',
+         onConfirm: async () => {
+             $wire.showSubjectModal = false;
+             await $wire.saveSubject();
+         }
      })"
      @edit-validation-passed.window="openConfirmModal({
-        title: 'Update Subject?',
-        body: 'Are you sure you want to save the changes made to this subject?',
-        variant: 'accept',
-        confirmText: 'Save Changes',
-        loadingText: 'Saving...',
-        onConfirm: async () => { 
-            await $wire.updateSubject(editingSubject.id, editForm.code, editForm.name);
-            showEditModal = false; 
-        }
+         title: 'Update Subject?',
+         body: 'Are you sure you want to save the changes made to this subject?',
+         variant: 'accept',
+         confirmText: 'Save Changes',
+         loadingText: 'Saving...',
+         onConfirm: async () => {
+             showEditModal = false;
+             await $wire.updateSubject();
+         }
      })">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdn.tailwindcss.com"></script>
 
-    <style>
-        :root {
-            --sidebar-green: #1a3c2f;
-            --header-maroon: #7b1d1d;
-            --bg-light: #f4f7f6;
-            --header-height: 80px;
-            --sidebar-width: 260px;
-            --sidebar-collapsed-width: 72px;
-        }
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script src="https://cdn.tailwindcss.com"></script>
 
-        * { box-sizing: border-box; }
-        body { margin: 0; font-family: 'Inter', sans-serif; background: var(--bg-light); overflow: hidden; }
-        .app-wrapper { display: flex; height: 100vh; width: 100vw; overflow: hidden; }
+<style>
+    :root {
+        --sidebar-green: #1a3c2f;
+        --header-maroon: #7b1d1d;
+        --bg-light: #f4f7f6;
+        --header-height: 80px;
+        --sidebar-width: 260px;
+        --sidebar-collapsed-width: 72px;
+    }
 
-        /* ── SIDEBAR ── */
-        .sidebar { width: var(--sidebar-width); background: var(--sidebar-green); flex-shrink: 0; display: flex; flex-direction: column; color: white; height: 100vh; transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1); z-index: 30; position: relative; overflow: visible; }
-        .sidebar.collapsed { width: var(--sidebar-collapsed-width); }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'Inter', sans-serif; background: var(--bg-light); overflow: hidden; }
+    .app-wrapper { display: flex; height: 100vh; width: 100%; overflow: hidden; }
 
-        .sidebar-logo-container { height: var(--header-height); display: flex; align-items: center; justify-content: center; padding: 0 20px; gap: 12px; flex-shrink: 0; overflow: hidden; transition: padding 0.3s, justify-content 0.3s; }
-        .sidebar:not(.collapsed) .sidebar-logo-container { justify-content: flex-start; }
-        .logo-icon { flex-shrink: 0; font-size: 27px; width: auto; text-align: center; }
-        .logo-text { font-size: 1.24rem; font-weight: 700; white-space: nowrap; overflow: hidden; opacity: 1; max-width: 200px; transition: opacity 0.2s, max-width 0.3s; }
-        .logo-content { display: flex; align-items: center; gap: 12px; white-space: nowrap; }
-        .sidebar.collapsed .logo-text { opacity: 0; max-width: 0; pointer-events: none; }
-        .sidebar.collapsed .sidebar-logo-container { justify-content: center; padding: 0; width: 100%; }
-        .sidebar.collapsed .logo-content { gap: 0; justify-content: center; width: 100%; }
+    /* ── SIDEBAR ── */
+    .sidebar {
+        width: var(--sidebar-width);
+        background: var(--sidebar-green);
+        flex-shrink: 0;
+        display: flex;
+        flex-direction: column;
+        color: white;
+        height: 100vh;
+        transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        z-index: 30;
+        position: relative;
+        overflow: visible;
+    }
+    .sidebar.collapsed { width: var(--sidebar-collapsed-width); }
 
-        .nav-item { display: flex; align-items: center; gap: 14px; padding: 16px 20px; color: rgba(255,255,255,0.7); text-decoration: none; transition: background 0.2s, color 0.2s, padding 0.3s, justify-content 0.3s; white-space: nowrap; position: relative; text-align: left; background: transparent; border: none; width: 100%; cursor: pointer; font-size: 0.95rem; justify-content: flex-start; }
-        .nav-item i { width: 32px; text-align: center; flex-shrink: 0; font-size: 22px; transition: width 0.3s; }
-        .nav-item span { overflow: hidden; opacity: 1; max-width: 200px; transition: opacity 0.2s, max-width 0.3s; }
-        .nav-item:hover, .nav-item.active { background: rgba(255,255,255,0.1); color: white; }
-        .nav-item.active { background: var(--bg-light); color: var(--header-maroon); font-weight: 700; border-radius: 0; width: calc(100% + 1px); z-index: 10; }
+    .sidebar-logo-container {
+        height: var(--header-height);
+        display: flex; align-items: center; justify-content: center;
+        padding: 0 20px; gap: 12px; flex-shrink: 0; overflow: hidden;
+        transition: padding 0.3s, justify-content 0.3s;
+    }
+    .sidebar:not(.collapsed) .sidebar-logo-container { justify-content: flex-start; }
+    .logo-icon { flex-shrink: 0; font-size: 27px; width: auto; text-align: center; }
+    .logo-text { font-size: 1.24rem; font-weight: 700; white-space: nowrap; overflow: hidden; opacity: 1; max-width: 200px; transition: opacity 0.2s, max-width 0.3s; }
+    .logo-content { display: flex; align-items: center; gap: 12px; white-space: nowrap; }
+    .sidebar.collapsed .logo-text { opacity: 0; max-width: 0; pointer-events: none; }
+    .sidebar.collapsed .sidebar-logo-container { justify-content: center; padding: 0; width: 100%; }
+    .sidebar.collapsed .logo-content { gap: 0; justify-content: center; width: 100%; }
 
-        .sidebar.collapsed .nav-item { display: flex; align-items: center; justify-content: center; padding: 16px 0; width: 100%; gap: 0; }
-        .sidebar.collapsed .nav-item i { margin: 0; width: auto; text-align: center; flex-shrink: 0; font-size: 22px;}
-        .sidebar.collapsed .nav-item span { opacity: 0; max-width: 0; pointer-events: none; }
+    .nav-item {
+        display: flex; align-items: center; gap: 14px; padding: 16px 20px;
+        color: rgba(255,255,255,0.7); text-decoration: none;
+        transition: background 0.2s, color 0.2s, padding 0.3s, justify-content 0.3s;
+        white-space: nowrap; position: relative; text-align: left;
+        background: transparent; border: none; width: 100%;
+        cursor: pointer; font-size: 0.95rem; justify-content: flex-start;
+    }
+    .nav-item i { width: 32px; text-align: center; flex-shrink: 0; font-size: 22px; transition: width 0.3s; }
+    .nav-item span { overflow: hidden; opacity: 1; max-width: 200px; transition: opacity 0.2s, max-width 0.3s; }
+    .nav-item:hover, .nav-item.active { background: rgba(255,255,255,0.1); color: white; }
+    .nav-item.active { background: var(--bg-light); color: var(--header-maroon); font-weight: 700; border-radius: 0; width: calc(100% + 1px); z-index: 10; }
 
-        .nav-item::after { content: attr(data-tooltip); position: absolute; left: 100%; top: 50%; transform: translateY(-50%); margin-left: 14px; background: rgba(0,0,0,0.85); color: white; padding: 5px 12px; border-radius: 4px; font-size: 12px; font-weight: 500; white-space: nowrap; opacity: 0; visibility: hidden; transition: opacity 0.2s; pointer-events: none; z-index: 100; }
-        .sidebar.collapsed .nav-item:hover::after { opacity: 1; visibility: visible; }
+    .sidebar.collapsed .nav-item { display: flex; align-items: center; justify-content: center; padding: 16px 0; width: 100%; gap: 0; }
+    .sidebar.collapsed .nav-item i { margin: 0; width: auto; text-align: center; flex-shrink: 0; font-size: 22px; }
+    .sidebar.collapsed .nav-item span { opacity: 0; max-width: 0; pointer-events: none; }
 
-        .sidebar-footer { padding: 0; border-top: 1px solid rgba(255,255,255,0.1); }
+    .nav-item::after {
+        content: attr(data-tooltip);
+        position: absolute; left: 100%; top: 50%; transform: translateY(-50%);
+        margin-left: 14px; background: rgba(0,0,0,0.85); color: white;
+        padding: 5px 12px; border-radius: 4px; font-size: 12px; font-weight: 500;
+        white-space: nowrap; opacity: 0; visibility: hidden; transition: opacity 0.2s;
+        pointer-events: none; z-index: 100;
+    }
+    .sidebar.collapsed .nav-item:hover::after { opacity: 1; visibility: visible; }
 
-        .sidebar-toggle-btn { position: absolute; right: -16px; top: 50%; width: 32px; height: 32px; border-radius: 50%; background: var(--header-maroon); border: 2px solid white; cursor: pointer; display: flex; align-items: center; justify-content: center; color: white; font-size: 13px; z-index: 50; box-shadow: 0 2px 8px rgba(0,0,0,0.25); transition: background 0.2s; flex-shrink: 0; }
-        .sidebar-toggle-btn:hover { background: #dfcece; }
-        .sidebar-toggle-btn .toggle-icon { transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); display: flex; align-items: center; justify-content: center; }
-        .sidebar:not(.collapsed) .sidebar-toggle-btn .toggle-icon { transform: rotate(180deg); }
+    .sidebar-footer { padding: 0; border-top: 1px solid rgba(255,255,255,0.1); }
 
-        .main-content { flex: 1; min-width: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
-        .top-header { background: var(--header-maroon); height: var(--header-height); padding: 0 40px; display: flex; align-items: center; justify-content: space-between; color: white; flex-shrink: 0; position: relative; }
-        
-        .profile-dropdown { position: absolute; top: 75px; right: 40px; background: white; border-radius: 12px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.2); width: 220px; display: none; flex-direction: column; z-index: 50; border: 1px solid #e2e8f0; overflow: hidden; }
-        .profile-dropdown.show { display: flex; }
-        .dropdown-item { padding: 12px 20px; font-size: 13px; color: #475569; display: flex; align-items: center; gap: 10px; transition: background 0.2s; text-decoration: none; }
-        .dropdown-item:hover { background: #f8fafc; color: var(--header-maroon); }
+    .sidebar-toggle-btn {
+        position: absolute; right: -16px; top: 50%;
+        width: 32px; height: 32px; border-radius: 50%;
+        background: var(--header-maroon); border: 2px solid white;
+        cursor: pointer; display: flex; align-items: center; justify-content: center;
+        color: white; font-size: 13px; z-index: 50;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.25); transition: background 0.2s; flex-shrink: 0;
+    }
+    .sidebar-toggle-btn:hover { background: #dfcece; }
+    .sidebar-toggle-btn .toggle-icon { transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); display: flex; align-items: center; justify-content: center; }
+    .sidebar:not(.collapsed) .sidebar-toggle-btn .toggle-icon { transform: rotate(180deg); }
 
-        .scroll-container { flex-grow: 1; overflow-y: auto; padding: 32px; width: 100%; }
+    .main-content { flex: 1; min-width: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+    .top-header { background: var(--header-maroon); height: var(--header-height); padding: 0 40px; display: flex; align-items: center; justify-content: space-between; color: white; flex-shrink: 0; position: relative; }
+    .scroll-container { flex-grow: 1; overflow-y: auto; padding: 32px; width: 100%; }
 
-        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 1000; }
-        .form-input { width: 100%; padding: 10px 14px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 13px; outline: none; }
-        .form-input:focus { border-color: var(--header-maroon); }
-        .form-label { display: block; font-size: 13px; font-weight: 600; color: #475569; margin-bottom: 6px; }
-    </style>
+    .profile-dropdown {
+        position: absolute; top: 75px; right: 40px; background: white; border-radius: 12px;
+        box-shadow: 0 10px 25px -5px rgba(0,0,0,0.2); width: 220px; display: none;
+        flex-direction: column; z-index: 50; border: 1px solid #e2e8f0; overflow: hidden;
+    }
+    .profile-dropdown.show { display: flex; }
+    .dropdown-item { padding: 12px 20px; font-size: 13px; color: #475569; display: flex; align-items: center; gap: 10px; transition: background 0.2s; text-decoration: none; }
+    .dropdown-item:hover { background: #f8fafc; color: var(--header-maroon); }
 
-    <div class="app-wrapper">
-        <aside class="sidebar" id="sidebar">
-            <div class="sidebar-logo-container">
-                <div class="logo-content">
-                    <i class="fa-solid fa-graduation-cap logo-icon"></i>
-                    <span class="logo-text">LRC PeerConnect</span>
-                </div>
+    .table-filter-select { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 12px; font-size: 0.75rem; color: #475569; outline: none; cursor: pointer; }
+
+    .pagination-btn { padding: 4px 10px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 11px; font-weight: 600; color: #64748b; transition: all 0.2s; background: white; cursor: pointer; }
+    .pagination-btn:hover:not(:disabled) { background: #f1f5f9; color: #7b1d1d; border-color: #7b1d1d; }
+
+    .hover-tooltip { position: relative; cursor: pointer; }
+    .hover-tooltip::after {
+        content: attr(data-full);
+        position: absolute; left: 0; top: 110%;
+        background: rgba(0,0,0,0.85); color: #fff;
+        padding: 6px 10px; border-radius: 6px; font-size: 11px; line-height: 1.4;
+        white-space: normal; word-break: break-word; overflow-wrap: break-word;
+        width: max-content; max-width: 220px;
+        opacity: 0; pointer-events: none;
+        transform: translateY(5px); transition: 0.15s ease; z-index: 9999;
+    }
+    .hover-tooltip:hover::after { opacity: 1; transform: translateY(0); }
+
+    /* Hover-reveal action buttons */
+    .subject-row .action-buttons {
+        opacity: 0;
+        transform: translateX(6px);
+        transition: opacity 0.15s ease, transform 0.15s ease;
+        pointer-events: none;
+    }
+    .subject-row:hover .action-buttons {
+        opacity: 1;
+        transform: translateX(0);
+        pointer-events: auto;
+    }
+    .subject-row .action-idle {
+        opacity: 1;
+        transition: opacity 0.15s ease;
+    }
+    .subject-row:hover .action-idle {
+        opacity: 0;
+    }
+
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+    .form-input { width: 100%; padding: 10px 14px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 13px; outline: none; }
+    .form-input:focus { border-color: var(--header-maroon); }
+    .form-label { display: block; font-size: 13px; font-weight: 600; color: #475569; margin-bottom: 6px; }
+
+    #confirmMeta { max-height: 200px; overflow-y: auto; }
+</style>
+
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-logo-container">
+            <div class="logo-content">
+                <i class="fa-solid fa-graduation-cap logo-icon"></i>
+                <span class="logo-text">LRC PeerConnect</span>
             </div>
+        </div>
 
-            <button class="sidebar-toggle-btn" id="sidebarToggle" aria-label="Toggle sidebar">
-                <span class="toggle-icon">
-                    <i class="fa-solid fa-chevron-right" id="toggleIcon"></i>
-                </span>
-            </button>
+        <button class="sidebar-toggle-btn" id="sidebarToggle" aria-label="Toggle sidebar">
+            <span class="toggle-icon">
+                <i class="fa-solid fa-chevron-right" id="toggleIcon"></i>
+            </span>
+        </button>
 
-            <nav class="flex-grow">
-                <a href="{{ route('admin.dashboard') }}" class="nav-item" data-tooltip="Dashboard">
-                    <i class="fa-solid fa-gauge w-5"></i><span>Dashboard</span>
-                </a>                
-                <a href="{{ route('admin.mentors') }}" class="nav-item" data-tooltip="Mentor Management">
-                    <i class="fa-solid fa-chalkboard-user w-5"></i><span>Mentor Management</span>
-                </a>
-                <a href="{{ route('admin.courses') }}" class="nav-item active" data-tooltip="Course Management">
-                    <i class="fa-solid fa-book-open w-5"></i><span>Course Management</span>
-                </a>
-                <a href="{{ route('admin.sessions') }}" class="nav-item" data-tooltip="Session Management">
-                    <i class="fa-solid fa-calendar-days w-5"></i><span>Session Management</span>
-                </a>
-                <a href="{{ route('admin.feedbacks') }}" class="nav-item" data-tooltip="Student Feedback">
-                    <i class="fa-solid fa-comments w-5"></i><span>Student Feedback</span>
-                </a>
-            </nav>
-            <div class="sidebar-footer">
-                <form method="POST" action="{{ route('logout') }}">
-                    @csrf
-                    <button type="submit" class="nav-item" data-tooltip="Logout">
-                        <i class="fa-solid fa-right-from-bracket"></i><span>Logout</span>
-                    </button>
-                </form>
-            </div>
-        </aside>
+        <nav class="flex-grow">
+            <a href="{{ route('admin.dashboard') }}" class="nav-item" data-tooltip="Dashboard">
+                <i class="fa-solid fa-gauge w-5"></i><span>Dashboard</span>
+            </a>
+            <a href="{{ route('admin.mentors') }}" class="nav-item" data-tooltip="Mentor Management">
+                <i class="fa-solid fa-chalkboard-user w-5"></i><span>Mentor Management</span>
+            </a>
+            <a href="{{ route('admin.courses') }}" class="nav-item active" data-tooltip="Course Management">
+                <i class="fa-solid fa-book-open w-5"></i><span>Course Management</span>
+            </a>
+            <a href="{{ route('admin.sessions') }}" class="nav-item" data-tooltip="Session Management">
+                <i class="fa-solid fa-calendar-days w-5"></i><span>Session Management</span>
+            </a>
+            <a href="{{ route('admin.feedbacks') }}" class="nav-item" data-tooltip="Student Feedback">
+                <i class="fa-solid fa-comments w-5"></i><span>Student Feedback</span>
+            </a>
+        </nav>
 
-        <div class="main-content">
-            <header class="top-header">
-                <div class="text-lg">Welcome, <span class="font-bold">{{ auth()->user()->name }}</span></div>
-                
-                <button id="profileTrigger" class="flex items-center gap-2 px-3 py-1 bg-white rounded-full hover:bg-gray-100 transition shadow-sm border-2 border-white/20 group text-slate-800">
+        <div class="sidebar-footer">
+            <form method="POST" action="{{ route('logout') }}">
+                @csrf
+                <button type="submit" class="nav-item" data-tooltip="Logout">
+                    <i class="fa-solid fa-right-from-bracket"></i><span>Logout</span>
+                </button>
+            </form>
+        </div>
+    </aside>
+
+    <div class="main-content">
+        <header class="top-header relative">
+            <div class="text-lg">Welcome, <span class="font-bold">{{ auth()->user()->name }}</span></div>
+            <div class="flex items-center gap-2">
+                <x-admin-notifications />
+
+                <button id="profileTrigger" class="flex items-center gap-2 px-3 py-1 bg-white rounded-full hover:bg-gray-100 transition shadow-sm border-2 border-white/20 group">
                     <div class="w-8 h-8 bg-red-900 text-white rounded-full flex items-center justify-center text-xs font-bold">
                         {{ strtoupper(substr(auth()->user()->name, 0, 2)) }}
                     </div>
-                    <i class="fa-solid fa-chevron-down text-[10px] text-gray-500" id="dropdownArrow"></i>
+                    <i class="fa-solid fa-chevron-down text-[10px] text-gray-500 group-hover:text-red-900 transition-transform duration-200"></i>
                 </button>
+            </div>
 
-                <div id="profileDropdown" class="profile-dropdown">
-                    <div class="p-4 border-b border-gray-100 bg-slate-50 text-slate-800">
-                        <p class="text-[11px] font-bold text-gray-400 uppercase mb-1">Signed in as</p>
-                        <p class="text-sm font-bold truncate">{{ auth()->user()->name }}</p>
-                        <p class="text-xs text-slate-500 truncate">{{ auth()->user()->email }}</p>
-
-                    </div>
-                    <form method="POST" action="{{ route('logout') }}" class="m-0 border-t border-gray-50">
-                        @csrf
-                        <button type="submit" class="dropdown-item w-full text-red-600 font-semibold bg-transparent border-none cursor-pointer">
-                            <i class="fa-solid fa-right-from-bracket"></i> Logout
-                        </button>
-                    </form>
+            <div id="profileDropdown" class="profile-dropdown">
+                <div class="p-4 border-b border-gray-100 bg-slate-50">
+                    <p class="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1">Signed in as</p>
+                    <p class="text-sm font-bold text-slate-800 truncate">{{ auth()->user()->name }}</p>
+                    <p class="text-xs text-slate-500 truncate">{{ auth()->user()->email }}</p>
                 </div>
-            </header>
+                <form method="POST" action="{{ route('logout') }}" class="m-0">
+                    @csrf
+                    <button type="submit" class="dropdown-item w-full border-t border-gray-50 text-red-600 font-semibold">
+                        <i class="fa-solid fa-right-from-bracket"></i> Logout
+                    </button>
+                </form>
+            </div>
+        </header>
 
-            <main class="scroll-container">
-                
-                {{-- Success Message --}}
-                @if(session('successMessage'))
-                    <div class="mb-6 bg-green-100 border border-green-400 text-green-800 px-4 py-3 rounded-xl">
-                        {{ session('successMessage') }}
+        <main class="scroll-container">
+
+            {{-- Success Message --}}
+            @if(session('successMessage'))
+                <div class="mb-6 bg-green-100 border border-green-400 text-green-800 px-4 py-3 rounded-xl">
+                    {{ session('successMessage') }}
+                </div>
+            @endif
+
+            {{-- Page heading --}}
+            <div class="mb-6 pb-4 border-b border-gray-200 flex flex-wrap items-center justify-between gap-4">
+                <div>
+                    <h1 class="text-3xl font-extrabold tracking-tight text-transparent bg-clip-text bg-up-maroon flex items-center gap-3">
+                        Course Management
+                    </h1>
+                    <p class="text-sm font-medium text-slate-500 mt-1">LRC Registry of Subjects</p>
+                </div>
+            </div>
+
+            {{-- Summary Stat Cards --}}
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6">
+                <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-slate-400 flex items-center gap-4">
+                    <div class="text-2xl">
+                        <i class="fa-solid fa-book-open text-slate-500"></i>
                     </div>
-                @endif
-
-                <div class="flex justify-between items-end mb-8">
                     <div>
-                        <h1 class="text-2xl font-extrabold tracking-tight text-transparent bg-clip-text bg-up-maroon flex items-center gap-3">Course Management</h1>
-                        <p class="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">LRC Registry of Subjects</p>
+                        <h3 class="text-xs font-bold text-gray-400 uppercase leading-none">Total Subjects</h3>
+                        <p class="text-2xl font-black text-slate-800" x-text="subjects.length"></p>
                     </div>
-                    <div class="flex gap-4">
+                </div>
+
+                <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-green-600 flex items-center gap-4">
+                    <div class="text-2xl">
+                        <i class="fa-solid fa-chalkboard-user text-green-600"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-xs font-bold text-gray-400 uppercase leading-none">Subjects With Mentors</h3>
+                        <p class="text-2xl font-black text-slate-800" x-text="subjects.filter(s => s.mentorCount > 0).length"></p>
+                    </div>
+                </div>
+
+                <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-yellow-500 flex items-center gap-4">
+                    <div class="text-2xl">
+                        <i class="fa-solid fa-user-slash text-yellow-500"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-xs font-bold text-gray-400 uppercase leading-none">Subjects With No Mentors</h3>
+                        <p class="text-2xl font-black text-slate-800" x-text="subjects.filter(s => s.mentorCount === 0).length"></p>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Subjects Table Card --}}
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-visible">
+
+                {{-- Table header / filters --}}
+                <div class="p-5 border-b border-gray-100 flex flex-wrap gap-3 items-center justify-between">
+                    <div>
+                        <h2 class="font-bold text-slate-800 text-m">All Subjects</h2>
+                        <p class="text-xs text-gray-400 font-medium" x-text="filteredSubjects.length + (filteredSubjects.length === 1 ? ' Subject' : ' Subjects') + ' found'"></p>
+                    </div>
+                    <div class="flex gap-2 items-center flex-wrap">
                         <div class="relative">
-                            <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
-                            <input type="text" x-model="searchQuery" @input="currentPage = 1"  placeholder="Search subjects..." class="pl-8 pr-3 py-2 h-12 text-xs border border-gray-200 rounded-lg bg-white outline-none focus:ring-1 focus:border-up-maroon focus:ring-up-maroon w-64">
+                            <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-300 text-xs"></i>
+                            <input type="text" x-model="searchQuery" @input="currentPage = 1" placeholder="Search subjects..."
+                                class="pl-8 pr-3 py-1.5 text-xs font-medium text-slate-700 placeholder-gray-400 border border-gray-200 rounded-lg bg-white outline-none focus:ring-1 focus:border-up-maroon focus:ring-up-maroon w-56 h-[34px] transition-shadow">
                         </div>
-                        
-                        <button wire:click="openSubjectModal" @click="$wire.showSubjectModal = true" class="bg-slate-800 text-white px-6 py-3 rounded-xl text-xs font-bold flex items-center gap-2 hover:bg-black transition shadow-lg">
-                            <i class="fa-solid fa-book-medical"></i> Add New Subject
+
+                        {{-- Mentor filter dropdown --}}
+                        <div class="relative" id="mentorDropdownWrap">
+                            <button id="mentorDropdownBtn"
+                                class="table-filter-select flex items-center gap-2 min-w-[120px] justify-between"
+                                onclick="toggleMentorDropdown(event)">
+                                <span class="flex items-center gap-1.5">
+                                    <i class="fa-solid fa-filter text-gray-400"></i> Mentors
+                                </span>
+                                <span id="mentorBadge" class="hidden bg-red-900 text-white rounded-full px-1.5 text-[10px] font-bold"></span>
+                            </button>
+                            <div id="mentorDropdown"
+                                class="hidden absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-xl shadow-xl z-20 overflow-hidden py-1"
+                                onclick="event.stopPropagation()">
+                                <label class="flex items-center gap-2 px-4 py-2.5 hover:bg-gray-50 cursor-pointer text-xs text-slate-700 font-medium transition">
+                                    <input type="checkbox" id="filterAll" checked onchange="handleAllFilter(this)" class="rounded border-gray-300 w-4 h-4">
+                                    <span>All</span>
+                                </label>
+                                <div class="border-t border-gray-100 my-1"></div>
+                                <label class="flex items-center gap-2 px-4 py-2.5 hover:bg-gray-50 cursor-pointer text-xs text-slate-700 font-medium transition">
+                                    <input type="checkbox" value="with_mentors" onchange="handleMentorFilter()" class="mentor-filter-cb rounded border-gray-300 w-4 h-4"> Has Mentors
+                                </label>
+                                <label class="flex items-center gap-2 px-4 py-2.5 hover:bg-gray-50 cursor-pointer text-xs text-slate-700 font-medium transition">
+                                    <input type="checkbox" value="no_mentors" onchange="handleMentorFilter()" class="mentor-filter-cb rounded border-gray-300 w-4 h-4"> No Mentors
+                                </label>
+                            </div>
+                        </div>
+
+                        <button @click="$wire.showSubjectModal = true; $wire.openSubjectModal()"
+                            class="flex items-center gap-2 bg-slate-800 text-white px-4 py-1.5 rounded-lg text-xs font-bold hover:bg-black transition shadow-sm h-[34px]">
+                            <i class="fa-solid fa-book-medical text-[11px]"></i> Add Subject
                         </button>
                     </div>
                 </div>
 
-                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                    <table class="w-full text-left table-fixed">
-                        <thead class="bg-white border-b uppercase text-[10px] font-bold text-gray-400 tracking-widest">
+                {{-- Table --}}
+                <div style="overflow:visible;">
+                    <table class="w-full text-left text-sm table-fixed" style="overflow:visible;">
+                        <thead class="bg-slate-50 border-b border-gray-100">
                             <tr>
-                                <th class="px-6 py-5 w-[30%]">Subject Code</th>
-                                <th class="px-6 py-5 w-[40%]">Subject Name</th>
-                                <th class="px-6 py-5 w-[20%] text-center">Registered Mentors</th>
-                                <th class="px-6 py-5 w-[10%] text-center">Actions</th>
+                                <th class="px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider w-[4%]">#</th>
+                                <th @click="setSort('code')" class="cursor-pointer px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider select-none" style="width:18%;">
+                                    <div class="flex items-center gap-1 hover:text-red-800 transition">
+                                        Subject Code
+                                        <span x-text="sortColumn === 'code' ? (sortDirection === 'asc' ? '↑' : '↓') : ''" class="text-[10px]"></span>
+                                    </div>
+                                </th>
+                                <th @click="setSort('name')" class="cursor-pointer px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider select-none" style="width:32%;">
+                                    <div class="flex items-center gap-1 hover:text-red-800 transition">
+                                        Subject Name
+                                        <span x-text="sortColumn === 'name' ? (sortDirection === 'asc' ? '↑' : '↓') : ''" class="text-[10px]"></span>
+                                    </div>
+                                </th>
+                                <th @click="setSort('mentorCount')" class="cursor-pointer px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider select-none text-center" style="width:18%;">
+                                    <div class="flex items-center justify-center gap-1 hover:text-red-800 transition">
+                                        Registered Mentors
+                                        <span x-text="sortColumn === 'mentorCount' ? (sortDirection === 'asc' ? '↑' : '↓') : ''" class="text-[10px]"></span>
+                                    </div>
+                                </th>
+                                <th class="px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider select-none text-center" style="width:14%;">Actions</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-50">
-                            <template x-for="sub in paginatedSubjects" :key="sub.id">
-                                <tr class="hover:bg-gray-50 transition group">
-                                    <td class="px-6 py-5">
-                                        <span class="font-bold text-slate-800 text-sm truncate block" x-text="sub.code"></span>
+                            <template x-for="(sub, idx) in paginatedSubjects" :key="sub.id">
+                                <tr class="subject-row hover:bg-slate-50 transition">
+                                    <td class="px-5 py-4 align-middle text-gray-400 text-xs font-medium" style="width:4%;">
+                                        <span x-text="(currentPage - 1) * perPage + idx + 1"></span>
                                     </td>
-                                    
-                                    <td class="px-6 py-5 text-slate-600 text-sm">
-                                        <span class="truncate block" :title="sub.name" x-text="sub.name"></span>
+                                    <td class="px-5 py-4 align-middle" style="width:18%;">
+                                        <div class="hover-tooltip" :data-full="sub.code">
+                                            <p class="font-bold text-slate-800 text-xs truncate" x-text="sub.code"></p>
+                                        </div>
                                     </td>
-                                    
-                                    <td class="px-6 py-5 text-center">
-                                        <span class="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-xs font-bold border border-blue-100" x-text="sub.mentorCount + ' Mentors'"></span>
+                                    <td class="px-5 py-4 align-middle" style="width:32%;">
+                                        <div class="hover-tooltip" :data-full="sub.name">
+                                            <p class="text-xs text-slate-600 truncate" x-text="sub.name"></p>
+                                        </div>
                                     </td>
-                                    
-                                    <td class="px-6 py-5">
-                                        <div class="flex gap-2 justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                                            <button class="w-8 h-8 rounded-lg text-slate-600 hover:text-slate-800 transition" title="View Mentors" @click="openViewModal(sub)"><i class="fa-solid fa-eye text-[10px]"></i></button>
-                                            <button class="w-8 h-8 rounded-lg text-slate-600 hover:text-blue-600 transition flex-shrink-0" title="Edit Subject" @click="openEditModal(sub)"><i class="fa-solid fa-pen text-[10px]"></i></button>
-                                            <button class="w-8 h-8 rounded-lg text-slate-600 hover:text-red-600 transition" title="Remove Subject" @click="openDeleteModal(sub)"><i class="fa-solid fa-trash text-[10px]"></i></button>
+                                    <td class="px-5 py-4 align-middle text-center" style="width:18%;">
+                                        <span @click="openViewModal(sub)"
+                                            class="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-xs font-bold border border-blue-100 cursor-pointer hover:bg-blue-100 transition"
+                                            x-text="sub.mentorCount + (sub.mentorCount === 1 ? ' Mentor' : ' Mentors')">
+                                        </span>
+                                    </td>
+                                    <td class="px-5 py-4 align-middle text-center" style="width:14%;">
+                                        <div class="relative flex items-center justify-center" style="min-height:28px;">
+                                            {{-- idle dot --}}
+                                            <div class="action-idle absolute inset-0 flex items-center justify-center pointer-events-none">
+                                                <span class="w-2 h-2 rounded-full bg-slate-300 inline-block"></span>
+                                            </div>
+
+                                            {{-- revealed buttons --}}
+                                            <div class="action-buttons flex items-center justify-center gap-1">
+                                                <div class="hover-tooltip" data-full="View Mentors">
+                                                    <button @click="openViewModal(sub)"
+                                                        class="w-7 h-7 rounded-lg bg-gray-100 hover:bg-gray-200 text-slate-600 flex items-center justify-center transition-all hover:scale-110 hover:shadow-sm"
+                                                        style="flex-shrink:0;">
+                                                        <i class="fa-solid fa-eye" style="font-size:11px;"></i>
+                                                    </button>
+                                                </div>
+
+                                                <div class="hover-tooltip" data-full="Edit Subject">
+                                                    <button @click="openEditModal(sub)"
+                                                        class="w-7 h-7 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600 flex items-center justify-center transition-all hover:scale-110 hover:shadow-sm"
+                                                        style="flex-shrink:0;">
+                                                        <i class="fa-solid fa-pen" style="font-size:11px;"></i>
+                                                    </button>
+                                                </div>
+
+                                                <div class="hover-tooltip" data-full="Delete Subject">
+                                                    <button @click="openDeleteModal(sub)"
+                                                        class="w-7 h-7 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 flex items-center justify-center transition-all hover:scale-110 hover:shadow-sm"
+                                                        style="flex-shrink:0;">
+                                                        <i class="fa-solid fa-trash" style="font-size:11px;"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
                                         </div>
                                     </td>
                                 </tr>
                             </template>
+
                             <tr x-show="filteredSubjects.length === 0" x-cloak>
-                                <td colspan="5" class="px-6 py-10 text-center text-sm italic text-gray-500">
-                                    No subjects match your search.
-                                </td>
+                                <td colspan="5" class="text-center py-16 text-gray-400 text-xs italic">No subjects found.</td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
 
-                {{-- Pagination --}}
-                <div class="mt-4 flex justify-center items-center gap-2" x-show="totalPages >= 1" x-cloak>
-                    <button @click="currentPage--" :disabled="currentPage === 1" class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-slate-500 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition">
-                        <i class="fa-solid fa-chevron-left text-[10px]"></i>
-                    </button>
-                    <template x-for="(page, index) in pages" :key="index">
-                        <div class="contents">
-                        <button @click="currentPage = page" :class="currentPage === page ? 'bg-[#1a3c2f] text-white shadow-sm' : 'bg-white border border-gray-200 text-slate-500 hover:bg-gray-100'" class="w-8 h-8 text-xs font-bold rounded-lg transition" x-text="page" x-show="page !== '...'"></button>
-                        <span x-show="page === '...'" class="w-7 h-7 flex items-center justify-center text-[11px] font-bold text-gray-400 tracking-widest shrink-0">...</span>
-                        </div>
-                    </template>
-                    <button @click="currentPage++" :disabled="currentPage === totalPages" class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-slate-500 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition">
-                        <i class="fa-solid fa-chevron-right text-[10px]"></i>
-                    </button>
+                {{-- Pagination footer --}}
+                <div class="pb-4 pt-3 flex flex-col items-center gap-2" x-show="totalPages > 1" x-cloak>
+                    <div class="flex items-center gap-2">
+                        <button @click="currentPage--" :disabled="currentPage === 1"
+                            class="pagination-btn disabled:opacity-40 disabled:cursor-not-allowed">
+                            <i class="fa-solid fa-chevron-left text-[10px]"></i>
+                        </button>
+
+                        <template x-for="(page, index) in pages" :key="index">
+                            <div class="contents">
+                                <button x-show="page !== '...'"
+                                    @click="currentPage = page"
+                                    :class="currentPage === page
+                                        ? 'bg-[#1a3c2f] text-white shadow-sm border border-[#1a3c2f]'
+                                        : 'bg-white border border-gray-200 text-slate-500 hover:bg-gray-100'"
+                                    class="w-8 h-8 text-xs font-bold rounded-lg transition"
+                                    x-text="page">
+                                </button>
+                                <span x-show="page === '...'"
+                                    class="w-7 h-7 flex items-center justify-center text-[11px] font-bold text-gray-400">…</span>
+                            </div>
+                        </template>
+
+                        <button @click="currentPage++" :disabled="currentPage === totalPages"
+                            class="pagination-btn disabled:opacity-40 disabled:cursor-not-allowed">
+                            <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                        </button>
+                    </div>
+                    <span class="text-[11px] text-gray-400 font-medium"
+                        x-text="`${(currentPage - 1) * perPage + 1}–${Math.min(currentPage * perPage, filteredSubjects.length)} of ${filteredSubjects.length}`">
+                    </span>
                 </div>
 
+            </div>
+        </main>
+    </div>
 
-                {{-- List of mentors --}}
-                <template x-teleport="body">
-                    <div class="modal-overlay" x-show="showViewModal" @click.self="showViewModal = false" x-cloak>
-                        <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden flex flex-col" style="max-height: 90vh;">
-                            <template x-if="selectedSubject">
-                                <div class="contents">
-                                    {{-- Header --}}
-                                    <div class="flex items-center gap-4 px-6 py-5 bg-white border-b border-gray-100 flex-shrink-0">
-                                        <div class="w-12 h-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xl flex-shrink-0">
-                                            <i class="fa-solid fa-book"></i>
-                                        </div>
+    {{-- ── VIEW MENTORS MODAL ── --}}
+    <template x-teleport="body">
+        <div class="modal-overlay" x-show="showViewModal" @click.self="showViewModal = false" x-cloak>
+            <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden flex flex-col" style="max-height: 90vh;">
+                <template x-if="selectedSubject">
+                    <div class="contents">
+                        <div class="flex items-center gap-4 px-6 py-5 bg-white border-b border-gray-100 flex-shrink-0">
+                            <div class="w-12 h-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xl flex-shrink-0">
+                                <i class="fa-solid fa-book"></i>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <h2 class="text-xl font-black text-slate-800 tracking-tight mb-0.5 truncate" x-text="selectedSubject.code"></h2>
+                                <p class="text-xs text-slate-500 font-medium truncate" x-text="selectedSubject.name"></p>
+                            </div>
+                            <button @click="showViewModal = false" class="text-gray-400 hover:text-red-600 transition flex-shrink-0">
+                                <i class="fa-solid fa-xmark text-xl"></i>
+                            </button>
+                        </div>
+
+                        <div class="overflow-y-auto flex-1 p-6 bg-white">
+                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Registered Peer Mentors</p>
+                            <div class="space-y-3">
+                                <template x-for="mentor in selectedSubject.mentors" :key="mentor.email">
+                                    <div class="flex items-center gap-4 bg-white border border-gray-100 shadow-sm rounded-xl p-3 hover:border-gray-200 transition">
+                                        <img :src="mentor.avatar" class="w-12 h-12 rounded-full object-cover shadow-sm bg-gray-100 border border-gray-200">
                                         <div class="flex-1 min-w-0">
-                                            <h2 class="text-xl font-black text-slate-800 tracking-tight mb-0.5 truncate" x-text="selectedSubject.code"></h2>
-                                            <p class="text-xs text-slate-500 font-medium truncate" x-text="selectedSubject.name"></p>
+                                            <p class="text-sm font-bold text-slate-800 truncate" x-text="mentor.name"></p>
+                                            <p class="text-xs text-gray-500 truncate" x-text="mentor.email"></p>
                                         </div>
-                                        <button @click="showViewModal = false" class="text-white/50 hover:text-white transition flex-shrink-0 mt-1">
-                                            <i class="fa-solid fa-xmark text-xl"></i>
-                                        </button>
                                     </div>
+                                </template>
 
-                                    {{-- Mentors List --}}
-                                    <div class="overflow-y-auto flex-1 p-6 bg-white">
-                                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Registered Peer Mentors</p>
-                                        
-                                        <div class="space-y-3">
-                                            <template x-for="mentor in selectedSubject.mentors" :key="mentor.email">
-                                                <div class="flex items-center gap-4 bg-white border border-gray-100 shadow-sm rounded-xl p-3 hover:border-gray-200 transition">
-                                                    <img :src="mentor.avatar" class="w-12 h-12 rounded-full object-cover shadow-sm bg-gray-100 border border-gray-200">
-                                                    <div class="flex-1 min-w-0">
-                                                        <p class="text-sm font-bold text-slate-800 truncate" :title="mentor.name" x-text="mentor.name"></p>
-                                                        <p class="text-xs text-gray-500 truncate" :title="mentor.email" x-text="mentor.email"></p>
-                                                    </div>
-                                                </div>
-                                            </template>
-                                            
-                                            <template x-if="selectedSubject.mentors.length === 0">
-                                                <div class="text-center py-8">
-                                                    <div class="w-12 h-12 bg-gray-50 text-gray-300 rounded-full flex items-center justify-center mx-auto mb-3">
-                                                        <i class="fa-solid fa-user-slash text-lg"></i>
-                                                    </div>
-                                                    <p class="text-sm font-medium text-gray-500">No mentors registered.</p>
-                                                    <p class="text-xs text-gray-400 mt-1">There are currently no peer mentors assigned to teach this subject.</p>
-                                                </div>
-                                            </template>
+                                <template x-if="selectedSubject.mentors.length === 0">
+                                    <div class="text-center py-8">
+                                        <div class="w-12 h-12 bg-gray-50 text-gray-300 rounded-full flex items-center justify-center mx-auto mb-3">
+                                            <i class="fa-solid fa-user-slash text-lg"></i>
                                         </div>
+                                        <p class="text-sm font-medium text-gray-500">No mentors registered.</p>
+                                        <p class="text-xs text-gray-400 mt-1">There are currently no peer mentors assigned to teach this subject.</p>
                                     </div>
-                                </div>
-                            </template>
+                                </template>
+                            </div>
                         </div>
                     </div>
                 </template>
-
-            </main>
+            </div>
         </div>
-    </div>
+    </template>
 
-    {{-- Subject Modal --}}
+    {{-- ── ADD SUBJECT MODAL ── --}}
     <div x-show="$wire.showSubjectModal" x-cloak class="modal-overlay">
-        <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden">
-            {{-- Header --}}
+        <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden" @click.stop>
             <div class="flex items-center gap-4 px-6 py-5 bg-white border-b border-gray-100">
                 <div class="w-12 h-12 rounded-full bg-green-100 text-green-600 flex items-center justify-center text-xl flex-shrink-0">
                     <i class="fa-solid fa-book-medical"></i>
@@ -455,7 +677,6 @@ mount(function () {
                 </button>
             </div>
 
-            {{-- Body --}}
             <div class="px-6 py-5 space-y-4">
                 <div>
                     <label class="form-label">Subject Code <span class="text-red-500">*</span></label>
@@ -469,17 +690,17 @@ mount(function () {
                 </div>
             </div>
 
-            {{-- Save button --}}
             <div class="px-6 py-5 bg-gray-50 border-t border-gray-100">
                 <div class="flex gap-3">
-                    <button type="button" @click="$wire.showSubjectModal = false; $wire.closeSubjectModal()" class="flex-1 py-2.5 text-sm font-bold text-gray-600 bg-white border border-gray-200 hover:bg-gray-100 rounded-xl transition">
+                    <button type="button" @click="$wire.showSubjectModal = false; $wire.closeSubjectModal()"
+                        class="flex-1 py-2.5 text-sm font-bold text-gray-600 bg-white border border-gray-200 hover:bg-gray-100 rounded-xl transition">
                         Cancel
                     </button>
-                    <button type="button" 
-                            @click="$wire.validateSubject"
-                            wire:loading.attr="disabled"
-                            wire:target="validateSubject"
-                            class="flex-1 bg-slate-800 text-white py-2.5 rounded-xl text-sm font-bold shadow-md hover:bg-black transition">
+                    <button type="button"
+                        @click="$wire.validateSubject()"
+                        wire:loading.attr="disabled"
+                        wire:target="validateSubject"
+                        class="flex-1 bg-slate-800 text-white py-2.5 rounded-xl text-sm font-bold shadow-md hover:bg-black transition disabled:opacity-60 disabled:cursor-not-allowed">
                         <span wire:loading.remove wire:target="validateSubject">Add Subject</span>
                         <span wire:loading wire:target="validateSubject"><i class="fa-solid fa-spinner fa-spin mr-1"></i>Verifying...</span>
                     </button>
@@ -488,11 +709,9 @@ mount(function () {
         </div>
     </div>
 
-
-    {{-- Edit Subject Modal --}}
+    {{-- ── EDIT SUBJECT MODAL ── --}}
     <div x-show="showEditModal" x-cloak class="modal-overlay">
-        <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden">
-            {{-- Header --}}
+        <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden" @click.stop>
             <div class="flex items-center gap-4 px-6 py-5 bg-white border-b border-gray-100">
                 <div class="w-12 h-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xl flex-shrink-0">
                     <i class="fa-solid fa-pen-to-square"></i>
@@ -506,7 +725,6 @@ mount(function () {
                 </button>
             </div>
 
-            {{-- Body --}}
             <div class="px-6 py-5 space-y-4">
                 <div>
                     <label class="form-label">Subject Code <span class="text-red-500">*</span></label>
@@ -520,31 +738,28 @@ mount(function () {
                 </div>
             </div>
 
-            {{-- Save button --}}
             <div class="px-6 py-5 bg-gray-50 border-t border-gray-100">
                 <div class="flex gap-3">
-                    <button type="button" @click="showEditModal = false; $wire.closeEditModal()" class="flex-1 py-2.5 text-sm font-bold text-gray-600 bg-white border border-gray-200 hover:bg-gray-100 rounded-xl transition">
+                    <button type="button" @click="showEditModal = false; $wire.closeEditModal()"
+                        class="flex-1 py-2.5 text-sm font-bold text-gray-600 bg-white border border-gray-200 hover:bg-gray-100 rounded-xl transition">
                         Cancel
                     </button>
-                    <button type="button" 
-                            @click="$wire.validateEditSubject(editingSubject.id, editForm.code, editForm.name)"
-                            wire:loading.attr="disabled"
-                            wire:target="validateEditSubject"
-                            class="flex-1 bg-blue-600 text-white py-2.5 rounded-xl text-sm font-bold shadow-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center">
-                        
+                    <button type="button"
+                        @click="$wire.validateEditSubject(editingSubject.id, editForm.code, editForm.name)"
+                        wire:loading.attr="disabled"
+                        wire:target="validateEditSubject"
+                        class="flex-1 bg-amber-500 text-white py-2.5 rounded-xl text-sm font-bold shadow-md hover:bg-amber-600 transition disabled:opacity-60 disabled:cursor-not-allowed">
                         <span wire:loading.remove wire:target="validateEditSubject">Save Changes</span>
-                        <span wire:loading wire:target="validateEditSubject" class="items-center justify-center gap-1">
-                            <i class="fa-solid fa-spinner fa-spin mr-1"></i> Verifying...
-                        </span>
+                        <span wire:loading wire:target="validateEditSubject"><i class="fa-solid fa-spinner fa-spin mr-1"></i>Verifying...</span>
                     </button>
                 </div>
             </div>
         </div>
     </div>
 
-
+    {{-- ── CONFIRMATION MODAL ── --}}
     <div id="confirmModal" style="display:none;" class="fixed inset-0 z-[1500] flex items-center justify-center bg-black/50 backdrop-blur-sm">
-        <div class="bg-[#ffffff] rounded-xl p-6 max-w-sm w-full mx-4 shadow-2xl" id="confirmModalBox">
+        <div class="bg-white rounded-xl p-6 max-w-sm w-full mx-4 shadow-2xl" id="confirmModalBox">
             <div class="flex items-center gap-3 mb-3">
                 <div id="confirmIconWrap" class="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0"></div>
                 <h3 id="confirmTitle" class="text-base font-bold text-gray-900"></h3>
@@ -558,182 +773,233 @@ mount(function () {
         </div>
     </div>
 
+</div>
 
-    <script>
-        window.onclick = (e) => {
-            const profileDropdown = document.getElementById('profileDropdown');
-            const dropdownArrow = document.getElementById('dropdownArrow');
-            
-            // Handle Profile Dropdown Trigger
-            const trigger = e.target.closest('#profileTrigger');
-            if (trigger) {
-                e.stopPropagation();
-                if (profileDropdown) {
-                    const isShown = profileDropdown.classList.toggle('show');
-                    if (dropdownArrow) dropdownArrow.style.transform = isShown ? 'rotate(180deg)' : 'rotate(0deg)';
-                }
-                return;
-            }
+<script>
+    /* ── Sidebar & Profile Dropdown (vanilla, outside Alpine scope) ── */
+    document.addEventListener('DOMContentLoaded', () => {
+        document.getElementById('sidebarToggle').addEventListener('click', () => {
+            document.getElementById('sidebar').classList.toggle('collapsed');
+        });
 
-            // Clicked outside profile dropdown
-            if (profileDropdown && profileDropdown.classList.contains('show')) {
-                profileDropdown.classList.remove('show');
-                if (dropdownArrow) dropdownArrow.style.transform = 'rotate(0deg)';
-            }
-            
-            // Handle Sidebar Toggle
-            const sidebarToggle = e.target.closest('#sidebarToggle');
-            if (sidebarToggle) {
-                const sidebar = document.getElementById('sidebar');
-                if (sidebar) sidebar.classList.toggle('collapsed');
+        const profileTrigger  = document.getElementById('profileTrigger');
+        const profileDropdown = document.getElementById('profileDropdown');
+
+        profileTrigger.addEventListener('click', e => {
+            e.stopPropagation();
+            profileDropdown.classList.toggle('show');
+        });
+
+        window.addEventListener('click', () => {
+            profileDropdown.classList.remove('show');
+            document.getElementById('mentorDropdown')?.classList.add('hidden');
+        });
+    });
+
+    /* ── Mentor filter dropdown (vanilla, syncs with Alpine via custom event) ── */
+    let activeMentorFilters = [];
+
+    function toggleMentorDropdown(e) {
+        e.stopPropagation();
+        document.getElementById('mentorDropdown').classList.toggle('hidden');
+    }
+
+    function handleAllFilter(cb) {
+        if (cb.checked) {
+            document.querySelectorAll('.mentor-filter-cb').forEach(c => c.checked = false);
+            activeMentorFilters = [];
+        }
+        updateMentorBadge();
+        window.dispatchEvent(new CustomEvent('mentor-filter-changed', { detail: activeMentorFilters }));
+    }
+
+    function handleMentorFilter() {
+        activeMentorFilters = [...document.querySelectorAll('.mentor-filter-cb:checked')].map(c => c.value);
+        document.getElementById('filterAll').checked = activeMentorFilters.length === 0;
+        updateMentorBadge();
+        window.dispatchEvent(new CustomEvent('mentor-filter-changed', { detail: activeMentorFilters }));
+    }
+
+    function updateMentorBadge() {
+        const badge = document.getElementById('mentorBadge');
+        if (activeMentorFilters.length > 0) {
+            badge.textContent = activeMentorFilters.length;
+            badge.classList.remove('hidden');
+        } else {
+            badge.classList.add('hidden');
+        }
+    }
+
+    /* ── Confirmation Modal ── */
+    function closeConfirmModal() {
+        document.getElementById('confirmModal').style.display = 'none';
+        document.getElementById('confirmOkBtn').onclick = null;
+    }
+
+    function openConfirmModal({ title, body, meta, variant, confirmText, loadingText, onConfirm }) {
+        const confirmModal     = document.getElementById('confirmModal');
+        const confirmModalBox  = document.getElementById('confirmModalBox');
+        const confirmTitle     = document.getElementById('confirmTitle');
+        const confirmBody      = document.getElementById('confirmBody');
+        const confirmMeta      = document.getElementById('confirmMeta');
+        const confirmOkBtn     = document.getElementById('confirmOkBtn');
+        const confirmCancelBtn = document.getElementById('confirmCancelBtn');
+        const confirmIconWrap  = document.getElementById('confirmIconWrap');
+
+        confirmModal.onclick = (e) => { if (!confirmModalBox.contains(e.target)) closeConfirmModal(); };
+        confirmCancelBtn.onclick = closeConfirmModal;
+
+        const variants = {
+            accept:  { iconHtml: iconCheck('#059669'), iconBg: '#d1fae5', btnClass: 'bg-emerald-600 hover:bg-emerald-700' },
+            reject:  { iconHtml: iconX('#dc2626'),     iconBg: '#fee2e2', btnClass: 'bg-red-600 hover:bg-red-700'         },
+            neutral: { iconHtml: iconInfo('#64748b'),  iconBg: '#f1f5f9', btnClass: 'bg-gray-700 hover:bg-gray-800'       },
+        };
+        const v = variants[variant] || variants.neutral;
+
+        confirmIconWrap.style.background = v.iconBg;
+        confirmIconWrap.innerHTML        = v.iconHtml;
+        confirmTitle.textContent         = title;
+        confirmBody.innerHTML            = body;
+        confirmMeta.innerHTML            = meta || '';
+        confirmMeta.style.display        = meta ? 'block' : 'none';
+
+        confirmOkBtn.className   = `px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors ${v.btnClass}`;
+        confirmOkBtn.textContent = confirmText || 'Confirm';
+
+        confirmOkBtn.onclick = async () => {
+            const originalText = confirmOkBtn.textContent;
+            confirmOkBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i>${loadingText || 'Processing...'}`;
+            confirmOkBtn.classList.add('opacity-70', 'cursor-not-allowed');
+            confirmOkBtn.style.pointerEvents = 'none';
+            confirmCancelBtn.disabled = true;
+            confirmCancelBtn.classList.add('opacity-50', 'cursor-not-allowed');
+
+            try {
+                const result = onConfirm();
+                if (result && typeof result.then === 'function') await result;
+            } finally {
+                confirmOkBtn.textContent = originalText;
+                confirmOkBtn.classList.remove('opacity-70', 'cursor-not-allowed');
+                confirmOkBtn.style.pointerEvents = 'auto';
+                confirmCancelBtn.disabled = false;
+                confirmCancelBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                closeConfirmModal();
             }
         };
 
-        /* ── CONFIRMATION MODAL ── */
-        function closeConfirmModal() { 
-            const confirmModal = document.getElementById('confirmModal');
-            const confirmOkBtn = document.getElementById('confirmOkBtn');
-            
-            if (confirmModal) confirmModal.style.display = 'none'; 
-            if (confirmOkBtn) confirmOkBtn.onclick = null; 
-        }
+        confirmModal.style.display = 'flex';
+    }
 
-        function openConfirmModal({ title, body, meta, variant, confirmText, loadingText, onConfirm }) {
-            const confirmModal     = document.getElementById('confirmModal');
-            const confirmModalBox  = document.getElementById('confirmModalBox');
-            const confirmTitle     = document.getElementById('confirmTitle');
-            const confirmBody      = document.getElementById('confirmBody');
-            const confirmMeta      = document.getElementById('confirmMeta');
-            const confirmOkBtn     = document.getElementById('confirmOkBtn');
-            const confirmCancelBtn = document.getElementById('confirmCancelBtn');
-            const confirmIconWrap  = document.getElementById('confirmIconWrap');
+    function iconCheck(color) { return `<svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M4 10l4.5 4.5L16 6" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`; }
+    function iconX(color)     { return `<svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M5 5l10 10M15 5L5 15" stroke="${color}" stroke-width="2" stroke-linecap="round"/></svg>`; }
+    function iconInfo(color)  { return `<svg width="18" height="18" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="8.5" stroke="${color}" stroke-width="1.5"/><path d="M10 9v5" stroke="${color}" stroke-width="1.5" stroke-linecap="round"/><circle cx="10" cy="6.5" r="0.8" fill="${color}"/></svg>`; }
 
-            confirmModal.onclick = (e) => { if (!confirmModalBox.contains(e.target)) closeConfirmModal(); };
-            confirmCancelBtn.onclick = closeConfirmModal;
+    /* ── Alpine.js component ── */
+    function courseManagement(initialSubjects) {
+        return {
+            subjects: initialSubjects,
 
-            const variants = {
-                accept:  { iconHtml: iconCheck('#059669'), iconBg: '#d1fae5', btnClass: 'bg-emerald-600 hover:bg-emerald-700', label: 'Confirm' },
-                reject:  { iconHtml: iconX('#dc2626'),     iconBg: '#fee2e2', btnClass: 'bg-red-600 hover:bg-red-700',         label: 'Reject'  },
-                neutral: { iconHtml: iconInfo('#64748b'),  iconBg: '#f1f5f9', btnClass: 'bg-gray-700 hover:bg-gray-800',       label: 'Confirm' },
-            };
-            const v = variants[variant] || variants.neutral;
-            
-            confirmIconWrap.style.background = v.iconBg;
-            confirmIconWrap.innerHTML        = v.iconHtml;
-            confirmTitle.textContent         = title;
-            confirmBody.innerHTML            = body;
-            confirmMeta.innerHTML            = meta || '';
-            confirmMeta.style.display        = meta ? 'block' : 'none';
-            
-            confirmOkBtn.className   = `px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors ${v.btnClass}`;
-            confirmOkBtn.textContent = confirmText || v.label;
-            
-            confirmOkBtn.onclick = async () => { 
-                const originalText = confirmOkBtn.textContent;
-                confirmOkBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i>${loadingText || 'Processing...'}`;
-                confirmOkBtn.classList.add('opacity-70', 'cursor-not-allowed');
-                confirmOkBtn.style.pointerEvents = 'none';
-                
-                confirmCancelBtn.disabled = true;
-                confirmCancelBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            // Search & filter
+            searchQuery: '',
+            mentorFilter: [],   // synced from vanilla checkbox logic above
 
-                try {
-                    const result = onConfirm();
-                    if (result && typeof result.then === 'function') {
-                        await result;
-                    }
-                } finally {
-                    confirmOkBtn.textContent = originalText;
-                    confirmOkBtn.classList.remove('opacity-70', 'cursor-not-allowed');
-                    confirmOkBtn.style.pointerEvents = 'auto';
-                    
-                    confirmCancelBtn.disabled = false;
-                    confirmCancelBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-                    
-                    closeConfirmModal();
+            // Sort
+            sortColumn: 'code',
+            sortDirection: 'asc',
+
+            // Pagination
+            currentPage: 1,
+            perPage: 10,
+
+            // Modals
+            showViewModal: false,
+            selectedSubject: null,
+            showEditModal: false,
+            editingSubject: null,
+            editForm: { code: '', name: '' },
+
+            init() {
+                // Listen for mentor filter changes from vanilla checkboxes
+                window.addEventListener('mentor-filter-changed', (e) => {
+                    this.mentorFilter = e.detail;
+                    this.currentPage = 1;
+                });
+            },
+
+            setSort(column) {
+                if (this.sortColumn === column) {
+                    this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
+                } else {
+                    this.sortColumn = column;
+                    this.sortDirection = 'asc';
                 }
-            };
-            
-            confirmModal.style.display = 'flex';
-        }
+                this.currentPage = 1;
+            },
 
-        function iconCheck(color) { return `<svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M4 10l4.5 4.5L16 6" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`; }
-        function iconX(color)     { return `<svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M5 5l10 10M15 5L5 15" stroke="${color}" stroke-width="2" stroke-linecap="round"/></svg>`; }
-        function iconInfo(color)  { return `<svg width="18" height="18" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="8.5" stroke="${color}" stroke-width="1.5"/><path d="M10 9v5" stroke="${color}" stroke-width="1.5" stroke-linecap="round"/><circle cx="10" cy="6.5" r="0.8" fill="${color}"/></svg>`; }
+            get filteredSubjects() {
+                const term = this.searchQuery.toLowerCase();
 
-        function courseManagement(initialSubjects) {
-            return {
-                subjects: initialSubjects,
-                searchQuery: '',
-                currentPage: 1,
-                perPage: 5,
-                showViewModal: false,
-                selectedSubject: null,
-                showEditModal: false,
-                editingSubject: null,
-                initialEditState: '',
+                let result = this.subjects.filter(s => {
+                    const matchSearch = (s.code + ' ' + s.name).toLowerCase().includes(term);
+                    const matchFilter = this.mentorFilter.length === 0
+                        || (this.mentorFilter.includes('with_mentors') && s.mentorCount > 0)
+                        || (this.mentorFilter.includes('no_mentors')   && s.mentorCount === 0);
+                    return matchSearch && matchFilter;
+                });
 
-                editForm: {
-                    code: '',
-                    name: ''
-                },
+                // Sort
+                result = [...result].sort((a, b) => {
+                    let valA = a[this.sortColumn];
+                    let valB = b[this.sortColumn];
+                    if (typeof valA === 'string') { valA = valA.toLowerCase(); valB = valB.toLowerCase(); }
+                    if (valA < valB) return this.sortDirection === 'asc' ? -1 : 1;
+                    if (valA > valB) return this.sortDirection === 'asc' ?  1 : -1;
+                    return 0;
+                });
 
-                get filteredSubjects() {
-                    const term = this.searchQuery.toLowerCase();
-                    return this.subjects.filter(sub => {
-                        return sub.code.toLowerCase().includes(term) || sub.name.toLowerCase().includes(term);
-                    });
-                },
+                return result;
+            },
 
-                get paginatedSubjects() {
-                    const start = (this.currentPage - 1) * this.perPage;
-                    return this.filteredSubjects.slice(start, start + this.perPage);
-                },
+            get paginatedSubjects() {
+                const start = (this.currentPage - 1) * this.perPage;
+                return this.filteredSubjects.slice(start, start + this.perPage);
+            },
 
-                get totalPages() {
-                    return Math.ceil(this.filteredSubjects.length / this.perPage) || 1;
-                },
+            get totalPages() {
+                return Math.max(1, Math.ceil(this.filteredSubjects.length / this.perPage));
+            },
 
-                get pages() {
-                    const total = this.totalPages;
-                    const current = this.currentPage;
+            get pages() {
+                const total   = this.totalPages;
+                const current = this.currentPage;
+                if (total <= 8) return Array.from({ length: total }, (_, i) => i + 1);
+                if (current <= 4) return [1, 2, 3, 4, 5, '...', total];
+                if (current >= total - 3) return [1, '...', total - 3, total - 2, total - 1, total];
+                return [1, '...', current - 1, current, current + 1, '...', total];
+            },
 
-                    if(total <= 8) {
-                        return Array.from({ length: total }, (_, i) => i + 1);
-                    }
-                    if(current <= 4) {
-                        return [1, 2, 3, 4, 5, '...', total];
-                    }
-                    if(current >= total - 3) {
-                        return [1, '...', total - 3, total - 2, total - 1, total];
-                    }
-                    return [1, '...', current - 1, current, current + 1, '...', total];
-                },
+            openViewModal(sub) {
+                this.selectedSubject = sub;
+                this.showViewModal = true;
+            },
 
-                openViewModal(sub) {
-                    this.selectedSubject = sub;
-                    this.showViewModal = true;
-                },
+            openEditModal(sub) {
+                this.editingSubject = sub;
+                this.editForm.code  = sub.code;
+                this.editForm.name  = sub.name;
+                this.showEditModal  = true;
+            },
 
-                openEditModal(sub) {
-                    this.editingSubject = sub;
-                    this.editForm.code = sub.code;
-                    this.editForm.name = sub.name;
-                    
-                    this.initialEditState = JSON.stringify(this.editForm);
-                    this.showEditModal = true;
-                },
-
-                openDeleteModal(sub) {
-                    openConfirmModal({
-                        title: 'Delete Subject?',
-                        body: `Are you sure you want to permanently delete <strong>${sub.code}</strong>? This will also remove the subject from all mentors currently assigned to teach it.`,
-                        variant: 'reject',
-                        confirmText: 'Delete',
-                        loadingText: 'Deleting...',
-                        onConfirm: async () => { await this.$wire.deleteSubject(sub.id); }
-                    });
-                }
-            };
-        }
-    </script>
+            openDeleteModal(sub) {
+                openConfirmModal({
+                    title: 'Delete Subject?',
+                    body:  `Are you sure you want to permanently delete <strong>${sub.code}</strong>? This will also remove the subject from all mentors currently assigned to teach it.`,
+                    variant: 'reject',
+                    confirmText: 'Delete',
+                    loadingText: 'Deleting...',
+                    onConfirm: async () => { await this.$wire.deleteSubject(sub.id); }
+                });
+            },
+        };
+    }
+</script>
