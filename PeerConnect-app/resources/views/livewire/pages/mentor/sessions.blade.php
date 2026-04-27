@@ -18,14 +18,16 @@
 
         if (!$mentorProfile) return [];
 
-        // AUTO-COMPLETE: mark accepted bookings as completed if their date has passed
-        Bookings::where('mentor_id', $mentorProfile->id)
-            ->where('booking_status', 'accepted')
-            ->whereDate('date', '<', today())
-            ->update([
-                'booking_status' => 'completed',
-                'completed_at'   => now(),
-            ]);
+// AUTO-COMPLETE: only affect bookings NOT manually touched today
+// This prevents "Uncomplete" reversions from being immediately re-completed on reload
+Bookings::where('mentor_id', $mentorProfile->id)
+    ->where('booking_status', 'accepted')
+    ->whereDate('date', '<', today())
+    ->whereDate('updated_at', '<', today())
+    ->update([
+        'booking_status' => 'completed',
+        'completed_at'   => now(),
+    ]);
 
         $mySubjectIds = \App\Models\MentorSubjects::where('mentor_id', $mentorProfile->id)->pluck('subject_id');
         $mySched = \App\Models\MentorAvailabilities::where('mentor_id', $mentorProfile->id)->get();
@@ -221,7 +223,7 @@
 
         .main-content { flex: 1; min-width: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
         .top-header { background: var(--header-maroon); height: var(--header-height); padding: 0 40px; display: flex; align-items: center; justify-content: space-between; color: white; flex-shrink: 0; }
-        .scroll-container { flex-grow: 1; overflow-y: auto; padding: 32px; width: 100%; }
+        .scroll-container { flex-grow: 1; overflow-y: scroll; padding: 32px; width: 100%; }
 
         .stat-card {
             background: white;
@@ -256,19 +258,37 @@
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
         .hover-tooltip { position: relative; cursor: pointer; }
-        .hover-tooltip::after {
-            content: attr(data-full);
-            position: absolute; left: 0; top: 110%;
-            background: rgba(0,0,0,0.85); color: #fff;
-            padding: 8px 10px; border-radius: 6px; font-size: 11px; line-height: 1.4;
-            white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere;
-            width: 320px; max-width: 320px;
-            opacity: 0; pointer-events: none;
-            transform: translateY(5px); transition: 0.15s ease; z-index: 9999;
-        }
+.hover-tooltip::after {
+    content: attr(data-full);
+    position: absolute; left: 0; top: 110%;
+    background: rgba(0,0,0,0.85); color: #fff;
+    padding: 6px 10px; border-radius: 6px; font-size: 11px; line-height: 1.4;
+    white-space: normal; word-break: break-word; overflow-wrap: break-word;
+    width: max-content; max-width: 220px;
+    opacity: 0; pointer-events: none;
+    transform: translateY(5px); transition: 0.15s ease; z-index: 9999;
+}
         .hover-tooltip:hover::after { opacity: 1; transform: translateY(0); }
 
         #confirmMeta { max-height: 200px; overflow-y: auto; }
+.session-row .action-buttons { 
+    opacity: 0; 
+    transform: translateX(6px);
+    transition: opacity 0.15s ease, transform 0.15s ease;
+    pointer-events: none;
+}
+.session-row:hover .action-buttons { 
+    opacity: 1; 
+    transform: translateX(0);
+    pointer-events: auto;
+}
+.session-row .action-idle {
+    opacity: 1;
+    transition: opacity 0.15s ease;
+}
+.session-row:hover .action-idle {
+    opacity: 0;
+}
         </style>
     </head>
 
@@ -321,12 +341,17 @@
         <div class="main-content">
             <header class="top-header relative">
                 <div class="text-lg">Welcome, <span class="font-bold">{{ auth()->user()->name }}</span></div>
+                <div class="flex items-center gap-2">
+                <x-mentor-notifications />
+                
                 <button id="profileTrigger" class="flex items-center gap-2 px-3 py-1 bg-white rounded-full hover:bg-gray-100 transition shadow-sm border-2 border-white/20 group">
                     <div class="w-8 h-8 bg-red-900 text-white rounded-full flex items-center justify-center text-xs font-bold">
-                        {{ strtoupper(substr(auth()->user()->name, 0, 2)) }}
+                        {{ strtoupper(substr(auth()->user()->name,0,2)) }}
                     </div>
-                    <i class="fa-solid fa-chevron-down text-[10px] text-gray-500 group-hover:text-red-900 transition-transform duration-200" id="dropdownArrow"></i>
+                    <i class="fa-solid fa-chevron-down text-[10px] text-gray-500 group-hover:text-red-900 transition-transform duration-200"></i>
                 </button>
+                </div>
+
                 <div id="profileDropdown" class="profile-dropdown">
                     <div class="p-4 border-b border-gray-100 bg-slate-50">
                         <p class="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1">Signed in as</p>
@@ -464,13 +489,14 @@
                         <table class="w-full text-left text-sm table-fixed" style="overflow:visible;">
                             <thead class="bg-slate-50 border-b border-gray-100">
                                 <tr>
-                                    <th onclick="setSort('student')" class="cursor-pointer px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider select-none" style="width:18%;">
+                                    <th class="px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider w-[5%]">#</th>
+                                    <th onclick="setSort('student')" class="cursor-pointer px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider select-none" style="width:15%;">
                                         <div class="flex items-center gap-1 hover:text-red-800 transition">Student<span id="sort-student" class="text-[10px]"></span></div>
                                     </th>
                                     <th onclick="setSort('subject')" class="cursor-pointer px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider select-none" style="width:13%;">
                                         <div class="flex items-center gap-1 hover:text-red-800 transition">Subject<span id="sort-subject" class="text-[10px]"></span></div>
                                     </th>
-                                    <th onclick="setSort('topic')" class="cursor-pointer px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider select-none" style="width:17%;">
+                                    <th onclick="setSort('topic')" class="cursor-pointer px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider select-none" style="width:20%;">
                                         <div class="flex items-center gap-1 hover:text-red-800 transition">Topic<span id="sort-topic" class="text-[10px]"></span></div>
                                     </th>
                                     <th onclick="setSort('date')" class="cursor-pointer px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider select-none" style="width:15%;">
@@ -480,7 +506,7 @@
                                     <th onclick="setSort('status')" class="cursor-pointer px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider select-none" style="width:10%;">
                                         <div class="flex items-center gap-1 hover:text-red-800 transition">Status<span id="sort-status" class="text-[10px]"></span></div>
                                     </th>
-                                    <th class="px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider select-none text-right" style="width:17%;">Actions</th>
+                                    <th class="px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider select-none text-right" style="width:8%;">Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="sessionsTable">
@@ -684,18 +710,18 @@ function updateStatusBadge() {
         /* =========================
         UTILS
         ========================= */
-        function getStatusColor(status) {
-            switch (status) {
-            case 'pending':   return 'bg-yellow-100 text-yellow-800';
-            case 'accepted':  return 'bg-green-100 text-green-800';
-            case 'completed': return 'bg-green-100 text-green-800';
-            case 'rejected':  return 'bg-red-100 text-red-800';
-            case 'cancelled': return 'bg-red-100 text-red-800';
-            case 'closed':    return 'bg-purple-100 text-purple-800';
-            case 'no_show':   return 'bg-red-100 text-red-800';
-            default:          return 'bg-gray-100 text-gray-800';
-            }
-        }
+function getStatusColor(status) {
+    switch (status) {
+    case 'pending':   return 'text-yellow-500';
+    case 'accepted':  return 'text-green-600';
+    case 'completed': return 'text-gray-500';
+    case 'rejected':  return 'text-red-900';
+    case 'cancelled': return 'text-red-600';
+    case 'closed':    return 'text-purple-700';
+    case 'no_show':   return 'text-orange-600';
+    default:          return 'text-gray-500';
+    }
+}
         
         function getStatusLabel(status) {
             switch (status) {
@@ -710,30 +736,52 @@ function updateStatusBadge() {
             }
         }
 
-        function renderActions(s) {
-            const btn = (action, status, color) =>
-                `<button onclick="updateStatus('${s.id}','${status}')"
-                    class="text-[10px] px-2 py-1 ${color} rounded font-semibold whitespace-nowrap">
-                    ${action}
-                </button>`;
+// AFTER
+function renderActions(s) {
+const iconBtn = (icon, label, status, color, textColor) =>
+    `<div class="hover-tooltip" data-full="${label}">
+        <button onclick="updateStatus('${s.id}','${status}')"
+            class="w-7 h-7 rounded-lg ${color} ${textColor} flex items-center justify-center transition-all hover:scale-110 hover:shadow-sm"
+            style="flex-shrink:0;">
+            <i class="fa-solid ${icon}" style="font-size:11px;"></i>
+        </button>
+    </div>`;
 
-            if (s.status === 'pending') {
-                if (s.is_open) {
-                    return btn('<i class="fa-solid fa-triangle-exclamation mr-1"></i> Claim Session', 'accepted', 'bg-purple-600 text-white hover:bg-purple-700');
-                }
-                return btn('Accept', 'accepted', 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200')
-                     + btn('Reject', 'rejected', 'bg-red-100 text-red-700 hover:bg-red-200');
-            }
-            if (s.status === 'accepted') {
-                return btn('Complete', 'completed', 'bg-gray-100 text-gray-700 hover:bg-gray-200')
-                     + btn('No-show',  'no_show',   'bg-orange-100 text-orange-700 hover:bg-orange-200')
-                     + btn('Cancel',   'cancelled',  'bg-red-100 text-red-700 hover:bg-red-200');
-            }
-            if (s.status === 'completed') {
-                return btn('Uncomplete', 'accepted', 'bg-gray-100 text-gray-500 hover:bg-gray-200');
-            }
-            return '<span class="text-gray-300 text-[10px]">—</span>';
+    let buttons = '';
+    let idleIndicator = '';
+
+    if (s.status === 'pending') {
+        if (s.is_open) {
+            buttons = iconBtn('fa-hand-pointer', 'Claim Session', 'accepted', 'bg-purple-100 hover:bg-purple-200', 'text-purple-700');
+            idleIndicator = `<span class="w-2 h-2 rounded-full bg-purple-400 inline-block"></span>`;
+        } else {
+            buttons = iconBtn('fa-check', 'Accept', 'accepted', 'bg-emerald-100 hover:bg-emerald-200', 'text-emerald-700')
+                    + iconBtn('fa-xmark', 'Reject', 'rejected', 'bg-red-100 hover:bg-red-200', 'text-red-600');
+            idleIndicator = `<span class="w-2 h-2 rounded-full bg-yellow-400 inline-block"></span>`;
         }
+    } else if (s.status === 'accepted') {
+        buttons = iconBtn('fa-flag-checkered', 'Complete',  'completed', 'bg-gray-100 hover:bg-gray-200',   'text-gray-600')
+                + iconBtn('fa-user-slash',     'No-show',   'no_show',   'bg-orange-100 hover:bg-orange-200','text-orange-600')
+                + iconBtn('fa-ban',            'Cancel',    'cancelled', 'bg-red-100 hover:bg-red-200',      'text-red-600');
+        idleIndicator = `<span class="w-2 h-2 rounded-full bg-green-400 inline-block"></span>`;
+    } else if (s.status === 'completed' || s.status === 'no_show' || s.status === 'rejected') {
+        buttons = iconBtn('fa-rotate-left', 'Undo', 'accepted', 'bg-gray-100 hover:bg-gray-200', 'text-gray-500');
+        idleIndicator = `<span class="w-2 h-2 rounded-full bg-gray-300 inline-block"></span>`;
+    } else {
+        return `<div class="flex justify-end"><span class="text-gray-200 text-[10px]">—</span></div>`;
+    }
+
+    return `
+        <div class="relative flex items-center justify-end" style="min-height:28px;">
+            <div class="action-idle absolute right-0 flex items-center gap-1 pointer-events-none">
+                ${idleIndicator}
+            </div>
+            <div class="action-buttons flex items-center gap-1 justify-end">
+                ${buttons}
+            </div>
+        </div>
+    `;
+}
 
         function formatTimeRange(s) {
             const [start, end] = s.duration.split(' (')[0].split(' - ');
@@ -803,7 +851,7 @@ function updateSummaryCounts() {
             if (label) label.textContent = filtered.length + ' Session' + (filtered.length !== 1 ? 's' : '') + ' found';
 
             if (!filtered.length) {
-                tbody.innerHTML = `<tr><td colspan="7" class="text-center py-16 text-gray-400 text-xs italic">No sessions found.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="8" class="text-center py-16 text-gray-400 text-xs italic">No sessions found.</td></tr>`;
                 updateSessionsPagination(0, 0, filtered);
                 return;
             }
@@ -818,8 +866,11 @@ function updateSummaryCounts() {
             updateSessionsPagination(total, maxPage, filtered);
 
             tbody.innerHTML = visible.map(s => `
-                <tr class="border-b border-gray-50 hover:bg-slate-50 transition">
+                <tr class="session-row border-b border-gray-50 hover:bg-slate-50 transition">
 
+                    <td class="px-5 py-4 align-middle text-gray-400 text-xs font-medium tabular-nums" style="width:5%;">
+                        ${start + visible.indexOf(s) + 1}
+                    </td>
                     <td class="px-5 py-4 align-middle" style="width:18%;">
                         <div class="hover-tooltip" data-full="${s.student} \n${s.yearLevel} - ${s.degreeProgram}">
                             <p class="font-bold text-slate-700 text-xs truncate">${s.student}</p>
@@ -830,7 +881,7 @@ function updateSummaryCounts() {
                     <td class="px-5 py-4 align-middle" style="width:13%;">
                         <div class="hover-tooltip" data-full="${s.subject} – ${s.subjectName}">
                             <p class="font-bold text-slate-700 text-xs">${s.subject}</p>
-                            <p class="text-[10px] text-gray-400 truncate" title="${s.subjectName}">${s.subjectName}</p>
+                            <p class="text-[10px] text-gray-400 truncate">${s.subjectName}</p>
                         </div>
                     </td>
 
@@ -848,9 +899,9 @@ function updateSummaryCounts() {
                     <td class="px-5 py-4 align-middle text-xs text-slate-500" style="width:10%;">${s.mode}</td>
 
                     <td class="px-5 py-4 align-middle" style="width:10%;">
-                        <span class="${getStatusColor(s.status)} text-[10px] px-2.5 py-1 rounded-full font-bold">
-                            ${getStatusLabel(s.status)}
-                        </span>
+<span class="${getStatusColor(s.status)} font-bold text-[10px] bg-gray-50 px-2 py-1 rounded border border-current opacity-80">
+    ${getStatusLabel(s.status)}
+</span>
                     </td>
 
                     <td class="px-5 py-4 align-middle" style="width:17%;">
