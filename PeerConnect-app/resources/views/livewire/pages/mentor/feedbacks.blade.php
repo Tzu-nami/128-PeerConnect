@@ -163,7 +163,7 @@ $totalPages = computed(function () {
         /* LAYOUT */
         .main-content { flex: 1; min-width: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
         .top-header { background: var(--header-maroon); height: var(--header-height); padding: 0 40px; display: flex; align-items: center; justify-content: space-between; color: white; flex-shrink: 0; }
-        .scroll-container { flex-grow: 1; overflow-y: auto; padding: 32px; width: 100%; }
+        .scroll-container { flex-grow: 1; overflow-y: scroll; padding: 32px; width: 100%; }
 
         /* PROFILE DROPDOWN */
         .profile-dropdown { position: absolute; top: 70px; right: 40px; background: white; border-radius: 12px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.2); width: 220px; display: none; flex-direction: column; z-index: 50; border: 1px solid #e2e8f0; overflow: hidden; }
@@ -215,25 +215,13 @@ $totalPages = computed(function () {
 }
 .hover-tooltip::after {
     content: attr(data-full);
-    position: absolute;
-    left: 0;
-    top: 110%;
-    background: rgba(0,0,0,0.85);
-    color: #fff;
-    padding: 8px 10px;
-    border-radius: 6px;
-    font-size: 11px;
-    line-height: 1.4;
-    white-space: normal;
-    word-break: break-word;
-    overflow-wrap: anywhere;
-    width: 320px;          /* fixed width instead of min/max */
-    max-width: 320px;
-    opacity: 0;
-    pointer-events: none;
-    transform: translateY(5px);
-    transition: 0.15s ease;
-    z-index: 9999;         /* bump this up */
+    position: absolute; left: 0; top: 110%;
+    background: rgba(0,0,0,0.85); color: #fff;
+    padding: 6px 10px; border-radius: 6px; font-size: 11px; line-height: 1.4;
+    white-space: normal; word-break: break-word; overflow-wrap: break-word;
+    width: max-content; max-width: 220px;
+    opacity: 0; pointer-events: none;
+    transform: translateY(5px); transition: 0.15s ease; z-index: 9999;
 }
 .hover-tooltip:hover::after {
     opacity: 1;
@@ -340,7 +328,7 @@ $totalPages = computed(function () {
             word-break: break-word;
             overflow-wrap: anywhere;
         }
-        .remarks-box::before { content: '\201C'; font-size: 2rem; color: #d1d5db; position: absolute; top: -4px; left: 8px; line-height: 1; font-family: Georgia, serif; }
+        .remarks-box::before { content: '\201C'; font-size: 2rem; color: #d1d5db; position: absolute; top: -4px; left: 8px; line-height: 1; }
 
         /* ── FEEDBACK POPUP (small, text-only) ── */
         .feedback-popup-overlay {
@@ -440,12 +428,19 @@ $totalPages = computed(function () {
     </aside>
 
     <div class="main-content">
-        <header class="top-header relative">
-            <div class="text-lg">Welcome, <span class="font-bold">{{ auth()->user()->name }}</span></div>
-            <button id="profileTrigger" class="flex items-center gap-2 px-3 py-1 bg-white rounded-full hover:bg-gray-100 transition shadow-sm border-2 border-white/20 group">
-                <div class="w-8 h-8 bg-red-900 text-white rounded-full flex items-center justify-center text-xs font-bold">{{ strtoupper(substr(auth()->user()->name, 0, 2)) }}</div>
-                <i class="fa-solid fa-chevron-down text-[10px] text-gray-500 group-hover:text-red-900 transition-transform duration-200"></i>
-            </button>
+            <header class="top-header relative">
+                <div class="text-lg">Welcome, <span class="font-bold">{{ auth()->user()->name }}</span></div>
+                <div class="flex items-center gap-2">
+                <x-mentor-notifications />
+                
+                <button id="profileTrigger" class="flex items-center gap-2 px-3 py-1 bg-white rounded-full hover:bg-gray-100 transition shadow-sm border-2 border-white/20 group">
+                    <div class="w-8 h-8 bg-red-900 text-white rounded-full flex items-center justify-center text-xs font-bold">
+                        {{ strtoupper(substr(auth()->user()->name,0,2)) }}
+                    </div>
+                    <i class="fa-solid fa-chevron-down text-[10px] text-gray-500 group-hover:text-red-900 transition-transform duration-200"></i>
+                </button>
+                </div>
+
             <div id="profileDropdown" class="profile-dropdown">
                 <div class="p-4 border-b border-gray-100 bg-slate-50">
                     <p class="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1">Signed in as</p>
