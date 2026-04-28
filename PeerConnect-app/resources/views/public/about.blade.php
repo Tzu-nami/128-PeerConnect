@@ -31,17 +31,17 @@
 
     {{-- Stats Band --}}
     <section class="grid grid-cols-3 border-b border-cream-border animate-fade-up [animation-delay:150ms]">
-        <div class="border-r border-cream-border text-center py-12">
-            <div class="font-heading text-5xl md:text-6xl text-up-maroon mb-2">{{ $stats['mentors'] }}</div>
-            <div class="text-up-yellow-dark text-xs font-bold tracking-widest uppercase">Mentors</div>
+        <div class="border-r border-cream-border text-center py-8 sm:py-12 px-1 sm:px-4">
+            <div class="font-heading text-4xl sm:text-5xl md:text-6xl text-up-maroon mb-2">{{ $stats['mentors'] }}</div>
+            <div class="text-up-yellow-dark text-[10px] sm:text-xs font-bold tracking-wider sm:tracking-widest uppercase">Mentors</div>
         </div>
-        <div class="border-r border-cream-border text-center py-12">
-            <div class="font-heading text-5xl md:text-6xl text-up-maroon mb-2">{{ $stats['bookings'] }}</div>
-            <div class="text-up-yellow-dark text-xs font-bold tracking-widest uppercase">Sessions Held</div>
+        <div class="border-r border-cream-border text-center py-8 sm:py-12 px-1 sm:px-4">
+            <div class="font-heading text-4xl sm:text-5xl md:text-6xl text-up-maroon mb-2">{{ $stats['bookings'] }}</div>
+            <div class="text-up-yellow-dark text-[10px] sm:text-xs font-bold tracking-wider sm:tracking-widest uppercase">Sessions Held</div>
         </div>
-        <div class="text-center py-12">
-            <div class="font-heading text-5xl md:text-6xl text-up-maroon mb-2">{{ $stats['subjects'] }}</div>
-            <div class="text-up-yellow-dark text-xs font-bold tracking-widest uppercase">Subjects Covered</div>
+        <div class="text-center py-8 sm:py-12 px-1 sm:px-4">
+            <div class="font-heading text-4xl sm:text-5xl md:text-6xl text-up-maroon mb-2">{{ $stats['subjects'] }}</div>
+            <div class="text-up-yellow-dark text-[10px] sm:text-xs font-bold tracking-wider sm:tracking-widest uppercase leading-tight">Subjects<br class="sm:hidden"> Covered</div>
         </div>
     </section>
 
