@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Livewire\Volt\Volt;
+use App\Http\Controllers\AboutController;
 
 // Guest Routes
 Route::get('/', function () {
@@ -20,14 +21,11 @@ Route::get('/services', function() {
     return view('public.services');
 })->name('public.services');
 
-Route::get('/about', function() {
-    return view('public.about');
-})->name('public.about');
+Route::get('/about', [AboutController::class, 'index'])->name('public.about');
 
 Route::get('/contact', function() {
     return view('public.contact');
 })->name('public.contact');
-
 
 
 
@@ -132,7 +130,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
                     $booking->booking_status = 'accepted';
                     $booking->save();
                 }
-                elseif($booking->mentor_id === $mentorProfile->id) { 
+                elseif($booking->mentor_id === $mentorProfile->id) {
                 $booking->booking_status = $requestedStatus;
 
                 if ($booking->booking_status === 'completed') {

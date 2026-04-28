@@ -1,4 +1,4 @@
-<div class="text-cream/60 bg-up-maroon-dark px-6 sm:px-12 lg:px-20 py-10">
+<div class="text-cream/60 bg-up-maroon-dark px-6 sm:px-12 lg:px-20 py-10 mt-auto">
     {{-- Main row --}}
     <div class="flex flex-col lg:flex-row justify-between mb-7 gap-10">
         {{-- Left Side --}}
@@ -10,7 +10,9 @@
                 Connecting UPB students with peer mentors for enrichment sessions and academic success.
             </div>
             <div class="flex items-center gap-3">
-                <a href="https://www.facebook.com/lrc.upbaguio" target="_blank" class="flex items-center justify-center w-8 h-8 rounded-full border border-cream/20 hover:bg-cream/10 hover:text-cream transition-colors">
+                <a href="https://www.facebook.com/lrc.upbaguio"
+                   target="_blank" rel="noopener noreferrer"
+                   class="flex items-center justify-center w-8 h-8 rounded-full border border-cream/20 hover:bg-cream/10 hover:text-cream transition-colors">
                     <i class="fa-brands fa-facebook text-sm"></i>
                 </a>
                 <a href="https://mainlib.upb.edu.ph/" target="_blank" class="flex items-center justify-center w-8 h-8 rounded-full border border-cream/20 hover:bg-cream/10 hover:text-cream transition-colors">
@@ -58,7 +60,9 @@
                 </div>
                 <div class="flex items-start gap-2">
                     <i class="fa-regular fa-envelope mt-0.5 opacity-50 text-xs"></i>
-                    <a href="mailto:lrc.upbaguio@up.edu.ph" class="hover:text-cream transition-colors">lrc.upbaguio@up.edu.ph</a>
+                    <a href="https://mail.google.com/mail/?view=cm&fs=1&to=lrc.upbaguio@up.edu.ph"
+                       target="_blank" rel="noopener noreferrer"
+                       class="hover:text-cream transition-colors">lrc.upbaguio@up.edu.ph</a>
                 </div>
                 <div class="flex items-start gap-2">
                     <i class="fa-solid fa-phone mt-0.5 opacity-50 text-xs"></i>
