@@ -116,7 +116,7 @@
     </section>
 
     {{-- FAQs --}}
-    <section id="faqs" class="bg-up-green px-6 md:px-20 py-24 mt-40 scroll-mt-[110px]">
+    <section id="faqs" class="bg-up-green px-6 md:px-20 py-14 xl:py-24 mt-10 xl:mt-40 scroll-mt-[110px]">
         <div class="flex flex-col gap-4 mb-12">
             <div class="flex items-center gap-3 text-up-yellow-dark text-xs tracking-widest font-bold uppercase">
                 <span class="block w-8 h-px bg-up-yellow-dark"></span>
@@ -129,6 +129,7 @@
                 Have questions about our services? Here are some answers to help you get started.
             </p>
         </div>
+
         {{-- FAQ Items --}}
         <div class="flex flex-col divide-y divide-white/20">
             <div class="py-5" x-data="{ open: false }">
@@ -142,6 +143,7 @@
                     Simply create an account and choose a session type that fits your needs.
                 </div>
             </div>
+
             <div class="py-5" x-data="{ open: false }">
                 <button class="w-full flex justify-between items-center text-left text-white font-semibold text-lg"
                         @click="open = !open">
@@ -153,6 +155,7 @@
                     and pick your preferred date and time slot.
                 </div>
             </div>
+
             <div class="py-5" x-data="{ open: false }">
                 <button class="w-full flex justify-between items-center text-left text-white font-semibold text-lg"
                         @click="open = !open">
@@ -163,6 +166,7 @@
                     No. All LRC peer mentoring sessions are completely free for UPB students.
                 </div>
             </div>
+
             <div class="py-5" x-data="{ open: false }">
                 <button class="w-full flex justify-between items-center text-left text-white font-semibold text-lg"
                         @click="open = !open">
@@ -173,6 +177,7 @@
                     All sessions are conducted at the LRC, located on the 2nd Floor of the University Library.
                 </div>
             </div>
+
             <div class="py-5" x-data="{ open: false }">
                 <button class="w-full flex justify-between items-center text-left text-white font-semibold text-lg"
                         @click="open = !open">
@@ -184,6 +189,7 @@
                     and the LRC's cancellation policy.
                 </div>
             </div>
+
             <div class="py-5" x-data="{ open: false }">
                 <button class="w-full flex justify-between items-center text-left text-white font-semibold text-lg"
                         @click="open = !open">
@@ -204,4 +210,5 @@
             </div>
         </div>
     </section>
+
 </x-layout.landing>
