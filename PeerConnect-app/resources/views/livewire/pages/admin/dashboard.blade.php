@@ -25,11 +25,11 @@ state([
 mount(function () {
     abort_if(!auth()->user()->isAdmin(), 403, 'Unauthorized Access');
     $this->totalMentors = MentorProfiles::count();
-    $this->sessionsToday = Bookings::whereDate('date', Carbon::today()) -> count();
-    $this->pendingBookings = Bookings::where('booking_status', 'pending') -> count();
+    $this->sessionsToday = Bookings::whereDate('date', Carbon::today())->count();
+    $this->pendingBookings = Bookings::where('booking_status', 'pending')->count();
     $this->totalStudents = StudentProfiles::count();
 
-      $this->todaySessions = Bookings::with(['mentor.user', 'student.user'])
+    $this->todaySessions = Bookings::with(['mentor.user', 'student.user'])
         ->whereDate('date', Carbon::today())
         ->orderBy('schedule_start')
         ->get()
@@ -46,9 +46,8 @@ mount(function () {
 $searchIndex = computed(function () {
     $index = [];
 
-    // Map Mentors
     $mentors = \App\Models\User::where('user_roles', 'mentor')->get();
-    foreach($mentors as $m) {
+    foreach ($mentors as $m) {
         $year = $m->studentProfile->yearLevel->name;
         $deprog = $m->studentProfile->degreeProgram->name;
         $index[] = [
@@ -62,9 +61,8 @@ $searchIndex = computed(function () {
         ];
     }
 
-    // Map Subjects
     $subjects = \App\Models\Subjects::all();
-    foreach($subjects as $s) {
+    foreach ($subjects as $s) {
         $index[] = [
             'group' => 'Courses',
             'label' => strtoupper($s->code),
@@ -75,25 +73,23 @@ $searchIndex = computed(function () {
         ];
     }
 
-    // Map Recent Sessions
-    $bookings = \App\Models\Bookings::with('mentor.user',  'subject')->latest()->take(50)->get();
-    foreach($bookings as $b) {
+    $bookings = \App\Models\Bookings::with('mentor.user', 'subject')->latest()->take(50)->get();
+    foreach ($bookings as $b) {
         $mentorName = $b->mentor ? ($b->mentor->user->lastName . ', ' . $b->mentor->user->firstName ?? 'Unknown Mentor') : 'Unknown Mentor';
         $sessionDate = \Carbon\Carbon::parse($b->date)->format('F j, Y');
         $index[] = [
             'group' => 'Sessions',
-            'label' => $b->topic ?: 'Tutorial Session', // Note: for some reason, naglalag siya kapag hindi topic yung label
-            'detail' => $sessionDate . ' -- Subject: ' . $b->subject->code . ' -- Mentor: ' . $mentorName . ' -- ' . ' -- Status: ' . ucfirst($b->booking_status),
+            'label' => $b->topic ?: 'Tutorial Session',
+            'detail' => $sessionDate . ' -- Subject: ' . $b->subject->code . ' -- Mentor: ' . $mentorName . ' -- Status: ' . ucfirst($b->booking_status),
             'icon' => 'fa-calendar-days',
             'bg' => '#d1fae5', 'color' => '#065f46',
             'url' => route('admin.sessions'),
-            'searchString' => strtolower($b->topic . ' ' . $mentorName . ' ' . $b->booking_status . ' ' . $b->subject->code  . ' ' . $sessionDate)
+            'searchString' => strtolower($b->topic . ' ' . $mentorName . ' ' . $b->booking_status . ' ' . $b->subject->code . ' ' . $sessionDate)
         ];
     }
 
-    // Map feedback
     $feedbacks = \App\Models\Feedback::with(['booking.subject', 'booking.mentor.user'])->latest('id')->take(50)->get();
-    foreach($feedbacks as $fb) {
+    foreach ($feedbacks as $fb) {
         $subjectCode = $fb->booking->subject->code ?? 'N/A';
         $mentorName = $fb->booking->mentor->user ? ($fb->booking->mentor->user->lastName . ', ' . $fb->booking->mentor->user->firstName) : 'Unknown Mentor';
         $comment = $fb->feedback ?? 'No comment provided.';
@@ -113,6 +109,80 @@ $searchIndex = computed(function () {
     return $index;
 });
 
+$monthlyTrends = computed(function () {
+    return Bookings::selectRaw("EXTRACT(WEEK FROM date) as week, COUNT(*) as count")
+        ->whereMonth('date', Carbon::now()->month)
+        ->groupBy('week')
+        ->orderBy('week')
+        ->pluck('count', 'week')
+        ->values()
+        ->toArray();
+});
+
+$topMentors = computed(function () {
+    return Bookings::with('mentor.user')
+        ->selectRaw('mentor_id, COUNT(*) as session_count')
+        ->groupBy('mentor_id')
+        ->orderByDesc('session_count')
+        ->take(4)
+        ->get()
+        ->map(fn($b) => [
+            'name'  => $b->mentor->user->lastName ?? 'Unknown',
+            'count' => $b->session_count,
+        ])
+        ->toArray();
+});
+
+$satisfactionRate = computed(function () {
+    $feedbacks = Feedback::whereNotNull('q1')->get();
+
+    if ($feedbacks->isEmpty()) {
+        return [0, 0, 0];
+    }
+
+    $scores = $feedbacks->map(function ($fb) {
+        $questions = [$fb->q1, $fb->q2, $fb->q3, $fb->q4, $fb->q5,
+                      $fb->q6, $fb->q7, $fb->q8, $fb->q9, $fb->q10];
+        $answered = array_filter($questions, fn($q) => !is_null($q));
+        return count($answered) > 0 ? array_sum($answered) / count($answered) : null;
+    })->filter()->values();
+
+    $total     = $scores->count();
+    $excellent = $scores->filter(fn($s) => $s >= 4)->count();
+    $good      = $scores->filter(fn($s) => $s >= 3 && $s < 4)->count();
+    $average   = $scores->filter(fn($s) => $s < 3)->count();
+
+    return [
+        round($excellent / $total * 100),
+        round($good      / $total * 100),
+        round($average   / $total * 100),
+    ];
+});
+
+$topSubjects = computed(function () {
+    return Bookings::with('subject')
+        ->selectRaw('subject_id, COUNT(*) as booking_count')
+        ->groupBy('subject_id')
+        ->orderByDesc('booking_count')
+        ->take(5)
+        ->get()
+        ->map(fn($b) => [
+            'name'  => $b->subject->code ?? 'Unknown',
+            'count' => $b->booking_count,
+        ])
+        ->toArray();
+});
+
+$collegeActivity = computed(function () {
+    return StudentProfiles::join('degree_programs', 'student_profiles.degreeProgram_id', '=', 'degree_programs.id')
+        ->join('colleges', 'degree_programs.college_id', '=', 'colleges.id')
+        ->selectRaw('colleges.code as college, COUNT(*) as count')
+        ->groupBy('colleges.id', 'colleges.code')
+        ->orderByDesc('count')
+        ->take(3)
+        ->pluck('count', 'college')
+        ->toArray();
+});
 
 ?>
 
@@ -626,6 +696,8 @@ updateDate();
                                 <div class="stats-column"><div class="stats-column-title">Top Mentors</div><div class="h-44"><canvas id="pieChart"></canvas></div></div>
                                 <div class="stats-column"><div class="stats-column-title">Satisfaction Rate</div><div class="h-44 flex justify-center"><canvas id="doughnutChart"></canvas></div></div>
                                 <div class="stats-column"><div class="stats-column-title">Most Active Colleges (CS, CSS, CAC)</div><div class="h-44"><canvas id="activeCollegeChart"></canvas></div></div>
+                                <div class="stats-column col-span-2"><div class="stats-column-title">Most Booked Subjects</div><div class="h-44"><canvas id="topSubjectsChart"></canvas></div>
+</div>
                             </div>
                         </div>
                     </div>
@@ -790,55 +862,104 @@ let selectedDateStr = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padSt
 let viewDate = new Date(_now.getFullYear(), _now.getMonth(), 1);
 
         // Chart Configs
-        const linearOptions = { maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false }, ticks: { font: { size: 9 } } }, y: { beginAtZero: true, grid: { display: false }, ticks: { font: { size: 9 } } } } };
+const monthlyData  = @json($this->monthlyTrends);
+const topMentors   = @json($this->topMentors);
+const satisfaction = @json($this->satisfactionRate);
+const collegeData  = @json($this->collegeActivity);
+const topSubjects = @json($this->topSubjects);
 
-        function initCharts() {
-            // Line Chart
-            charts.push(new Chart(document.getElementById('lineChart'), { type: 'line', data: { labels: ['W1', 'W2', 'W3', 'W4'], datasets: [{ data: [45, 52, 38, 65], borderColor: '#7b1d1d', tension: 0.4 }] }, options: linearOptions }));
+const linearOptions = {
+    maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 9 } } },
+        y: { beginAtZero: true, grid: { display: false }, ticks: { font: { size: 9 } } }
+    }
+};
 
-            // Pie Chart (Top Mentors)
-            charts.push(new Chart(document.getElementById('pieChart'), { type: 'pie', data: { labels: ['Daniel D.', 'Sarah J.', 'James W.', 'Others'], datasets: [{ data: [40, 25, 20, 15], backgroundColor: ['#1a3c2f', '#7b1d1d', '#94a3b8', '#cbd5e1'] }] }, options: { maintainAspectRatio: false, plugins: { legend: { display: true, position: 'right', labels: { boxWidth: 8, font: { size: 9 } } } } } }));
+function initCharts() {
+    charts.push(new Chart(document.getElementById('lineChart'), {
+        type: 'line',
+        data: {
+            labels: monthlyData.map((_, i) => `W${i + 1}`),
+            datasets: [{ data: monthlyData, borderColor: '#7b1d1d', tension: 0.4 }]
+        },
+        options: linearOptions
+    }));
 
-            // Doughnut Chart (Satisfaction Rate)
-            charts.push(new Chart(document.getElementById('doughnutChart'), {
-                type: 'doughnut',
-                data: {
-                    labels: ['Excl', 'Good', 'Avg'],
-                    datasets: [{ data: [70, 20, 10], backgroundColor: ['#1a3c2f', '#7b1d1d', '#cbd5e1'], borderWidth: 0 }]
-                },
-                options: {
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: true, position: 'bottom', labels: { boxWidth: 10, font: { size: 9 } } }
-                    },
-                    cutout: '70%'
-                }
-            }));
-
-            // Bar Chart (Most Active Colleges - CS, CSS, CAC)
-            charts.push(new Chart(document.getElementById('activeCollegeChart'), {
-                type: 'bar',
-                data: {
-                    labels: ['CS', 'CSS', 'CAC'],
-                    datasets: [{
-                        label: 'Active Students',
-                        data: [68, 85, 42],
-                        backgroundColor: ['#94a3b8', '#1a3c2f', '#7b1d1d'],
-                        borderRadius: 4,
-                        barThickness: 20
-                    }]
-                },
-                options: {
-                    indexAxis: 'y',
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: {
-                        x: { beginAtZero: true, grid: { display: false }, ticks: { font: { size: 9 } } },
-                        y: { grid: { display: false }, ticks: { font: { size: 9 } } }
-                    }
-                }
-            }));
+    charts.push(new Chart(document.getElementById('pieChart'), {
+        type: 'pie',
+        data: {
+            labels: topMentors.map(m => m.name),
+            datasets: [{
+                data: topMentors.map(m => m.count),
+                backgroundColor: ['#1a3c2f', '#7b1d1d', '#94a3b8', '#cbd5e1']
+            }]
+        },
+        options: {
+            maintainAspectRatio: false,
+            plugins: { legend: { display: true, position: 'right', labels: { boxWidth: 8, font: { size: 9 } } } }
         }
+    }));
+
+    charts.push(new Chart(document.getElementById('doughnutChart'), {
+        type: 'doughnut',
+        data: {
+            labels: ['Excl', 'Good', 'Avg'],
+            datasets: [{ data: satisfaction, backgroundColor: ['#1a3c2f', '#7b1d1d', '#cbd5e1'], borderWidth: 0 }]
+        },
+        options: {
+            maintainAspectRatio: false,
+            cutout: '70%',
+            plugins: { legend: { display: true, position: 'bottom', labels: { boxWidth: 10, font: { size: 9 } } } }
+        }
+    }));
+
+    charts.push(new Chart(document.getElementById('topSubjectsChart'), {
+    type: 'bar',
+    data: {
+        labels: topSubjects.map(s => s.name),
+        datasets: [{
+            label: 'Bookings',
+            data: topSubjects.map(s => s.count),
+            backgroundColor: ['#1a3c2f', '#7b1d1d', '#94a3b8', '#cbd5e1', '#fef3c7'],
+            borderRadius: 4,
+            barThickness: 20
+        }]
+    },
+    options: {
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+            x: { grid: { display: false }, ticks: { font: { size: 9 } } },
+            y: { beginAtZero: true, grid: { display: false }, ticks: { font: { size: 9 } } }
+        }
+    }
+}));
+
+    charts.push(new Chart(document.getElementById('activeCollegeChart'), {
+        type: 'bar',
+        data: {
+            labels: Object.keys(collegeData),
+            datasets: [{
+                label: 'Active Students',
+                data: Object.values(collegeData),
+                backgroundColor: ['#94a3b8', '#1a3c2f', '#7b1d1d'],
+                borderRadius: 4,
+                barThickness: 20
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { beginAtZero: true, grid: { display: false }, ticks: { font: { size: 9 } } },
+                y: { grid: { display: false }, ticks: { font: { size: 9 } } }
+            }
+        }
+    }));
+}
 
         // Table Logic
 function applyFilters() {
@@ -989,7 +1110,7 @@ document.getElementById('nextBtn').addEventListener('click', () => { currentPage
         { group: 'Approvals', label: 'Tom Chen',               detail: 'Profile Edit Request · Pending',                 target: 'section-approvals', keywords: ['tom','chen','profile edit','edit profile'] },
 
         // ── ANALYTICS ──
-        { group: 'Analytics', label: 'Monthly Session Trends', detail: 'Weekly session volume — W1 to W4',               target: 'section-analytics', keywords: ['monthly','trends','sessions','volume','weekly','line chart','chart'] },
+        { group: 'Analytics', label: 'Monthly Session Trends', detail: 'Weekly session volume — Week 1 to Week 4',               target: 'section-analytics', keywords: ['monthly','trends','sessions','volume','weekly','line chart','chart'] },
         { group: 'Analytics', label: 'Top Mentors',            detail: 'Daniel D., Sarah J., James W. ranked by sessions', target: 'section-analytics', keywords: ['top','mentors','ranked','pie chart','leaderboard','best'] },
         { group: 'Analytics', label: 'Satisfaction Rate',      detail: 'Excellent 70%, Good 20%, Average 10%',           target: 'section-analytics', keywords: ['satisfaction','rate','excellent','good','average','doughnut','donut','feedback'] },
         { group: 'Analytics', label: 'Most Active Colleges',   detail: 'CS · CSS · CAC — session counts',                target: 'section-analytics', keywords: ['college','colleges','cs','css','cac','active','bar chart','campus'] },
