@@ -24,7 +24,7 @@
     {{-- Hero Image --}}
     <div class="w-full h-64 md:h-96 bg-cream-dark border-b border-cream-border overflow-hidden animate-fade-up [animation-delay:100ms]">
         <img
-            src="https://cwpbwqcxlccbittkhasq.supabase.co/storage/v1/object/public/assets/images/library.jpeg"
+            src="https://cwpbwqcxlccbittkhasq.supabase.co/storage/v1/object/public/assets/images/landing-page/library.jpeg"
             alt="LRC PeerConnect"
             class="w-full h-full object-cover brightness-125">
     </div>
@@ -58,7 +58,7 @@
                 </div>
                 <div class="aspect-[4/3] bg-cream-dark border border-cream-border overflow-hidden">
                     <img
-                        src="https://cwpbwqcxlccbittkhasq.supabase.co/storage/v1/object/public/assets/images/mission.jpg"
+                        src="https://cwpbwqcxlccbittkhasq.supabase.co/storage/v1/object/public/assets/images/landing-page/about-us/mission.jpg"
                         alt="Our Mission"
                         class="w-full h-full object-cover">
                 </div>
@@ -107,7 +107,7 @@
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
                 <div class="aspect-[4/3] bg-cream-dark border border-cream-border overflow-hidden order-last lg:order-first">
                     <img
-                        src="https://cwpbwqcxlccbittkhasq.supabase.co/storage/v1/object/public/assets/images/mentors.jpg"
+                        src="https://cwpbwqcxlccbittkhasq.supabase.co/storage/v1/object/public/assets/images/landing-page/about-us/mentors.jpg"
                         alt="Our Mentors"
                         class="w-full h-full object-cover brightness-110">
                 </div>
@@ -121,7 +121,7 @@
                         @foreach ([
                             ['icon' => 'verified', 'text' => 'Trained and screened by LRC staff'],
                             ['icon' => 'school', 'text' => 'Currently enrolled UPB students'],
-                            ['icon' => 'menu_book', 'text' => 'Cover 10+ subjects across disciplines'],
+                            ['icon' => 'menu_book', 'text' => 'Experts in their own fields of study'],
                             ['icon' => 'favorite', 'text' => 'Committed to peer-driven learning'],
                         ] as $item)
                             <div class="flex items-center gap-3">
