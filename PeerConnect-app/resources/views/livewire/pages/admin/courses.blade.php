@@ -306,6 +306,8 @@ mount(function () {
     .form-label { display: block; font-size: 13px; font-weight: 600; color: #475569; margin-bottom: 6px; }
 
     #confirmMeta { max-height: 200px; overflow-y: auto; }
+    @keyframes slideDown { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 </style>
 
     <aside class="sidebar" id="sidebar">
@@ -381,12 +383,22 @@ mount(function () {
 
         <main class="scroll-container">
 
-            {{-- Success Message --}}
-            @if(session('successMessage'))
-                <div class="mb-6 bg-green-100 border border-green-400 text-green-800 px-4 py-3 rounded-xl">
-                    {{ session('successMessage') }}
-                </div>
-            @endif
+{{-- Success Message --}}
+@if(session('successMessage'))
+    <div id="flashSuccessBanner" class="mb-6 bg-green-100 border border-green-400 text-green-800 px-4 py-3 rounded-xl" style="animation:slideDown 0.2s ease;">
+        {{ session('successMessage') }}
+    </div>
+    <script>
+        setTimeout(() => {
+            const b = document.getElementById('flashSuccessBanner');
+            if (b) {
+                b.style.transition = 'opacity 0.4s ease';
+                b.style.opacity = '0';
+                setTimeout(() => b.remove(), 400);
+            }
+        }, 5000);
+    </script>
+@endif
 
             {{-- Page heading --}}
             <div class="mb-6 pb-4 border-b border-gray-200 flex flex-wrap items-center justify-between gap-4">
@@ -484,6 +496,7 @@ mount(function () {
                 {{-- Table --}}
                 <div style="overflow:visible;">
                     <table class="w-full text-left text-sm table-fixed" style="overflow:visible;">
+
                         <thead class="bg-slate-50 border-b border-gray-100">
                             <tr>
                                 <th class="px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider w-[4%]">#</th>
@@ -829,7 +842,69 @@ mount(function () {
             badge.classList.add('hidden');
         }
     }
+/* ── Banners ── */
+function showCourseBanner(id, html) {
+    const area = document.getElementById('coursesBannerArea');
+    if (!area) return;
+    let banner = document.getElementById(id);
+    if (!banner) {
+        banner = document.createElement('div');
+        banner.id = id;
+        banner.style.cssText = 'border-radius:8px; overflow:hidden; font-size:11px; animation:slideDown 0.2s ease; margin-bottom:4px;';
+        area.appendChild(banner);
+    }
+    banner.innerHTML = html;
+    clearTimeout(banner._timer);
+    if (id !== 'courseLoadingBanner') {
+        banner._timer = setTimeout(() => banner.remove(), 5000);
+    }
+}
 
+function showCourseLoadingBanner(message) {
+    showCourseBanner('courseLoadingBanner', `
+        <div style="border:1px solid #bfdbfe; background:#eff6ff; border-radius:8px;">
+            <div style="display:flex; align-items:center; gap:8px; padding:10px 12px;">
+                <div style="flex-shrink:0;">
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style="animation:spin 1s linear infinite;">
+                        <circle cx="7" cy="7" r="6" stroke="#93c5fd" stroke-width="1.5"/>
+                        <path d="M7 1a6 6 0 0 1 6 6" stroke="#2563eb" stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>
+                </div>
+                <div style="flex:1; color:#1d4ed8; line-height:1.5; font-size:11px;">
+                    <span style="font-weight:600;">${message}</span>
+                </div>
+            </div>
+        </div>
+    `);
+    const banner = document.getElementById('courseLoadingBanner');
+    if (banner) clearTimeout(banner._timer);
+}
+
+function hideCourseLoadingBanner() {
+    const banner = document.getElementById('courseLoadingBanner');
+    if (banner) banner.remove();
+}
+
+function showCourseErrorBanner(message) {
+    showCourseBanner('courseErrorBanner', `
+        <div style="border:1px solid #fca5a5; background:#fef2f2; border-radius:8px;">
+            <div style="display:flex; align-items:flex-start; gap:8px; padding:10px 12px;">
+                <div style="flex-shrink:0; margin-top:2px;">
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                        <circle cx="8" cy="8" r="7.5" stroke="#ef4444" stroke-width="1"/>
+                        <path d="M8 4.5v4" stroke="#ef4444" stroke-width="1.5" stroke-linecap="round"/>
+                        <circle cx="8" cy="11" r="0.75" fill="#ef4444"/>
+                    </svg>
+                </div>
+                <div style="flex:1; color:#b91c1c; line-height:1.5;">
+                    <span style="font-weight:600;">Error —</span> ${message}
+                </div>
+                <button onclick="document.getElementById('courseErrorBanner').remove()"
+                    style="flex-shrink:0; background:none; border:none; cursor:pointer; color:#b91c1c; font-size:14px; line-height:1; padding:0;">&times;</button>
+            </div>
+        </div>
+    `);
+}
     /* ── Confirmation Modal ── */
     function closeConfirmModal() {
         document.getElementById('confirmModal').style.display = 'none';
@@ -866,27 +941,31 @@ mount(function () {
         confirmOkBtn.className   = `px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors ${v.btnClass}`;
         confirmOkBtn.textContent = confirmText || 'Confirm';
 
-        confirmOkBtn.onclick = async () => {
-            const originalText = confirmOkBtn.textContent;
-            confirmOkBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i>${loadingText || 'Processing...'}`;
-            confirmOkBtn.classList.add('opacity-70', 'cursor-not-allowed');
-            confirmOkBtn.style.pointerEvents = 'none';
-            confirmCancelBtn.disabled = true;
-            confirmCancelBtn.classList.add('opacity-50', 'cursor-not-allowed');
+confirmOkBtn.onclick = async () => {
+    const originalText = confirmOkBtn.textContent;
+    confirmOkBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i>${loadingText || 'Processing...'}`;
+    confirmOkBtn.classList.add('opacity-70', 'cursor-not-allowed');
+    confirmOkBtn.style.pointerEvents = 'none';
+    confirmCancelBtn.disabled = true;
+    confirmCancelBtn.classList.add('opacity-50', 'cursor-not-allowed');
 
-            try {
-                const result = onConfirm();
-                if (result && typeof result.then === 'function') await result;
-            } finally {
-                confirmOkBtn.textContent = originalText;
-                confirmOkBtn.classList.remove('opacity-70', 'cursor-not-allowed');
-                confirmOkBtn.style.pointerEvents = 'auto';
-                confirmCancelBtn.disabled = false;
-                confirmCancelBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-                closeConfirmModal();
-            }
-        };
+    showCourseLoadingBanner(loadingText || 'Processing, please wait...');
 
+    try {
+        const result = onConfirm();
+        if (result && typeof result.then === 'function') await result;
+    } catch (err) {
+        hideCourseLoadingBanner();
+        showCourseErrorBanner('Something went wrong. Please try again.');
+    } finally {
+        confirmOkBtn.textContent = originalText;
+        confirmOkBtn.classList.remove('opacity-70', 'cursor-not-allowed');
+        confirmOkBtn.style.pointerEvents = 'auto';
+        confirmCancelBtn.disabled = false;
+        confirmCancelBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        closeConfirmModal();
+    }
+};
         confirmModal.style.display = 'flex';
     }
 
