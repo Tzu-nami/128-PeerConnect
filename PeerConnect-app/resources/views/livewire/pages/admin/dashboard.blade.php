@@ -59,18 +59,19 @@ mount(function () {
     $this->pendingBookings = Bookings::where('booking_status', 'pending')->count();
     $this->totalStudents = StudentProfiles::count();
 
-    $this->todaySessions = Bookings::with(['mentor.user', 'student.user'])
-        ->whereDate('date', Carbon::today())
-        ->orderBy('schedule_start')
-        ->get()
-        ->map(fn($b) => [
-            'date'   => $b->date,
-            'mentor' => $b->mentor->user->name  ?? 'Unknown Mentor',
-            'mentee' => $b->student->user->name ?? 'Unknown Mentee',
-            'time'   => Carbon::parse($b->start_time)->format('h:i A'),
-            'status' => ucfirst($b->booking_status),
-        ])
-        ->toArray();
+$this->todaySessions = Bookings::with(['mentor.user', 'student.user', 'subject'])
+    ->whereDate('date', Carbon::today())
+    ->orderBy('schedule_start')
+    ->get()
+    ->map(fn($b) => [
+        'date'    => $b->date,
+        'mentor'  => $b->mentor->user->name  ?? 'Unknown Mentor',
+        'mentee'  => $b->student->user->name ?? 'Unknown Mentee',
+        'subject' => $b->subject->code       ?? 'N/A',
+        'time'    => Carbon::parse($b->schedule_start)->format('h:i A'),
+        'status'  => ucfirst($b->booking_status),
+    ])
+    ->toArray();
 
         $this->pendingApprovalsList = Bookings::with(['student.user', 'mentor.user', 'subject'])
     ->where('booking_status', 'pending')
@@ -874,30 +875,25 @@ updateDate();
 
 <div>
                                 <table class="w-full text-left text-sm table-fixed">
-                                    <thead class="text-gray-400 border-b">
-                                        <tr>
-                                            <th class="pb-3 text-[10px] tracking-wider" style="width:35%">
-                                                <button id="sortHead-student" onclick="toggleSort('student')" class="flex items-center gap-1 font-semibold uppercase hover:text-red-800 transition-colors" style="color:#94a3b8;">
-                                                    Student <span class="sort-icon"><i class="fa-solid fa-arrow-up-arrow-down" style="font-size:8px;opacity:0.4;"></i></span>
-                                                </button>
-                                            </th>
-                                            <th class="pb-3 text-[10px] tracking-wider" style="width:30%">
-                                                <button id="sortHead-start" onclick="toggleSort('start')" class="flex items-center gap-1 font-semibold uppercase hover:text-red-800 transition-colors" style="color:#7b1d1d;">
-                                                    Time <span class="sort-icon"><i class="fa-solid fa-arrow-up" style="font-size:8px;"></i></span>
-                                                </button>
-                                            </th>
-                                            <th class="pb-3 text-[10px] tracking-wider" style="width:20%">
-                                                <button id="sortHead-subject" onclick="toggleSort('subject')" class="flex items-center gap-1 font-semibold uppercase hover:text-red-800 transition-colors" style="color:#94a3b8;">
-                                                    Subject <span class="sort-icon"><i class="fa-solid fa-arrow-up-arrow-down" style="font-size:8px;opacity:0.4;"></i></span>
-                                                </button>
-                                            </th>
-<th class="pb-3 text-[10px] tracking-wider" style="width:20%">
-    <button id="sortHead-status" onclick="toggleSort('status')" class="flex items-center justify-center gap-1 font-semibold uppercase hover:text-red-800 transition-colors w-full" style="color:#94a3b8;">
-        Status <span class="sort-icon"><i class="fa-solid fa-arrow-up-arrow-down" style="font-size:8px;opacity:0.4;"></i></span>
-    </button>
-</th>
-                                        </tr>
-                                    </thead>
+<thead class="text-gray-400 border-b">
+    <tr>
+        <th class="pb-3 text-[10px] tracking-wider" style="width:22%">
+            <span class="flex items-center gap-1 font-semibold uppercase" style="color:#94a3b8;">Student</span>
+        </th>
+        <th class="pb-3 text-[10px] tracking-wider" style="width:22%">
+            <span class="flex items-center gap-1 font-semibold uppercase" style="color:#94a3b8;">Mentor</span>
+        </th>
+        <th class="pb-3 text-[10px] tracking-wider" style="width:16%">
+            <span class="flex items-center gap-1 font-semibold uppercase" style="color:#94a3b8;">Subject</span>
+        </th>
+        <th class="pb-3 text-[10px] tracking-wider" style="width:20%">
+            <span class="flex items-center gap-1 font-semibold uppercase" style="color:#94a3b8;">Time</span>
+        </th>
+        <th class="pb-3 text-[10px] tracking-wider" style="width:20%">
+            <span class="flex items-center justify-center gap-1 font-semibold uppercase w-full" style="color:#94a3b8;">Status</span>
+        </th>
+    </tr>
+</thead>
                                     <tbody id="tableBody"></tbody>
                                 </table>
                             </div>
@@ -1772,10 +1768,11 @@ function applyFilters() {
     const selectedStatus = statusFilter.value;
 
     const filtered = allSessions.filter(item => {
-        const matchesSearch = searchTerm
-            ? item.mentor.toLowerCase().includes(searchTerm) ||
-              item.mentee.toLowerCase().includes(searchTerm)
-            : true;
+const matchesSearch = searchTerm
+    ? item.mentor.toLowerCase().includes(searchTerm) ||
+      item.mentee.toLowerCase().includes(searchTerm) ||
+      item.subject.toLowerCase().includes(searchTerm)
+    : true;
         const matchesStatus = selectedStatus === 'All' || item.status === selectedStatus;
         return matchesSearch && matchesStatus;
     });
@@ -1790,24 +1787,27 @@ function applyFilters() {
     if (paginated.length === 0) {
         tbody.innerHTML = `<tr><td colspan="4" class="py-12 text-center text-gray-400 italic">No matching sessions found.</td></tr>`;
     } else {
-        tbody.innerHTML = paginated.map(row => `
-            <tr class="border-b last:border-0 hover:bg-slate-50 transition">
-                <td class="py-4 font-bold text-slate-700 max-w-0 w-1/4">
-                    <div class="tooltip-wrap">
-                        <div class="truncate">${row.mentor}</div>
-                        <span class="tooltip-text">${row.mentor}</span>
-                    </div>
-                </td>
-                <td class="text-slate-600 max-w-0 w-1/4">
-                    <div class="tooltip-wrap">
-                        <div class="truncate">${row.mentee}</div>
-                        <span class="tooltip-text">${row.mentee}</span>
-                    </div>
-                </td>
-                <td class="text-slate-500 w-1/4">${row.time}</td>
-                <td class="w-1/4"><span class="${row.color} font-bold text-[10px] bg-gray-50 px-2 py-1 rounded border border-current opacity-80">${row.status}</span></td>
-            </tr>
-        `).join('');
+tbody.innerHTML = paginated.map(row => `
+    <tr class="border-b last:border-0 hover:bg-slate-50 transition">
+        <td class="py-3 max-w-0" style="width:22%;">
+            <div class="tooltip-wrap">
+                <div class="truncate text-xs font-bold text-slate-700">${row.mentee}</div>
+                <span class="tooltip-text">${row.mentee}</span>
+            </div>
+        </td>
+        <td class="py-3 max-w-0" style="width:22%;">
+            <div class="tooltip-wrap">
+                <div class="truncate text-xs text-slate-600">${row.mentor}</div>
+                <span class="tooltip-text">${row.mentor}</span>
+            </div>
+        </td>
+        <td class="py-3 text-xs text-slate-500" style="width:16%;">${row.subject}</td>
+        <td class="py-3 text-xs text-slate-500" style="width:20%;">${row.time}</td>
+        <td class="py-3 text-center" style="width:20%;">
+            <span class="${row.color} font-bold text-[10px] bg-gray-50 px-2 py-1 rounded border border-current opacity-80">${row.status}</span>
+        </td>
+    </tr>
+`).join('');
     }
 
     document.getElementById('pageIndicator').innerText = `Showing ${start + 1}–${Math.min(start + perPage, filtered.length)} of ${filtered.length} result${filtered.length !== 1 ? 's' : ''}`;
