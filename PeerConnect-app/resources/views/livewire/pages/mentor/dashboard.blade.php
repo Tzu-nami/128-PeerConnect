@@ -546,13 +546,13 @@ Bookings::where('mentor_id', $mentorProfile->id)
                             <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col">
                                 <div class="flex justify-between items-center mb-6">
                                     <div>
-                                        <h2 class="text-lg font-bold text-slate-800" id="tableTitle">Today's Schedule</h2>
+                                        <h2 class="text-lg font-bold text-slate-800" id="tableTitle"><i class="fa-solid fa-calendar-check"></i> Today's Schedule</h2>
                                         <p class="text-s text-gray-500" id="tableSubtitle"></p>
                                     </div>
                                     <div class="flex gap-2">
                                         <div class="relative w-48">
                                             <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-300 text-xs"></i>
-                                            <input type="text" id="liveSearchInput" placeholder="Search names..." class="w-full pl-8 pr-3 py-1.5 text-xs font-medium text-slate-700 placeholder-gray-400 border border-gray-200 rounded-lg bg-white outline-none focus:ring-1 focus:border-up-maroon focus:ring-up-maroon w-56 h-[34px] transition-shadow">
+                                            <input type="text" id="liveSearchInput" placeholder="Search..." class="w-full pl-8 pr-3 py-1.5 text-xs font-medium text-slate-700 placeholder-gray-400 border border-gray-200 rounded-lg bg-white outline-none focus:ring-1 focus:border-up-maroon focus:ring-up-maroon w-56 h-[34px] transition-shadow">
                                         </div>
 <select id="statusFilter" class="table-filter-select">
     <option value="">All</option>
@@ -902,12 +902,10 @@ let filtered = allSessions.filter(item => {
         <div style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis;max-width:90%;">${row.subject}</div>
     </div>
 </td>
-<td style="width:20%">
-    <div class="flex items-center justify-center">
-<span class="${getStatusColor(row.status)} font-bold text-[10px] bg-gray-50 px-2 py-1 rounded border border-current opacity-80 capitalize">
-    ${getStatusLabel(row.status)}
-</span>
-    </div>
+<td class="py-4 text-center" style="width:20%">
+    <span class="${getStatusColor(row.status)} font-bold text-[10px] bg-gray-50 px-2 py-1 rounded border border-current opacity-80 capitalize">
+        ${getStatusLabel(row.status)}
+    </span>
 </td>
                 </tr>
             `).join('');
