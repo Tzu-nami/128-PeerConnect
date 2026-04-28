@@ -629,12 +629,24 @@ mount(function () {
 
             <main class="scroll-container">
 
-                {{-- Success Message --}}
-                @if(session('successMessage'))
-                    <div class="mb-6 bg-green-100 border border-green-400 text-green-800 px-4 py-3 rounded-xl" style="animation: slideDown 0.2s ease;">
-                        {{ session('successMessage') }}
-                    </div>
-                @endif
+{{-- Success Message --}}
+@if(session('successMessage'))
+    <div
+        x-data="{ show: true }"
+        x-init="setTimeout(() => show = false, 5000)"
+        x-show="show"
+        x-transition:enter="transition ease-out duration-300"
+        x-transition:enter-start="opacity-0 -translate-y-2"
+        x-transition:enter-end="opacity-100 translate-y-0"
+        x-transition:leave="transition ease-in duration-300"
+        x-transition:leave-start="opacity-100 translate-y-0"
+        x-transition:leave-end="opacity-0 -translate-y-2"
+        class="mb-6 bg-green-100 border border-green-400 text-green-800 px-4 py-3 rounded-xl"
+        style="animation: slideDown 0.2s ease;"
+    >
+        {{ session('successMessage') }}
+    </div>
+@endif
 
                 {{-- Page heading --}}
                 <div class="mb-6 pb-4 border-b border-gray-200 flex flex-wrap items-center justify-between gap-4">
