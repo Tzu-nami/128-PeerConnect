@@ -189,9 +189,6 @@ $summaryCounts = computed(function () {
         .dropdown-item { padding: 12px 20px; font-size: 13px; color: #475569; display: flex; align-items: center; gap: 10px; transition: background 0.2s; text-decoration: none; }
         .dropdown-item:hover { background: #f8fafc; color: var(--header-maroon); }
 
-        /* ── TABLE STYLES (from mentor sessions) ── */
-
-
         .table-filter-select { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 12px; font-size: 0.75rem; color: #475569; outline: none; cursor: pointer; }
 
         .pagination-btn { padding: 4px 10px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 11px; font-weight: 600; color: #64748b; transition: all 0.2s; background: white; cursor: pointer; }
@@ -231,10 +228,11 @@ $summaryCounts = computed(function () {
             opacity: 0;
         }
 
+        /* ── CONFIRMATION MODAL ── */
+        #confirmMeta { max-height: 200px; overflow-y: auto; }
+
         @keyframes slideDown { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-
-        #confirmMeta { max-height: 200px; overflow-y: auto; }
     </style>
 
     <div class="app-wrapper">
@@ -311,7 +309,6 @@ $summaryCounts = computed(function () {
 
             <main class="scroll-container">
 
-                {{-- ── Everything ABOVE the table stays exactly as-is ── --}}
                 {{-- Page heading --}}
                 <div class="mb-6 pb-4 border-b border-gray-200 flex flex-wrap items-center justify-between gap-4">
                     <div>
@@ -322,60 +319,46 @@ $summaryCounts = computed(function () {
                     </div>
                 </div>
 
-{{-- Summary Stat Cards --}}
-<div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-6">
-    <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-slate-400 flex items-center gap-4">
-        <div class="text-2xl">
-            <i class="fa-solid fa-list-check text-slate-500"></i>
-        </div>
-        <div>
-            <h3 class="text-xs font-bold text-gray-400 uppercase leading-none">Total</h3>
-            <p class="text-2xl font-black text-slate-800" id="statTotal">{{ $this->summaryCounts['total'] }}</p>
-        </div>
-    </div>
+                {{-- Summary Stat Cards --}}
+                <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-6">
+                    <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-slate-400 flex items-center gap-4">
+                        <div class="text-2xl"><i class="fa-solid fa-list-check text-slate-500"></i></div>
+                        <div>
+                            <h3 class="text-xs font-bold text-gray-400 uppercase leading-none">Total</h3>
+                            <p class="text-2xl font-black text-slate-800" id="statTotal">{{ $this->summaryCounts['total'] }}</p>
+                        </div>
+                    </div>
+                    <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-green-600 flex items-center gap-4">
+                        <div class="text-2xl"><i class="fa-solid fa-circle-check text-green-600"></i></div>
+                        <div>
+                            <h3 class="text-xs font-bold text-gray-400 uppercase leading-none">Accepted</h3>
+                            <p class="text-2xl font-black text-slate-800" id="statAccepted">{{ $this->summaryCounts['accepted'] }}</p>
+                        </div>
+                    </div>
+                    <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-yellow-500 flex items-center gap-4">
+                        <div class="text-2xl"><i class="fa-solid fa-hourglass-half text-yellow-500"></i></div>
+                        <div>
+                            <h3 class="text-xs font-bold text-gray-400 uppercase leading-none">Pending</h3>
+                            <p class="text-2xl font-black text-slate-800" id="statPending">{{ $this->summaryCounts['pending'] }}</p>
+                        </div>
+                    </div>
+                    <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-blue-600 flex items-center gap-4">
+                        <div class="text-2xl"><i class="fa-solid fa-flag-checkered text-blue-600"></i></div>
+                        <div>
+                            <h3 class="text-xs font-bold text-gray-400 uppercase leading-none">Completed</h3>
+                            <p class="text-2xl font-black text-slate-800" id="statCompleted">{{ $this->summaryCounts['completed'] }}</p>
+                        </div>
+                    </div>
+                    <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-purple-600 flex items-center gap-4">
+                        <div class="text-2xl"><i class="fa-solid fa-stopwatch text-purple-600"></i></div>
+                        <div>
+                            <h3 class="text-xs font-bold text-gray-400 uppercase leading-none">Total Hours</h3>
+                            <p class="text-2xl font-black text-slate-800" id="statHours">{{ $this->summaryCounts['totalHours'] }}</p>
+                        </div>
+                    </div>
+                </div>
 
-    <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-green-600 flex items-center gap-4">
-        <div class="text-2xl">
-            <i class="fa-solid fa-circle-check text-green-600"></i>
-        </div>
-        <div>
-            <h3 class="text-xs font-bold text-gray-400 uppercase leading-none">Accepted</h3>
-            <p class="text-2xl font-black text-slate-800" id="statAccepted">{{ $this->summaryCounts['accepted'] }}</p>
-        </div>
-    </div>
-
-    <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-yellow-500 flex items-center gap-4">
-        <div class="text-2xl">
-            <i class="fa-solid fa-hourglass-half text-yellow-500"></i>
-        </div>
-        <div>
-            <h3 class="text-xs font-bold text-gray-400 uppercase leading-none">Pending</h3>
-            <p class="text-2xl font-black text-slate-800" id="statPending">{{ $this->summaryCounts['pending'] }}</p>
-        </div>
-    </div>
-
-    <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-blue-600 flex items-center gap-4">
-        <div class="text-2xl">
-            <i class="fa-solid fa-flag-checkered text-blue-600"></i>
-        </div>
-        <div>
-            <h3 class="text-xs font-bold text-gray-400 uppercase leading-none">Completed</h3>
-            <p class="text-2xl font-black text-slate-800" id="statCompleted">{{ $this->summaryCounts['completed'] }}</p>
-        </div>
-    </div>
-
-    <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-purple-600 flex items-center gap-4">
-        <div class="text-2xl">
-            <i class="fa-solid fa-stopwatch text-purple-600"></i>
-        </div>
-        <div>
-            <h3 class="text-xs font-bold text-gray-400 uppercase leading-none">Total Hours</h3>
-            <p class="text-2xl font-black text-slate-800" id="statHours">{{ $this->summaryCounts['totalHours'] }}</p>
-        </div>
-    </div>
-</div>
-
-                {{-- ── Sessions Table Card — same UI as mentor sessions ── --}}
+                {{-- Sessions Table Card --}}
                 <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-visible">
 
                     {{-- Table header / filters --}}
@@ -408,32 +391,32 @@ $summaryCounts = computed(function () {
                                         <span>All</span>
                                     </label>
                                     <div class="border-t border-gray-100 my-1"></div>
-                                    <label class="flex items-center gap-2 px-4 py-2.5 hover:bg-gray-50 cursor-pointer text-xs text-slate-700 font-medium capitalize transition" data-status="pending">
+                                    <label class="flex items-center gap-2 px-4 py-2.5 hover:bg-gray-50 cursor-pointer text-xs text-slate-700 font-medium capitalize transition">
                                         <input type="checkbox" value="pending" onchange="handleStatusFilter()" class="status-filter-cb rounded border-gray-300 w-4 h-4"> Pending
                                     </label>
-                                    <label class="flex items-center gap-2 px-4 py-2.5 hover:bg-gray-50 cursor-pointer text-xs text-slate-700 font-medium capitalize transition" data-status="accepted">
+                                    <label class="flex items-center gap-2 px-4 py-2.5 hover:bg-gray-50 cursor-pointer text-xs text-slate-700 font-medium capitalize transition">
                                         <input type="checkbox" value="accepted" onchange="handleStatusFilter()" class="status-filter-cb rounded border-gray-300 w-4 h-4"> Accepted
                                     </label>
-                                    <label class="flex items-center gap-2 px-4 py-2.5 hover:bg-gray-50 cursor-pointer text-xs text-slate-700 font-medium capitalize transition" data-status="completed">
+                                    <label class="flex items-center gap-2 px-4 py-2.5 hover:bg-gray-50 cursor-pointer text-xs text-slate-700 font-medium capitalize transition">
                                         <input type="checkbox" value="completed" onchange="handleStatusFilter()" class="status-filter-cb rounded border-gray-300 w-4 h-4"> Completed
                                     </label>
-                                    <label class="flex items-center gap-2 px-4 py-2.5 hover:bg-gray-50 cursor-pointer text-xs text-slate-700 font-medium capitalize transition" data-status="rejected">
+                                    <label class="flex items-center gap-2 px-4 py-2.5 hover:bg-gray-50 cursor-pointer text-xs text-slate-700 font-medium capitalize transition">
                                         <input type="checkbox" value="rejected" onchange="handleStatusFilter()" class="status-filter-cb rounded border-gray-300 w-4 h-4"> Rejected
                                     </label>
-                                    <label class="flex items-center gap-2 px-4 py-2.5 hover:bg-gray-50 cursor-pointer text-xs text-slate-700 font-medium capitalize transition" data-status="cancelled">
+                                    <label class="flex items-center gap-2 px-4 py-2.5 hover:bg-gray-50 cursor-pointer text-xs text-slate-700 font-medium capitalize transition">
                                         <input type="checkbox" value="cancelled" onchange="handleStatusFilter()" class="status-filter-cb rounded border-gray-300 w-4 h-4"> Cancelled
                                     </label>
-                                    <label class="flex items-center gap-2 px-4 py-2.5 hover:bg-gray-50 cursor-pointer text-xs text-slate-700 font-medium capitalize transition" data-status="no_show">
+                                    <label class="flex items-center gap-2 px-4 py-2.5 hover:bg-gray-50 cursor-pointer text-xs text-slate-700 font-medium capitalize transition">
                                         <input type="checkbox" value="no_show" onchange="handleStatusFilter()" class="status-filter-cb rounded border-gray-300 w-4 h-4"> No Show
                                     </label>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    
 
                     {{-- Table --}}
                     <div style="overflow:visible;">
+                        <div id="sessionsBannerArea" class="space-y-2"></div>
                         <table class="w-full text-left text-sm table-fixed" style="overflow:visible;">
                             <thead class="bg-slate-50 border-b border-gray-100">
                                 <tr>
@@ -454,8 +437,8 @@ $summaryCounts = computed(function () {
                                         <div class="flex items-center gap-1 hover:text-red-800 transition">Date & Time<span id="sort-date" class="text-[10px]"></span></div>
                                     </th>
                                     <th class="px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider select-none" style="width:9%;">Mode</th>
-                                    <th onclick="setSort('status')" class="cursor-pointer px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider select-none" style="width:10%;">
-                                        <div class="flex items-center gap-1 hover:text-red-800 transition">Status<span id="sort-status" class="text-[10px]"></span></div>
+                                    <th onclick="setSort('status')" class="cursor-pointer px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider select-none text-center" style="width:10%;">
+                                        <div class="flex items-center gap-1 hover:text-red-800 transition justify-center">Status<span id="sort-status" class="text-[10px]"></span></div>
                                     </th>
                                     <th class="px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider select-none text-center" style="width:10%;">Actions</th>
                                 </tr>
@@ -480,17 +463,17 @@ $summaryCounts = computed(function () {
             </main>
         </div>
 
-        {{-- Confirmation Modal --}}
-        <div id="confirmModal" style="display:none;" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-            <div class="bg-[#fffffa] rounded-xl p-6 max-w-sm w-full mx-4 shadow-2xl" id="confirmModalBox">
+        {{-- ── CONFIRMATION MODAL ── --}}
+        <div id="confirmModal" style="display:none;" class="fixed inset-0 z-[1500] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+            <div class="bg-white rounded-xl p-6 max-w-sm w-full mx-4 shadow-2xl" id="confirmModalBox">
                 <div class="flex items-center gap-3 mb-3">
                     <div id="confirmIconWrap" class="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0"></div>
                     <h3 id="confirmTitle" class="text-base font-bold text-gray-900"></h3>
                 </div>
                 <p id="confirmBody" class="text-sm text-gray-600 mb-1 leading-relaxed"></p>
                 <div id="confirmMeta" class="mt-3 mb-5 bg-gray-50 border border-gray-100 rounded-lg px-4 py-3 text-xs text-gray-600 space-y-1"></div>
-                <div class="flex justify-end gap-3">
-                    <button id="confirmCancelBtn" class="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">Cancel</button>
+                <div class="flex justify-end gap-3 mt-6">
+                    <button id="confirmCancelBtn" class="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-300 hover:text-gray-800 rounded-lg transition-colors">Cancel</button>
                     <button id="confirmOkBtn" class="px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors">Confirm</button>
                 </div>
             </div>
@@ -575,16 +558,44 @@ $summaryCounts = computed(function () {
         /* ── Banners ── */
         function showBanner(id, html) {
             const area = document.getElementById('sessionsBannerArea');
+            if (!area) return;
             let banner = document.getElementById(id);
             if (!banner) {
                 banner = document.createElement('div');
                 banner.id = id;
-                banner.style.cssText = 'border-radius:8px; overflow:hidden; font-size:11px; animation:slideDown 0.2s ease; margin-bottom:4px;';
+                banner.style.cssText = 'border-radius:8px; overflow:hidden; font-size:11px; animation:slideDown 0.2s ease;';
                 area.appendChild(banner);
             }
             banner.innerHTML = html;
             clearTimeout(banner._timer);
-            banner._timer = setTimeout(() => banner.remove(), 6000);
+            if (id !== 'sessionLoadingBanner') {
+                banner._timer = setTimeout(() => banner.remove(), 5000);
+            }
+        }
+
+        function showSessionLoadingBanner(message) {
+            showBanner('sessionLoadingBanner', `
+                <div style="border:1px solid #bfdbfe; background:#eff6ff; border-radius:8px;">
+                    <div style="display:flex; align-items:center; gap:8px; padding:10px 12px;">
+                        <div style="flex-shrink:0;">
+                            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style="animation:spin 1s linear infinite;">
+                                <circle cx="7" cy="7" r="6" stroke="#93c5fd" stroke-width="1.5"/>
+                                <path d="M7 1a6 6 0 0 1 6 6" stroke="#2563eb" stroke-width="1.5" stroke-linecap="round"/>
+                            </svg>
+                        </div>
+                        <div style="flex:1; color:#1d4ed8; line-height:1.5; font-size:11px;">
+                            <span style="font-weight:600;">${message}</span>
+                        </div>
+                    </div>
+                </div>
+            `);
+            const banner = document.getElementById('sessionLoadingBanner');
+            if (banner) clearTimeout(banner._timer);
+        }
+
+        function hideSessionLoadingBanner() {
+            const banner = document.getElementById('sessionLoadingBanner');
+            if (banner) banner.remove();
         }
 
         function showConflictBanner(message) {
@@ -630,30 +641,57 @@ $summaryCounts = computed(function () {
             `);
         }
 
-        function showLoadingBanner() {
-            showBanner('loadingBanner', `
-                <div style="border:1px solid #bfdbfe; background:#eff6ff; border-radius:8px;">
-                    <div style="display:flex; align-items:center; gap:8px; padding:10px 12px;">
-                        <div style="flex-shrink:0;">
-                            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style="animation:spin 1s linear infinite;">
-                                <circle cx="7" cy="7" r="6" stroke="#93c5fd" stroke-width="1.5"/>
-                                <path d="M7 1a6 6 0 0 1 6 6" stroke="#2563eb" stroke-width="1.5" stroke-linecap="round"/>
+        function showSessionErrorBanner(message) {
+            showBanner('sessionErrorBanner', `
+                <div style="border:1px solid #fca5a5; background:#fef2f2; border-radius:8px;">
+                    <div style="display:flex; align-items:flex-start; gap:8px; padding:10px 12px;">
+                        <div style="flex-shrink:0; margin-top:2px;">
+                            <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                                <circle cx="8" cy="8" r="7.5" stroke="#ef4444" stroke-width="1"/>
+                                <path d="M8 4.5v4" stroke="#ef4444" stroke-width="1.5" stroke-linecap="round"/>
+                                <circle cx="8" cy="11" r="0.75" fill="#ef4444"/>
                             </svg>
                         </div>
-                        <div style="flex:1; color:#1d4ed8; line-height:1.5; font-size:11px;">
-                            <span style="font-weight:600;">Updating session status</span> — please wait...
+                        <div style="flex:1; color:#b91c1c; line-height:1.5;">
+                            <span style="font-weight:600;">Error —</span> ${message}
                         </div>
+                        <button onclick="document.getElementById('sessionErrorBanner').remove()"
+                            style="flex-shrink:0; background:none; border:none; cursor:pointer; color:#b91c1c; font-size:14px; line-height:1; padding:0;">&times;</button>
                     </div>
                 </div>
             `);
-            const banner = document.getElementById('loadingBanner');
-            if (banner) clearTimeout(banner._timer);
         }
 
-        function hideLoadingBanner() {
-            const banner = document.getElementById('loadingBanner');
-            if (banner) banner.remove();
-        }
+function showSuccessBanner(message) {
+    const existing = document.getElementById('successBanner');
+    if (existing) existing.remove();
+
+    const banner = document.createElement('div');
+    banner.id = 'successBanner';
+    banner.style.cssText = `
+        margin-bottom: 24px;
+        animation: slideDown 0.2s ease;
+    `;
+
+    banner.innerHTML = `
+        <div class="bg-green-100 border border-green-400 text-green-800 px-4 py-3 rounded-xl">
+            ${message}
+        </div>
+    `;
+
+    const scrollContainer = document.querySelector('.scroll-container');
+    scrollContainer.insertBefore(banner, scrollContainer.firstChild);
+    scrollContainer.scrollTop = 0;
+
+    setTimeout(() => {
+        banner.style.transition = 'opacity 0.4s ease';
+        banner.style.opacity = '0';
+
+        setTimeout(() => {
+            banner.style.display = 'none';
+        }, 400);
+    }, 5000);
+}
 
         /* ── Utils ── */
         function getStatusColor(status) {
@@ -716,16 +754,16 @@ $summaryCounts = computed(function () {
                 return `<div class="flex justify-end"><span class="text-gray-200 text-[10px]">—</span></div>`;
             }
 
-return `
-    <div class="relative flex items-center justify-center" style="min-height:28px;">
-        <div class="action-idle absolute flex items-center justify-center gap-1 pointer-events-none">
-            ${idleIndicator}
-        </div>
-        <div class="action-buttons flex items-center gap-1 justify-center">
-            ${buttons}
-        </div>
-    </div>
-`;
+            return `
+                <div class="relative flex items-center justify-center" style="min-height:28px;">
+                    <div class="action-idle absolute flex items-center justify-center gap-1 pointer-events-none">
+                        ${idleIndicator}
+                    </div>
+                    <div class="action-buttons flex items-center gap-1 justify-center">
+                        ${buttons}
+                    </div>
+                </div>
+            `;
         }
 
         function formatHours(s) {
@@ -807,87 +845,66 @@ return `
 
             tbody.innerHTML = visible.map((s, idx) => `
                 <tr class="session-row border-b border-gray-50 hover:bg-slate-50 transition">
-
-                    <td class="px-5 py-4 align-middle text-gray-400 text-xs font-medium tabular-nums" style="width:4%;">
-                        ${start + idx + 1}
-                    </td>
-
+                    <td class="px-5 py-4 align-middle text-gray-400 text-xs font-medium tabular-nums" style="width:4%;">${start + idx + 1}</td>
                     <td class="px-5 py-4 align-middle" style="width:13%;">
                         <div class="hover-tooltip" data-full="${s.student}\n${s.yearLevel} - ${s.degreeProgram}">
                             <p class="font-bold text-slate-700 text-xs truncate">${s.student}</p>
                             <p class="text-[10px] text-gray-400 mt-0.5 truncate">${s.yearLevel !== '—' ? s.yearLevel : ''} - ${s.degreeProgram !== '—' ? s.degreeProgram : ''}</p>
                         </div>
                     </td>
-
                     <td class="px-5 py-4 align-middle" style="width:13%;">
                         <div class="hover-tooltip" data-full="${s.mentor}">
                             <p class="font-bold text-slate-700 text-xs truncate">${s.mentor}</p>
                         </div>
                     </td>
-
                     <td class="px-5 py-4 align-middle" style="width:10%;">
                         <div class="hover-tooltip" data-full="${s.subject} – ${s.subjectName}">
                             <p class="font-bold text-slate-700 text-xs">${s.subject}</p>
                             <p class="text-[10px] text-gray-400 truncate">${s.subjectName}</p>
                         </div>
                     </td>
-
                     <td class="px-5 py-4 align-middle" style="width:17%;">
                         <div class="hover-tooltip" data-full="${s.topic}">
                             <p class="text-xs text-slate-600 truncate">${s.topic}</p>
                         </div>
                     </td>
-
                     <td class="px-5 py-4 align-middle" style="width:14%;">
                         <p class="text-xs font-medium text-slate-700">${s.date} ${formatHours(s)}</p>
                         <p class="text-[10px] text-gray-400">${s.time}</p>
                     </td>
-
                     <td class="px-5 py-4 align-middle text-xs text-slate-500" style="width:9%;">${s.mode}</td>
-
-                    <td class="px-5 py-4 align-middle" style="width:10%;">
+                    <td class="px-5 py-4 align-middle text-center" style="width:10%;">
                         <span class="${getStatusColor(s.status)} font-bold text-[10px] bg-gray-50 px-2 py-1 rounded border border-current opacity-80">
                             ${getStatusLabel(s.status)}
                         </span>
                     </td>
-
-<td class="px-5 py-4 align-middle" style="width:10%;">
-    ${renderActions(s)}
-</td>
+                    <td class="px-5 py-4 align-middle" style="width:10%;">
+                        ${renderActions(s)}
+                    </td>
                 </tr>
             `).join('');
         }
 
         function sortSessions(data) {
             if (!sortColumn) return data;
-
             const statusOrder = {
                 accepted: 1, pending: 2, completed: 3,
                 cancelled: 4, no_show: 5, rejected: 6
             };
-
             return [...data].sort((a, b) => {
                 let valA = a[sortColumn];
                 let valB = b[sortColumn];
-
-                if (sortColumn === 'status') {
-                    valA = statusOrder[valA] ?? 999;
-                    valB = statusOrder[valB] ?? 999;
-                }
-                if (sortColumn === 'date') {
-                    valA = new Date(valA);
-                    valB = new Date(valB);
-                }
+                if (sortColumn === 'status') { valA = statusOrder[valA] ?? 999; valB = statusOrder[valB] ?? 999; }
+                if (sortColumn === 'date')   { valA = new Date(valA); valB = new Date(valB); }
                 if (typeof valA === 'string') valA = valA.toLowerCase();
                 if (typeof valB === 'string') valB = valB.toLowerCase();
-
                 if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
-                if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
+                if (valA > valB) return sortDirection === 'asc' ?  1 : -1;
                 return 0;
             });
         }
 
-        /* ── Numbered Pagination ── */
+        /* ── Pagination ── */
         function getPageNumbers(current, totalPages) {
             if (totalPages <= 8) return Array.from({ length: totalPages }, (_, i) => i + 1);
             if (current <= 4)    return [1, 2, 3, 4, 5, '...', totalPages];
@@ -899,7 +916,6 @@ return `
             const footer  = document.getElementById('sessionsPaginationFooter');
             const info    = document.getElementById('sessionsPageInfo');
             const btnWrap = document.getElementById('sessionsPaginationButtons');
-
             if (!footer) return;
             if (total === 0) { footer.style.display = 'none'; return; }
 
@@ -927,7 +943,6 @@ return `
             pages.forEach(page => {
                 const btn = document.createElement('button');
                 btn.textContent = page;
-
                 if (page === '...') {
                     btn.className = 'w-8 h-8 text-xs font-bold rounded-lg bg-white border border-gray-200 text-gray-400 cursor-default';
                     btn.disabled  = true;
@@ -937,7 +952,6 @@ return `
                     btn.className = 'w-8 h-8 text-xs font-bold rounded-lg bg-white border border-gray-200 text-slate-500 hover:bg-gray-100 transition';
                     btn.addEventListener('click', () => { sessionsPage = page - 1; renderSessions(); });
                 }
-
                 btnWrap.appendChild(btn);
             });
 
@@ -949,55 +963,85 @@ return `
             btnWrap.appendChild(nextBtn);
         }
 
-        /* ── Confirmation Modal ── */
-        const confirmModal     = document.getElementById('confirmModal');
-        const confirmModalBox  = document.getElementById('confirmModalBox');
-        const confirmTitle     = document.getElementById('confirmTitle');
-        const confirmBody      = document.getElementById('confirmBody');
-        const confirmMeta      = document.getElementById('confirmMeta');
-        const confirmOkBtn     = document.getElementById('confirmOkBtn');
-        const confirmCancelBtn = document.getElementById('confirmCancelBtn');
-        const confirmIconWrap  = document.getElementById('confirmIconWrap');
-
-        confirmModal.addEventListener('click', (e) => {
-            if (!confirmModalBox.contains(e.target)) closeConfirmModal();
-        });
-        confirmCancelBtn.addEventListener('click', closeConfirmModal);
-
+        /* ── Confirmation Modal (two-step with loading state, matching courses tab) ── */
         function closeConfirmModal() {
-            confirmModal.style.display = 'none';
-            confirmOkBtn.onclick = null;
+            document.getElementById('confirmModal').style.display = 'none';
+            document.getElementById('confirmOkBtn').onclick = null;
         }
 
-        function openConfirmModal({ title, body, meta, variant, onConfirm }) {
+        function openConfirmModal({ title, body, meta, variant, confirmText, loadingText, onConfirm }) {
+            const confirmModal     = document.getElementById('confirmModal');
+            const confirmModalBox  = document.getElementById('confirmModalBox');
+            const confirmTitle     = document.getElementById('confirmTitle');
+            const confirmBody      = document.getElementById('confirmBody');
+            const confirmMeta      = document.getElementById('confirmMeta');
+            const confirmOkBtn     = document.getElementById('confirmOkBtn');
+            const confirmCancelBtn = document.getElementById('confirmCancelBtn');
+            const confirmIconWrap  = document.getElementById('confirmIconWrap');
+
+            // Close on backdrop click
+            confirmModal.onclick = (e) => { if (!confirmModalBox.contains(e.target)) closeConfirmModal(); };
+            confirmCancelBtn.onclick = closeConfirmModal;
+
             const variants = {
-                accept:  { icon: iconCheck(),   iconBg: 'bg-emerald-100', iconColor: '#059669', btnBg: 'bg-emerald-600 hover:bg-emerald-700', label: 'Confirm' },
-                reject:  { icon: iconX(),       iconBg: 'bg-red-100',     iconColor: '#dc2626', btnBg: 'bg-red-600 hover:bg-red-700',         label: 'Reject'  },
-                neutral: { icon: iconInfo(),    iconBg: 'bg-gray-100',    iconColor: '#64748b', btnBg: 'bg-gray-700 hover:bg-gray-800',        label: 'Confirm' },
+                accept:  { iconHtml: iconCheck('#059669'), iconBg: '#d1fae5', btnClass: 'bg-emerald-600 hover:bg-emerald-700' },
+                reject:  { iconHtml: iconX('#dc2626'),     iconBg: '#fee2e2', btnClass: 'bg-red-600 hover:bg-red-700'         },
+                neutral: { iconHtml: iconInfo('#64748b'),  iconBg: '#f1f5f9', btnClass: 'bg-gray-700 hover:bg-gray-800'       },
+            };
+            const v = variants[variant] || variants.neutral;
+
+            confirmIconWrap.style.background = v.iconBg;
+            confirmIconWrap.innerHTML        = v.iconHtml;
+            confirmTitle.textContent         = title;
+            confirmBody.innerHTML            = body;
+            confirmMeta.innerHTML            = meta || '';
+            confirmMeta.style.display        = meta ? 'block' : 'none';
+
+            confirmOkBtn.className   = `px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors ${v.btnClass}`;
+            confirmOkBtn.textContent = confirmText || 'Confirm';
+
+            // Two-step: on click, lock the modal UI, show loading banner, then run async action
+            confirmOkBtn.onclick = async () => {
+                const originalText = confirmOkBtn.textContent;
+
+                // Step 1 — lock the modal while processing
+                confirmOkBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i>${loadingText || 'Processing...'}`;
+                confirmOkBtn.classList.add('opacity-70', 'cursor-not-allowed');
+                confirmOkBtn.style.pointerEvents = 'none';
+                confirmCancelBtn.disabled = true;
+                confirmCancelBtn.classList.add('opacity-50', 'cursor-not-allowed');
+
+
+                try {
+                    const result = onConfirm();
+                    if (result && typeof result.then === 'function') await result;
+                } catch (err) {
+                    showSessionErrorBanner('Something went wrong. Please try again.');
+                } finally {
+                    // Restore modal state
+                    confirmOkBtn.textContent = originalText;
+                    confirmOkBtn.classList.remove('opacity-70', 'cursor-not-allowed');
+                    confirmOkBtn.style.pointerEvents = 'auto';
+                    confirmCancelBtn.disabled = false;
+                    confirmCancelBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    closeConfirmModal();
+                }
             };
 
-            const v = variants[variant] || variants.neutral;
-            confirmIconWrap.className = `w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${v.iconBg}`;
-            confirmIconWrap.innerHTML = v.icon(v.iconColor);
-            confirmTitle.textContent  = title;
-            confirmBody.innerHTML     = body;
-            confirmMeta.innerHTML     = meta || '';
-            confirmMeta.style.display = meta ? 'block' : 'none';
-            confirmOkBtn.className = `px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors ${v.btnBg}`;
-            confirmOkBtn.textContent = v.label;
-            confirmOkBtn.onclick = () => { closeConfirmModal(); onConfirm(); };
             confirmModal.style.display = 'flex';
         }
 
-        function iconCheck() { return (color) => `<svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M4 10l4.5 4.5L16 6" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`; }
-        function iconX()     { return (color) => `<svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M5 5l10 10M15 5L5 15" stroke="${color}" stroke-width="2" stroke-linecap="round"/></svg>`; }
-        function iconInfo()  { return (color) => `<svg width="18" height="18" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="8.5" stroke="${color}" stroke-width="1.5"/><path d="M10 9v5" stroke="${color}" stroke-width="1.5" stroke-linecap="round"/><circle cx="10" cy="6.5" r="0.8" fill="${color}"/></svg>`; }
+        function iconCheck(color) { return `<svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M4 10l4.5 4.5L16 6" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`; }
+        function iconX(color)     { return `<svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M5 5l10 10M15 5L5 15" stroke="${color}" stroke-width="2" stroke-linecap="round"/></svg>`; }
+        function iconInfo(color)  { return `<svg width="18" height="18" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="8.5" stroke="${color}" stroke-width="1.5"/><path d="M10 9v5" stroke="${color}" stroke-width="1.5" stroke-linecap="round"/><circle cx="10" cy="6.5" r="0.8" fill="${color}"/></svg>`; }
 
+        /* ── Status action flow ── */
         function updateStatus(id, status) {
             const req = allSessions.find(s => s.id == id);
             if (!req) return;
 
-            if (status === 'accepted' && req.status !== 'completed' && hasConflict(req)) {
+            // Guard: conflict check before even showing the modal
+            if (status === 'accepted' && hasConflict(req)) {
                 const conflict = allSessions.find(s =>
                     s.id !== req.id && s.status === 'accepted' && s.date === req.date
                 );
@@ -1011,34 +1055,66 @@ return `
             const isUncomplete = status === 'accepted' && req.status === 'completed';
             const isClaiming   = status === 'accepted' && req.status === 'pending' && req.is_open;
 
+            // Per-action dialog config: title, body, variant, confirmText, loadingText
             const dialogConfig = {
                 accepted: isUncomplete ? {
-                    title: 'Revert to accepted?',
-                    body:  'This will mark the session as accepted again, reversing the completed status.',
-                    variant: 'neutral',
+                    title:       'Revert to accepted?',
+                    body:        'This will mark the session as accepted again, reversing the completed status.',
+                    variant:     'neutral',
+                    confirmText: 'Revert',
+                    loadingText: 'Reverting...',
                 } : isClaiming ? {
-                    title: 'Claim Open Session?',
-                    body:  'You are about to claim this session. It will be permanently assigned.',
-                    variant: 'accept',
+                    title:       'Claim open session?',
+                    body:        'You are about to claim this session. It will be permanently assigned.',
+                    variant:     'accept',
+                    confirmText: 'Claim Session',
+                    loadingText: 'Claiming...',
                 } : {
-                    title: 'Accept booking?',
-                    body:  'The student will be notified that their session has been approved.',
-                    variant: 'accept',
+                    title:       'Accept booking?',
+                    body:        'The student will be notified that their session has been approved.',
+                    variant:     'accept',
+                    confirmText: 'Accept',
+                    loadingText: 'Accepting...',
                 },
-                rejected:  { title: 'Reject booking?',    body: 'The student will be notified that their session request was declined.',  variant: 'reject'  },
-                completed: { title: 'Mark as completed?', body: 'This will mark the session as done.',                                    variant: 'neutral' },
-                no_show:   { title: 'Mark as no-show?',   body: 'This will record that the student did not attend the session.',          variant: 'reject'  },
-                cancelled: { title: 'Cancel session?',    body: 'This will cancel the accepted session.',                                 variant: 'reject'  },
+                rejected: {
+                    title:       'Reject booking?',
+                    body:        'The student will be notified that their session request was declined.',
+                    variant:     'reject',
+                    confirmText: 'Reject',
+                    loadingText: 'Rejecting...',
+                },
+                completed: {
+                    title:       'Mark as completed?',
+                    body:        'This will mark the session as done.',
+                    variant:     'neutral',
+                    confirmText: 'Mark Complete',
+                    loadingText: 'Saving...',
+                },
+                no_show: {
+                    title:       'Mark as no-show?',
+                    body:        'This will record that the student did not attend the session.',
+                    variant:     'reject',
+                    confirmText: 'Mark No-show',
+                    loadingText: 'Saving...',
+                },
+                cancelled: {
+                    title:       'Cancel session?',
+                    body:        'This will cancel the accepted session.',
+                    variant:     'reject',
+                    confirmText: 'Cancel Session',
+                    loadingText: 'Cancelling...',
+                },
             };
 
-            const cfg = dialogConfig[status] || { title: 'Confirm action', body: 'Are you sure you want to proceed?', variant: 'neutral' };
+            const cfg = dialogConfig[status] || {
+                title: 'Confirm action', body: 'Are you sure you want to proceed?',
+                variant: 'neutral', confirmText: 'Confirm', loadingText: 'Processing...',
+            };
 
             const metaHtml = `
-                <div>
-                    <div class="flex justify-between items-start gap-2">
-                        <span class="text-gray-400">Student</span>
-                        <span class="font-medium text-gray-700 text-right truncate max-w-[60%]">${req.student}</span>
-                    </div>
+                <div class="flex justify-between items-start gap-2">
+                    <span class="text-gray-400">Student</span>
+                    <span class="font-medium text-gray-700 text-right truncate max-w-[60%]">${req.student}</span>
                 </div>
                 <div class="flex justify-between gap-2">
                     <span class="text-gray-400">Mentor</span>
@@ -1048,11 +1124,9 @@ return `
                     <span class="text-gray-400">Subject</span>
                     <span class="font-medium text-gray-700 text-right truncate max-w-[60%]">${req.subject}${req.subjectName ? ' – ' + req.subjectName : ''}</span>
                 </div>
-                <div>
-                    <div class="flex justify-between items-start gap-2">
-                        <span class="text-gray-400">Topic</span>
-                        <span class="font-medium text-gray-700 text-right truncate max-w-[60%]">${req.topic}</span>
-                    </div>
+                <div class="flex justify-between items-start gap-2">
+                    <span class="text-gray-400">Topic</span>
+                    <span class="font-medium text-gray-700 text-right truncate max-w-[60%]">${req.topic}</span>
                 </div>
                 <div class="flex justify-between gap-2">
                     <span class="text-gray-400">Date</span>
@@ -1069,23 +1143,23 @@ return `
             `;
 
             openConfirmModal({
-                title:     cfg.title,
-                body:      cfg.body,
-                meta:      metaHtml,
-                variant:   cfg.variant,
-                onConfirm: () => commitStatus(id, status, req),
+                title:       cfg.title,
+                body:        cfg.body,
+                meta:        metaHtml,
+                variant:     cfg.variant,
+                confirmText: cfg.confirmText,
+                loadingText: cfg.loadingText,
+                onConfirm:   () => commitStatus(id, status, req),
             });
         }
 
         function commitStatus(id, status, target) {
-            showLoadingBanner();
-
             const formData = new FormData();
             formData.append('_token', csrfToken);
             formData.append('booking_id', id);
             formData.append('booking_status', status);
 
-            fetch(sessionsUrl, { method: 'POST', body: formData })
+            return fetch(sessionsUrl, { method: 'POST', body: formData })
                 .then(res => {
                     if (!res.ok) throw new Error('Request failed');
 
@@ -1106,14 +1180,15 @@ return `
                                     .then(() => {
                                         completed++;
                                         if (completed === conflictingIds.length) {
-                                            hideLoadingBanner();
+                                            hideSessionLoadingBanner();
                                             renderSessions();
                                             updateSummaryCounts();
                                             showAutoRejectBanner(conflictingIds.length);
+                                            showSuccessBanner('Session status has been successfully updated.');
                                         }
                                     })
                                     .catch(err => {
-                                        hideLoadingBanner();
+                                        hideSessionLoadingBanner();
                                         console.error('Auto-reject failed for id', conflictId, err);
                                     });
                             });
@@ -1123,30 +1198,14 @@ return `
                         }
                     }
 
-                    hideLoadingBanner();
+                    hideSessionLoadingBanner();
                     updateSummaryCounts();
                     renderSessions();
+                    showSuccessBanner('Session status has been successfully updated.');
                 })
                 .catch(err => {
-                    hideLoadingBanner();
-                    showBanner('errorBanner', `
-                        <div style="border:1px solid #fca5a5; background:#fef2f2; border-radius:8px;">
-                            <div style="display:flex; align-items:flex-start; gap:8px; padding:10px 12px;">
-                                <div style="flex-shrink:0; margin-top:2px;">
-                                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-                                        <circle cx="8" cy="8" r="7.5" stroke="#ef4444" stroke-width="1"/>
-                                        <path d="M8 4.5v4" stroke="#ef4444" stroke-width="1.5" stroke-linecap="round"/>
-                                        <circle cx="8" cy="11" r="0.75" fill="#ef4444"/>
-                                    </svg>
-                                </div>
-                                <div style="flex:1; color:#b91c1c; line-height:1.5;">
-                                    <span style="font-weight:600;">Update failed —</span> please check your connection and try again.
-                                </div>
-                                <button onclick="document.getElementById('errorBanner').remove()"
-                                    style="flex-shrink:0; background:none; border:none; cursor:pointer; color:#b91c1c; font-size:14px; line-height:1; padding:0;">&times;</button>
-                            </div>
-                        </div>
-                    `);
+                    hideSessionLoadingBanner();
+                    showSessionErrorBanner('Update failed — please check your connection and try again.');
                     console.error('commitStatus failed:', err);
                 });
         }
@@ -1159,12 +1218,10 @@ return `
 
             const profileTrigger  = document.getElementById('profileTrigger');
             const profileDropdown = document.getElementById('profileDropdown');
-            const dropdownArrow   = document.getElementById('dropdownArrow');
 
             profileTrigger.addEventListener('click', e => {
                 e.stopPropagation();
-                const isShown = profileDropdown.classList.toggle('show');
-                dropdownArrow.style.transform = isShown ? 'rotate(180deg)' : 'rotate(0deg)';
+                profileDropdown.classList.toggle('show');
             });
 
             window.addEventListener('click', () => {
