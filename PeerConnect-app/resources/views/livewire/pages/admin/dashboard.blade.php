@@ -1,6 +1,6 @@
 <?php
 
-use function Livewire\Volt\{layout, state, mount, computed};
+use function Livewire\Volt\{layout, state, mount, computed, action};
 use App\Models\MentorProfiles;
 use App\Models\StudentProfiles;
 use App\Models\Bookings;
@@ -20,6 +20,35 @@ state([
     'totalStudents' => 0,
     'todaySessions' => [],
     'globalSearchTerm' => '',
+    'pendingApprovalsList' => [],
+
+        // Form states
+    'showModal' => false,
+    'showSubjectModal' => false,
+    'showConfirm' => false,
+    'showSubjectConfirm' => false,
+
+    // Edit states
+    'showEditModal' => false,
+    'showEditConfirm' => false,
+    'editMentorId' => null,
+    'editMentorName' => '',
+    'editMentorEmail' => '',
+    'editAvatarPreview' => '',
+    'editAvatar' => null,
+
+    'up_mail' => '',
+    'newMentor' => null,
+    'emailError' => '',
+    'selectedSubjects' => [],
+    'avatar' => null,
+
+    'availabilities' => [
+        ['id' => '1', 'day_of_week' => '', 'start_time' => '', 'end_time' => '']
+    ],
+
+    'newSubjectCode' => '',
+    'newSubjectName' => '',
 ]);
 
 mount(function () {
@@ -41,7 +70,23 @@ mount(function () {
             'status' => ucfirst($b->booking_status),
         ])
         ->toArray();
-});
+
+        
+}); 
+$pendingApprovalsList = Bookings::with(['student.user', 'mentor.user', 'subject'])
+    ->where('booking_status', 'pending')
+    ->latest()
+    ->take(10)
+    ->get()
+    ->map(fn($b) => [
+        'initials' => strtoupper(substr($b->student->user->name ?? 'U', 0, 2)),
+        'name'     => $b->student->user->name ?? 'Unknown Student',
+        'mentor'   => $b->mentor->user->name  ?? 'Unknown Mentor',
+        'type'        => 'Session Booking',
+        'subject'     => $b->subject->code ?? 'N/A',
+        'date'        => \Carbon\Carbon::parse($b->date)->format('M j'),
+    ])
+    ->toArray();
 
 $searchIndex = computed(function () {
     $index = [];
@@ -183,6 +228,140 @@ $collegeActivity = computed(function () {
         ->pluck('count', 'college')
         ->toArray();
 });
+
+$openSubjectModal = action(function () {
+    $this->reset(['newSubjectCode', 'newSubjectName', 'showSubjectConfirm']);
+    $this->showSubjectModal = true;
+});
+
+$closeSubjectModal = action(function () {
+    $this->showSubjectModal = false;
+    $this->showSubjectConfirm = false;
+    $this->reset(['newSubjectCode', 'newSubjectName']);
+});
+
+$checkEmail = action(function () {
+    $this->emailError = '';
+    $this->newMentor = null;
+
+    $this->validate(['up_mail' => ['required', 'email']]);
+    $userEmail = User::with('studentProfile')->where('email', $this->up_mail)->first();
+
+    if (!$userEmail) {
+        $this->emailError = 'The student with this email does not exist.';
+        return;
+    }
+
+    if (!$userEmail->studentProfile || empty($userEmail->studentProfile->student_num)) {
+        $this->emailError = 'The student must complete their student profile first. Please tell the student to login to the system, then go to the booking forms to complete their student profile.';
+        return;
+    }
+
+    if ($userEmail->isMentor()) {
+        $this->emailError = 'This student is already a peer mentor';
+        return;
+    }
+
+    $this->newMentor = [
+        'id' => $userEmail->id,
+        'name' => $userEmail->name,
+        'email' => $userEmail->email,
+    ];
+});
+
+$toggleAvailabilityOn = action(function () {
+    $this->availabilities[] = ['day_of_week' => '', 'start_time' => '', 'end_time' => ''];
+});
+
+$toggleAvailabilityOff = action(function (int $index) {
+    array_splice($this->availabilities, $index, 1);
+    $this->availabilities = array_values($this->availabilities);
+});
+
+$confirmMentor = action(function () {
+    if (!$this->newMentor) {
+        $this->emailError = 'Please input a valid student email.';
+        return;
+    }
+
+    $this->validate([
+        'avatar' => ['required', 'image', 'max:2048'],
+        'selectedSubjects' => ['required', 'array', 'min:1'],
+        'selectedSubjects.*' => ['exists:subjects,id'],
+        'availabilities' => ['required', 'array', 'min:1'],
+        'availabilities.*.day_of_week' => ['required', 'in:monday,tuesday,wednesday,thursday,friday,saturday'],
+        'availabilities.*.start_time' => ['required', 'date_format:H:i'],
+        'availabilities.*.end_time' => ['required', 'date_format:H:i'],
+    ], [], [
+        'avatar' => 'profile picture',
+        'selectedSubjects' => 'subjects',
+        'availabilities' => 'availabilities',
+    ]);
+
+    foreach ($this->availabilities as $i => $row) {
+        if ($row['end_time'] <= $row['start_time']) {
+            $this->addError("availabilities.{$i}.end_time", 'Start time should be earlier than end time.');
+            return;
+        }
+    }
+    $this->showConfirm = true;
+});
+
+$saveMentor = action(function () {
+    if (!$this->newMentor) return;
+
+    $userMentor = User::findOrFail($this->newMentor['id']);
+    $userMentor->update(['user_roles' => 'mentor']);
+
+    if ($this->avatar) {
+        $filename = $this->avatar->hashName();
+        $this->avatar->storeAs('', $filename, 's3');
+        $url = rtrim(config('filesystems.disks.s3.public_url'), '/') . '/' . $filename;
+        $userMentor->update(['avatar' => $url]);
+    }
+
+    $mentorProf = MentorProfiles::create(['user_id' => $userMentor->id]);
+
+    foreach ($this->selectedSubjects as $subjectId) {
+        MentorSubjects::create(['mentor_id' => $mentorProf->id, 'subject_id' => $subjectId]);
+    }
+
+    foreach ($this->availabilities as $sched) {
+        MentorAvailabilities::create([
+            'mentor_id' => $mentorProf->id,
+            'day_of_week' => $sched['day_of_week'],
+            'start_time' => $sched['start_time'],
+            'end_time' => $sched['end_time'],
+        ]);
+    }
+
+    $this->showModal = false;
+    $this->showConfirm = false;
+    session()->flash('successMessage', "{$userMentor->name} has been registered as a mentor.");
+    $this->redirect(route('admin.mentors'), navigate: true);
+});
+
+$confirmSubject = action(function () {
+    $this->validate([
+        'newSubjectCode' => ['required', 'string', 'max:20', 'unique:subjects,code'],
+        'newSubjectName' => ['required', 'string', 'max:255'],
+    ], [], [
+        'newSubjectCode' => 'subject_code',
+        'newSubjectName' => 'subject_name',
+    ]);
+    $this->showSubjectConfirm = true;
+});
+
+$saveSubject = action(function () {
+    Subjects::create([
+        'code' => trim($this->newSubjectCode),
+        'name' => trim($this->newSubjectName),
+    ]);
+    $this->showSubjectModal = false;
+    $this->showSubjectConfirm = false;
+    session()->flash('successMessage', "{$this->newSubjectCode} has been added.");
+});
+
 
 ?>
 
@@ -704,22 +883,438 @@ updateDate();
 
  <div class="flex flex-col gap-6">
 
-<div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100" id="section-quickactions">
-    <h3 class="font-bold mb-3 text-slate-800 text-sm tracking-tight">Quick Actions</h3>
-    <div class="grid grid-cols-2 gap-2">
-        <button class="border border-slate-300 p-2.5 rounded-lg text-[11px] font-bold hover:bg-gray-50 transition flex items-center justify-center gap-1.5">
-            <i class="fa-solid fa-user-plus text-[10px]"></i> Add Mentor
-        </button>
-        <button class="border border-slate-300 p-2.5 rounded-lg text-[11px] font-bold hover:bg-gray-50 transition flex items-center justify-center gap-1.5">
-            <i class="fa-solid fa-calendar-plus text-[10px]"></i> Create Session
-        </button>
-        <button class="border border-slate-300 p-2.5 rounded-lg text-[11px] font-bold hover:bg-gray-50 transition flex items-center justify-center gap-1.5">
-            <i class="fa-solid fa-book-open text-[10px]"></i> Manage Subjects
-        </button>
-        <button class="border border-slate-300 p-2.5 rounded-lg text-[11px] font-bold hover:bg-gray-50 transition flex items-center justify-center gap-1.5">
-            <i class="fa-solid fa-file-invoice text-[10px]"></i> Generate Report
-        </button>
+<div x-data="{
+    showAddMentorModal: false,
+    showConfirmModal: false,
+    email: '',
+    emailError: '',
+    foundStudent: null,
+    fileName: '',
+    selectedSubjects: [],
+    availabilities: [{ id: 1, day_of_week: '', start_time: '', end_time: '' }],
+
+    showSubjectModal: false,
+    showSubjectConfirm: false,
+    newSubjectCode: '',
+    newSubjectName: '',
+    subjectError: '',
+
+    async checkEmail() {
+        this.emailError = '';
+        this.foundStudent = null;
+        if (!this.email) { this.emailError = 'Please enter an email.'; return; }
+        const res = await fetch('/admin/check-mentor-email?email=' + encodeURIComponent(this.email));
+        const data = await res.json();
+        if (data.error) { this.emailError = data.error; return; }
+        this.foundStudent = data;
+    },
+
+    addSlot() {
+        this.availabilities.push({ id: Date.now(), day_of_week: '', start_time: '', end_time: '' });
+    },
+
+    removeSlot(id) {
+        this.availabilities = this.availabilities.filter(a => a.id !== id);
+    },
+
+    validate() {
+        if (!this.foundStudent) { this.emailError = 'Please find a valid student first.'; return false; }
+        if (this.selectedSubjects.length === 0) { alert('Please select at least one subject.'); return false; }
+        for (const a of this.availabilities) {
+            if (!a.day_of_week || !a.start_time || !a.end_time) { alert('Please fill out all availability slots.'); return false; }
+            if (a.end_time <= a.start_time) { alert('End time must be after start time.'); return false; }
+        }
+        return true;
+    },
+
+    async submitMentor() {
+        const formData = new FormData();
+        const avatarFile = document.getElementById('dash-avatar-upload').files[0];
+        if (!avatarFile) { alert('Please upload a profile picture.'); return; }
+
+        formData.append('user_id', this.foundStudent.id);
+        formData.append('avatar', avatarFile);
+        this.selectedSubjects.forEach(s => formData.append('subjects[]', s));
+        this.availabilities.forEach((a, i) => {
+            formData.append('availabilities[' + i + '][day_of_week]', a.day_of_week);
+            formData.append('availabilities[' + i + '][start_time]', a.start_time);
+            formData.append('availabilities[' + i + '][end_time]', a.end_time);
+        });
+        formData.append('_token', document.querySelector('meta[name=csrf-token]').content);
+
+        const res = await fetch('/admin/save-mentor', { method: 'POST', body: formData });
+        const data = await res.json();
+
+        if (data.success) {
+            this.showConfirmModal = false;
+            this.showAddMentorModal = false;
+            alert(data.name + ' has been registered as a mentor.');
+            window.location.reload();
+        }
+    },
+
+    validateSubject() {
+        this.subjectError = '';
+        if (!this.newSubjectCode.trim()) { this.subjectError = 'Subject code is required.'; return false; }
+        if (!this.newSubjectName.trim()) { this.subjectError = 'Subject name is required.'; return false; }
+        return true;
+    },
+
+    async submitSubject() {
+        this.subjectError = '';
+        const res = await fetch('/admin/save-subject', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content
+            },
+            body: JSON.stringify({
+                code: this.newSubjectCode.trim(),
+                name: this.newSubjectName.trim()
+            })
+        });
+
+        if (res.status === 422) {
+            const err = await res.json();
+            const messages = Object.values(err.errors).flat();
+            this.subjectError = messages[0];
+            this.showSubjectConfirm = false;
+            return;
+        }
+
+        const data = await res.json();
+        this.showSubjectConfirm = false;
+        this.showSubjectModal = false;
+        this.newSubjectCode = '';
+        this.newSubjectName = '';
+        alert(data.name + ' has been successfully added.');
+        window.location.reload();
+    }
+}">
+
+    {{-- ── QUICK ACTIONS CARD ── --}}
+    <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100" id="section-quickactions">
+        <h3 class="font-bold mb-3 text-slate-800 text-sm tracking-tight">Quick Actions</h3>
+        <div class="grid grid-cols-2 gap-2">
+            <button @click="showAddMentorModal = true"
+                class="border border-slate-300 p-2.5 rounded-lg text-[11px] font-bold hover:bg-gray-50 transition flex items-center justify-center gap-1.5">
+                <i class="fa-solid fa-user-plus text-[10px]"></i> Add Mentor
+            </button>
+            <a href="{{ route('admin.sessions') }}"
+                class="border border-slate-300 p-2.5 rounded-lg text-[11px] font-bold hover:bg-gray-50 transition flex items-center justify-center gap-1.5">
+                <i class="fa-solid fa-calendar-plus text-[10px]"></i> Create Session
+            </a>
+            <button @click="showSubjectModal = true"
+                class="border border-slate-300 p-2.5 rounded-lg text-[11px] font-bold hover:bg-gray-50 transition flex items-center justify-center gap-1.5">
+                <i class="fa-solid fa-book-open text-[10px]"></i> Manage Subjects
+            </button>
+            <button onclick="document.getElementById('reportModal').style.display='flex'"
+                class="border border-slate-300 p-2.5 rounded-lg text-[11px] font-bold hover:bg-gray-50 transition flex items-center justify-center gap-1.5">
+                <i class="fa-solid fa-file-invoice text-[10px]"></i> Generate Report
+            </button>
+        </div>
     </div>
+
+    {{-- ── ADD MENTOR MODAL ── --}}
+    <div x-show="showAddMentorModal" x-cloak
+        style="position:fixed; inset:0; background:rgba(0,0,0,0.5); backdrop-filter:blur(4px); z-index:1000;"
+        @keydown.escape.window="showAddMentorModal = false">
+        <div style="display:flex; align-items:center; justify-content:center; width:100%; height:100%; padding:24px;">
+            <div class="bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col" style="max-height: 90vh;">
+
+                <div class="px-8 py-6 border-b flex justify-between items-center flex-shrink-0 bg-white">
+                    <div>
+                        <h2 class="text-xl font-black text-slate-800">Register Mentor</h2>
+                        <p class="text-sm text-gray-400 mt-0.5">Add their email, assign their subjects, then set their availabilities.</p>
+                    </div>
+                    <button @click="showAddMentorModal = false" class="text-gray-400 hover:text-red-600 transition">
+                        <i class="fa-solid fa-xmark text-xl"></i>
+                    </button>
+                </div>
+
+                <div class="px-8 py-6 space-y-5 overflow-y-auto bg-white">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+
+                        {{-- Step 1: Email --}}
+                        <div>
+                            <div class="flex items-center gap-2 mb-3">
+                                <span class="flex items-center justify-center w-5 h-5 bg-slate-800 text-white rounded-full text-[10px] font-bold shrink-0">1</span>
+                                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest m-0">Student Email</h3>
+                            </div>
+                            <div class="flex flex-col gap-2">
+                                <div>
+                                    <input type="email" x-model="email"
+                                        placeholder="student@up.edu.ph"
+                                        class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:border-red-900"
+                                        @keydown.enter.prevent="checkEmail()" />
+                                    <p x-show="emailError" x-text="emailError" class="mt-1 text-xs text-red-600"></p>
+                                </div>
+                                <button wire:click="checkEmail" type="button"
+                                class="w-full px-4 py-2.5 bg-slate-800 text-white text-xs font-bold rounded-lg hover:bg-black transition"
+                                wire:loading.attr="disabled" wire:target="checkEmail">
+                                <span wire:loading.remove wire:target="checkEmail">Find Email</span>
+                                <span wire:loading wire:target="checkEmail"><i class="fa-solid fa-spinner fa-spin mr-1"></i>Verifying...</span>
+                            </button>
+                            </div>
+                            @if($newMentor)
+                            <div class="mt-3 flex items-center gap-3 bg-green-50 border border-green-200 rounded-lg px-4 py-3">
+                                <div class="w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">{{ substr($newMentor['name'], 0, 1) }}</div>
+                                <div class="min-w-0">
+                                    <p class="text-sm font-bold text-slate-800 truncate">{{ $newMentor['name'] }}</p>
+                                    <p class="text-[10px] text-gray-500 truncate">{{ $newMentor['email'] }}</p>
+                                </div>
+                                <i class="fa-solid fa-circle-check text-green-500 ml-auto text-lg"></i>
+                            </div>
+                        @endif
+                            <div x-show="foundStudent"
+                                class="mt-3 flex items-center gap-3 bg-green-50 border border-green-200 rounded-lg px-4 py-3">
+                                <div class="w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
+                                    x-text="foundStudent ? foundStudent.name.charAt(0).toUpperCase() : ''"></div>
+                                <div class="min-w-0">
+                                    <p class="text-sm font-bold text-slate-800 truncate" x-text="foundStudent?.name"></p>
+                                    <p class="text-[10px] text-gray-500 truncate" x-text="foundStudent?.email"></p>
+                                </div>
+                                <i class="fa-solid fa-circle-check text-green-500 ml-auto text-lg"></i>
+                            </div>
+                        </div>
+
+                        {{-- Step 2: Profile Picture --}}
+                        <div>
+                            <div class="flex items-center gap-2 mb-3">
+                                <span class="flex items-center justify-center w-5 h-5 bg-slate-800 text-white rounded-full text-[10px] font-bold shrink-0">2</span>
+                                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest m-0">Profile Picture</h3>
+                            </div>
+                            <div class="flex items-start gap-4">
+                                <div class="flex-shrink-0">
+                                    <div class="w-32 h-32 rounded-xl bg-white border border-dashed border-gray-300 flex items-center justify-center text-gray-400 overflow-hidden">
+                                        <img id="dashAvatarPreview" src="" alt="" class="w-full h-full object-cover hidden" />
+                                        <i id="dashAvatarPlaceholder" class="fa-solid fa-image text-2xl"></i>
+                                    </div>
+                                </div>
+                                <div class="flex-1 pt-1 flex flex-col justify-center h-32 min-w-0">
+                                    <input type="file" id="dash-avatar-upload" accept="image/*" class="hidden"
+                                        @change="
+                                            fileName = $event.target.files[0]?.name ?? '';
+                                            const reader = new FileReader();
+                                            reader.onload = e => {
+                                                document.getElementById('dashAvatarPreview').src = e.target.result;
+                                                document.getElementById('dashAvatarPreview').classList.remove('hidden');
+                                                document.getElementById('dashAvatarPlaceholder').classList.add('hidden');
+                                            };
+                                            reader.readAsDataURL($event.target.files[0]);
+                                        " />
+                                    <label for="dash-avatar-upload"
+                                        class="block w-full text-center py-2.5 px-4 rounded-lg text-xs font-bold bg-slate-800 text-white hover:bg-black cursor-pointer transition shadow-sm">
+                                        Choose File
+                                    </label>
+                                    <p x-show="fileName" x-text="fileName"
+                                        class="mt-3 text-[10px] text-center text-slate-700 font-bold truncate px-2"></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- Step 3: Subjects --}}
+                    <div>
+                        <div class="flex items-center gap-2 mb-3">
+                            <span class="flex items-center justify-center w-5 h-5 bg-slate-800 text-white rounded-full text-[10px] font-bold shrink-0">3</span>
+                            <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest m-0">Teachable Subjects</h3>
+                        </div>
+                        <div class="border border-gray-200 rounded-xl overflow-hidden">
+                            <div class="max-h-44 overflow-y-auto divide-y divide-gray-50 bg-white">
+                                @forelse(\App\Models\Subjects::orderBy('code')->get() as $subject)
+                                    <div class="flex items-center px-4 hover:bg-gray-50">
+                                        <input type="checkbox"
+                                            id="dash-subject-{{ $subject->id }}"
+                                            value="{{ $subject->id }}"
+                                            x-model="selectedSubjects"
+                                            class="rounded border-gray-300 w-4 h-4 cursor-pointer flex-shrink-0" />
+                                        <label for="dash-subject-{{ $subject->id }}"
+                                            class="flex items-center gap-3 ml-3 py-2.5 cursor-pointer flex-1">
+                                            <span class="text-xs font-bold text-slate-700 w-16">{{ $subject->code }}</span>
+                                            <span class="text-xs text-gray-400">{{ $subject->name }}</span>
+                                        </label>
+                                    </div>
+                                @empty
+                                    <p class="text-xs text-gray-400 text-center py-4">No subjects yet.</p>
+                                @endforelse
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- Step 4: Availabilities --}}
+                    <div>
+                        <div class="flex items-center gap-2 mb-3">
+                            <span class="flex items-center justify-center w-5 h-5 bg-slate-800 text-white rounded-full text-[10px] font-bold shrink-0">4</span>
+                            <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest m-0">Availability Schedule</h3>
+                        </div>
+                        <div class="grid grid-cols-[1fr_1fr_1fr_auto] gap-2 px-1 mb-1">
+                            <label class="text-[10px] font-bold text-slate-500 uppercase">Day</label>
+                            <label class="text-[10px] font-bold text-slate-500 uppercase">Start</label>
+                            <label class="text-[10px] font-bold text-slate-500 uppercase">End</label>
+                            <div class="w-8"></div>
+                        </div>
+                        <div class="space-y-2">
+                            <template x-for="(row, index) in availabilities" :key="row.id">
+                                <div class="grid grid-cols-[1fr_1fr_1fr_auto] gap-2 items-center">
+                                    <select x-model="row.day_of_week"
+                                        class="w-full px-2 py-2 border border-gray-200 rounded-lg text-xs outline-none focus:border-red-900">
+                                        <option value="">- Day -</option>
+                                        <option value="monday">Monday</option>
+                                        <option value="tuesday">Tuesday</option>
+                                        <option value="wednesday">Wednesday</option>
+                                        <option value="thursday">Thursday</option>
+                                        <option value="friday">Friday</option>
+                                        <option value="saturday">Saturday</option>
+                                    </select>
+                                    <input type="time" x-model="row.start_time"
+                                        class="w-full px-2 py-2 border border-gray-200 rounded-lg text-xs outline-none focus:border-red-900" />
+                                    <input type="time" x-model="row.end_time"
+                                        class="w-full px-2 py-2 border border-gray-200 rounded-lg text-xs outline-none focus:border-red-900" />
+                                    <div class="flex items-center justify-center">
+                                        <template x-if="availabilities.length > 1">
+                                            <button type="button" @click="removeSlot(row.id)"
+                                                class="w-8 h-8 flex items-center justify-center rounded-lg bg-red-50 text-red-400 hover:bg-red-100 hover:text-red-600 transition">
+                                                <i class="fa-solid fa-xmark text-xs"></i>
+                                            </button>
+                                        </template>
+                                        <template x-if="availabilities.length <= 1">
+                                            <div class="w-8"></div>
+                                        </template>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                        <button @click="addSlot()" type="button"
+                            class="mt-3 flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-800 transition">
+                            <i class="fa-solid fa-plus text-[10px]"></i> Add more days or time slots
+                        </button>
+                    </div>
+                </div>
+
+                <div class="px-8 py-5 bg-white border-t flex-shrink-0">
+                    <div class="flex gap-3">
+                        <button type="button" @click="showAddMentorModal = false"
+                            class="flex-1 py-3 text-xs font-bold text-gray-800 bg-gray-200 hover:bg-gray-300 rounded-xl transition">
+                            Cancel
+                        </button>
+                        <button type="button" @click="if (validate()) showConfirmModal = true"
+                            class="flex-1 bg-red-900 text-white py-3 rounded-xl text-xs font-bold shadow-lg hover:bg-red-800 transition">
+                            Register Mentor
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- ── CONFIRM REGISTER MENTOR MODAL ── --}}
+    <div x-show="showConfirmModal" x-cloak
+        style="position:fixed; inset:0; background:rgba(0,0,0,0.5); backdrop-filter:blur(4px); z-index:1100;">
+        <div style="display:flex; align-items:center; justify-content:center; width:100%; height:100%; padding:24px;">
+            <div class="bg-white w-full max-w-sm rounded-2xl shadow-2xl p-8 text-center">
+                <div class="w-16 h-16 bg-amber-100 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-5">
+                    <i class="fa-solid fa-user-plus text-3xl"></i>
+                </div>
+                <h3 class="text-xl font-black text-slate-800">Confirm Mentor Registration</h3>
+                <p class="text-sm text-gray-500 mt-2 mb-8">This will register the student as a peer mentor and will allow them access to the mentor module.</p>
+                <div class="flex gap-3">
+                    <button type="button" @click="showConfirmModal = false"
+                        class="flex-1 py-3 text-xs font-bold text-gray-800 bg-gray-200 hover:bg-gray-300 rounded-xl transition">
+                        Cancel
+                    </button>
+                    <button type="button" @click="submitMentor()"
+                        class="flex-1 bg-red-900 text-white py-3 rounded-xl text-xs font-bold shadow-lg hover:bg-red-800 transition">
+                        Save
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- ── ADD SUBJECT MODAL ── --}}
+    <div x-show="showSubjectModal" x-cloak
+        style="position:fixed; inset:0; background:rgba(0,0,0,0.5); backdrop-filter:blur(4px); z-index:1000;"
+        @keydown.escape.window="showSubjectModal = false">
+        <div style="display:flex; align-items:center; justify-content:center; width:100%; height:100%; padding:24px;">
+            <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden">
+
+                <div class="flex items-center gap-4 px-6 py-5 bg-white border-b border-gray-100">
+                    <div class="w-12 h-12 rounded-full bg-green-100 text-green-600 flex items-center justify-center text-xl flex-shrink-0">
+                        <i class="fa-solid fa-book-medical"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <h2 class="text-xl font-extrabold text-slate-800 tracking-tight mb-0.5">Add New Subject</h2>
+                        <p class="text-xs text-slate-500 leading-snug">This subject will become available for mentor assignments.</p>
+                    </div>
+                    <button @click="showSubjectModal = false; newSubjectCode = ''; newSubjectName = ''; subjectError = ''"
+                        class="text-gray-400 hover:text-red-600 transition ml-2">
+                        <i class="fa-solid fa-xmark text-xl"></i>
+                    </button>
+                </div>
+
+                <div class="px-6 py-5 space-y-4 bg-white">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1.5">Subject Code <span class="text-red-500">*</span></label>
+                        <input type="text" x-model="newSubjectCode"
+                            placeholder="e.g. Math 54"
+                            class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:border-red-900"
+                            @keydown.enter.prevent="if (validateSubject()) showSubjectConfirm = true" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1.5">Subject Name <span class="text-red-500">*</span></label>
+                        <input type="text" x-model="newSubjectName"
+                            placeholder="e.g. Elementary Analysis II"
+                            class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:border-red-900"
+                            @keydown.enter.prevent="if (validateSubject()) showSubjectConfirm = true" />
+                    </div>
+                    <p x-show="subjectError" x-text="subjectError" class="text-xs text-red-600"></p>
+                </div>
+
+                <div class="px-6 py-5 bg-gray-50 border-t border-gray-100">
+                    <div class="flex gap-3">
+                        <button type="button"
+                            @click="showSubjectModal = false; newSubjectCode = ''; newSubjectName = ''; subjectError = ''"
+                            class="flex-1 py-2.5 text-sm font-bold text-gray-600 bg-white border border-gray-200 hover:bg-gray-100 rounded-xl transition">
+                            Cancel
+                        </button>
+                        <button type="button" @click="if (validateSubject()) showSubjectConfirm = true"
+                            class="flex-1 bg-slate-800 text-white py-2.5 rounded-xl text-sm font-bold shadow-md hover:bg-black transition">
+                            Add Subject
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    {{-- ── CONFIRM ADD SUBJECT MODAL ── --}}
+    <div x-show="showSubjectConfirm" x-cloak
+        style="position:fixed; inset:0; background:rgba(0,0,0,0.5); backdrop-filter:blur(4px); z-index:1100;">
+        <div style="display:flex; align-items:center; justify-content:center; width:100%; height:100%; padding:24px;">
+            <div class="bg-white w-full max-w-sm rounded-2xl shadow-2xl p-8 text-center">
+                <div class="w-16 h-16 bg-amber-100 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-5">
+                    <i class="fa-solid fa-book text-3xl"></i>
+                </div>
+                <h3 class="text-xl font-black text-slate-800">Confirm New Subject</h3>
+                <p class="text-sm text-gray-500 mt-2 mb-2">You are about to add this subject:</p>
+                <p class="text-sm font-black text-slate-800 mb-1" x-text="newSubjectCode"></p>
+                <p class="text-xs text-gray-400 mb-8" x-text="newSubjectName"></p>
+                <div class="flex gap-3">
+                    <button type="button" @click="showSubjectConfirm = false"
+                        class="flex-1 py-3 text-xs font-bold text-gray-800 bg-gray-200 hover:bg-gray-300 rounded-xl transition">
+                        Cancel
+                    </button>
+                    <button type="button" @click="submitSubject()"
+                        class="flex-1 bg-red-900 text-white py-3 rounded-xl text-xs font-bold shadow-lg hover:bg-red-800 transition">
+                        Save
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </div>
 
 <div class="bg-white rounded-xl shadow-sm border border-gray-100">
@@ -765,55 +1360,53 @@ updateDate();
                                     <div id="calendarGrid" class="grid grid-cols-7 gap-1"></div>
                                 </div>
                             </div>
-                        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                            <div class="flex justify-between items-center mb-4">
-                                <h3 class="font-bold text-slate-800 text-sm tracking-tight">Pending Approvals</h3>
-                                <span class="bg-red-100 text-red-700 text-[10px] font-bold px-2 py-0.5 rounded-full">4 New</span>
-                            </div>
-                            <div class="flex flex-col gap-4">
-                                <div class="flex items-center justify-between group">
-                                    <div class="flex items-center gap-3">
-                                        <div class="w-8 h-8 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-[10px] font-bold">JD</div>
-                                        <div><p class="text-[11px] font-bold text-slate-700">John Doe</p><p class="text-[9px] text-gray-400 font-medium">Mentor Applicant</p></div>
-                                    </div>
-                                    <div class="flex gap-1">
-                                        <button class="w-6 h-6 rounded-md bg-gray-50 hover:bg-red-50 hover:text-red-600 flex items-center justify-center"><i class="fa-solid fa-xmark text-[10px]"></i></button>
-                                        <button class="w-6 h-6 rounded-md bg-gray-50 hover:bg-emerald-50 hover:text-emerald-600 flex items-center justify-center"><i class="fa-solid fa-check text-[10px]"></i></button>
-                                    </div>
-                                </div>
-                                <div class="flex items-center justify-between group">
-                                    <div class="flex items-center gap-3">
-                                        <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-[10px] font-bold">SM</div>
-                                        <div><p class="text-[11px] font-bold text-slate-700">Sarah Miller</p><p class="text-[9px] text-gray-400 font-medium">Session Change</p></div>
-                                    </div>
-                                    <div class="flex gap-1">
-                                        <button class="w-6 h-6 rounded-md bg-gray-50 hover:bg-red-50 hover:text-red-600 flex items-center justify-center"><i class="fa-solid fa-xmark text-[10px]"></i></button>
-                                        <button class="w-6 h-6 rounded-md bg-gray-50 hover:bg-emerald-50 hover:text-emerald-600 flex items-center justify-center"><i class="fa-solid fa-check text-[10px]"></i></button>
-                                    </div>
-                                </div>
-                                <div class="flex items-center justify-between group">
-                                    <div class="flex items-center gap-3">
-                                        <div class="w-8 h-8 rounded-full bg-orange-100 text-orange-700 flex items-center justify-center text-[10px] font-bold">AL</div>
-                                        <div><p class="text-[11px] font-bold text-slate-700">Amy Lee</p><p class="text-[9px] text-gray-400 font-medium">Subject Add</p></div>
-                                    </div>
-                                    <div class="flex gap-1">
-                                        <button class="w-6 h-6 rounded-md bg-gray-50 hover:bg-red-50 hover:text-red-600 flex items-center justify-center"><i class="fa-solid fa-xmark text-[10px]"></i></button>
-                                        <button class="w-6 h-6 rounded-md bg-gray-50 hover:bg-emerald-50 hover:text-emerald-600 flex items-center justify-center"><i class="fa-solid fa-check text-[10px]"></i></button>
-                                    </div>
-                                </div>
-                                <div class="flex items-center justify-between group">
-                                    <div class="flex items-center gap-3">
-                                        <div class="w-8 h-8 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center text-[10px] font-bold">TC</div>
-                                        <div><p class="text-[11px] font-bold text-slate-700">Tom Chen</p><p class="text-[9px] text-gray-400 font-medium">Profile Edit</p></div>
-                                    </div>
-                                    <div class="flex gap-1">
-                                        <button class="w-6 h-6 rounded-md bg-gray-50 hover:bg-red-50 hover:text-red-600 flex items-center justify-center"><i class="fa-solid fa-xmark text-[10px]"></i></button>
-                                        <button class="w-6 h-6 rounded-md bg-gray-50 hover:bg-emerald-50 hover:text-emerald-600 flex items-center justify-center"><i class="fa-solid fa-check text-[10px]"></i></button>
-                                    </div>
-                                </div>
-                            </div>
-                            <button class="w-full mt-4 py-2 text-[10px] font-bold text-slate-400 hover:text-slate-600 border-t border-gray-50 transition text-center">View All Requests</button>
-                        </div>
+                        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100" id="section-approvals">
+    <div class="flex justify-between items-center mb-4">
+        <h3 class="font-bold text-slate-800 text-sm tracking-tight">Pending Bookings</h3>
+        <span class="bg-red-100 text-red-700 text-[10px] font-bold px-2 py-0.5 rounded-full">
+            {{ count($pendingApprovalsList) }} Pending
+        </span>
+    </div>
+
+    <div class="flex flex-col gap-4">
+        @forelse($pendingApprovalsList as $item)
+            <div class="flex items-center gap-3">
+                {{-- Avatar initials --}}
+                <div class="w-8 h-8 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center text-[10px] font-bold flex-shrink-0">
+                    {{ $item['initials'] }}
+                </div>
+
+                {{-- Info --}}
+                <div class="min-w-0 flex-1">
+                    <p class="text-[11px] font-bold text-slate-700 truncate">{{ $item['name'] }}</p>
+                    <p class="text-[9px] text-gray-400 font-medium truncate">
+                        {{ $item['type'] }} &mdash; {{ $item['subject'] }} &mdash; {{ $item['date'] }}
+                    </p>
+                    <p class="text-[9px] text-gray-400 truncate">Mentor: {{ $item['mentor'] }}</p>
+                </div>
+
+                {{-- Pending badge only, no actions --}}
+                <span class="text-yellow-600 text-[9px] font-bold bg-yellow-50 border border-yellow-200 px-2 py-0.5 rounded-full flex-shrink-0">
+                    Pending
+                </span>
+            </div>
+        @empty
+            <div class="text-center py-6">
+                <i class="fa-solid fa-circle-check text-green-400 text-2xl mb-2"></i>
+                <p class="text-xs text-gray-400 font-medium-italic">No pending bookings right now.</p>
+            </div>
+        @endforelse
+    </div>
+
+    @if(count($pendingApprovalsList) > 0)
+        <a href="{{ route('admin.sessions') }}"
+            class="block w-full mt-4 py-2 text-[10px] font-bold text-slate-400 hover:text-slate-600 border-t border-gray-50 transition text-center">
+            View All in Session Management →
+        </a>
+    @endif
+</div>
+</div>
+ 
                     </div>
                 </div>
             </main>
@@ -1049,6 +1642,14 @@ statusFilter.addEventListener('change', applyFilters);
 document.getElementById('prevBtn').addEventListener('click', () => { currentPage--; applyFilters(); });
 document.getElementById('nextBtn').addEventListener('click', () => { currentPage++; applyFilters(); });
 
+document.getElementById('sidebarToggle').addEventListener('click', () => {
+    sidebar.classList.toggle('collapsed');
+    const icon = document.getElementById('toggleIcon');
+    icon.classList.toggle('fa-chevron-left');
+    icon.classList.toggle('fa-chevron-right');
+    setTimeout(() => { charts.forEach(c => c.resize()); }, 310);
+});
+
         // Bootstrap
         initCharts();
         renderCalendar();
@@ -1102,12 +1703,6 @@ document.getElementById('nextBtn').addEventListener('click', () => { currentPage
         { group: 'Sessions', label: 'Completed Sessions',      detail: 'View all completed sessions',                    target: 'section-schedule',  keywords: ['completed','done','finished'] },
         { group: 'Sessions', label: 'Upcoming Sessions',       detail: 'View all upcoming sessions',                     target: 'section-schedule',  keywords: ['upcoming','future','scheduled'] },
         { group: 'Sessions', label: 'Pending Sessions',        detail: 'View sessions awaiting confirmation',             target: 'section-schedule',  keywords: ['pending','waiting','unconfirmed'] },
-
-        // ── PENDING APPROVALS ──
-        { group: 'Approvals', label: 'John Doe',               detail: 'Mentor Applicant · Pending approval',            target: 'section-approvals', keywords: ['john','doe','mentor applicant','applicant','new mentor'] },
-        { group: 'Approvals', label: 'Sarah Miller',           detail: 'Session Change Request · Pending',               target: 'section-approvals', keywords: ['sarah','miller','session change','change request'] },
-        { group: 'Approvals', label: 'Amy Lee',                detail: 'Subject Add Request · Pending',                  target: 'section-approvals', keywords: ['amy','lee','subject add','add subject','new subject'] },
-        { group: 'Approvals', label: 'Tom Chen',               detail: 'Profile Edit Request · Pending',                 target: 'section-approvals', keywords: ['tom','chen','profile edit','edit profile'] },
 
         // ── ANALYTICS ──
         { group: 'Analytics', label: 'Monthly Session Trends', detail: 'Weekly session volume — Week 1 to Week 4',               target: 'section-analytics', keywords: ['monthly','trends','sessions','volume','weekly','line chart','chart'] },
@@ -1222,14 +1817,6 @@ document.getElementById('nextBtn').addEventListener('click', () => { currentPage
 
         render(q, matches);
     });
-
-    document.getElementById('sidebarToggle').addEventListener('click', () => {
-    sidebar.classList.toggle('collapsed');
-    const icon = document.getElementById('toggleIcon');
-    icon.classList.toggle('fa-chevron-left');
-    icon.classList.toggle('fa-chevron-right');
-    setTimeout(() => { charts.forEach(c => c.resize()); }, 310);
-});
 
     // ── CLOSE ON OUTSIDE CLICK ───────────────────────────────────────────────
     document.addEventListener('click', function (e) {
