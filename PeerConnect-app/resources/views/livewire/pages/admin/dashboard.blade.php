@@ -21,6 +21,7 @@ state([
     'todaySessions' => [],
     'globalSearchTerm' => '',
     'pendingApprovalsList' => [],
+    'allSessions' => [],
 
         // Form states
     'showModal' => false,
@@ -397,6 +398,18 @@ $rejectBooking = action(function (string $id) {
         ->toArray();
     $this->pendingBookings = Bookings::where('booking_status', 'pending')->count();
 });
+
+$allSessions = Bookings::with(['mentor.user', 'student.user'])
+    ->orderBy('date')
+    ->get()
+    ->map(fn($b) => [
+        'date'   => $b->date,
+        'mentor' => $b->mentor->user->name  ?? 'Unknown',
+        'mentee' => $b->student->user->name ?? 'Unknown',
+        'time'   => Carbon::parse($b->start_time)->format('h:i A'),
+        'status' => ucfirst($b->booking_status),
+    ])
+    ->toArray();
 
 
 ?>
@@ -1028,28 +1041,190 @@ updateDate();
     }
 }">
 
-    {{-- ── QUICK ACTIONS CARD ── --}}
-    <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100" id="section-quickactions">
-        <h3 class="font-bold mb-3 text-slate-800 text-sm tracking-tight">Quick Actions</h3>
+{{-- ── QUICK ACTIONS CARD ── --}}
+<div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100" id="section-quickactions">
+    <h3 class="font-bold mb-3 text-slate-800 text-sm tracking-tight">Quick Actions</h3>
+    <div class="flex flex-col gap-2">
         <div class="grid grid-cols-2 gap-2">
             <button @click="showAddMentorModal = true"
                 class="border border-slate-300 p-2.5 rounded-lg text-[11px] font-bold hover:bg-gray-50 transition flex items-center justify-center gap-1.5">
                 <i class="fa-solid fa-user-plus text-[10px]"></i> Add Mentor
             </button>
-            <a href="{{ route('admin.sessions') }}"
-                class="border border-slate-300 p-2.5 rounded-lg text-[11px] font-bold hover:bg-gray-50 transition flex items-center justify-center gap-1.5">
-                <i class="fa-solid fa-calendar-plus text-[10px]"></i> Create Session
-            </a>
             <button @click="showSubjectModal = true"
                 class="border border-slate-300 p-2.5 rounded-lg text-[11px] font-bold hover:bg-gray-50 transition flex items-center justify-center gap-1.5">
-                <i class="fa-solid fa-book-open text-[10px]"></i> Manage Subjects
-            </button>
-            <button onclick="document.getElementById('reportModal').style.display='flex'"
-                class="border border-slate-300 p-2.5 rounded-lg text-[11px] font-bold hover:bg-gray-50 transition flex items-center justify-center gap-1.5">
-                <i class="fa-solid fa-file-invoice text-[10px]"></i> Generate Report
+                <i class="fa-solid fa-book-open text-[10px]"></i> Add Subject
             </button>
         </div>
+        <button onclick="document.getElementById('reportModal').style.display='flex'"
+            class="w-full border border-slate-300 p-2.5 rounded-lg text-[11px] font-bold hover:bg-gray-50 transition flex items-center justify-center gap-1.5">
+            <i class="fa-solid fa-file-invoice text-[10px]"></i> Generate Report
+        </button>
     </div>
+</div>
+{{-- ── GENERATE REPORT MODAL ── --}}
+<div id="reportModal"
+    style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); backdrop-filter:blur(4px); z-index:1000; align-items:center; justify-content:center; padding:24px;">
+    <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden">
+
+        <div class="flex items-center gap-4 px-6 py-5 border-b border-gray-100">
+            <div class="w-12 h-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xl flex-shrink-0">
+                <i class="fa-solid fa-file-invoice"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+                <h2 class="text-xl font-extrabold text-slate-800 tracking-tight mb-0.5">Generate Report</h2>
+                <p class="text-xs text-slate-500 leading-snug">Choose the report type and date range to export.</p>
+            </div>
+            <button onclick="document.getElementById('reportModal').style.display='none'"
+                class="text-gray-400 hover:text-red-600 transition">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
+        </div>
+
+        <div class="px-6 py-5 space-y-4">
+            <div>
+                <label class="block text-xs font-bold text-slate-600 mb-1.5">Report Type <span class="text-red-500">*</span></label>
+                <select id="reportType" class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:border-red-900">
+                    <option value="sessions">Session Summary</option>
+                    <option value="mentors">Mentor Performance</option>
+                    <option value="feedback">Student Feedback</option>
+                    <option value="bookings">Booking Overview</option>
+                </select>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1.5">From</label>
+                    <input type="date" id="reportFrom" class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:border-red-900" />
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1.5">To</label>
+                    <input type="date" id="reportTo" class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:border-red-900" />
+                </div>
+            </div>
+            <p id="reportError" class="text-xs text-red-600 hidden">Please fill in all fields before generating.</p>
+        </div>
+
+        <div class="px-6 py-5 bg-gray-50 border-t border-gray-100">
+            <div class="flex gap-3">
+                <button type="button"
+                    onclick="document.getElementById('reportModal').style.display='none'"
+                    class="flex-1 py-2.5 text-sm font-bold text-gray-600 bg-white border border-gray-200 hover:bg-gray-100 rounded-xl transition">
+                    Cancel
+                </button>
+                <button type="button" onclick="submitReport()"
+                    class="flex-1 bg-red-900 text-white py-2.5 rounded-xl text-sm font-bold shadow-md hover:bg-red-800 transition">
+                    <i class="fa-solid fa-download mr-1"></i> Export
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function submitReport() {
+    const from = document.getElementById('reportFrom').value;
+    const to   = document.getElementById('reportTo').value;
+    const err  = document.getElementById('reportError');
+
+    if (!from || !to) {
+        err.textContent = 'Please fill in both date fields.';
+        err.classList.remove('hidden');
+        return;
+    }
+
+    const fromDate = new Date(from);
+    const toDate   = new Date(to);
+    toDate.setHours(23, 59, 59);
+
+    const diffDays = (toDate - fromDate) / (1000 * 60 * 60 * 24);
+    if (diffDays < 0) {
+        err.textContent = '"To" date must be after "From" date.';
+        err.classList.remove('hidden');
+        return;
+    }
+    if (diffDays > 7) {
+        err.textContent = 'Date range cannot exceed 7 days.';
+        err.classList.remove('hidden');
+        return;
+    }
+
+    err.classList.add('hidden');
+
+    const fromDate = new Date(from);
+    const toDate   = new Date(to);
+    toDate.setHours(23, 59, 59);
+
+    // ── Raw data from Blade ──────────────────────────────────────────
+    const allSessions  = @json($allSessions);   
+    const topMentors   = @json($this->topMentors);
+    const topSubjects  = @json($this->topSubjects);
+    const satisfaction = @json($this->satisfactionRate);
+    const collegeData  = @json($this->collegeActivity);
+    const monthlyData  = @json($this->monthlyTrends);
+
+    // ── Filter sessions by date range ────────────────────────────────
+    const filtered = allSessions.filter(row => {
+        const d = new Date(row.date);
+        return d >= fromDate && d <= toDate;
+    });
+
+    if (!filtered.length) {
+        err.textContent = 'No session data found for the selected range.';
+        err.classList.remove('hidden');
+        return;
+    }
+
+    const wb = XLSX.utils.book_new();
+
+    // ── Sheet 1: Sessions ────────────────────────────────────────────
+    const sessionRows = [
+        ['Date', 'Mentor', 'Mentee', 'Time', 'Status'],
+        ...filtered.map(r => [r.date, r.mentor, r.mentee, r.time, r.status])
+    ];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(sessionRows), 'Sessions');
+
+    // ── Sheet 2: Top Mentors ─────────────────────────────────────────
+    const mentorRows = [
+        ['Mentor', 'Total Sessions'],
+        ...topMentors.map(m => [m.name, m.count])
+    ];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(mentorRows), 'Top Mentors');
+
+    // ── Sheet 3: Top Subjects ────────────────────────────────────────
+    const subjectRows = [
+        ['Subject Code', 'Total Bookings'],
+        ...topSubjects.map(s => [s.name, s.count])
+    ];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(subjectRows), 'Top Subjects');
+
+    // ── Sheet 4: Satisfaction Rate ───────────────────────────────────
+    const satisfactionRows = [
+        ['Rating Category', 'Percentage'],
+        ['Excellent (4-5)',  satisfaction[0] + '%'],
+        ['Good (3-4)',       satisfaction[1] + '%'],
+        ['Average (below 3)', satisfaction[2] + '%'],
+    ];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(satisfactionRows), 'Satisfaction');
+
+    // ── Sheet 5: College Activity ────────────────────────────────────
+    const collegeRows = [
+        ['College', 'Student Count'],
+        ...Object.entries(collegeData).map(([college, count]) => [college, count])
+    ];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(collegeRows), 'College Activity');
+
+    // ── Sheet 6: Monthly Trends ──────────────────────────────────────
+    const trendRows = [
+        ['Week', 'Session Count'],
+        ...monthlyData.map((count, i) => [`Week ${i + 1}`, count])
+    ];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(trendRows), 'Monthly Trends');
+
+    // ── Export ───────────────────────────────────────────────────────
+    XLSX.writeFile(wb, `lrc-analytics-report-${from}-to-${to}.xlsx`);
+
+    document.getElementById('reportModal').style.display = 'none';
+}
+</script>
 
     {{-- ── ADD MENTOR MODAL ── --}}
     <div x-show="showAddMentorModal" x-cloak
@@ -1399,7 +1574,7 @@ updateDate();
                         <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100" id="section-approvals">
     <div class="flex justify-between items-center mb-4">
         <h3 class="font-bold text-slate-800 text-sm tracking-tight">Pending Bookings</h3>
-        <span class="bg-red-100 text-red-700 text-[10px] font-bold px-2 py-0.5 rounded-full">
+        <span class="bg-red-100 text-red-700 text-[10px] font-bold px-2 py-0.5 rounded-full">     
             {{ count($pendingApprovalsList) }} Pending
         </span>
     </div>
@@ -1408,7 +1583,7 @@ updateDate();
         @forelse($pendingApprovalsList as $item)
             <div class="flex items-center gap-3">
                 {{-- Avatar initials --}}
-                <div class="w-8 h-8 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center text-[10px] font-bold flex-shrink-0">
+                <div class="w-8 h-8 rounded-full bg-amber-100 text-yellow-500 flex items-center justify-center text-[10px] font-bold flex-shrink-0">
                     {{ $item['initials'] }}
                 </div>
 
@@ -1873,5 +2048,5 @@ document.getElementById('sidebarToggle').addEventListener('click', () => {
 
 </script>
 
-
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </body>
