@@ -71,22 +71,22 @@ mount(function () {
         ])
         ->toArray();
 
-        
-}); 
-$pendingApprovalsList = Bookings::with(['student.user', 'mentor.user', 'subject'])
+        $this->pendingApprovalsList = Bookings::with(['student.user', 'mentor.user', 'subject'])
     ->where('booking_status', 'pending')
-    ->latest()
-    ->take(10)
+    ->latest('created_at')
     ->get()
     ->map(fn($b) => [
         'initials' => strtoupper(substr($b->student->user->name ?? 'U', 0, 2)),
         'name'     => $b->student->user->name ?? 'Unknown Student',
+        'type'     => 'Session Booking',
+        'subject'  => $b->subject->code       ?? 'N/A',
         'mentor'   => $b->mentor->user->name  ?? 'Unknown Mentor',
-        'type'        => 'Session Booking',
-        'subject'     => $b->subject->code ?? 'N/A',
-        'date'        => \Carbon\Carbon::parse($b->date)->format('M j'),
+        'date'     => \Carbon\Carbon::parse($b->date)->format('M j'),
     ])
     ->toArray();
+
+        
+}); 
 
 $searchIndex = computed(function () {
     $index = [];
@@ -360,6 +360,42 @@ $saveSubject = action(function () {
     $this->showSubjectModal = false;
     $this->showSubjectConfirm = false;
     session()->flash('successMessage', "{$this->newSubjectCode} has been added.");
+});
+
+$acceptBooking = action(function (string $id) {
+    Bookings::where('id', $id)->update(['booking_status' => 'accepted']);
+    $this->pendingApprovalsList = Bookings::with(['student.user', 'mentor.user', 'subject'])
+        ->where('booking_status', 'pending')
+        ->latest('created_at')
+        ->get()
+        ->map(fn($b) => [
+            'initials' => strtoupper(substr($b->student->user->name ?? 'U', 0, 2)),
+            'name'     => $b->student->user->name ?? 'Unknown Student',
+            'type'     => 'Session Booking',
+            'subject'  => $b->subject->code       ?? 'N/A',
+            'mentor'   => $b->mentor->user->name  ?? 'Unknown Mentor',
+            'date'     => \Carbon\Carbon::parse($b->date)->format('M j'),
+        ])
+        ->toArray();
+    $this->pendingBookings = Bookings::where('booking_status', 'pending')->count();
+});
+
+$rejectBooking = action(function (string $id) {
+    Bookings::where('id', $id)->update(['booking_status' => 'rejected']);
+    $this->pendingApprovalsList = Bookings::with(['student.user', 'mentor.user', 'subject'])
+        ->where('booking_status', 'pending')
+        ->latest('created_at')
+        ->get()
+        ->map(fn($b) => [
+            'initials' => strtoupper(substr($b->student->user->name ?? 'U', 0, 2)),
+            'name'     => $b->student->user->name ?? 'Unknown Student',
+            'type'     => 'Session Booking',
+            'subject'  => $b->subject->code       ?? 'N/A',
+            'mentor'   => $b->mentor->user->name  ?? 'Unknown Mentor',
+            'date'     => \Carbon\Carbon::parse($b->date)->format('M j'),
+        ])
+        ->toArray();
+    $this->pendingBookings = Bookings::where('booking_status', 'pending')->count();
 });
 
 
