@@ -46,16 +46,16 @@ $studentHistory = computed(function () {
         $isOpen = is_null($session->mentor_id);
         $mentorName = $isOpen ? 'ANY' : strtoupper($session->mentor->user->lastName ?? 'TBD') . ', ' . ($session->mentor->user->firstName ?? '');
 
-        $statusClass = match($session->booking_status) {
-            'pending' => 'bg-yellow-100 text-yellow-800',
-            'accepted' => 'bg-green-100 text-green-800',
-            'rejected' => 'bg-red-100 text-red-800',
-            'completed' => 'bg-green-100 text-green-800',
-            'cancelled' => 'bg-red-100 text-red-800',
-            'closed'    => 'bg-purple-100 text-purple-800',
-            'no_show'   => 'bg-red-100 text-red-800',
-            default     => 'bg-gray-100 text-gray-800',
-        };
+$statusClass = match($session->booking_status) {
+    'pending'   => 'text-yellow-500',
+    'accepted'  => 'text-green-600',
+    'rejected'  => 'text-red-900',
+    'completed' => 'text-gray-500',
+    'cancelled' => 'text-red-600',
+    'closed'    => 'text-purple-700',
+    'no_show'   => 'text-orange-600',
+    default     => 'text-gray-500',
+};
         $statusLabel = ucfirst(str_replace('_', ' ', $session->booking_status));
 
         $startCarbon = \Carbon\Carbon::parse($session->schedule_start);
@@ -186,17 +186,6 @@ $studentHistory = computed(function () {
 .dropdown-item { padding: 12px 20px; font-size: 13px; color: #475569; display: flex; align-items: center; gap: 10px; transition: background 0.2s; }
 .dropdown-item:hover { background: #f8fafc; color: var(--header-maroon); }
 
-.stat-card {
-    background: white;
-    border-radius: 12px;
-    padding: 16px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    border: 1px solid #f1f5f9;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-}
-
 /* Hover tooltip */
 .hover-tooltip { position: relative; cursor: default; }
 .hover-tooltip::after {
@@ -264,26 +253,31 @@ $studentHistory = computed(function () {
         <div class="main-content">
             <header class="top-header relative">
                 <div class="text-lg">Welcome, <span class="font-bold">{{ auth()->user()->name }}</span></div>
+                <div class="flex items-center gap-2">
+                <x-student-notifications />
+                
                 <button id="profileTrigger" class="flex items-center gap-2 px-3 py-1 bg-white rounded-full hover:bg-gray-100 transition shadow-sm border-2 border-white/20 group">
                     <div class="w-8 h-8 bg-red-900 text-white rounded-full flex items-center justify-center text-xs font-bold">
-                        {{ strtoupper(substr(auth()->user()->name, 0, 2)) }}
+                        {{ strtoupper(substr(auth()->user()->name,0,2)) }}
                     </div>
-                    <i class="fa-solid fa-chevron-down text-[10px] text-gray-500 group-hover:text-red-900"></i>
+                    <i class="fa-solid fa-chevron-down text-[10px] text-gray-500 group-hover:text-red-900 transition-transform duration-200"></i>
                 </button>
-                <div id="profileDropdown" class="profile-dropdown">
-                    <div class="p-4 border-b border-gray-100 bg-slate-50">
-                        <p class="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1">Signed in as</p>
-                        <p class="text-sm font-bold text-slate-800 truncate">{{ auth()->user()->name }}</p>
-                        <p class="text-xs text-slate-500 truncate">{{ auth()->user()->email }}</p>
-                    </div>
-                    <form method="POST" action="{{ route('logout') }}" class="m-0">
-                        @csrf
-                        <button type="submit" class="dropdown-item w-full border-t border-gray-50 text-red-600 font-semibold">
-                            <i class="fa-solid fa-right-from-bracket"></i> Logout
-                        </button>
-                    </form>
                 </div>
-            </header>
+
+                    <div id="profileDropdown" class="profile-dropdown">
+                        <div class="p-4 border-b border-gray-100 bg-slate-50">
+                            <p class="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1">Signed in as</p>
+                            <p class="text-sm font-bold text-slate-800 truncate">{{ auth()->user()->name }}</p>
+                            <p class="text-xs text-slate-500 truncate">{{ auth()->user()->email }}</p>
+                        </div>
+                        <form method="POST" action="{{ route('logout') }}" class="m-0">
+                            @csrf
+                            <button type="submit" class="dropdown-item w-full border-t border-gray-50 text-red-600 font-semibold">
+                                <i class="fa-solid fa-right-from-bracket"></i> Logout
+                            </button>
+                        </form>
+                    </div>
+                </header>
 
             <main class="scroll-container">
 
@@ -296,54 +290,44 @@ $studentHistory = computed(function () {
                 </div>
             </div>
 
-                {{-- Summary Cards --}}
-                <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-6">
-                    <div class="stat-card">
-                        <div class="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0">
-                            <i class="fa-solid fa-list-check text-slate-600"></i>
-                        </div>
-                        <div>
-                            <p class="text-xs font-bold text-gray-400 uppercase tracking-wide">Total Requests</p>
-                            <p class="text-xl font-black text-slate-800">{{ $this->summaryCount['total'] }}</p>
-                        </div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="w-10 h-10 rounded-lg bg-yellow-100 flex items-center justify-center flex-shrink-0">
-                            <i class="fa-solid fa-hourglass text-yellow-800"></i>
-                        </div>
-                        <div>
-                            <p class="text-xs font-bold text-gray-400 uppercase tracking-wide">Pending Requests</p>
-                            <p class="text-xl font-black text-slate-800">{{ $this->summaryCount['pending'] }}</p>
-                        </div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center">
-                            <i class="fa-solid fa-circle-check text-blue-600"></i>
-                        </div>
-                        <div>
-                            <p class="text-xs font-bold text-gray-400 uppercase tracking-wide">Completed Sessions</p>
-                            <p class="text-xl font-black text-slate-800">{{ $this->summaryCount['completed'] }}</p>
-                        </div>
-                    </div>
-<div class="stat-card">
-    <div class="w-10 h-10 rounded-lg bg-purple-50 flex items-center justify-center">
-        <i class="fa-solid fa-stopwatch text-purple-600"></i>
+{{-- Summary Cards --}}
+<div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-6">
+    <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-slate-400 flex items-center gap-4">
+        <div class="text-2xl"><i class="fa-solid fa-list-check text-slate-500"></i></div>
+        <div>
+            <h3 class="text-xs font-bold text-gray-400 uppercase leading-none">Total Requests</h3>
+            <p class="text-2xl font-black text-slate-800">{{ $this->summaryCount['total'] }}</p>
+        </div>
     </div>
-    <div>
-        <p class="text-xs font-bold text-gray-400 uppercase tracking-wide">Total Hours</p>
-        <p class="text-xl font-black text-slate-800">{{ $this->summaryCount['totalHours'] }}</p>
+    <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-yellow-500 flex items-center gap-4">
+        <div class="text-2xl"><i class="fa-solid fa-hourglass-half text-yellow-500"></i></div>
+        <div>
+            <h3 class="text-xs font-bold text-gray-400 uppercase leading-none">Pending Requests</h3>
+            <p class="text-2xl font-black text-slate-800">{{ $this->summaryCount['pending'] }}</p>
+        </div>
+    </div>
+    <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-blue-600 flex items-center gap-4">
+        <div class="text-2xl"><i class="fa-solid fa-flag-checkered text-blue-600"></i></div>
+        <div>
+            <h3 class="text-xs font-bold text-gray-400 uppercase leading-none">Completed Sessions</h3>
+            <p class="text-2xl font-black text-slate-800">{{ $this->summaryCount['completed'] }}</p>
+        </div>
+    </div>
+    <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-purple-600 flex items-center gap-4">
+        <div class="text-2xl"><i class="fa-solid fa-stopwatch text-purple-600"></i></div>
+        <div>
+            <h3 class="text-xs font-bold text-gray-400 uppercase leading-none">Total Hours</h3>
+            <p class="text-2xl font-black text-slate-800">{{ $this->summaryCount['totalHours'] }}</p>
+        </div>
+    </div>
+    <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-red-500 flex items-center gap-4">
+        <div class="text-2xl"><i class="fa-solid fa-ban text-red-500"></i></div>
+        <div>
+            <h3 class="text-xs font-bold text-gray-400 uppercase leading-none">Cancelled Requests</h3>
+            <p class="text-2xl font-black text-slate-800">{{ $this->summaryCount['cancelled'] }}</p>
+        </div>
     </div>
 </div>
-                    <div class="stat-card">
-                        <div class="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center">
-                            <i class="fa-solid fa-ban text-red-500"></i>
-                        </div>
-                        <div>
-                            <p class="text-xs font-bold text-gray-400 uppercase tracking-wide">Cancelled Requests</p>
-                            <p class="text-xl font-black text-slate-800">{{ $this->summaryCount['cancelled'] }}</p>
-                        </div>
-                    </div>
-                </div>
 
                 {{-- Table --}}
 <div class="bg-white rounded-xl shadow-sm border border-gray-100" x-data="{
@@ -500,9 +484,10 @@ $studentHistory = computed(function () {
                                             <p class="text-[10px] text-gray-400" x-text="booking.time"></p>
                                         </td>
                                         <td class="px-5 py-4 text-xs text-slate-500" x-text="booking.mode"></td>
-                                        <td class="px-5 py-4">
-                                            <span :class="'text-xs font-bold px-2.5 py-1 rounded-full ' + booking.statusClass" x-text="booking.statusLabel"></span>
-                                        </td>
+<td class="px-5 py-4">
+    <span :class="'font-bold text-[10px] bg-gray-50 px-2 py-1 rounded border border-current opacity-80 ' + booking.statusClass"
+          x-text="booking.statusLabel"></span>
+</td>
                                     </tr>
                                 </template>
                                 
