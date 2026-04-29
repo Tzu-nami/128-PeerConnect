@@ -1,6 +1,7 @@
 <?php
 
-use function Livewire\Volt\{layout, state, mount, computed, action};
+use function Livewire\Volt\{layout, state, mount, computed, action, uses};
+use Livewire\WithFileUploads;
 use App\Models\MentorProfiles;
 use App\Models\StudentProfiles;
 use App\Models\Bookings;
@@ -10,8 +11,13 @@ use App\Models\Feedback;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
+use App\Models\MentorAvailabilities;
+use App\Models\MentorSubjects;
+use App\Services\Avatar;
 
 layout('layouts.app');
+
+uses([WithFileUploads::class]);
 
 state([
     'totalMentors' => 0,
@@ -23,7 +29,7 @@ state([
     'pendingApprovalsList' => [],
     'allSessions' => [],
 
-        // Form states
+    // Form states
     'showModal' => false,
     'showSubjectModal' => false,
     'showConfirm' => false,
@@ -231,6 +237,27 @@ $collegeActivity = computed(function () {
         ->toArray();
 });
 
+$allSubjects = computed(function () {
+    return Subjects::orderBy('code')->get()
+        ->map(fn($subs) => ['id' => $subs->id, 'code' => $subs->code, 'name' => $subs->name])
+        ->toArray();
+});
+
+$openModal = action(function () {
+    $this->reset(['up_mail', 'newMentor', 'emailError', 'availabilities', 'showConfirm', 'avatar']);
+    $this->selectedSubjects = [];
+    $this->availabilities = [['day_of_week' => '', 'start_time' => '', 'end_time' => '']];
+    $this->showModal = true;
+});
+
+$closeModal = action(function () {
+    $this->showModal = false;
+    $this->showConfirm = false;
+    $this->reset(['up_mail', 'newMentor', 'emailError', 'avatar']);
+    $this->selectedSubjects = [];
+    $this->availabilities = [['id' => '1', 'day_of_week' => '', 'start_time' => '', 'end_time' => '']];
+});
+
 $openSubjectModal = action(function () {
     $this->reset(['newSubjectCode', 'newSubjectName', 'showSubjectConfirm']);
     $this->showSubjectModal = true;
@@ -362,6 +389,7 @@ $saveSubject = action(function () {
     $this->showSubjectModal = false;
     $this->showSubjectConfirm = false;
     session()->flash('successMessage', "{$this->newSubjectCode} has been added.");
+    $this->redirect(route('admin.courses'), navigate: true);
 });
 
 $acceptBooking = action(function (string $id) {
@@ -417,12 +445,7 @@ $allSessions = Bookings::with(['mentor.user', 'student.user', 'subject'])
 
 
 ?>
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LRC PeerConnect Dashboard</title>
-
+    <div> 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -572,6 +595,13 @@ $allSessions = Bookings::with(['mentor.user', 'student.user', 'subject'])
     cursor: not-allowed;       /* Shows a "prohibited" cursor */
     border-color: #e5e7eb;
 }
+
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+    .form-input { width: 100%; padding: 10px 14px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 13px; outline: none; }
+    .form-input:focus { border-color: var(--header-maroon); }
+    .form-label { display: block; font-size: 13px; font-weight: 600; color: #475569; margin-bottom: 6px; }
+
+    @keyframes slideDown { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
     
     /* MAIN CONTENT SEARCH BAR */
 .main-search-container {
@@ -638,9 +668,6 @@ $allSessions = Bookings::with(['mentor.user', 'student.user', 'subject'])
 }
     </style>
 
-</head>
-
-<body>
     <div class="app-wrapper">
             <aside class="sidebar" id="sidebar">
                 <div class="sidebar-logo-container">
@@ -834,7 +861,7 @@ $allSessions = Bookings::with(['mentor.user', 'student.user', 'subject'])
 
                 <div class="grid grid-cols-3 gap-8">
                     <div class="col-span-2 space-y-8">
-                        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col" id="section-schedule">                            
+                        <div wire:ignore class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col" id="section-schedule">                            
                             <div class="flex justify-between items-center mb-6">
                                 <div>
                                     <div class="flex items-center gap-2">
@@ -911,7 +938,7 @@ updateDate();
                             </div>
                         </div>
 
-<div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+<div wire:ignore class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
     <div class="flex justify-between items-center mb-6">
         <div class="flex items-center gap-2">
             <i class="fa-solid fa-chart-line"></i>
@@ -930,125 +957,19 @@ updateDate();
 
  <div class="flex flex-col gap-6">
 
-<div x-data="{
-    showAddMentorModal: false,
-    showConfirmModal: false,
-    email: '',
-    emailError: '',
-    foundStudent: null,
-    fileName: '',
-    selectedSubjects: [],
-    availabilities: [{ id: 1, day_of_week: '', start_time: '', end_time: '' }],
-
-    showSubjectModal: false,
-    showSubjectConfirm: false,
-    newSubjectCode: '',
-    newSubjectName: '',
-    subjectError: '',
-
-    async checkEmail() {
-        this.emailError = '';
-        this.foundStudent = null;
-        if (!this.email) { this.emailError = 'Please enter an email.'; return; }
-        const res = await fetch('/admin/check-mentor-email?email=' + encodeURIComponent(this.email));
-        const data = await res.json();
-        if (data.error) { this.emailError = data.error; return; }
-        this.foundStudent = data;
-    },
-
-    addSlot() {
-        this.availabilities.push({ id: Date.now(), day_of_week: '', start_time: '', end_time: '' });
-    },
-
-    removeSlot(id) {
-        this.availabilities = this.availabilities.filter(a => a.id !== id);
-    },
-
-    validate() {
-        if (!this.foundStudent) { this.emailError = 'Please find a valid student first.'; return false; }
-        if (this.selectedSubjects.length === 0) { alert('Please select at least one subject.'); return false; }
-        for (const a of this.availabilities) {
-            if (!a.day_of_week || !a.start_time || !a.end_time) { alert('Please fill out all availability slots.'); return false; }
-            if (a.end_time <= a.start_time) { alert('End time must be after start time.'); return false; }
-        }
-        return true;
-    },
-
-    async submitMentor() {
-        const formData = new FormData();
-        const avatarFile = document.getElementById('dash-avatar-upload').files[0];
-        if (!avatarFile) { alert('Please upload a profile picture.'); return; }
-
-        formData.append('user_id', this.foundStudent.id);
-        formData.append('avatar', avatarFile);
-        this.selectedSubjects.forEach(s => formData.append('subjects[]', s));
-        this.availabilities.forEach((a, i) => {
-            formData.append('availabilities[' + i + '][day_of_week]', a.day_of_week);
-            formData.append('availabilities[' + i + '][start_time]', a.start_time);
-            formData.append('availabilities[' + i + '][end_time]', a.end_time);
-        });
-        formData.append('_token', document.querySelector('meta[name=csrf-token]').content);
-
-        const res = await fetch('/admin/save-mentor', { method: 'POST', body: formData });
-        const data = await res.json();
-
-        if (data.success) {
-            this.showConfirmModal = false;
-            this.showAddMentorModal = false;
-            alert(data.name + ' has been registered as a mentor.');
-            window.location.reload();
-        }
-    },
-
-    validateSubject() {
-        this.subjectError = '';
-        if (!this.newSubjectCode.trim()) { this.subjectError = 'Subject code is required.'; return false; }
-        if (!this.newSubjectName.trim()) { this.subjectError = 'Subject name is required.'; return false; }
-        return true;
-    },
-
-    async submitSubject() {
-        this.subjectError = '';
-        const res = await fetch('/admin/save-subject', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content
-            },
-            body: JSON.stringify({
-                code: this.newSubjectCode.trim(),
-                name: this.newSubjectName.trim()
-            })
-        });
-
-        if (res.status === 422) {
-            const err = await res.json();
-            const messages = Object.values(err.errors).flat();
-            this.subjectError = messages[0];
-            this.showSubjectConfirm = false;
-            return;
-        }
-
-        const data = await res.json();
-        this.showSubjectConfirm = false;
-        this.showSubjectModal = false;
-        this.newSubjectCode = '';
-        this.newSubjectName = '';
-        alert(data.name + ' has been successfully added.');
-        window.location.reload();
-    }
-}">
+<div>
 
 {{-- ── QUICK ACTIONS CARD ── --}}
 <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100" id="section-quickactions">
     <h3 class="font-bold mb-3 text-slate-800 text-sm tracking-tight">Quick Actions</h3>
     <div class="flex flex-col gap-2">
         <div class="grid grid-cols-2 gap-2">
-            <button @click="showAddMentorModal = true"
+            <button wire:click="openModal" @click="$wire.showModal = true"
                 class="border border-slate-300 p-2.5 rounded-lg text-[11px] font-bold hover:bg-gray-50 transition flex items-center justify-center gap-1.5">
                 <i class="fa-solid fa-user-plus text-[10px]"></i> Add Mentor
             </button>
-            <button @click="showSubjectModal = true"
+            
+            <button wire:click="openSubjectModal" @click="$wire.showSubjectModal = true"
                 class="border border-slate-300 p-2.5 rounded-lg text-[11px] font-bold hover:bg-gray-50 transition flex items-center justify-center gap-1.5">
                 <i class="fa-solid fa-book-open text-[10px]"></i> Add Subject
             </button>
@@ -1066,7 +987,7 @@ updateDate();
 
 <div class="flex items-center gap-4 px-6 py-5 border-b border-gray-100">
     <div class="w-12 h-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xl flex-shrink-0">
-        <i class="fa-solid fa-file-chart-column"></i>
+        <i class="fa-solid fa-file-arrow-down"></i>
     </div>
     <div class="flex-1 min-w-0">
         <h2 class="text-xl font-extrabold text-slate-800 tracking-tight mb-0.5">Generate Weekly Report</h2>
@@ -1284,47 +1205,46 @@ XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(sessionRows), 'Sessions
 </script>
 
     {{-- ── ADD MENTOR MODAL ── --}}
-    <div x-show="showAddMentorModal" x-cloak
-        style="position:fixed; inset:0; background:rgba(0,0,0,0.5); backdrop-filter:blur(4px); z-index:1000;"
-        @keydown.escape.window="showAddMentorModal = false">
-        <div style="display:flex; align-items:center; justify-content:center; width:100%; height:100%; padding:24px;">
-            <div class="bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col" style="max-height: 90vh;">
-
-                <div class="px-8 py-6 border-b flex justify-between items-center flex-shrink-0 bg-white">
-                    <div>
-                        <h2 class="text-xl font-black text-slate-800">Register Mentor</h2>
-                        <p class="text-sm text-gray-400 mt-0.5">Add their email, assign their subjects, then set their availabilities.</p>
-                    </div>
-                    <button @click="showAddMentorModal = false" class="text-gray-400 hover:text-red-600 transition">
-                        <i class="fa-solid fa-xmark text-xl"></i>
-                    </button>
+    <div x-show="$wire.showModal" x-cloak class="modal-overlay" 
+        x-data="{ fileName: '', isVerifying: false }" 
+        x-init="$watch('$wire.showModal', val => { if (!val) { fileName = ''; document.getElementById('avatar-upload').value = ''; } })">
+        <div class="bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col" style="max-height: 90vh;">
+            <div class="px-8 py-6 border-b flex justify-between items-center flex-shrink-0 bg-white">
+                <div>
+                    <h2 class="text-xl font-black text-slate-800">Register Mentor</h2>
+                    <p class="text-sm text-gray-400 mt-0.5">Add their email, assign their subjects, then set their availabilities.</p>
                 </div>
+                <button wire:click="closeModal" @click="$wire.showModal = false" class="text-gray-400 hover:text-red-600 transition disabled:cursor-not-allowed" x-bind:disabled="isVerifying">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
 
-                <div class="px-8 py-6 space-y-5 overflow-y-auto bg-white">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-
-                        {{-- Step 1: Email --}}
-                        <div>
-                            <div class="flex items-center gap-2 mb-3">
-                                <span class="flex items-center justify-center w-5 h-5 bg-slate-800 text-white rounded-full text-[10px] font-bold shrink-0">1</span>
-                                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest m-0">Student Email</h3>
+            <div class="px-8 py-6 space-y-5 overflow-y-auto bg-white">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    {{-- Step 1: Email --}}
+                    <div>
+                        <div class="flex items-center gap-2 mb-3">
+                            <span class="flex items-center justify-center w-5 h-5 bg-slate-800 text-white rounded-full text-[10px] font-bold shrink-0">1</span>
+                            <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest m-0">Student Email</h3>
+                        </div>
+                        <div class="flex flex-col gap-2">
+                            <div>
+                                <input type="email" wire:model="up_mail" placeholder="student@up.edu.ph" class="form-input" wire:keydown.enter.prevent="checkEmail" />
+                                @error('up_mail') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                                @if($emailError) <p class="mt-1 text-xs text-red-600">{{ $emailError }}</p> @endif
                             </div>
-                            <div class="flex flex-col gap-2">
-                                <div>
-                                    <input type="email" x-model="email"
-                                        placeholder="student@up.edu.ph"
-                                        class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:border-red-900"
-                                        @keydown.enter.prevent="checkEmail()" />
-                                    <p x-show="emailError" x-text="emailError" class="mt-1 text-xs text-red-600"></p>
-                                </div>
-                                <button wire:click="checkEmail" type="button"
-                                class="w-full px-4 py-2.5 bg-slate-800 text-white text-xs font-bold rounded-lg hover:bg-black transition"
-                                wire:loading.attr="disabled" wire:target="checkEmail">
-                                <span wire:loading.remove wire:target="checkEmail">Find Email</span>
-                                <span wire:loading wire:target="checkEmail"><i class="fa-solid fa-spinner fa-spin mr-1"></i>Verifying...</span>
+                            <button type="button"
+                                x-data="{ isVerifying: false }"
+                                @click="isVerifying = true; $wire.checkEmail().finally(() => isVerifying = false)"
+                                x-bind:disabled="isVerifying"
+                                class="w-full px-4 py-2.5 bg-slate-800 text-white text-xs font-bold rounded-lg hover:bg-black transition disabled:cursor-not-allowed">
+                                <span x-show="!isVerifying">Find Email</span>
+                                <span x-show="isVerifying" style="display: none;">
+                                    <i class="fa-solid fa-spinner fa-spin mr-1"></i>Verifying...
+                                </span>
                             </button>
-                            </div>
-                            @if($newMentor)
+                        </div>
+                        @if($newMentor)
                             <div class="mt-3 flex items-center gap-3 bg-green-50 border border-green-200 rounded-lg px-4 py-3">
                                 <div class="w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">{{ substr($newMentor['name'], 0, 1) }}</div>
                                 <div class="min-w-0">
@@ -1334,258 +1254,215 @@ XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(sessionRows), 'Sessions
                                 <i class="fa-solid fa-circle-check text-green-500 ml-auto text-lg"></i>
                             </div>
                         @endif
-                            <div x-show="foundStudent"
-                                class="mt-3 flex items-center gap-3 bg-green-50 border border-green-200 rounded-lg px-4 py-3">
-                                <div class="w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
-                                    x-text="foundStudent ? foundStudent.name.charAt(0).toUpperCase() : ''"></div>
-                                <div class="min-w-0">
-                                    <p class="text-sm font-bold text-slate-800 truncate" x-text="foundStudent?.name"></p>
-                                    <p class="text-[10px] text-gray-500 truncate" x-text="foundStudent?.email"></p>
-                                </div>
-                                <i class="fa-solid fa-circle-check text-green-500 ml-auto text-lg"></i>
-                            </div>
-                        </div>
-
-                        {{-- Step 2: Profile Picture --}}
-                        <div>
-                            <div class="flex items-center gap-2 mb-3">
-                                <span class="flex items-center justify-center w-5 h-5 bg-slate-800 text-white rounded-full text-[10px] font-bold shrink-0">2</span>
-                                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest m-0">Profile Picture</h3>
-                            </div>
-                            <div class="flex items-start gap-4">
-                                <div class="flex-shrink-0">
-                                    <div class="w-32 h-32 rounded-xl bg-white border border-dashed border-gray-300 flex items-center justify-center text-gray-400 overflow-hidden">
-                                        <img id="dashAvatarPreview" src="" alt="" class="w-full h-full object-cover hidden" />
-                                        <i id="dashAvatarPlaceholder" class="fa-solid fa-image text-2xl"></i>
-                                    </div>
-                                </div>
-                                <div class="flex-1 pt-1 flex flex-col justify-center h-32 min-w-0">
-                                    <input type="file" id="dash-avatar-upload" accept="image/*" class="hidden"
-                                        @change="
-                                            fileName = $event.target.files[0]?.name ?? '';
-                                            const reader = new FileReader();
-                                            reader.onload = e => {
-                                                document.getElementById('dashAvatarPreview').src = e.target.result;
-                                                document.getElementById('dashAvatarPreview').classList.remove('hidden');
-                                                document.getElementById('dashAvatarPlaceholder').classList.add('hidden');
-                                            };
-                                            reader.readAsDataURL($event.target.files[0]);
-                                        " />
-                                    <label for="dash-avatar-upload"
-                                        class="block w-full text-center py-2.5 px-4 rounded-lg text-xs font-bold bg-slate-800 text-white hover:bg-black cursor-pointer transition shadow-sm">
-                                        Choose File
-                                    </label>
-                                    <p x-show="fileName" x-text="fileName"
-                                        class="mt-3 text-[10px] text-center text-slate-700 font-bold truncate px-2"></p>
-                                </div>
-                            </div>
-                        </div>
                     </div>
 
-                    {{-- Step 3: Subjects --}}
+                    {{-- Step 2: Profile Picture --}}
                     <div>
                         <div class="flex items-center gap-2 mb-3">
-                            <span class="flex items-center justify-center w-5 h-5 bg-slate-800 text-white rounded-full text-[10px] font-bold shrink-0">3</span>
-                            <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest m-0">Teachable Subjects</h3>
+                            <span class="flex items-center justify-center w-5 h-5 bg-slate-800 text-white rounded-full text-[10px] font-bold shrink-0">2</span>
+                            <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest m-0">Profile Picture</h3>
                         </div>
-                        <div class="border border-gray-200 rounded-xl overflow-hidden">
-                            <div class="max-h-44 overflow-y-auto divide-y divide-gray-50 bg-white">
-                                @forelse(\App\Models\Subjects::orderBy('code')->get() as $subject)
-                                    <div class="flex items-center px-4 hover:bg-gray-50">
-                                        <input type="checkbox"
-                                            id="dash-subject-{{ $subject->id }}"
-                                            value="{{ $subject->id }}"
-                                            x-model="selectedSubjects"
-                                            class="rounded border-gray-300 w-4 h-4 cursor-pointer flex-shrink-0" />
-                                        <label for="dash-subject-{{ $subject->id }}"
-                                            class="flex items-center gap-3 ml-3 py-2.5 cursor-pointer flex-1">
-                                            <span class="text-xs font-bold text-slate-700 w-16">{{ $subject->code }}</span>
-                                            <span class="text-xs text-gray-400">{{ $subject->name }}</span>
-                                        </label>
+                        <div class="flex items-start gap-4">
+                            <div class="flex-shrink-0">
+                                @if($avatar)
+                                    <img src="{{ $avatar->temporaryUrl() }}" class="w-32 h-32 rounded-xl object-cover border border-gray-200 shadow-sm">
+                                @else
+                                    <div class="w-32 h-32 rounded-xl bg-white border border-dashed border-gray-300 flex items-center justify-center text-gray-400 shadow-sm">
+                                        <i class="fa-solid fa-image text-2xl" wire:loading.remove wire:target="avatar"></i>
+                                        <i class="fa-solid fa-circle-notch fa-spin text-2xl text-slate-800" wire:loading wire:target="avatar"></i>
                                     </div>
-                                @empty
-                                    <p class="text-xs text-gray-400 text-center py-4">No subjects yet.</p>
-                                @endforelse
+                                @endif
+                            </div>
+                            <div class="flex-1 pt-1 flex flex-col justify-center h-32 min-w-0">
+                                <input type="file" id="avatar-upload" wire:model="avatar" accept="image/*" class="hidden"
+                                    @change="fileName = $event.target.files[0].name" />
+                                <label for="avatar-upload" class="block w-full text-center py-2.5 px-4 rounded-lg text-xs font-bold bg-slate-800 text-white hover:bg-black cursor-pointer transition shadow-sm">
+                                    <span wire:loading.remove wire:target="avatar">Choose File</span>
+                                    <span wire:loading wire:target="avatar"><i class="fa-solid fa-spinner fa-spin mr-1"></i>Uploading...</span>
+                                </label>
+                                <div class="mt-3 text-[10px] text-center w-full">
+                                    <p x-show="fileName" class="text-slate-700 font-bold truncate px-2 block w-full" x-text="fileName"></p>
+                                </div>
+                                @error('avatar') <p class="mt-1 text-xs text-red-600 text-center">{{ $message }}</p> @enderror
                             </div>
                         </div>
-                    </div>
-
-                    {{-- Step 4: Availabilities --}}
-                    <div>
-                        <div class="flex items-center gap-2 mb-3">
-                            <span class="flex items-center justify-center w-5 h-5 bg-slate-800 text-white rounded-full text-[10px] font-bold shrink-0">4</span>
-                            <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest m-0">Availability Schedule</h3>
-                        </div>
-                        <div class="grid grid-cols-[1fr_1fr_1fr_auto] gap-2 px-1 mb-1">
-                            <label class="text-[10px] font-bold text-slate-500 uppercase">Day</label>
-                            <label class="text-[10px] font-bold text-slate-500 uppercase">Start</label>
-                            <label class="text-[10px] font-bold text-slate-500 uppercase">End</label>
-                            <div class="w-8"></div>
-                        </div>
-                        <div class="space-y-2">
-                            <template x-for="(row, index) in availabilities" :key="row.id">
-                                <div class="grid grid-cols-[1fr_1fr_1fr_auto] gap-2 items-center">
-                                    <select x-model="row.day_of_week"
-                                        class="w-full px-2 py-2 border border-gray-200 rounded-lg text-xs outline-none focus:border-red-900">
-                                        <option value="">- Day -</option>
-                                        <option value="monday">Monday</option>
-                                        <option value="tuesday">Tuesday</option>
-                                        <option value="wednesday">Wednesday</option>
-                                        <option value="thursday">Thursday</option>
-                                        <option value="friday">Friday</option>
-                                        <option value="saturday">Saturday</option>
-                                    </select>
-                                    <input type="time" x-model="row.start_time"
-                                        class="w-full px-2 py-2 border border-gray-200 rounded-lg text-xs outline-none focus:border-red-900" />
-                                    <input type="time" x-model="row.end_time"
-                                        class="w-full px-2 py-2 border border-gray-200 rounded-lg text-xs outline-none focus:border-red-900" />
-                                    <div class="flex items-center justify-center">
-                                        <template x-if="availabilities.length > 1">
-                                            <button type="button" @click="removeSlot(row.id)"
-                                                class="w-8 h-8 flex items-center justify-center rounded-lg bg-red-50 text-red-400 hover:bg-red-100 hover:text-red-600 transition">
-                                                <i class="fa-solid fa-xmark text-xs"></i>
-                                            </button>
-                                        </template>
-                                        <template x-if="availabilities.length <= 1">
-                                            <div class="w-8"></div>
-                                        </template>
-                                    </div>
-                                </div>
-                            </template>
-                        </div>
-                        <button @click="addSlot()" type="button"
-                            class="mt-3 flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-800 transition">
-                            <i class="fa-solid fa-plus text-[10px]"></i> Add more days or time slots
-                        </button>
                     </div>
                 </div>
 
-                <div class="px-8 py-5 bg-white border-t flex-shrink-0">
-                    <div class="flex gap-3">
-                        <button type="button" @click="showAddMentorModal = false"
-                            class="flex-1 py-3 text-xs font-bold text-gray-800 bg-gray-200 hover:bg-gray-300 rounded-xl transition">
-                            Cancel
-                        </button>
-                        <button type="button" @click="if (validate()) showConfirmModal = true"
-                            class="flex-1 bg-red-900 text-white py-3 rounded-xl text-xs font-bold shadow-lg hover:bg-red-800 transition">
-                            Register Mentor
-                        </button>
+                {{-- Step 3: Subjects --}}
+                <div>
+                    <div class="flex items-center gap-2 mb-3">
+                        <span class="flex items-center justify-center w-5 h-5 bg-slate-800 text-white rounded-full text-[10px] font-bold shrink-0">3</span>
+                        <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest m-0">Teachable Subjects</h3>
+                    </div>
+                    <div class="border border-gray-200 rounded-xl overflow-hidden">
+                        <div class="max-h-44 overflow-y-auto divide-y divide-gray-50 bg-white">
+                            @forelse($this->allSubjects as $subject)
+                                <div class="flex items-center px-4 hover:bg-gray-50" wire:key="sub-{{ $subject['id'] }}">
+                                    <input type="checkbox" id="subject-{{ $subject['id'] }}" wire:model="selectedSubjects" value="{{ $subject['id'] }}"
+                                        class="rounded border-gray-300 text-slate-800 focus:ring-slate-800 w-4 h-4 cursor-pointer flex-shrink-0" />
+                                    <label for="subject-{{ $subject['id'] }}" class="flex items-center gap-3 ml-3 py-2.5 cursor-pointer flex-1">
+                                        <span class="text-xs font-bold text-slate-700 w-16">{{ $subject['code'] }}</span>
+                                        <span class="text-xs text-gray-400">{{ $subject['name'] }}</span>
+                                    </label>
+                                </div>
+                            @empty
+                                <p class="text-xs text-gray-400 text-center py-4">No subjects yet. Please add the subject first.</p>
+                            @endforelse
+                        </div>
+                    </div>
+                    @error('selectedSubjects') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                </div>
+
+                {{-- Step 4: Availabilities --}}
+                <div>
+                    <div class="flex items-center gap-2 mb-3">
+                        <span class="flex items-center justify-center w-5 h-5 bg-slate-800 text-white rounded-full text-[10px] font-bold shrink-0">4</span>
+                        <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest m-0">Availability Schedule</h3>
+                    </div>
+                    <div x-data="{ avails: $wire.entangle('availabilities') }">
+                        <div wire:ignore>
+                            <div class="grid grid-cols-[1fr_1fr_1fr_auto] gap-2 px-1 mb-1">
+                                <label class="text-[10px] font-bold text-slate-500 uppercase">Day</label>
+                                <label class="text-[10px] font-bold text-slate-500 uppercase">Start Time</label>
+                                <label class="text-[10px] font-bold text-slate-500 uppercase">End Time</label>
+                                <div class="w-8"></div>
+                            </div>
+                            <div class="space-y-2">
+                                <template x-for="(row, index) in avails" :key="row.id">
+                                    <div class="grid grid-cols-[1fr_1fr_1fr_auto] gap-2 items-center">
+                                        <select x-model="row.day_of_week" class="form-input text-xs h-10 w-full">
+                                            <option value="">- Day -</option>
+                                            <option value="monday">Monday</option>
+                                            <option value="tuesday">Tuesday</option>
+                                            <option value="wednesday">Wednesday</option>
+                                            <option value="thursday">Thursday</option>
+                                            <option value="friday">Friday</option>
+                                            <option value="saturday">Saturday</option>
+                                        </select>
+                                        <input type="time" x-model="row.start_time" class="form-input text-xs h-10 w-full" />
+                                        <input type="time" x-model="row.end_time" class="form-input text-xs h-10 w-full" />
+                                        <div class="flex items-center justify-center">
+                                            <template x-if="avails.length > 1">
+                                                <button type="button" @click="avails.splice(index, 1)" class="w-8 h-8 flex items-center justify-center rounded-lg bg-red-50 text-red-400 hover:bg-red-100 hover:text-red-600 transition">
+                                                    <i class="fa-solid fa-xmark text-xs"></i>
+                                                </button>
+                                            </template>
+                                            <template x-if="avails.length <= 1">
+                                                <div class="w-8"></div>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                            <button @click="avails.push({id: Date.now() + Math.random(), day_of_week: '', start_time: '', end_time: ''})" type="button"
+                                class="mt-3 flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-800 transition">
+                                <i class="fa-solid fa-plus text-[10px]"></i> Add more days or time slots
+                            </button>
+                        </div>
+                        @error('availabilities') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
 
-    {{-- ── CONFIRM REGISTER MENTOR MODAL ── --}}
-    <div x-show="showConfirmModal" x-cloak
-        style="position:fixed; inset:0; background:rgba(0,0,0,0.5); backdrop-filter:blur(4px); z-index:1100;">
-        <div style="display:flex; align-items:center; justify-content:center; width:100%; height:100%; padding:24px;">
-            <div class="bg-white w-full max-w-sm rounded-2xl shadow-2xl p-8 text-center">
-                <div class="w-16 h-16 bg-amber-100 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-5">
-                    <i class="fa-solid fa-user-plus text-3xl"></i>
-                </div>
-                <h3 class="text-xl font-black text-slate-800">Confirm Mentor Registration</h3>
-                <p class="text-sm text-gray-500 mt-2 mb-8">This will register the student as a peer mentor and will allow them access to the mentor module.</p>
+            <div class="px-8 py-5 bg-white border-t flex-shrink-0">
                 <div class="flex gap-3">
-                    <button type="button" @click="showConfirmModal = false"
-                        class="flex-1 py-3 text-xs font-bold text-gray-800 bg-gray-200 hover:bg-gray-300 rounded-xl transition">
+                    <button type="button" wire:click="closeModal" @click="$wire.showModal = false" x-bind:disabled="isVerifying"
+                        class="flex-1 py-3 text-xs font-bold text-gray-800 bg-gray-200 hover:bg-gray-300 rounded-xl transition disabled:cursor-not-allowed">
                         Cancel
                     </button>
-                    <button type="button" @click="submitMentor()"
-                        class="flex-1 bg-red-900 text-white py-3 rounded-xl text-xs font-bold shadow-lg hover:bg-red-800 transition">
-                        Save
+                    <button type="button" @click="isVerifying = true; $wire.confirmMentor().finally(() => isVerifying = false)"
+                        x-bind:disabled="isVerifying"
+                        class="flex-1 bg-red-900 text-white py-3 rounded-xl text-xs font-bold shadow-lg hover:bg-red-800 transition disabled:cursor-not-allowed">
+                        <span x-show="!isVerifying">Register Mentor</span>
+                        <span x-show="isVerifying" style="display: none;"><i class="fa-solid fa-spinner fa-spin mr-1"></i>Validating...</span>
                     </button>
                 </div>
             </div>
         </div>
     </div>
 
-    {{-- ── ADD SUBJECT MODAL ── --}}
-    <div x-show="showSubjectModal" x-cloak
-        style="position:fixed; inset:0; background:rgba(0,0,0,0.5); backdrop-filter:blur(4px); z-index:1000;"
-        @keydown.escape.window="showSubjectModal = false">
-        <div style="display:flex; align-items:center; justify-content:center; width:100%; height:100%; padding:24px;">
-            <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden">
+    {{-- ── CONFIRM ADD MENTOR ── --}}
+    <div x-show="$wire.showConfirm" x-cloak class="modal-overlay flex items-center justify-center" style="z-index: 1100;" wire:click.self="$set('showConfirm', false)">
+        <div class="bg-white w-full max-w-sm rounded-2xl shadow-2xl p-8 text-center m-4">
+            <div class="w-16 h-16 bg-amber-100 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-5">
+                <i class="fa-solid fa-user-plus text-3xl"></i>
+            </div>
+            <h3 class="text-xl font-black text-slate-800">Confirm Mentor Registration</h3>
+            <p class="text-sm text-gray-500 mt-2 mb-8">This will register the student as a peer mentor and will allow them access to the mentor module.</p>
+            <div class="flex gap-3" x-data="{ isSaving: false }">
+                <button type="button" @click="$wire.showConfirm = false" class="flex-1 py-3 text-xs font-bold text-gray-800 bg-gray-200 hover:bg-gray-300 rounded-xl transition disabled:cursor-not-allowed" x-bind:disabled="isSaving">Cancel</button>
+                <button type="button" @click="isSaving = true; $wire.saveMentor().finally(() => isSaving = false)"
+                    class="flex-1 bg-red-900 text-white py-3 rounded-xl text-xs font-bold shadow-lg hover:bg-red-800 transition disabled:cursor-not-allowed" x-bind:disabled="isSaving"
+                    >
+                    <span x-show="!isSaving">Save</span>
+                    <span x-show="isSaving" style="display: none;"><i class="fa-solid fa-spinner fa-spin mr-1"></i>Saving...</span>
+                </button>
+            </div>
+        </div>
+    </div>
 
-                <div class="flex items-center gap-4 px-6 py-5 bg-white border-b border-gray-100">
-                    <div class="w-12 h-12 rounded-full bg-green-100 text-green-600 flex items-center justify-center text-xl flex-shrink-0">
-                        <i class="fa-solid fa-book-medical"></i>
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <h2 class="text-xl font-extrabold text-slate-800 tracking-tight mb-0.5">Add New Subject</h2>
-                        <p class="text-xs text-slate-500 leading-snug">This subject will become available for mentor assignments.</p>
-                    </div>
-                    <button @click="showSubjectModal = false; newSubjectCode = ''; newSubjectName = ''; subjectError = ''"
-                        class="text-gray-400 hover:text-red-600 transition ml-2">
-                        <i class="fa-solid fa-xmark text-xl"></i>
+    {{-- Add Subject Modal --}}
+    <div x-show="$wire.showSubjectModal" x-cloak class="modal-overlay" x-data="{ isVerifying: false }">
+        <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden">
+            <div class="px-8 py-5 bg-white border-b flex justify-between items-center">
+                <div>
+                    <h2 class="text-lg font-black text-slate-800">Add New Subject</h2>
+                    <p class="text-xs text-gray-400 mt-0.5">This subject will become available for mentor assignments.</p>
+                </div>
+                <button wire:click="closeSubjectModal" @click="$wire.showSubjectModal = false"  x-bind:disabled="isVerifying" class="text-gray-400 hover:text-red-600 transition disabled:cursor-not-allowed">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+            <div class="px-8 py-4 space-y-4">
+                <div>
+                    <label class="form-label">Subject Code <span class="text-red-500">*</span></label>
+                    <input type="text" wire:model="newSubjectCode" placeholder="e.g. Math 54" class="form-input" />
+                    @error('newSubjectCode') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                </div>
+                <div>
+                    <label class="form-label">Subject Name <span class="text-red-500">*</span></label>
+                    <input type="text" wire:model="newSubjectName" placeholder="e.g. Elementary Analysis II" class="form-input" />
+                    @error('newSubjectName') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                </div>
+            </div>
+            <div class="px-8 py-5 bg-white border-t">
+                <div class="flex gap-3">
+                    <button type="button" wire:click="closeSubjectModal" @click="$wire.showSubjectModal = false" x-bind:disabled="isVerifying"
+                        class="flex-1 py-3 text-xs font-bold text-gray-800 bg-gray-200 hover:bg-gray-300 rounded-xl transition disabled:cursor-not-allowed">Cancel</button>
+                    <button type="button" @click="isVerifying = true; $wire.confirmSubject().finally(() => isVerifying = false)" x-bind:disabled="isVerifying"
+                        class="flex-1 bg-red-900 text-white py-3 rounded-xl text-xs font-bold shadow-lg hover:bg-red-800 transition disabled:cursor-not-allowed"
+                        >
+                        <span x-show="!isVerifying">Add Subject</span>
+                        <span x-show="isVerifying" style="display: none;"><i class="fa-solid fa-spinner fa-spin mr-1"></i>Validating...</span>
                     </button>
                 </div>
-
-                <div class="px-6 py-5 space-y-4 bg-white">
-                    <div>
-                        <label class="block text-xs font-bold text-slate-600 mb-1.5">Subject Code <span class="text-red-500">*</span></label>
-                        <input type="text" x-model="newSubjectCode"
-                            placeholder="e.g. Math 54"
-                            class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:border-red-900"
-                            @keydown.enter.prevent="if (validateSubject()) showSubjectConfirm = true" />
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-slate-600 mb-1.5">Subject Name <span class="text-red-500">*</span></label>
-                        <input type="text" x-model="newSubjectName"
-                            placeholder="e.g. Elementary Analysis II"
-                            class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:border-red-900"
-                            @keydown.enter.prevent="if (validateSubject()) showSubjectConfirm = true" />
-                    </div>
-                    <p x-show="subjectError" x-text="subjectError" class="text-xs text-red-600"></p>
-                </div>
-
-                <div class="px-6 py-5 bg-gray-50 border-t border-gray-100">
-                    <div class="flex gap-3">
-                        <button type="button"
-                            @click="showSubjectModal = false; newSubjectCode = ''; newSubjectName = ''; subjectError = ''"
-                            class="flex-1 py-2.5 text-sm font-bold text-gray-600 bg-white border border-gray-200 hover:bg-gray-100 rounded-xl transition">
-                            Cancel
-                        </button>
-                        <button type="button" @click="if (validateSubject()) showSubjectConfirm = true"
-                            class="flex-1 bg-slate-800 text-white py-2.5 rounded-xl text-sm font-bold shadow-md hover:bg-black transition">
-                            Add Subject
-                        </button>
-                    </div>
-                </div>
-
             </div>
         </div>
     </div>
 
     {{-- ── CONFIRM ADD SUBJECT MODAL ── --}}
-    <div x-show="showSubjectConfirm" x-cloak
-        style="position:fixed; inset:0; background:rgba(0,0,0,0.5); backdrop-filter:blur(4px); z-index:1100;">
-        <div style="display:flex; align-items:center; justify-content:center; width:100%; height:100%; padding:24px;">
-            <div class="bg-white w-full max-w-sm rounded-2xl shadow-2xl p-8 text-center">
-                <div class="w-16 h-16 bg-amber-100 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-5">
-                    <i class="fa-solid fa-book text-3xl"></i>
-                </div>
-                <h3 class="text-xl font-black text-slate-800">Confirm New Subject</h3>
-                <p class="text-sm text-gray-500 mt-2 mb-2">You are about to add this subject:</p>
-                <p class="text-sm font-black text-slate-800 mb-1" x-text="newSubjectCode"></p>
-                <p class="text-xs text-gray-400 mb-8" x-text="newSubjectName"></p>
-                <div class="flex gap-3">
-                    <button type="button" @click="showSubjectConfirm = false"
-                        class="flex-1 py-3 text-xs font-bold text-gray-800 bg-gray-200 hover:bg-gray-300 rounded-xl transition">
-                        Cancel
-                    </button>
-                    <button type="button" @click="submitSubject()"
-                        class="flex-1 bg-red-900 text-white py-3 rounded-xl text-xs font-bold shadow-lg hover:bg-red-800 transition">
-                        Save
-                    </button>
-                </div>
+    <div x-show="$wire.showSubjectConfirm" x-cloak class="modal-overlay flex items-center justify-center" style="z-index: 1100;" wire:click.self="$set('showSubjectConfirm', false)">
+        <div class="bg-white w-full max-w-sm rounded-2xl shadow-2xl p-8 text-center m-4">
+            <div class="w-16 h-16 bg-amber-100 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-5">
+                <i class="fa-solid fa-book text-3xl"></i>
+            </div>
+            <h3 class="text-xl font-black text-slate-800">Confirm New Subject</h3>
+            <p class="text-sm text-gray-500 mt-2 mb-8">This will be added to the list of available subjects.</p>
+            <div class="flex gap-3" x-data="{ isSaving: false }">
+                <button type="button" @click="$wire.showSubjectConfirm = false" class="flex-1 py-3 text-xs font-bold text-gray-800 bg-gray-200 hover:bg-gray-300 rounded-xl transition" x-bind:disabled="isSaving">Cancel</button>
+                <button type="button" @click="isSaving = true; $wire.saveSubject().finally(() => isSaving = false)" x-bind:disabled="isSaving" 
+                    class="flex-1 bg-red-900 text-white py-3 rounded-xl text-xs font-bold shadow-lg hover:bg-red-800 transition disabled:cursor-not-allowed">
+                    <span x-show="!isSaving">Save</span>
+                    <span x-show="isSaving" style="display: none;"><i class="fa-solid fa-spinner fa-spin mr-1"></i>Saving...</span>
+                </button>
             </div>
         </div>
     </div>
 
 </div>
 
-<div class="bg-white rounded-xl shadow-sm border border-gray-100">
+<div wire:ignore class="bg-white rounded-xl shadow-sm border border-gray-100">
     
     {{-- Clock --}}
     <div class="bg-slate-900 rounded-t-xl px-4 py-3 flex items-center justify-between">
@@ -1628,7 +1505,7 @@ XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(sessionRows), 'Sessions
                                     <div id="calendarGrid" class="grid grid-cols-7 gap-1"></div>
                                 </div>
                             </div>
-                        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100" id="section-approvals">
+                        <div wire:ignore class="bg-white p-6 rounded-xl shadow-sm border border-gray-100" id="section-approvals">
     <div class="flex justify-between items-center mb-4">
         <h3 class="font-bold text-slate-800 text-sm tracking-tight">Pending Bookings</h3>
         <span class="bg-red-100 text-red-700 text-[10px] font-bold px-2 py-0.5 rounded-full">     
@@ -2091,7 +1968,19 @@ document.getElementById('sidebarToggle').addEventListener('click', () => {
 
 })();
 
+document.addEventListener('livewire:navigated', () => { 
+    initCharts();
+    renderCalendar();
+    applyFilters();
+});
+
+document.addEventListener('livewire:initialized', () => {
+    Livewire.on('mentor-saved', (event) => {
+        initCharts(); 
+    });
+});
+
 </script>
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-</body>
+</div>
