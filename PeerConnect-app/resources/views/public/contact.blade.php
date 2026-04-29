@@ -4,8 +4,8 @@
 
         {{-- Title --}}
         <div class="flex flex-col gap-4 animate-fade-up">
-            <div class="flex items-center gap-3 text-up-yellow-dark text-xs tracking-widest font-bold uppercase">
-                <span class="block w-8 h-px bg-up-yellow-dark"></span>
+            <div class="flex items-center gap-3 text-up-yellow text-xs tracking-widest font-bold uppercase">
+                <span class="block w-8 h-px bg-up-yellow"></span>
                 Contact Us
             </div>
             <h1 class="font-heading text-up-maroon text-4xl md:text-5xl font-semibold tracking-wider">
@@ -14,7 +14,7 @@
         </div>
 
         {{-- Description --}}
-        <div class="text-text-brown leading-7 border-l-0 md:border-l border-up-yellow-dark pl-0 md:pl-5 self-center animate-fade-up">
+        <div class="text-text-brown leading-7 border-l-0 md:border-l border-up-yellow pl-0 md:pl-5 self-center animate-fade-up">
             Have questions about PeerConnect or need help with your booking? Reach out to us and we'll get back to you as soon as we can.
         </div>
 
@@ -29,7 +29,7 @@
             {{-- Email us --}}
             <div class="flex flex-col gap-7">
                 <div>
-                    <div class="text-xs text-up-yellow-dark font-bold tracking-widest uppercase mb-4">Email Us Directly</div>
+                    <div class="text-xs text-up-yellow font-bold tracking-widest uppercase mb-4">Email Us Directly</div>
 
                     <div class="border border-cream-border p-8 flex flex-col gap-6">
                         <p class="text-sm text-text-brown leading-6">
@@ -55,7 +55,7 @@
 
             {{-- Map --}}
             <div>
-                <div class="text-xs text-up-yellow-dark font-bold tracking-widest uppercase mb-4">Find Us</div>
+                <div class="text-xs text-up-yellow font-bold tracking-widest uppercase mb-4">Find Us</div>
                 <div class="border border-cream-border overflow-hidden">
                     <iframe
                         src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d568.9439499111152!2d120.59798456996893!3d16.405342066671974!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3391a141c4304cdb%3A0x33bf08cb99d8e1b!2sUP%20Baguio%20Library!5e0!3m2!1sen!2sph!4v1775744315561!5m2!1sen!2sph"
@@ -76,7 +76,7 @@
 
             {{-- Contact Details --}}
             <div>
-                <div class="text-xs text-up-yellow-dark font-bold tracking-widest uppercase mb-4">Our Office</div>
+                <div class="text-xs text-up-yellow font-bold tracking-widest uppercase mb-4">Our Office</div>
                 <div class="border border-cream-border divide-y divide-cream-border">
                     <div class="flex gap-5 items-center py-4 px-4">
                         <span class="material-symbols-outlined text-up-maroon text-2xl w-8 h-8 flex justify-center items-center flex-shrink-0">location_on</span>
@@ -101,7 +101,7 @@
 
             {{-- Socials --}}
             <div>
-                <div class="text-xs text-up-yellow-dark font-bold tracking-widest uppercase mb-4">Follow Us</div>
+                <div class="text-xs text-up-yellow font-bold tracking-widest uppercase mb-4">Follow Us</div>
                 <div class="border border-cream-border divide-y divide-cream-border">
                     <a href="https://www.facebook.com/lrc.upbaguio"
                        target="_blank" rel="noopener noreferrer"

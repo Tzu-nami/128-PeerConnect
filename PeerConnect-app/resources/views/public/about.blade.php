@@ -5,8 +5,8 @@
 
         {{-- Title --}}
         <div class="flex flex-col gap-4 animate-fade-up">
-            <div class="flex items-center gap-3 text-up-yellow-dark text-xs tracking-widest font-bold uppercase">
-                <span class="block w-8 h-px bg-up-yellow-dark"></span>
+            <div class="flex items-center gap-3 text-up-yellow text-xs tracking-widest font-bold uppercase">
+                <span class="block w-8 h-px bg-up-yellow"></span>
                 About Us
             </div>
             <h1 class="font-heading text-up-maroon text-4xl md:text-5xl font-semibold tracking-wider">
@@ -15,7 +15,7 @@
         </div>
 
         {{-- Description --}}
-        <div class="text-text-brown leading-7 border-l-0 md:border-l border-up-yellow-dark pl-0 md:pl-5 self-center animate-fade-up">
+        <div class="text-text-brown leading-7 border-l-0 md:border-l border-up-yellow pl-0 md:pl-5 self-center animate-fade-up">
             LRC PeerConnect connects UPB students with trained peer mentors for enrichment sessions and academic support — simple, organized, and easy to book.
         </div>
 
@@ -33,15 +33,15 @@
     <section class="grid grid-cols-3 border-b border-cream-border animate-fade-up [animation-delay:150ms]">
         <div class="border-r border-cream-border text-center py-8 sm:py-12 px-1 sm:px-4">
             <div class="font-heading text-4xl sm:text-5xl md:text-6xl text-up-maroon mb-2">{{ $stats['mentors'] }}</div>
-            <div class="text-up-yellow-dark text-[10px] sm:text-xs font-bold tracking-wider sm:tracking-widest uppercase">Mentors</div>
+            <div class="text-up-yellow text-[10px] sm:text-xs font-bold tracking-wider sm:tracking-widest uppercase">Mentors</div>
         </div>
         <div class="border-r border-cream-border text-center py-8 sm:py-12 px-1 sm:px-4">
             <div class="font-heading text-4xl sm:text-5xl md:text-6xl text-up-maroon mb-2">{{ $stats['bookings'] }}</div>
-            <div class="text-up-yellow-dark text-[10px] sm:text-xs font-bold tracking-wider sm:tracking-widest uppercase">Sessions Held</div>
+            <div class="text-up-yellow text-[10px] sm:text-xs font-bold tracking-wider sm:tracking-widest uppercase">Sessions Held</div>
         </div>
         <div class="text-center py-8 sm:py-12 px-1 sm:px-4">
             <div class="font-heading text-4xl sm:text-5xl md:text-6xl text-up-maroon mb-2">{{ $stats['subjects'] }}</div>
-            <div class="text-up-yellow-dark text-[10px] sm:text-xs font-bold tracking-wider sm:tracking-widest uppercase leading-tight">Subjects<br class="sm:hidden"> Covered</div>
+            <div class="text-up-yellow text-[10px] sm:text-xs font-bold tracking-wider sm:tracking-widest uppercase leading-tight">Subjects<br class="sm:hidden"> Covered</div>
         </div>
     </section>
 
@@ -51,7 +51,7 @@
         <section class="py-16 border-b border-cream-border animate-fade-up [animation-delay:200ms]">
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
                 <div>
-                    <div class="text-up-yellow-dark text-xs font-bold tracking-widest uppercase mb-4">Our Mission</div>
+                    <div class="text-up-yellow text-xs font-bold tracking-widest uppercase mb-4">Our Mission</div>
                     <p class="text-text-brown leading-8 text-lg">
                         The Learning Resource Center exists to empower every UPB student with the academic tools, guidance, and peer support they need to succeed — making quality learning assistance accessible to all.
                     </p>
@@ -72,14 +72,14 @@
                 <p class="italic text-text-brown leading-9 text-xl md:text-2xl mb-6">
                     "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."
                 </p>
-                <div class="w-8 h-px bg-up-yellow-dark mx-auto mb-4"></div>
+                <div class="w-8 h-px bg-up-yellow mx-auto mb-4"></div>
                 <p class="text-text-brown-light text-xs tracking-widest uppercase">— LRC Head</p>
             </div>
         </section>
 
         {{-- How it Works --}}
         <section class="py-16 border-b border-cream-border animate-fade-up [animation-delay:250ms]">
-            <div class="text-up-yellow-dark text-xs font-bold tracking-widest uppercase mb-10">How it Works</div>
+            <div class="text-up-yellow text-xs font-bold tracking-widest uppercase mb-10">How it Works</div>
 
             <div class="grid grid-cols-1 md:grid-cols-5 gap-0">
                 @foreach ([
@@ -112,7 +112,7 @@
                         class="w-full h-full object-cover brightness-110">
                 </div>
                 <div>
-                    <div class="text-up-yellow-dark text-xs font-bold tracking-widest uppercase mb-4">Who are Mentors?</div>
+                    <div class="text-up-yellow text-xs font-bold tracking-widest uppercase mb-4">Who are Mentors?</div>
                     <p class="text-text-brown leading-7 mb-6">
                         Peer mentors are trained UPB students who have excelled in their fields. They undergo preparation to guide fellow students through academic challenges in a supportive, relatable environment.
                     </p>
@@ -143,7 +143,7 @@
 
         {{-- Common FAQs --}}
         <section class="py-10 border-b border-cream-border animate-fade-up [animation-delay:300ms]">
-            <div class="text-up-yellow-dark text-xs font-bold tracking-widest uppercase mb-4">Common Questions</div>
+            <div class="text-up-yellow text-xs font-bold tracking-widest uppercase mb-4">Common Questions</div>
 
             <div class="border border-cream-border divide-y divide-cream-border">
                 <div class="px-5 py-4" x-data="{ open: false }">
@@ -194,7 +194,7 @@
 
         {{-- Developers --}}
         <section class="py-8 animate-fade-up [animation-delay:325ms]">
-            <div class="text-up-yellow-dark text-xs font-bold tracking-widest uppercase mb-4">Developed By</div>
+            <div class="text-up-yellow text-xs font-bold tracking-widest uppercase mb-4">Developed By</div>
 
             <div class="border border-cream-border divide-y divide-cream-border">
                 <div class="grid grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-cream-border">

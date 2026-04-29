@@ -25,7 +25,7 @@
         <div class="flex flex-wrap gap-10 text-sm">
             {{-- Navigate --}}
             <div class="flex flex-col gap-3">
-                <div class="font-bold text-up-yellow-dark tracking-widest uppercase mb-1">Navigate</div>
+                <div class="font-bold text-up-yellow tracking-widest uppercase mb-1">Navigate</div>
                 <a href="{{ request()->is('/') ? '#' : url('/') }}" class="hover:text-cream transition-colors">Home</a>
                 <a href="{{ request()->is('mentors') ? '#' : route('public.mentors') }}" class="hover:text-cream transition-colors">Mentors</a>
                 <a href="#" class="hover:text-cream transition-colors">Staff</a>
@@ -35,7 +35,7 @@
 
             {{-- Quick Actions --}}
             <div class="flex flex-col gap-3">
-                <div class="font-bold text-up-yellow-dark tracking-widest uppercase mb-1">Quick Actions</div>
+                <div class="font-bold text-up-yellow tracking-widest uppercase mb-1">Quick Actions</div>
                 @auth
                     @if($shouldShowBookNow)
                         <a href="{{ $bookUrl }}" class="hover:text-cream transition-colors">Book a Session</a>
@@ -49,7 +49,7 @@
 
             {{-- Contact --}}
             <div class="flex flex-col gap-3">
-                <div class="font-bold text-up-yellow-dark tracking-widest uppercase mb-1">Contact</div>
+                <div class="font-bold text-up-yellow tracking-widest uppercase mb-1">Contact</div>
                 <div class="flex items-start gap-2">
                     <i class="fa-solid fa-location-dot mt-0.5 opacity-50 text-xs"></i>
                     <span>2nd Floor, University Library, UPB</span>
@@ -75,9 +75,5 @@
     {{-- Bottom row --}}
     <div class="flex flex-col sm:flex-row justify-between border-t border-cream/20 text-xs pt-5 gap-3">
         <div>&copy; {{ date('Y') }} LRC PeerConnect · University of the Philippines Baguio. All rights reserved.</div>
-        <div class="flex gap-6">
-            <a href="#" class="hover:text-cream transition-colors">Privacy Policy</a>
-            <a href="#" class="hover:text-cream transition-colors">Terms of Service</a>
-        </div>
     </div>
 </div>

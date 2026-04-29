@@ -4,8 +4,8 @@
 
         {{-- Title --}}
         <div class="flex flex-col gap-4 animate-fade-up">
-            <div class="flex items-center gap-3 text-up-yellow-dark text-xs tracking-widest font-bold uppercase">
-                <span class="block w-8 h-px bg-up-yellow-dark"></span>
+            <div class="flex items-center gap-3 text-up-yellow text-xs tracking-widest font-bold uppercase">
+                <span class="block w-8 h-px bg-up-yellow"></span>
                 Our Team
             </div>
             <h1 class="font-heading text-up-maroon text-4xl md:text-5xl font-semibold tracking-wider">
@@ -14,7 +14,7 @@
         </div>
 
         {{-- Description --}}
-        <div class="text-text-brown leading-7 border-l-0 md:border-l border-up-yellow-dark pl-0 md:pl-5 self-center animate-fade-up">
+        <div class="text-text-brown leading-7 border-l-0 md:border-l border-up-yellow pl-0 md:pl-5 self-center animate-fade-up">
             The LRC staff oversee and manage the PeerConnect platform, ensuring that every session runs smoothly and that students get the support they need.
         </div>
 

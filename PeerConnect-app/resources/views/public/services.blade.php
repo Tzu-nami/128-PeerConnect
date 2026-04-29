@@ -3,8 +3,8 @@
     <section class="grid grid-cols-1 md:grid-cols-2 px-6 md:px-20 py-10 gap-6">
         {{-- Title --}}
         <div class="flex flex-col gap-4 animate-fade-up">
-            <div class="flex items-center gap-3 text-up-yellow-dark text-xs tracking-widest font-bold uppercase">
-                <span class="block w-8 h-px bg-up-yellow-dark"></span>
+            <div class="flex items-center gap-3 text-up-yellow text-xs tracking-widest font-bold uppercase">
+                <span class="block w-8 h-px bg-up-yellow"></span>
                 Our Services
             </div>
             <h1 class="font-heading text-up-maroon text-4xl md:text-5xl font-semibold tracking-wider">
@@ -12,7 +12,7 @@
             </h1>
         </div>
         {{-- Description --}}
-        <div class="text-text-brown leading-7 border-l-0 md:border-l border-up-yellow-dark pl-0 md:pl-5 self-center animate-fade-up">
+        <div class="text-text-brown leading-7 border-l-0 md:border-l border-up-yellow pl-0 md:pl-5 self-center animate-fade-up">
             The LRC offers three types of peer mentoring sessions led by trained student-mentors ready to help you succeed.
             <div class="flex gap-6 flex-wrap mt-2">
                 <a href="#one-on-one" class="border border-text-brown rounded-[40px] px-4 py-1 hover:bg-cream">One-on-One Sessions</a>
@@ -28,7 +28,7 @@
             {{-- Row 1 --}}
             <div id="one-on-one" class="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-14 scroll-mt-36 items-center">
                 <img
-                    src="https://cwpbwqcxlccbittkhasq.supabase.co/storage/v1/object/public/assets/images/landing-carousel/Image-7.jpeg"
+                    src="https://cwpbwqcxlccbittkhasq.supabase.co/storage/v1/object/public/assets/images/landing-page/services/one-on-one.jpeg"
                     alt="One on One Tutorial Session"
                     class="w-full aspect-[16/9] object-cover bg-cream-dark border border-cream-border max-h-64 lg:max-h-none">
                 <div class="flex flex-col justify-center">
@@ -78,7 +78,7 @@
                     @endif
                 </div>
                 <img
-                    src="https://cwpbwqcxlccbittkhasq.supabase.co/storage/v1/object/public/assets/images/landing-carousel/Image-8.jpg"
+                    src="https://cwpbwqcxlccbittkhasq.supabase.co/storage/v1/object/public/assets/images/landing-page/services/group-session.jpg"
                     alt="Group Tutorial Session"
                     class="w-full aspect-[16/9] object-cover bg-cream-dark border border-cream-border max-h-64 lg:max-h-none order-first lg:order-none">
             </div>
@@ -88,7 +88,7 @@
             {{-- Row 3 --}}
             <div id="review-classes" class="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-14 scroll-mt-44 lg:scroll-mt-52 xl:scroll-mt-72 items-center">
                 <img
-                    src="https://cwpbwqcxlccbittkhasq.supabase.co/storage/v1/object/public/assets/images/landing-carousel/Image-6.jpg"
+                    src="https://cwpbwqcxlccbittkhasq.supabase.co/storage/v1/object/public/assets/images/landing-page/services/review-classes.jpg"
                     alt="Review Class"
                     class="w-full aspect-[16/9] object-cover bg-cream-dark border border-cream-border max-h-64 lg:max-h-none">
                 <div class="flex flex-col justify-center">
@@ -118,14 +118,14 @@
     {{-- FAQs --}}
     <section id="faqs" class="bg-up-green px-6 md:px-20 py-14 xl:py-24 mt-10 xl:mt-40 scroll-mt-[110px]">
         <div class="flex flex-col gap-4 mb-12">
-            <div class="flex items-center gap-3 text-up-yellow-dark text-xs tracking-widest font-bold uppercase">
-                <span class="block w-8 h-px bg-up-yellow-dark"></span>
+            <div class="flex items-center gap-3 text-up-yellow text-xs tracking-widest font-bold uppercase">
+                <span class="block w-8 h-px bg-up-yellow"></span>
                 FAQ
             </div>
             <h2 class="font-heading text-white text-5xl font-semibold tracking-wider">
                 Frequently Asked Questions
             </h2>
-            <p class="text-white/70 leading-8 border-l border-up-yellow-dark pl-5">
+            <p class="text-white/70 leading-8 border-l border-up-yellow pl-5">
                 Have questions about our services? Here are some answers to help you get started.
             </p>
         </div>
