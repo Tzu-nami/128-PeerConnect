@@ -1469,7 +1469,7 @@ XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(sessionRows), 'Sessions
             <h3 class="text-xl font-black text-slate-800">Confirm New Subject</h3>
             <p class="text-sm text-gray-500 mt-2 mb-8">This will be added to the list of available subjects.</p>
             <div class="flex gap-3" x-data="{ isSaving: false }">
-                <button type="button" @click="$wire.showSubjectConfirm = false" class="flex-1 py-3 text-xs font-bold text-gray-800 bg-gray-200 hover:bg-gray-300 rounded-xl transition" x-bind:disabled="isSaving">Cancel</button>
+                <button type="button" @click="$wire.showSubjectConfirm = false" class="flex-1 py-3 text-xs font-bold text-gray-800 bg-gray-200 hover:bg-gray-300 rounded-xl transition disabled:cursor-not-allowed" x-bind:disabled="isSaving">Cancel</button>
                 <button type="button" @click="isSaving = true; $wire.saveSubject().finally(() => isSaving = false)" x-bind:disabled="isSaving" 
                     class="flex-1 bg-red-900 text-white py-3 rounded-xl text-xs font-bold shadow-lg hover:bg-red-800 transition disabled:cursor-not-allowed">
                     <span x-show="!isSaving">Save</span>
