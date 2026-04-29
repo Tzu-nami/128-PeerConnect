@@ -165,7 +165,7 @@ $dashboardStats = computed(function () {
         .dropdown-item { padding: 12px 20px; font-size: 13px; color: #475569; display: flex; align-items: center; gap: 10px; transition: background 0.2s; }
         .dropdown-item:hover { background: #f8fafc; color: var(--header-maroon); }
 
-        /* ── TABLE STYLES COPIED FROM MENTOR MODULE ── */
+        /* ── TABLE STYLES FROM MENTOR MODULE ── */
         .table-filter-select { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 12px; font-size: 0.75rem; color: #475569; outline: none; cursor: pointer; height: 34px;}
         
         table { table-layout: fixed; width: 100%; border-collapse: collapse; }
@@ -184,7 +184,7 @@ $dashboardStats = computed(function () {
         .feedback-row:hover { background: #f8fafc; }
 
         .hover-tooltip { position: relative; cursor: pointer; }
-        .hover-tooltip::after { content: attr(data-full); position: absolute; left: 0; top: 110%; background: rgba(0,0,0,0.85); color: #fff; padding: 8px 10px; border-radius: 6px; font-size: 11px; line-height: 1.4; white-space: normal; word-break: break-word; overflow-wrap: anywhere; width: 320px; max-width: 320px; opacity: 0; pointer-events: none; transform: translateY(5px); transition: 0.15s ease; z-index: 9999; }
+        .hover-tooltip::after { content: attr(data-full); position: absolute; left: 0; top: 110%; background: rgba(0,0,0,0.85); color: #fff; padding: 8px 10px; border-radius: 6px; font-size: 11px; line-height: 1.4; white-space: normal; word-break: break-word; overflow-wrap: anywhere; width: max-content; max-width: 400px; opacity: 0; pointer-events: none; transform: translateY(5px); transition: 0.15s ease; z-index: 9999; }
         .hover-tooltip:hover::after { opacity: 1; transform: translateY(0); }
 
         .rating-pill { display: inline-flex; align-items: center; gap: 5px; padding: 5px 10px; border-radius: 20px; font-size: 12px; font-weight: 700; cursor: pointer; transition: all 0.15s; white-space: nowrap; border: 1.5px solid transparent; }
@@ -200,7 +200,7 @@ $dashboardStats = computed(function () {
         .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 64px 32px; color: #9ca3af; text-align: center; }
         .empty-state i { font-size: 2.5rem; margin-bottom: 12px; color: #d1d5db; }
 
-        /* ── MODALS COPIED FROM MENTOR MODULE ── */
+        /* ── MODALS FROM MENTOR MODULE ── */
         .modal-overlay { display: none; position: fixed; inset: 0; z-index: 9999; background: rgba(0,0,0,0.55); backdrop-filter: blur(4px); align-items: center; justify-content: center; }
         .modal-overlay.open { display: flex; }
         .modal-box { background: white; border-radius: 16px; width: 100%; max-width: 520px; height: 80vh; max-height: 640px; display: flex; flex-direction: column; box-shadow: 0 24px 48px rgba(0,0,0,0.2); margin: 16px; animation: modalIn 0.18s ease; }
@@ -402,31 +402,31 @@ $dashboardStats = computed(function () {
                                     <tbody class="divide-y divide-gray-100">
                                         <template x-for="fb in paginatedFeedbacks" :key="fb.id">
                                             <tr class="feedback-row">
-                                                <td class="px-5 py-5 align-top col-date">
+                                                <td class="px-5 py-5 align-middle col-date">
                                                     <span class="cell-text text-slate-700 text-[13px] font-semibold" x-text="fb.date_formatted"></span>
                                                 </td>
 
-                                                <td class="px-5 py-5 align-top col-mentor">
+                                                <td class="px-5 py-5 align-middle col-mentor">
                                                     <span class="cell-text text-slate-700 text-[12px] font-semibold" x-text="fb.mentor_name"></span>
                                                 </td>
 
-                                                <td class="px-5 py-5 align-top col-subject">
+                                                <td class="px-5 py-5 align-middle col-subject">
                                                     <span class="bg-red-50 text-red-700 px-2 py-0.5 rounded text-[10px] font-bold border border-red-100 whitespace-nowrap" x-text="fb.subject"></span>
                                                 </td>
 
-                                                <td class="px-5 py-5 align-top col-topic" style="overflow:visible; position:relative;">
+                                                <td class="px-5 py-5 align-middle col-topic" style="overflow:visible; position:relative;">
                                                     <div class="hover-tooltip" :data-full="fb.topic">
                                                         <span class="cell-text-wrap text-xs text-slate-600" x-text="fb.topic"></span>
                                                     </div>
                                                 </td>
 
-                                                <td class="px-5 py-5 align-top col-feedback">
+                                                <td class="px-5 py-5 align-middle col-feedback">
                                                     <button type="button" @click="openFeedbackPopup({ feedback: fb.has_feedback ? fb.feedback : null })" class="text-left w-full group">
                                                         <span class="cell-text-wrap text-[11px] bg-slate-100 px-2 py-1 rounded text-slate-700 font-semibold block group-hover:bg-slate-200 transition-colors" x-text="fb.feedback"></span>
                                                     </button>
                                                 </td>
 
-                                                <td class="px-5 py-5 align-top col-rating text-right">
+                                                <td class="px-5 py-5 align-middle col-rating text-right">
                                                     <button type="button" @click="openDetailModal({ 
                                                         mentor: fb.mentor_name, 
                                                         subject: fb.subject, 
@@ -625,9 +625,6 @@ $dashboardStats = computed(function () {
             }
         }
 
-        /* ════════════════════════════════════
-           FULL DETAIL MODAL
-        ════════════════════════════════════ */
         const QUESTIONS = [
             'The topics have been discussed very well.',
             'I have learned a lot from the Tutorial Session.',

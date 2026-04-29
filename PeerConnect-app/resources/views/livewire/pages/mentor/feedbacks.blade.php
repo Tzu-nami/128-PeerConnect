@@ -563,21 +563,21 @@ $totalPages = computed(function () {
                             <tr class="feedback-row">
 
                                 {{-- Date --}}
-                                <td class="px-5 py-5 align-top col-date">
+                                <td class="px-5 py-5 align-middle col-date">
                                     <span class="cell-text text-slate-700 text-[13px] font-semibold">
                                         {{ $fb->date_submitted ? \Carbon\Carbon::parse($fb->date_submitted)->format('M j, Y') : '—' }}
                                     </span>
                                 </td>
 
                                 {{-- Subject --}}
-                                <td class="px-5 py-5 align-top col-subject">
+                                <td class="px-5 py-5 align-middle col-subject">
                                     <span class="bg-red-50 text-red-700 px-2 py-0.5 rounded text-[10px] font-bold border border-red-100 whitespace-nowrap">
                                         {{ $fb->subject ?? '—' }}
                                     </span>
                                 </td>
 
                                 {{-- Topic — 2-line clamp, break long words --}}
-                                <td class="px-5 py-5 align-top col-topic" style = "overflow:visible; position:relative;">
+                                <td class="px-5 py-5 align-middle col-topic" style = "overflow:visible; position:relative;">
                                     <div class="hover-tooltip" data-full="{{ $fb->topic ?? '—' }} ">
                                     <span class="cell-text-wrap text-xs text-slate-600">
                                         {{ $fb->topic ?? '—' }}
@@ -586,7 +586,7 @@ $totalPages = computed(function () {
                                 </td>
 
                                 {{-- Feedback — click opens simple text popup only --}}
-                                <td class="px-5 py-5 align-top col-feedback">
+                                <td class="px-5 py-5 align-middle col-feedback">
                                     <button type="button"
                                         onclick='openFeedbackPopup({{ $popupData }})'
                                         class="text-left w-full group">
@@ -597,7 +597,7 @@ $totalPages = computed(function () {
                                 </td>
 
                                 {{-- Rating — click opens full detail modal --}}
-<td class="px-5 py-5 align-top col-rating text-right">
+<td class="px-5 py-5 align-middle col-rating text-right">
     <button type="button"
         onclick='openDetailModal({{ $modalData }})'
         class="flex flex-col items-end gap-1 text-right ml-auto">
