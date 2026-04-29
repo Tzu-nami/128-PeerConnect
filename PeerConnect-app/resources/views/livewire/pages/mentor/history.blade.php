@@ -301,54 +301,44 @@ $statusClass = match($session->booking_status) {
                 </div>
             </div>
 
-                {{-- Summary Cards --}}
-                <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-6">
-                    <div class="stat-card">
-                        <div class="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0">
-                            <i class="fa-solid fa-list-check text-slate-600"></i>
-                        </div>
-                        <div>
-                            <p class="text-xs font-bold text-gray-400 uppercase tracking-wide">Total Requests</p>
-                            <p class="text-xl font-black text-slate-800">{{ $this->summaryCount['total'] }}</p>
-                        </div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="w-10 h-10 rounded-lg bg-yellow-100 flex items-center justify-center flex-shrink-0">
-                            <i class="fa-solid fa-hourglass text-yellow-800"></i>
-                        </div>
-                        <div>
-                            <p class="text-xs font-bold text-gray-400 uppercase tracking-wide">Pending Requests</p>
-                            <p class="text-xl font-black text-slate-800">{{ $this->summaryCount['pending'] }}</p>
-                        </div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center">
-                            <i class="fa-solid fa-circle-check text-blue-600"></i>
-                        </div>
-                        <div>
-                            <p class="text-xs font-bold text-gray-400 uppercase tracking-wide">Completed Sessions</p>
-                            <p class="text-xl font-black text-slate-800">{{ $this->summaryCount['completed'] }}</p>
-                        </div>
-                    </div>
-<div class="stat-card">
-    <div class="w-10 h-10 rounded-lg bg-purple-50 flex items-center justify-center">
-        <i class="fa-solid fa-stopwatch text-purple-600"></i>
+{{-- Summary Cards --}}
+<div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-6">
+    <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-slate-400 flex items-center gap-4">
+        <div class="text-2xl"><i class="fa-solid fa-list-check text-slate-500"></i></div>
+        <div>
+            <h3 class="text-xs font-bold text-gray-400 uppercase leading-none">Total Requests</h3>
+            <p class="text-2xl font-black text-slate-800">{{ $this->summaryCount['total'] }}</p>
+        </div>
     </div>
-    <div>
-        <p class="text-xs font-bold text-gray-400 uppercase tracking-wide">Total Hours</p>
-        <p class="text-xl font-black text-slate-800">{{ $this->summaryCount['totalHours'] }}</p>
+    <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-yellow-500 flex items-center gap-4">
+        <div class="text-2xl"><i class="fa-solid fa-hourglass-half text-yellow-500"></i></div>
+        <div>
+            <h3 class="text-xs font-bold text-gray-400 uppercase leading-none">Pending Requests</h3>
+            <p class="text-2xl font-black text-slate-800">{{ $this->summaryCount['pending'] }}</p>
+        </div>
+    </div>
+    <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-blue-600 flex items-center gap-4">
+        <div class="text-2xl"><i class="fa-solid fa-flag-checkered text-blue-600"></i></div>
+        <div>
+            <h3 class="text-xs font-bold text-gray-400 uppercase leading-none">Completed Sessions</h3>
+            <p class="text-2xl font-black text-slate-800">{{ $this->summaryCount['completed'] }}</p>
+        </div>
+    </div>
+    <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-purple-600 flex items-center gap-4">
+        <div class="text-2xl"><i class="fa-solid fa-stopwatch text-purple-600"></i></div>
+        <div>
+            <h3 class="text-xs font-bold text-gray-400 uppercase leading-none">Total Hours</h3>
+            <p class="text-2xl font-black text-slate-800">{{ $this->summaryCount['totalHours'] }}</p>
+        </div>
+    </div>
+    <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-red-500 flex items-center gap-4">
+        <div class="text-2xl"><i class="fa-solid fa-ban text-red-500"></i></div>
+        <div>
+            <h3 class="text-xs font-bold text-gray-400 uppercase leading-none">Cancelled Requests</h3>
+            <p class="text-2xl font-black text-slate-800">{{ $this->summaryCount['cancelled'] }}</p>
+        </div>
     </div>
 </div>
-                    <div class="stat-card">
-                        <div class="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center">
-                            <i class="fa-solid fa-ban text-red-500"></i>
-                        </div>
-                        <div>
-                            <p class="text-xs font-bold text-gray-400 uppercase tracking-wide">Cancelled Requests</p>
-                            <p class="text-xl font-black text-slate-800">{{ $this->summaryCount['cancelled'] }}</p>
-                        </div>
-                    </div>
-                </div>
 
                 {{-- Table --}}
 <div class="bg-white rounded-xl shadow-sm border border-gray-100" 
