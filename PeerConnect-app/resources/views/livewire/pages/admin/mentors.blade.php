@@ -922,7 +922,9 @@ mount(function () {
     </div>
 
     {{-- ── ADD MENTOR MODAL ── --}}
-    <div x-show="$wire.showModal" x-cloak class="modal-overlay">
+    <div x-show="$wire.showModal" x-cloak class="modal-overlay" 
+        x-data="{ fileName: '' }" 
+        x-init="$watch('$wire.showModal', val => { if (!val) { fileName = ''; document.getElementById('avatar-upload').value = ''; } })">
         <div class="bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col" style="max-height: 90vh;">
             <div class="px-8 py-6 border-b flex justify-between items-center flex-shrink-0 bg-white">
                 <div>
@@ -973,7 +975,7 @@ mount(function () {
                             <span class="flex items-center justify-center w-5 h-5 bg-slate-800 text-white rounded-full text-[10px] font-bold shrink-0">2</span>
                             <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest m-0">Profile Picture</h3>
                         </div>
-                        <div class="flex items-start gap-4" x-data="{ fileName: '' }">
+                        <div class="flex items-start gap-4">
                             <div class="flex-shrink-0">
                                 @if($avatar)
                                     <img src="{{ $avatar->temporaryUrl() }}" class="w-32 h-32 rounded-xl object-cover border border-gray-200 shadow-sm">
@@ -1114,7 +1116,9 @@ mount(function () {
     </div>
 
     {{-- ── EDIT MENTOR MODAL ── --}}
-    <div x-show="showEditModal" x-cloak class="modal-overlay">
+    <div x-show="showEditModal" x-cloak class="modal-overlay" 
+        x-data="{ fileName: '' }" 
+        x-init="$watch('showEditModal', val => { if (!val) { fileName = ''; document.getElementById('edit-avatar-upload').value = ''; } })">
         <div class="bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col" style="max-height: 90vh;">
             <div class="px-8 py-6 bg-white border-b flex justify-between items-center flex-shrink-0">
                 <div>
@@ -1149,7 +1153,7 @@ mount(function () {
                                 <span class="flex items-center justify-center w-5 h-5 bg-slate-800 text-white rounded-full text-[10px] font-bold shrink-0">1</span>
                                 <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest m-0">Update Picture</h3>
                             </div>
-                            <div class="flex items-start gap-4" x-data="{ fileName: '' }">
+                            <div class="flex items-start gap-4">
                                 <div class="flex-shrink-0">
                                     @if($editAvatar)
                                         <img src="{{ $editAvatar->temporaryUrl() }}" class="w-32 h-32 rounded-xl object-cover border border-gray-200 shadow-sm">
