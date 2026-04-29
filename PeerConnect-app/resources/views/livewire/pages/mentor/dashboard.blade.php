@@ -397,6 +397,24 @@ Bookings::where('mentor_id', $mentorProfile->id)
     flex-shrink: 0;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
+.session-row .action-buttons { 
+    opacity: 0; 
+    transform: translateX(6px);
+    transition: opacity 0.15s ease, transform 0.15s ease;
+    pointer-events: none;
+}
+.session-row:hover .action-buttons { 
+    opacity: 1; 
+    transform: translateX(0);
+    pointer-events: auto;
+}
+.session-row .action-idle {
+    opacity: 1;
+    transition: opacity 0.15s ease;
+}
+.session-row:hover .action-idle {
+    opacity: 0;
+}
         </style>
     </head>
 
@@ -700,9 +718,9 @@ Bookings::where('mentor_id', $mentorProfile->id)
                                     <h3 class="font-bold text-slate-800 text-sm tracking-tight">Pending Requests</h3>
                                         <span id="pendingBadge" class="bg-red-100 text-red-700 text-[10px] font-bold px-2 py-0.5 rounded-full"></span>
                                 </div>
+
                                 <div class="flex flex-col gap-4">
                                     <div id="pendingBannerArea" class="flex flex-col gap-2 mb-2"></div>
-                                    <div id="pendingRequestsList" class="flex flex-col gap-4"></div>
                                     <div id="pendingRequestsList" class="flex flex-col gap-4"></div>
                                     <div class="flex items-center justify-between group">
                                     </div>
@@ -710,17 +728,6 @@ Bookings::where('mentor_id', $mentorProfile->id)
                                 <button id="toggleRequestsBtn" class="w-full mt-4 py-2 text-[10px] font-bold text-slate-400 hover:text-slate-600 border-t border-gray-50 transition text-center">
                                     View All Requests
                                 </button>
-                                <div id="pendingPagination" class="hidden mt-2 flex items-center justify-between px-1">
-                                        <span id="pendingPageInfo" class="text-[10px] text-gray-400"></span>
-                                        <div class="flex gap-1">
-                                            <button id="pendingPrevBtn" class="pagination-btn opacity-30 cursor-not-allowed" disabled>
-                                                <i class="fa-solid fa-chevron-left text-[10px]"></i>
-                                            </button>
-                                            <button id="pendingNextBtn" class="pagination-btn">
-                                                <i class="fa-solid fa-chevron-right text-[10px]"></i>
-                                            </button>
-                                        </div>
-                                </div>
                             </div>
 
 
@@ -1505,62 +1512,86 @@ function showAutoRejectBannerPending(count) { showAutoRejectBannerInSection('pen
     let pendingPage = 0;
     const PENDING_PER_PAGE = 5;
 
-    function renderPendingRequests() {
-        const container = document.getElementById('pendingRequestsList');
-        const badge     = document.getElementById('pendingBadge');
-        const toggleBtn = document.getElementById('toggleRequestsBtn');
-        const sorted = [...allSessions].filter(s => s.status === 'pending').sort((a,b) => new Date(b.date) - new Date(a.date));
-        const total  = sorted.length;
-        badge.innerText = `${total} ${total===1?'Request':'Requests'}`;
-        if (!total) { container.innerHTML = `<p class="text-xs text-gray-400 italic">No pending requests.</p>`; toggleBtn.style.display = 'none'; return; }
-        const maxPage = Math.ceil(total / PENDING_PER_PAGE) - 1;
-        if (pendingPage > maxPage) pendingPage = maxPage;
-        if (pendingPage < 0) pendingPage = 0;
-        const start   = pendingPage * PENDING_PER_PAGE;
-        const visible = sorted.slice(start, start + PENDING_PER_PAGE);
-        const hasPrev = pendingPage > 0;
-        const hasNext = pendingPage < maxPage;
+function renderPendingRequests() {
+    const container = document.getElementById('pendingRequestsList');
+    const badge     = document.getElementById('pendingBadge');
+    const toggleBtn = document.getElementById('toggleRequestsBtn');
+    const sorted = [...allSessions].filter(s => s.status === 'pending').sort((a,b) => new Date(b.date) - new Date(a.date));
+    const total  = sorted.length;
+    badge.innerText = `${total} ${total===1?'Request':'Requests'}`;
 
-        container.innerHTML = visible.map(req => `
-            <div class="flex items-center justify-between group">
-                <div class="flex items-center gap-3">
-                    <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-[10px] font-bold">${req.student.slice(0,2).toUpperCase()}</div>
-                    <div>
-                        <div style="max-width:180px;">
-                            <div id="pname-${req.id}" style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-size:11px;font-weight:700;color:#1e293b;" title="${req.student}">${req.student}</div>
-                            <button onclick="togglePendingName('${req.id}','${req.student.replace(/'/g,"\\'")}')" id="ptoggle-${req.id}" style="font-size:9px;color:#7b1d1d;font-weight:600;margin-top:1px;background:none;border:none;cursor:pointer;padding:0;display:none;">Show more</button>
-                        </div>
-                        <p class="text-[9px] text-gray-400 font-medium">${req.subject} • ${formatTimeTo12Hour(req.start)} - ${formatTimeTo12Hour(req.end)}</p>
-                        <p class="text-[9px] text-gray-400">${new Date(req.date).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</p>
-                    </div>
+    if (!total) {
+        container.innerHTML = `<p class="text-xs text-gray-400 italic">No pending requests.</p>`;
+        toggleBtn.style.display = 'none';
+        return;
+    }
+
+    const maxPage = Math.ceil(total / PENDING_PER_PAGE) - 1;
+    if (pendingPage > maxPage) pendingPage = maxPage;
+    if (pendingPage < 0) pendingPage = 0;
+
+    const start   = pendingPage * PENDING_PER_PAGE;
+    const visible = sorted.slice(start, start + PENDING_PER_PAGE);
+    const hasPrev = pendingPage > 0;
+    const hasNext = pendingPage < maxPage;
+
+    function pendingIconBtn(icon, label, onclickFn, color, textColor) {
+        return `<div class="hover-tooltip" data-full="${label}">
+            <button onclick="${onclickFn}"
+                class="w-7 h-7 rounded-lg ${color} ${textColor} flex items-center justify-center transition-all hover:scale-110 hover:shadow-sm"
+                style="flex-shrink:0;">
+                <i class="fa-solid ${icon}" style="font-size:11px;"></i>
+            </button>
+        </div>`;
+    }
+
+    container.innerHTML = visible.map(req => `
+        <div class="session-row flex items-center justify-between group">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-[10px] font-bold flex-shrink-0">
+                    ${req.student.slice(0,2).toUpperCase()}
                 </div>
-                <div class="flex gap-1">
-                    <button onclick="rejectRequest('${req.id}')" class="w-6 h-6 rounded-md bg-gray-50 hover:bg-red-50 hover:text-red-600 flex items-center justify-center"><i class="fa-solid fa-xmark text-[10px]"></i></button>
-                    <button onclick="approveRequest('${req.id}')" class="w-6 h-6 rounded-md bg-gray-50 hover:bg-emerald-50 hover:text-emerald-600 flex items-center justify-center"><i class="fa-solid fa-check text-[10px]"></i></button>
+                <div>
+                    <div style="max-width:130px;">
+                        <div id="pname-${req.id}" style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-size:11px;font-weight:700;color:#1e293b;" title="${req.student}">${req.student}</div>
+                        <button onclick="togglePendingName('${req.id}','${req.student.replace(/'/g,"\\'")}')" id="ptoggle-${req.id}" style="font-size:9px;color:#7b1d1d;font-weight:600;margin-top:1px;background:none;border:none;cursor:pointer;padding:0;display:none;">Show more</button>
+                    </div>
+                    <p class="text-[9px] text-gray-400 font-medium">${req.subject} • ${formatTimeTo12Hour(req.start)} – ${formatTimeTo12Hour(req.end)}</p>
+                    <p class="text-[9px] text-gray-400">${new Date(req.date).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</p>
                 </div>
             </div>
-        `).join('');
+            <div class="relative flex items-center justify-end" style="min-height:28px;">
+                <div class="action-idle absolute right-0 flex items-center gap-1 pointer-events-none">
+                    <span class="w-2 h-2 rounded-full bg-yellow-400 inline-block"></span>
+                </div>
+                <div class="action-buttons flex items-center gap-1 justify-end">
+                    ${pendingIconBtn('fa-xmark', 'Reject',  `rejectRequest('${req.id}')`,  'bg-red-100 hover:bg-red-200',     'text-red-600')}
+                    ${pendingIconBtn('fa-check', 'Accept',  `approveRequest('${req.id}')`, 'bg-emerald-100 hover:bg-emerald-200', 'text-emerald-700')}
+                </div>
+            </div>
+        </div>
+    `).join('');
 
-        visible.forEach(req => {
-            const nameEl = document.getElementById('pname-' + req.id);
-            const toggleEl = document.getElementById('ptoggle-' + req.id);
-            if (nameEl && toggleEl && nameEl.scrollWidth > nameEl.clientWidth) toggleEl.style.display = 'block';
-        });
+    visible.forEach(req => {
+        const nameEl   = document.getElementById('pname-' + req.id);
+        const toggleEl = document.getElementById('ptoggle-' + req.id);
+        if (nameEl && toggleEl && nameEl.scrollWidth > nameEl.clientWidth) toggleEl.style.display = 'block';
+    });
 
-        if (total <= PENDING_PER_PAGE) {
-            toggleBtn.style.display = 'none';
-        } else {
-            toggleBtn.style.display = 'block';
-            toggleBtn.innerHTML = `
-                <div class="flex items-center justify-between w-full px-1">
-                    <span class="text-[10px] text-gray-400">${start+1}–${Math.min(start+PENDING_PER_PAGE,total)} of ${total}</span>
-                    <div class="flex gap-1">
-                        <button onclick="pendingPage--; renderPendingRequests(); event.stopPropagation();" ${!hasPrev?'disabled':''} class="pagination-btn ${!hasPrev?'opacity-30 cursor-not-allowed':''}"><i class="fa-solid fa-chevron-left text-[10px]"></i></button>
-                        <button onclick="pendingPage++; renderPendingRequests(); event.stopPropagation();" ${!hasNext?'disabled':''} class="pagination-btn ${!hasNext?'opacity-30 cursor-not-allowed':''}"><i class="fa-solid fa-chevron-right text-[10px]"></i></button>
-                    </div>
-                </div>`;
-        }
+    if (total <= PENDING_PER_PAGE) {
+        toggleBtn.style.display = 'none';
+    } else {
+        toggleBtn.style.display = 'block';
+        toggleBtn.innerHTML = `
+            <div class="flex items-center justify-between w-full px-1">
+                <span class="text-[10px] text-gray-400">${start+1}–${Math.min(start+PENDING_PER_PAGE,total)} of ${total}</span>
+                <div class="flex gap-1">
+                    <button onclick="pendingPage--; renderPendingRequests(); event.stopPropagation();" ${!hasPrev?'disabled':''} class="pagination-btn ${!hasPrev?'opacity-30 cursor-not-allowed':''}"><i class="fa-solid fa-chevron-left text-[10px]"></i></button>
+                    <button onclick="pendingPage++; renderPendingRequests(); event.stopPropagation();" ${!hasNext?'disabled':''} class="pagination-btn ${!hasNext?'opacity-30 cursor-not-allowed':''}"><i class="fa-solid fa-chevron-right text-[10px]"></i></button>
+                </div>
+            </div>`;
     }
+}
 
     function hasConflict(newReq) {
         function toMin(t) { const [h,m] = t.split(":").map(Number); return h*60+m; }
@@ -1702,56 +1733,71 @@ function showAutoRejectBannerPending(count) { showAutoRejectBannerInSection('pen
     let quickActionsPage = 0;
     const QUICK_ACTIONS_PER_PAGE = 5;
 
-    function renderQuickActions() {
-        const container     = document.getElementById('quickActionsList');
-        const todaySessions = allSessions.filter(s => s.date === selectedDateStr && s.status === 'accepted');
-        const total         = todaySessions.length;
+function renderQuickActions() {
+    const container     = document.getElementById('quickActionsList');
+    const todaySessions = allSessions.filter(s => s.date === selectedDateStr && s.status === 'accepted');
+    const total         = todaySessions.length;
 
-        if (!total) { container.innerHTML = `<p class="text-xs text-gray-400 italic">No active sessions for this date.</p>`; return; }
+    if (!total) { container.innerHTML = `<p class="text-xs text-gray-400 italic">No active sessions for this date.</p>`; return; }
 
-        const maxPage = Math.ceil(total / QUICK_ACTIONS_PER_PAGE) - 1;
-        if (quickActionsPage > maxPage) quickActionsPage = maxPage;
-        if (quickActionsPage < 0) quickActionsPage = 0;
+    const maxPage = Math.ceil(total / QUICK_ACTIONS_PER_PAGE) - 1;
+    if (quickActionsPage > maxPage) quickActionsPage = maxPage;
+    if (quickActionsPage < 0) quickActionsPage = 0;
 
-        const start   = quickActionsPage * QUICK_ACTIONS_PER_PAGE;
-        const visible = todaySessions.slice(start, start + QUICK_ACTIONS_PER_PAGE);
-        const hasPrev = quickActionsPage > 0;
-        const hasNext = quickActionsPage < maxPage;
+    const start   = quickActionsPage * QUICK_ACTIONS_PER_PAGE;
+    const visible = todaySessions.slice(start, start + QUICK_ACTIONS_PER_PAGE);
+    const hasPrev = quickActionsPage > 0;
+    const hasNext = quickActionsPage < maxPage;
 
-        container.innerHTML = `
-            ${visible.map(s => `
-                <div class="flex items-center justify-between border border-gray-100 rounded-lg p-3">
-                    <div style="min-width:0;flex:1;margin-right:8px;">
-                        <div style="max-width:200px;">
-                            <div id="qaname-${s.id}" style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-size:11px;font-weight:700;color:#1e293b;" title="${s.student}">${s.student}</div>
-                            <button onclick="toggleQaName('${s.id}')" id="qatoggle-${s.id}" style="font-size:9px;color:#7b1d1d;font-weight:600;margin-top:1px;background:none;border:none;cursor:pointer;padding:0;display:none;">Show more</button>
-                        </div>
-                        <p class="text-[10px] text-gray-400">${s.subject} • ${formatTimeTo12Hour(s.start)} - ${formatTimeTo12Hour(s.end)}</p>
-                        <p class="text-[9px] text-gray-400">${new Date(s.date).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</p>
-                    </div>
-                    <div class="flex gap-1 flex-wrap justify-end">
-                        <button onclick="updateStatus('${s.id}','completed')" class="text-[10px] px-2 py-1 rounded bg-gray-100 text-gray-700 font-bold">Complete</button>
-                        <button onclick="updateStatus('${s.id}','no_show')"   class="text-[10px] px-2 py-1 rounded bg-orange-100 text-orange-700 font-bold">No-show</button>
-                        <button onclick="updateStatus('${s.id}','cancelled')" class="text-[10px] px-2 py-1 rounded bg-red-100 text-red-700 font-bold">Cancel</button>
-                    </div>
-                </div>
-            `).join('')}
-            ${total > QUICK_ACTIONS_PER_PAGE ? `
-                <div class="flex items-center justify-between pt-2 border-t border-gray-100 mt-1">
-                    <span class="text-[10px] text-gray-400">${start+1}–${Math.min(start+QUICK_ACTIONS_PER_PAGE,total)} of ${total}</span>
-                    <div class="flex gap-1">
-                        <button onclick="quickActionsPage--; renderQuickActions();" ${!hasPrev?'disabled':''} class="pagination-btn ${!hasPrev?'opacity-30 cursor-not-allowed':''}"><i class="fa-solid fa-chevron-left text-[10px]"></i></button>
-                        <button onclick="quickActionsPage++; renderQuickActions();" ${!hasNext?'disabled':''} class="pagination-btn ${!hasNext?'opacity-30 cursor-not-allowed':''}"><i class="fa-solid fa-chevron-right text-[10px]"></i></button>
-                    </div>
-                </div>
-            ` : ''}`;
-
-        visible.forEach(s => {
-            const nameEl   = document.getElementById('qaname-' + s.id);
-            const toggleEl = document.getElementById('qatoggle-' + s.id);
-            if (nameEl && toggleEl && nameEl.scrollWidth > nameEl.clientWidth) toggleEl.style.display = 'block';
-        });
+    function qaIconBtn(icon, label, status, color, textColor, id) {
+        return `<div class="hover-tooltip" data-full="${label}">
+            <button onclick="updateStatus('${id}','${status}')"
+                class="w-7 h-7 rounded-lg ${color} ${textColor} flex items-center justify-center transition-all hover:scale-110 hover:shadow-sm"
+                style="flex-shrink:0;">
+                <i class="fa-solid ${icon}" style="font-size:11px;"></i>
+            </button>
+        </div>`;
     }
+
+    container.innerHTML = `
+        ${visible.map(s => `
+            <div class="session-row flex items-center justify-between border border-gray-100 rounded-lg p-3">
+                <div style="min-width:0;flex:1;margin-right:8px;">
+                    <div style="max-width:200px;">
+                        <div id="qaname-${s.id}" style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-size:11px;font-weight:700;color:#1e293b;" title="${s.student}">${s.student}</div>
+                        <button onclick="toggleQaName('${s.id}')" id="qatoggle-${s.id}" style="font-size:9px;color:#7b1d1d;font-weight:600;margin-top:1px;background:none;border:none;cursor:pointer;padding:0;display:none;">Show more</button>
+                    </div>
+                    <p class="text-[10px] text-gray-400">${s.subject} • ${formatTimeTo12Hour(s.start)} - ${formatTimeTo12Hour(s.end)}</p>
+                    <p class="text-[9px] text-gray-400">${new Date(s.date).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</p>
+                </div>
+                <div class="relative flex items-center justify-end" style="min-height:28px;">
+                    <div class="action-idle absolute right-0 flex items-center gap-1 pointer-events-none">
+                        <span class="w-2 h-2 rounded-full bg-green-400 inline-block"></span>
+                    </div>
+                    <div class="action-buttons flex items-center gap-1 justify-end">
+                        ${qaIconBtn('fa-flag-checkered', 'Complete',  'completed', 'bg-gray-100 hover:bg-gray-200',   'text-gray-600',   s.id)}
+                        ${qaIconBtn('fa-user-slash',     'No-show',   'no_show',   'bg-orange-100 hover:bg-orange-200','text-orange-600', s.id)}
+                        ${qaIconBtn('fa-ban',            'Cancel',    'cancelled', 'bg-red-100 hover:bg-red-200',      'text-red-600',    s.id)}
+                    </div>
+                </div>
+            </div>
+        `).join('')}
+        ${total > QUICK_ACTIONS_PER_PAGE ? `
+            <div class="flex items-center justify-between pt-2 border-t border-gray-100 mt-1">
+                <span class="text-[10px] text-gray-400">${start+1}–${Math.min(start+QUICK_ACTIONS_PER_PAGE,total)} of ${total}</span>
+                <div class="flex gap-1">
+                    <button onclick="quickActionsPage--; renderQuickActions();" ${!hasPrev?'disabled':''} class="pagination-btn ${!hasPrev?'opacity-30 cursor-not-allowed':''}"><i class="fa-solid fa-chevron-left text-[10px]"></i></button>
+                    <button onclick="quickActionsPage++; renderQuickActions();" ${!hasNext?'disabled':''} class="pagination-btn ${!hasNext?'opacity-30 cursor-not-allowed':''}"><i class="fa-solid fa-chevron-right text-[10px]"></i></button>
+                </div>
+            </div>
+        ` : ''}`;
+
+    visible.forEach(s => {
+        const nameEl   = document.getElementById('qaname-' + s.id);
+        const toggleEl = document.getElementById('qatoggle-' + s.id);
+        if (nameEl && toggleEl && nameEl.scrollWidth > nameEl.clientWidth) toggleEl.style.display = 'block';
+    });
+}
 
     window.addEventListener("load", function () { initDashboard(); });
     document.addEventListener("livewire:navigated", function () { initDashboard(); });
