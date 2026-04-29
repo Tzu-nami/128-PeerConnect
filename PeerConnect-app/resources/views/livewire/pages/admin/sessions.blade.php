@@ -36,7 +36,7 @@ $sessions = computed(function () {
 
         $durationText = $durationHours == 1
             ? '1 hr'
-            : rtrim(rtrim(number_format($durationHours, 2), '0'), '.') . ' hrs';
+            : rtrim(rtrim(number_format($durationHours, 2), '0'), '.');
 
         return [
             'id'            => $b->id,
@@ -80,7 +80,7 @@ $summaryCounts = computed(function () {
     $completedSessions = array_filter($sessions, fn($s) => $s['status'] === 'completed');
     $totalHours = array_sum(array_column($completedSessions, 'durationHours'));
 
-    $hoursFormatted = number_format($totalHours, 2) . ' hrs';
+    $hoursFormatted = number_format($totalHours, 2);
 
     return [
         'total'          => $total,
@@ -488,6 +488,42 @@ $summaryCounts = computed(function () {
             </div>
         </div>
 
+{{-- ── SESSION DETAIL MODAL ── --}}
+    <div id="sessionDetailModal" style="display:none;" class="fixed inset-0 z-[1400] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+        <div class="bg-white rounded-2xl max-w-md w-full mx-4 shadow-2xl overflow-hidden">
+            
+            {{-- Colored header band --}}
+            <div style="background: linear-gradient(135deg, #1a3c2f 0%, #2d6a4f 100%);" class="px-6 py-5 relative">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
+                            <i class="fa-solid fa-calendar-days text-white text-base"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-base font-bold text-white">Session Details</h3>
+                            <p class="text-xs text-white/60 mt-0.5">Full session information</p>
+                        </div>
+                    </div>
+                    <button onclick="closeSessionDetailModal()" class="w-8 h-8 rounded-full bg-white/10 hover:bg-white/25 flex items-center justify-center text-white/80 hover:text-white transition">
+                        <i class="fa-solid fa-xmark text-sm"></i>
+                    </button>
+                </div>
+
+                {{-- Status badge in header --}}
+                <div id="sessionDetailStatusWrap" class="mt-4"></div>
+            </div>
+
+            <div id="sessionDetailBody" class="px-6 py-5 space-y-2 max-h-[60vh] overflow-y-auto"></div>
+
+            {{-- Footer --}}
+            <div class="px-6 py-4 border-t border-gray-100 bg-slate-50 flex justify-end">
+                <button onclick="closeSessionDetailModal()" class="px-5 py-2 text-sm font-semibold text-white rounded-lg transition" style="background:#1a3c2f;">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
     </div>
 
     <script>
@@ -730,9 +766,9 @@ function showSuccessBanner(message) {
         }
 
         function renderActions(s) {
-            const iconBtn = (icon, label, status, color, textColor) =>
+const iconBtn = (icon, label, status, color, textColor) =>
                 `<div class="hover-tooltip" data-full="${label}">
-                    <button onclick="updateStatus('${s.id}','${status}')"
+                    <button onclick="event.stopPropagation(); updateStatus('${s.id}','${status}')"
                         class="w-7 h-7 rounded-lg ${color} ${textColor} flex items-center justify-center transition-all hover:scale-110 hover:shadow-sm"
                         style="flex-shrink:0;">
                         <i class="fa-solid ${icon}" style="font-size:11px;"></i>
@@ -816,7 +852,7 @@ function showSuccessBanner(message) {
             document.getElementById('statAccepted').textContent  = statuses.filter(s => s === 'accepted').length;
             document.getElementById('statPending').textContent   = statuses.filter(s => s === 'pending').length;
             document.getElementById('statCompleted').textContent = statuses.filter(s => s === 'completed').length;
-            document.getElementById('statHours').textContent     = parseFloat(completedHours.toFixed(2)) + ' hrs';
+            document.getElementById('statHours').textContent     = parseFloat(completedHours.toFixed(2));
         }
 
         /* ── Render ── */
@@ -853,7 +889,7 @@ function showSuccessBanner(message) {
             updateSessionsPagination(total, maxPage, filtered);
 
             tbody.innerHTML = visible.map((s, idx) => `
-                <tr class="session-row border-b border-gray-50 hover:bg-slate-50 transition">
+                <tr class="session-row border-b border-gray-50 hover:bg-slate-50 transition cursor-pointer" onclick="openSessionDetailModal(${JSON.stringify(s).replace(/"/g, '&quot;')})">
                     <td class="px-5 py-4 align-middle text-gray-400 text-xs font-medium tabular-nums" style="width:4%;">${start + idx + 1}</td>
                     <td class="px-5 py-4 align-middle" style="width:13%;">
                         <div class="hover-tooltip" data-full="${s.student}\n${s.yearLevel} - ${s.degreeProgram}">
@@ -1218,6 +1254,73 @@ function showSuccessBanner(message) {
                     console.error('commitStatus failed:', err);
                 });
         }
+/* ── Session Detail Modal ── */
+function openSessionDetailModal(s) {
+            const statusColor = getStatusColor(s.status);
+            const statusLabel = getStatusLabel(s.status);
+
+            const statusBgMap = {
+                accepted:  'background:#d1fae5; color:#065f46; border-color:#6ee7b7;',
+                pending:   'background:#fef9c3; color:#854d0e; border-color:#fde047;',
+                completed: 'background:#dbeafe; color:#1e40af; border-color:#93c5fd;',
+                rejected:  'background:#fee2e2; color:#991b1b; border-color:#fca5a5;',
+                cancelled: 'background:#fee2e2; color:#991b1b; border-color:#fca5a5;',
+                no_show:   'background:#ffedd5; color:#9a3412; border-color:#fdba74;',
+            };
+            const statusIconMap = {
+                accepted:  'fa-circle-check',
+                pending:   'fa-hourglass-half',
+                completed: 'fa-flag-checkered',
+                rejected:  'fa-circle-xmark',
+                cancelled: 'fa-ban',
+                no_show:   'fa-user-slash',
+            };
+
+            const statusStyle = statusBgMap[s.status] || 'background:#f1f5f9; color:#475569; border-color:#cbd5e1;';
+            const statusIcon  = statusIconMap[s.status] || 'fa-circle';
+
+            document.getElementById('sessionDetailStatusWrap').innerHTML = `
+                <span style="${statusStyle} border:1.5px solid; border-radius:20px; padding:5px 14px; font-size:12px; font-weight:700; display:inline-flex; align-items:center; gap:6px;">
+                    <i class="fa-solid ${statusIcon}" style="font-size:11px;"></i>
+                    ${statusLabel}
+                </span>
+            `;
+
+            document.getElementById('sessionDetailBody').innerHTML = `
+                ${detailRow('fa-user',           '#3b82f6', '#eff6ff', '#bfdbfe', 'Student',        s.student)}
+                ${detailRow('fa-chalkboard-user','#8b5cf6', '#f5f3ff', '#ddd6fe', 'Mentor',         s.mentor === '—' ? 'Unassigned' : s.mentor)}
+                ${detailRow('fa-book-open',      '#f59e0b', '#fffbeb', '#fde68a', 'Subject',        s.subject + (s.subjectName ? ' – ' + s.subjectName : ''))}
+                ${detailRow('fa-tag',            '#10b981', '#ecfdf5', '#a7f3d0', 'Topic',          s.topic)}
+                ${detailRow('fa-calendar',       '#ef4444', '#fef2f2', '#fecaca', 'Date',           s.date)}
+                ${detailRow('fa-clock',          '#06b6d4', '#ecfeff', '#a5f3fc', 'Time',           s.time)}
+                ${detailRow('fa-stopwatch',      '#6366f1', '#eef2ff', '#c7d2fe', 'Duration',       formatHours(s).replace(/[()]/g, ''))}
+                ${detailRow('fa-laptop',         '#ec4899', '#fdf2f8', '#fbcfe8', 'Mode',           s.mode)}
+                ${detailRow('fa-graduation-cap', '#14b8a6', '#f0fdfa', '#99f6e4', 'Year Level',     s.yearLevel)}
+                ${detailRow('fa-school',         '#f97316', '#fff7ed', '#fed7aa', 'Degree Program', s.degreeProgram)}
+            `;
+
+            document.getElementById('sessionDetailModal').style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
+
+function detailRow(icon, iconColor, iconBg, iconBorder, label, value) {
+            return `
+                <div class="flex items-center gap-3 p-3 rounded-xl transition hover:bg-slate-50" style="border:1px solid #f1f5f9;">
+                    <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                         style="background:${iconBg}; border:1.5px solid ${iconBorder};">
+                        <i class="fa-solid ${icon} text-[12px]" style="color:${iconColor};"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider leading-none mb-0.5">${label}</p>
+                        <p class="text-sm font-semibold text-slate-700 break-words leading-snug">${value || '—'}</p>
+                    </div>
+                </div>
+            `;
+        }
+        function closeSessionDetailModal() {
+            document.getElementById('sessionDetailModal').style.display = 'none';
+            document.body.style.overflow = '';
+        }
 
         /* ── Init ── */
         document.addEventListener('DOMContentLoaded', () => {
@@ -1243,6 +1346,10 @@ function showSuccessBanner(message) {
                 renderSessions();
             });
 
-            renderSessions();
+renderSessions();
+
+            document.addEventListener('keydown', e => {
+                if (e.key === 'Escape') closeSessionDetailModal();
+            });
         });
     </script>

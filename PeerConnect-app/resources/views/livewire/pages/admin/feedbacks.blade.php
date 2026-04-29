@@ -402,15 +402,15 @@ $dashboardStats = computed(function () {
                                     <tbody class="divide-y divide-gray-100">
                                         <template x-for="fb in paginatedFeedbacks" :key="fb.id">
                                             <tr class="feedback-row cursor-pointer" @click="openDetailModal({ 
-    mentor: fb.mentor_name, 
-    subject: fb.subject, 
-    topic: fb.topic, 
-    date: fb.date_formatted, 
-    avg: fb.avg, 
-    avgLabel: fb.avgLabel, 
-    q1: fb.q1, q2: fb.q2, q3: fb.q3, q4: fb.q4, q5: fb.q5, q6: fb.q6, q7: fb.q7, q8: fb.q8, q9: fb.q9, q10: fb.q10, 
-    feedback: fb.has_feedback ? fb.feedback : null 
-})">
+                                                mentor: fb.mentor_name, 
+                                                subject: fb.subject, 
+                                                topic: fb.topic, 
+                                                date: fb.date_formatted, 
+                                                avg: fb.avg, 
+                                                avgLabel: fb.avgLabel, 
+                                                q1: fb.q1, q2: fb.q2, q3: fb.q3, q4: fb.q4, q5: fb.q5, q6: fb.q6, q7: fb.q7, q8: fb.q8, q9: fb.q9, q10: fb.q10, 
+                                                feedback: fb.has_feedback ? fb.feedback : null 
+                                            })">
                                                 <td class="px-5 py-5 align-middle col-date">
                                                     <span class="cell-text text-slate-700 text-[13px] font-semibold" x-text="fb.date_formatted"></span>
                                                 </td>
