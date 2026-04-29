@@ -379,54 +379,44 @@ Bookings::where('mentor_id', $mentorProfile->id)
                     </div>
                 </div>
 
-                {{-- Summary Stat Cards --}}
-                <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-6">
-                    <div class="stat-card">
-                        <div class="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0">
-                            <i class="fa-solid fa-list-check text-slate-600"></i>
-                        </div>
-                        <div>
-                            <p class="text-xs font-bold text-gray-400 uppercase tracking-wide">Total</p>
-                            <p class="text-xl font-black text-slate-800" id="statTotal">{{ $this->summaryCounts['total'] }}</p>
-                        </div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center flex-shrink-0">
-                            <i class="fa-solid fa-circle-check text-green-600"></i>
-                        </div>
-                        <div>
-                            <p class="text-xs font-bold text-gray-400 uppercase tracking-wide">Accepted</p>
-                            <p class="text-xl font-black text-slate-800" id="statAccepted">{{ $this->summaryCounts['accepted'] }}</p>
-                        </div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="w-10 h-10 rounded-lg bg-yellow-50 flex items-center justify-center flex-shrink-0">
-                            <i class="fa-solid fa-hourglass-half text-yellow-500"></i>
-                        </div>
-                        <div>
-                            <p class="text-xs font-bold text-gray-400 uppercase tracking-wide">Pending</p>
-                            <p class="text-xl font-black text-slate-800" id="statPending">{{ $this->summaryCounts['pending'] }}</p>
-                        </div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
-                            <i class="fa-solid fa-flag-checkered text-blue-600"></i>
-                        </div>
-                        <div>
-                            <p class="text-xs font-bold text-gray-400 uppercase tracking-wide">Completed</p>
-                            <p class="text-xl font-black text-slate-800" id="statCompleted">{{ $this->summaryCounts['completed'] }}</p>
-                        </div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="w-10 h-10 rounded-lg bg-purple-50 flex items-center justify-center flex-shrink-0">
-                            <i class="fa-solid fa-stopwatch text-purple-600"></i>
-                        </div>
-                        <div>
-                            <p class="text-xs font-bold text-gray-400 uppercase tracking-wide">Total Hours</p>
-                            <p class="text-xl font-black text-slate-800" id="statHours">{{ $this->summaryCounts['totalHours'] }}</p>
-                        </div>
-                    </div>
-                </div>
+{{-- Summary Stat Cards --}}
+<div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-6">
+    <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-slate-400 flex items-center gap-4">
+        <div class="text-2xl"><i class="fa-solid fa-list-check text-slate-500"></i></div>
+        <div>
+            <h3 class="text-xs font-bold text-gray-400 uppercase leading-none">Total</h3>
+            <p class="text-2xl font-black text-slate-800" id="statTotal">{{ $this->summaryCounts['total'] }}</p>
+        </div>
+    </div>
+    <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-green-600 flex items-center gap-4">
+        <div class="text-2xl"><i class="fa-solid fa-circle-check text-green-600"></i></div>
+        <div>
+            <h3 class="text-xs font-bold text-gray-400 uppercase leading-none">Accepted</h3>
+            <p class="text-2xl font-black text-slate-800" id="statAccepted">{{ $this->summaryCounts['accepted'] }}</p>
+        </div>
+    </div>
+    <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-yellow-500 flex items-center gap-4">
+        <div class="text-2xl"><i class="fa-solid fa-hourglass-half text-yellow-500"></i></div>
+        <div>
+            <h3 class="text-xs font-bold text-gray-400 uppercase leading-none">Pending</h3>
+            <p class="text-2xl font-black text-slate-800" id="statPending">{{ $this->summaryCounts['pending'] }}</p>
+        </div>
+    </div>
+    <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-blue-600 flex items-center gap-4">
+        <div class="text-2xl"><i class="fa-solid fa-flag-checkered text-blue-600"></i></div>
+        <div>
+            <h3 class="text-xs font-bold text-gray-400 uppercase leading-none">Completed</h3>
+            <p class="text-2xl font-black text-slate-800" id="statCompleted">{{ $this->summaryCounts['completed'] }}</p>
+        </div>
+    </div>
+    <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-purple-600 flex items-center gap-4">
+        <div class="text-2xl"><i class="fa-solid fa-stopwatch text-purple-600"></i></div>
+        <div>
+            <h3 class="text-xs font-bold text-gray-400 uppercase leading-none">Total Hours</h3>
+            <p class="text-2xl font-black text-slate-800" id="statHours">{{ $this->summaryCounts['totalHours'] }}</p>
+        </div>
+    </div>
+</div>
 
                 {{-- Sessions Table Card --}}
                 <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-visible">
@@ -506,7 +496,7 @@ Bookings::where('mentor_id', $mentorProfile->id)
                                     <th onclick="setSort('status')" class="cursor-pointer px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider select-none" style="width:10%;">
                                         <div class="flex items-center gap-1 hover:text-red-800 transition">Status<span id="sort-status" class="text-[10px]"></span></div>
                                     </th>
-                                    <th class="px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider select-none text-right" style="width:8%;">Actions</th>
+                                    <th class="px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider select-none text-center" style="width:8%;">Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="sessionsTable">
@@ -753,30 +743,30 @@ const iconBtn = (icon, label, status, color, textColor) =>
     if (s.status === 'pending') {
         if (s.is_open) {
             buttons = iconBtn('fa-hand-pointer', 'Claim Session', 'accepted', 'bg-purple-100 hover:bg-purple-200', 'text-purple-700');
-            idleIndicator = `<span class="w-2 h-2 rounded-full bg-purple-400 inline-block"></span>`;
+            idleIndicator = `<span class="w-2 h-2 rounded-full bg-purple-400 inline-block text-center"></span>`;
         } else {
             buttons = iconBtn('fa-check', 'Accept', 'accepted', 'bg-emerald-100 hover:bg-emerald-200', 'text-emerald-700')
                     + iconBtn('fa-xmark', 'Reject', 'rejected', 'bg-red-100 hover:bg-red-200', 'text-red-600');
-            idleIndicator = `<span class="w-2 h-2 rounded-full bg-yellow-400 inline-block"></span>`;
+            idleIndicator = `<span class="w-2 h-2 rounded-full bg-yellow-400 inline-block text-center"></span>`;
         }
     } else if (s.status === 'accepted') {
         buttons = iconBtn('fa-flag-checkered', 'Complete',  'completed', 'bg-gray-100 hover:bg-gray-200',   'text-gray-600')
                 + iconBtn('fa-user-slash',     'No-show',   'no_show',   'bg-orange-100 hover:bg-orange-200','text-orange-600')
                 + iconBtn('fa-ban',            'Cancel',    'cancelled', 'bg-red-100 hover:bg-red-200',      'text-red-600');
-        idleIndicator = `<span class="w-2 h-2 rounded-full bg-green-400 inline-block"></span>`;
+        idleIndicator = `<span class="w-2 h-2 rounded-full bg-green-400 inline-block text-center"></span>`;
     } else if (s.status === 'completed' || s.status === 'no_show' || s.status === 'rejected') {
         buttons = iconBtn('fa-rotate-left', 'Undo', 'accepted', 'bg-gray-100 hover:bg-gray-200', 'text-gray-500');
-        idleIndicator = `<span class="w-2 h-2 rounded-full bg-gray-300 inline-block"></span>`;
+        idleIndicator = `<span class="w-2 h-2 rounded-full bg-gray-300 inline-block text-center"></span>`;
     } else {
         return `<div class="flex justify-end"><span class="text-gray-200 text-[10px]">—</span></div>`;
     }
 
     return `
         <div class="relative flex items-center justify-end" style="min-height:28px;">
-            <div class="action-idle absolute right-0 flex items-center gap-1 pointer-events-none">
+            <div class="action-idle text-center flex items-center gap-1 pointer-events-none">
                 ${idleIndicator}
             </div>
-            <div class="action-buttons flex items-center gap-1 justify-end">
+            <div class="action-buttons flex items-center gap-1 text-center">
                 ${buttons}
             </div>
         </div>
