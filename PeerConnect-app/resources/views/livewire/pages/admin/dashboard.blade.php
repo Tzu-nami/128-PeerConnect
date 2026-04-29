@@ -237,6 +237,25 @@ $collegeActivity = computed(function () {
         ->toArray();
 });
 
+$dashboardStats = computed(function () {
+    $all = \DB::table('feedback')->get();
+    $totalSessions = \DB::table('bookings')->where('booking_status', 'completed')->count();
+    
+    if ($all->isEmpty()) {
+        return ['avg' => '0.0', 'total' => 0, 'sessions' => number_format($totalSessions)];
+    }
+
+    $totalScores = [];
+    foreach ($all as $fb) {
+        $scores = array_filter([$fb->q1, $fb->q2, $fb->q3, $fb->q4, $fb->q5, $fb->q6, $fb->q7, $fb->q8, $fb->q9], fn($v) => !is_null($v));
+        if (count($scores) > 0) $totalScores[] = array_sum($scores) / count($scores);
+    }
+
+    return [
+        'avg'      => number_format(count($totalScores) > 0 ? array_sum($totalScores) / count($totalScores) : 0, 1),
+    ];
+});
+
 $allSubjects = computed(function () {
     return Subjects::orderBy('code')->get()
         ->map(fn($subs) => ['id' => $subs->id, 'code' => $subs->code, 'name' => $subs->name])
@@ -843,8 +862,8 @@ $allSessions = Bookings::with(['mentor.user', 'student.user', 'subject'])
       <i class="fa-solid fa-star text-red-600"></i>
     </div>
     <div>
-      <h3 class="text-xs font-bold text-gray-400 uppercase leading-none">Ratings</h3>
-      <p class="text-2xl font-black">4.9</p>
+      <h3 class="text-xs font-bold text-gray-400 uppercase leading-none">Average Ratings</h3>
+      <p class="text-2xl font-black">{{ $this->dashboardStats['avg'] }}</p>
     </div>
   </div>
 
