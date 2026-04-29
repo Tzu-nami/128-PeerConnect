@@ -921,9 +921,9 @@ mount(function () {
         </div>
     </div>
 
-    {{-- ── ADD MENTOR MODAL ── --}}
+    {{-- Add Mentor Modal --}}
     <div x-show="$wire.showModal" x-cloak class="modal-overlay" 
-        x-data="{ fileName: '' }" 
+        x-data="{ fileName: '', isVerifying: false }" 
         x-init="$watch('$wire.showModal', val => { if (!val) { fileName = ''; document.getElementById('avatar-upload').value = ''; } })">
         <div class="bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col" style="max-height: 90vh;">
             <div class="px-8 py-6 border-b flex justify-between items-center flex-shrink-0 bg-white">
@@ -931,7 +931,7 @@ mount(function () {
                     <h2 class="text-xl font-black text-slate-800">Register Mentor</h2>
                     <p class="text-sm text-gray-400 mt-0.5">Add their email, assign their subjects, then set their availabilities.</p>
                 </div>
-                <button wire:click="closeModal" @click="$wire.showModal = false" class="text-gray-400 hover:text-red-600 transition">
+                <button wire:click="closeModal" @click="$wire.showModal = false" class="text-gray-400 hover:text-red-600 transition disabled:cursor-not-allowed" x-bind:disabled="isVerifying">
                     <i class="fa-solid fa-xmark text-xl"></i>
                 </button>
             </div>
@@ -950,11 +950,15 @@ mount(function () {
                                 @error('up_mail') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
                                 @if($emailError) <p class="mt-1 text-xs text-red-600">{{ $emailError }}</p> @endif
                             </div>
-                            <button wire:click="checkEmail" type="button"
-                                class="w-full px-4 py-2.5 bg-slate-800 text-white text-xs font-bold rounded-lg hover:bg-black transition"
-                                wire:loading.attr="disabled" wire:target="checkEmail">
-                                <span wire:loading.remove wire:target="checkEmail">Find Email</span>
-                                <span wire:loading wire:target="checkEmail"><i class="fa-solid fa-spinner fa-spin mr-1"></i>Verifying...</span>
+                            <button type="button"
+                                x-data="{ isVerifying: false }"
+                                @click="isVerifying = true; $wire.checkEmail().finally(() => isVerifying = false)"
+                                x-bind:disabled="isVerifying"
+                                class="w-full px-4 py-2.5 bg-slate-800 text-white text-xs font-bold rounded-lg hover:bg-black transition disabled:cursor-not-allowed">
+                                <span x-show="!isVerifying">Find Email</span>
+                                <span x-show="isVerifying" style="display: none;">
+                                    <i class="fa-solid fa-spinner fa-spin mr-1"></i>Verifying...
+                                </span>
                             </button>
                         </div>
                         @if($newMentor)
@@ -1080,15 +1084,15 @@ mount(function () {
 
             <div class="px-8 py-5 bg-white border-t flex-shrink-0">
                 <div class="flex gap-3">
-                    <button type="button" wire:click="closeModal" @click="$wire.showModal = false"
-                        class="flex-1 py-3 text-xs font-bold text-gray-800 bg-gray-200 hover:bg-gray-300 rounded-xl transition">
+                    <button type="button" wire:click="closeModal" @click="$wire.showModal = false" x-bind:disabled="isVerifying"
+                        class="flex-1 py-3 text-xs font-bold text-gray-800 bg-gray-200 hover:bg-gray-300 rounded-xl transition disabled:cursor-not-allowed">
                         Cancel
                     </button>
-                    <button type="button" wire:click="confirmMentor"
-                        class="flex-1 bg-red-900 text-white py-3 rounded-xl text-xs font-bold shadow-lg hover:bg-red-800 transition"
-                        wire:loading.attr="disabled" wire:target="confirmMentor">
-                        <span wire:loading.remove wire:target="confirmMentor">Register Mentor</span>
-                        <span wire:loading wire:target="confirmMentor"><i class="fa-solid fa-spinner fa-spin mr-1"></i>Validating...</span>
+                    <button type="button" @click="isVerifying = true; $wire.confirmMentor().finally(() => isVerifying = false)"
+                        x-bind:disabled="isVerifying"
+                        class="flex-1 bg-red-900 text-white py-3 rounded-xl text-xs font-bold shadow-lg hover:bg-red-800 transition disabled:cursor-not-allowed">
+                        <span x-show="!isVerifying">Register Mentor</span>
+                        <span x-show="isVerifying" style="display: none;"><i class="fa-solid fa-spinner fa-spin mr-1"></i>Validating...</span>
                     </button>
                 </div>
             </div>
@@ -1103,13 +1107,13 @@ mount(function () {
             </div>
             <h3 class="text-xl font-black text-slate-800">Confirm Mentor Registration</h3>
             <p class="text-sm text-gray-500 mt-2 mb-8">This will register the student as a peer mentor and will allow them access to the mentor module.</p>
-            <div class="flex gap-3">
-                <button type="button" @click="$wire.showConfirm = false" class="flex-1 py-3 text-xs font-bold text-gray-800 bg-gray-200 hover:bg-gray-300 rounded-xl transition">Cancel</button>
-                <button type="button" wire:click="saveMentor"
-                    class="flex-1 bg-red-900 text-white py-3 rounded-xl text-xs font-bold shadow-lg hover:bg-red-800 transition"
-                    wire:loading.attr="disabled" wire:target="saveMentor">
-                    <span wire:loading.remove wire:target="saveMentor">Save</span>
-                    <span wire:loading wire:target="saveMentor"><i class="fa-solid fa-spinner fa-spin mr-1"></i>Saving...</span>
+            <div class="flex gap-3" x-data="{ isSaving: false }">
+                <button type="button" @click="$wire.showConfirm = false" class="flex-1 py-3 text-xs font-bold text-gray-800 bg-gray-200 hover:bg-gray-300 rounded-xl transition disabled:cursor-not-allowed" x-bind:disabled="isSaving">Cancel</button>
+                <button type="button" @click="isSaving = true; $wire.saveMentor().finally(() => isSaving = false)"
+                    class="flex-1 bg-red-900 text-white py-3 rounded-xl text-xs font-bold shadow-lg hover:bg-red-800 transition disabled:cursor-not-allowed" x-bind:disabled="isSaving"
+                    >
+                    <span x-show="!isSaving">Save</span>
+                    <span x-show="isSaving" style="display: none;"><i class="fa-solid fa-spinner fa-spin mr-1"></i>Saving...</span>
                 </button>
             </div>
         </div>
@@ -1117,7 +1121,7 @@ mount(function () {
 
     {{-- ── EDIT MENTOR MODAL ── --}}
     <div x-show="showEditModal" x-cloak class="modal-overlay" 
-        x-data="{ fileName: '' }" 
+        x-data="{ fileName: '', isVerifying: false }" 
         x-init="$watch('showEditModal', val => { if (!val) { fileName = ''; document.getElementById('edit-avatar-upload').value = ''; } })">
         <div class="bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col" style="max-height: 90vh;">
             <div class="px-8 py-6 bg-white border-b flex justify-between items-center flex-shrink-0">
@@ -1125,7 +1129,7 @@ mount(function () {
                     <h2 class="text-xl font-black text-slate-800">Edit Mentor Profile</h2>
                     <p class="text-sm text-gray-400 mt-0.5">Update their profile picture, teachable subjects, or their availabilities.</p>
                 </div>
-                <button @click="showEditModal = false; $wire.closeEditModal()" class="text-gray-400 hover:text-red-600 transition">
+                <button @click="showEditModal = false; $wire.closeEditModal()" class="text-gray-400 hover:text-red-600 transition disabled:cursor-not-allowed" x-bind:disabled="isVerifying">
                     <i class="fa-solid fa-xmark text-xl"></i>
                 </button>
             </div>
@@ -1256,13 +1260,13 @@ mount(function () {
 
             <div class="px-8 py-5 bg-white border-t flex-shrink-0">
                 <div class="flex gap-3">
-                    <button type="button" @click="showEditModal = false; $wire.closeEditModal()"
-                        class="flex-1 py-3 text-xs font-bold text-gray-800 bg-gray-200 hover:bg-gray-300 rounded-xl transition">Cancel</button>
-                    <button type="button" @click="$wire.confirmEdit(editingMentor.id, editForm.subjects, editForm.availabilities)"
+                    <button type="button" @click="showEditModal = false; $wire.closeEditModal()" x-bind:disabled="isVerifying"
+                        class="flex-1 py-3 text-xs font-bold text-gray-800 bg-gray-200 hover:bg-gray-300 rounded-xl transition disabled:cursor-not-allowed">Cancel</button>
+                    <button type="button" @click="isVerifying = true; $wire.confirmEdit(editingMentor.id, editForm.subjects, editForm.availabilities).finally(() => isVerifying = false)" x-bind:disabled="isVerifying"
                         class="flex-1 bg-red-900 text-white py-3 rounded-xl text-xs font-bold shadow-lg hover:bg-red-800 transition"
-                        wire:loading.attr="disabled" wire:target="confirmEdit">
-                        <span wire:loading.remove wire:target="confirmEdit">Save Changes</span>
-                        <span wire:loading wire:target="confirmEdit"><i class="fa-solid fa-spinner fa-spin mr-1"></i>Validating...</span>
+                        >
+                        <span x-show="!isVerifying">Save Changes</span>
+                        <span x-show="isVerifying" style="display: none;"><i class="fa-solid fa-spinner fa-spin mr-1"></i>Validating...</span>
                     </button>
                 </div>
             </div>
@@ -1277,27 +1281,27 @@ mount(function () {
             </div>
             <h3 class="text-xl font-black text-slate-800">Confirm Changes</h3>
             <p class="text-sm text-gray-500 mt-2 mb-8">This will update the mentor's profile information.</p>
-            <div class="flex gap-3">
-                <button type="button" @click="$wire.showEditConfirm = false" class="flex-1 py-3 text-xs font-bold text-gray-800 bg-gray-200 hover:bg-gray-300 rounded-xl transition">Cancel</button>
-                <button type="button" wire:click="updateMentor"
-                    class="flex-1 bg-blue-600 text-white py-3 rounded-xl text-xs font-bold shadow-lg hover:bg-blue-800 transition"
-                    wire:loading.attr="disabled" wire:target="updateMentor">
-                    <span wire:loading.remove wire:target="updateMentor">Save</span>
-                    <span wire:loading wire:target="updateMentor"><i class="fa-solid fa-spinner fa-spin mr-1"></i>Saving...</span>
+            <div class="flex gap-3" x-data="{ isSaving: false }">
+                <button type="button" @click="$wire.showEditConfirm = false" class="flex-1 py-3 text-xs font-bold text-gray-800 bg-gray-200 hover:bg-gray-300 rounded-xl transition disabled:cursor-not-allowed" x-bind:disabled="isSaving">Cancel</button>
+                <button type="button" @click="isSaving = true; $wire.updateMentor().finally(() => isSaving = false)"
+                    class="flex-1 bg-blue-600 text-white py-3 rounded-xl text-xs font-bold shadow-lg hover:bg-blue-800 transition disabled:cursor-not-allowed"
+                    wire:loading.attr="disabled" wire:target="updateMentor.finally(() => isSaving = false)" x-bind:disabled="isSaving">
+                    <span x-show="!isSaving">Save</span>
+                    <span x-show="isSaving" style="display: none;"><i class="fa-solid fa-spinner fa-spin mr-1"></i>Saving...</span>
                 </button>
             </div>
         </div>
     </div>
 
     {{-- ── SUBJECT MODAL ── --}}
-    <div x-show="$wire.showSubjectModal" x-cloak class="modal-overlay">
+    <div x-show="$wire.showSubjectModal" x-cloak class="modal-overlay" x-data="{ isVerifying: false }">
         <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden">
             <div class="px-8 py-5 bg-white border-b flex justify-between items-center">
                 <div>
                     <h2 class="text-lg font-black text-slate-800">Add New Subject</h2>
                     <p class="text-xs text-gray-400 mt-0.5">This subject will become available for mentor assignments.</p>
                 </div>
-                <button wire:click="closeSubjectModal" @click="$wire.showSubjectModal = false" class="text-gray-400 hover:text-red-600 transition">
+                <button wire:click="closeSubjectModal" @click="$wire.showSubjectModal = false"  x-bind:disabled="isVerifying" class="text-gray-400 hover:text-red-600 transition disabled:cursor-not-allowed">
                     <i class="fa-solid fa-xmark text-xl"></i>
                 </button>
             </div>
@@ -1315,13 +1319,13 @@ mount(function () {
             </div>
             <div class="px-8 py-5 bg-white border-t">
                 <div class="flex gap-3">
-                    <button type="button" wire:click="closeSubjectModal" @click="$wire.showSubjectModal = false"
-                        class="flex-1 py-3 text-xs font-bold text-gray-800 bg-gray-200 hover:bg-gray-300 rounded-xl transition">Cancel</button>
-                    <button type="button" wire:click="confirmSubject"
-                        class="flex-1 bg-red-900 text-white py-3 rounded-xl text-xs font-bold shadow-lg hover:bg-red-800 transition"
-                        wire:loading.attr="disabled" wire:target="confirmSubject">
-                        <span wire:loading.remove wire:target="confirmSubject">Add Subject</span>
-                        <span wire:loading wire:target="confirmSubject"><i class="fa-solid fa-spinner fa-spin mr-1"></i>Validating...</span>
+                    <button type="button" wire:click="closeSubjectModal" @click="$wire.showSubjectModal = false" x-bind:disabled="isVerifying"
+                        class="flex-1 py-3 text-xs font-bold text-gray-800 bg-gray-200 hover:bg-gray-300 rounded-xl transition disabled:cursor-not-allowed">Cancel</button>
+                    <button type="button" @click="isVerifying = true; $wire.confirmSubject().finally(() => isVerifying = false)" x-bind:disabled="isVerifying"
+                        class="flex-1 bg-red-900 text-white py-3 rounded-xl text-xs font-bold shadow-lg hover:bg-red-800 transition disabled:cursor-not-allowed"
+                        >
+                        <span x-show="!isVerifying">Add Subject</span>
+                        <span x-show="isVerifying" style="display: none;"><i class="fa-solid fa-spinner fa-spin mr-1"></i>Validating...</span>
                     </button>
                 </div>
             </div>
@@ -1336,13 +1340,12 @@ mount(function () {
             </div>
             <h3 class="text-xl font-black text-slate-800">Confirm New Subject</h3>
             <p class="text-sm text-gray-500 mt-2 mb-8">This will be added to the list of available subjects.</p>
-            <div class="flex gap-3">
-                <button type="button" @click="$wire.showSubjectConfirm = false" class="flex-1 py-3 text-xs font-bold text-gray-800 bg-gray-200 hover:bg-gray-300 rounded-xl transition">Cancel</button>
-                <button type="button" wire:click="saveSubject"
-                    class="flex-1 bg-red-900 text-white py-3 rounded-xl text-xs font-bold shadow-lg hover:bg-red-800 transition"
-                    wire:loading.attr="disabled" wire:target="saveSubject">
-                    <span wire:loading.remove wire:target="saveSubject">Save</span>
-                    <span wire:loading wire:target="saveSubject"><i class="fa-solid fa-spinner fa-spin mr-1"></i>Saving...</span>
+            <div class="flex gap-3" x-data="{ isSaving: false }">
+                <button type="button" @click="$wire.showSubjectConfirm = false" class="flex-1 py-3 text-xs font-bold text-gray-800 bg-gray-200 hover:bg-gray-300 rounded-xl transition disabled:cursor-not-allowed" x-bind:disabled="isSaving">Cancel</button>
+                <button type="button" @click="isSaving = true; $wire.saveSubject().finally(() => isSaving = false)" x-bind:disabled="isSaving" 
+                    class="flex-1 bg-red-900 text-white py-3 rounded-xl text-xs font-bold shadow-lg hover:bg-red-800 transition disabled:cursor-not-allowed">
+                    <span x-show="!isSaving">Save</span>
+                    <span x-show="isSaving" style="display: none;"><i class="fa-solid fa-spinner fa-spin mr-1"></i>Saving...</span>
                 </button>
             </div>
         </div>
