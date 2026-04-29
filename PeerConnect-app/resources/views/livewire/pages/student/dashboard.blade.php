@@ -686,6 +686,46 @@ $dismissSuccessMessage = action(function () {
                             </div>
                         </div>
                     </div>
+<!-- STATS ROW -->
+<div class="grid grid-cols-3 gap-4">
+
+    <!-- Total Session Hours -->
+    <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex items-center gap-4">
+        <div class="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center flex-shrink-0">
+            <i class="fa-solid fa-clock text-blue-600 text-sm"></i>
+        </div>
+        <div>
+            <p class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Total Session Hours</p>
+            <p class="text-2xl font-bold text-slate-800 leading-tight" id="statTotalHours">0h</p>
+            <p class="text-[10px] text-gray-400 mt-0.5" id="statTotalHoursLabel">all time</p>
+        </div>
+    </div>
+
+    <!-- Completed Sessions -->
+    <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex items-center gap-4">
+        <div class="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center flex-shrink-0">
+            <i class="fa-solid fa-circle-check text-green-600 text-sm"></i>
+        </div>
+        <div>
+            <p class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Completed</p>
+            <p class="text-2xl font-bold text-slate-800 leading-tight" id="statCompleted">0</p>
+            <p class="text-[10px] text-gray-400 mt-0.5">sessions</p>
+        </div>
+    </div>
+
+    <!-- Upcoming Sessions -->
+    <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex items-center gap-4">
+        <div class="w-10 h-10 rounded-full bg-yellow-50 flex items-center justify-center flex-shrink-0">
+            <i class="fa-solid fa-calendar-days text-yellow-500 text-sm"></i>
+        </div>
+        <div>
+            <p class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Upcoming</p>
+            <p class="text-2xl font-bold text-slate-800 leading-tight" id="statUpcoming">0</p>
+            <p class="text-[10px] text-gray-400 mt-0.5">accepted sessions</p>
+        </div>
+    </div>
+
+</div>
 
                     <!-- WEEKLY SCHEDULE (grid-based, from mentor dashboard) -->
                     <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
@@ -1388,6 +1428,7 @@ function initDashboard() {
     refreshSchedules();
     updateTableDate();
     updateClock();
+    renderStatCards();
 }
 
 window.addEventListener('load', initDashboard);
