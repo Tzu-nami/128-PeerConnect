@@ -582,7 +582,7 @@ $dismissSuccessMessage = action(function () {
                         x-model="query"
                         @focus="open = true"
                         @keydown.escape.window="open = false; query = ''"
-                        placeholder="Search mentors, courses, recent sessions, or feedbacks..."
+                        placeholder="Search mentors, courses or recent sessions..."
                         class="w-full pl-8 pr-3 py-1.5 text-xs font-medium text-slate-700 placeholder-gray-400 border border-gray-200 rounded-lg bg-white outline-none focus:ring-1 focus:border-up-maroon focus:ring-up-maroon h-[34px] transition-shadow"
                     >
                 </div>

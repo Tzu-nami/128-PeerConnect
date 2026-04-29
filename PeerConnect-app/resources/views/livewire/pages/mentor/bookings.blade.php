@@ -12,6 +12,9 @@ use App\Models\YearLevels;
 use App\Models\MentorSubjects;
 use App\Models\MentorAvailabilities;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\MentorBookingNotification;
+use App\Mail\StudentCancelledSession;
 use function Livewire\Volt\{layout, state, mount, action, computed, updated};
 
 layout('layouts.app');
@@ -171,39 +174,136 @@ $saveProfile = action(function () {
     $this->dispatch('profile-updated');
 });
 
-// Check if there is input in forms
-$validateBooking = action(function () {
-    abort_if(!auth()->user()->isMentor(), 403, 'Unauthorized Access');
+// Check and validate input in forms
+$bookingRules = [
+    'mentor_id' => ['required'],
+    'subject_id' => ['required', 'exists:subjects,id'],
+    'topic' => ['required', 'string', 'max:255'],
+    'tutorialMode_id' => ['required', 'exists:tutorial_modes,id'],
+    'date' => ['required', 'date', 'after:today', function($attribute, $value, $fail) {
+        if (\Carbon\Carbon::parse($value)->format('l') === 'Sunday') {
+            $fail('The session cannot be on a Sunday. Please select another date.');
+        }
+    }],
+    'schedule_start' => ['required', 'date_format:H:i'],
+    'schedule_end' => ['required', 'date_format:H:i', 'after:schedule_start'], 
+];
 
-    $this->validate([
-        'subject_id' => ['required', 'exists:subjects,id'],
-        'topic' => ['required', 'string', 'max:255'],
-        'tutorialMode_id' => ['required', 'exists:tutorial_modes,id'],
-        'date' => ['required', 'date', 'after:today', function($attribute, $value, $fail) {
-            $sessionDate = \Carbon\Carbon::parse($value)->format('l, F j, Y');
-            if ($sessionDate === 'Sunday') {
-                $fail('The session cannot be on a Sunday. Please select another date.');
-            }
-        }],
-        'schedule_start' => ['required', 'date_format:H:i'],
-        'schedule_end' => ['required', 'date_format:H:i'],
-        'mentor_id' => ['required'],
-    ],  attributes: [
-        'subject_id' => 'subject',
-        'topic' => 'topic',
-        'tutorialMode_id' => 'mode of tutorial',
-        'date' => 'date',
-        'schedule_start' => 'start time',
-        'schedule_end' => 'end time',
-        'mentor_id' => 'mentor',
-    ]);
-    if ($this->schedule_end <= $this->schedule_start) {
-        $this->addError('schedule_end', 'End time must be later than start time.');
+$bookingAttributes = [
+    'mentor_id' => 'mentor',
+    'subject_id' => 'subject',
+    'topic' => 'topic',
+    'tutorialMode_id' => 'mode of tutorial',
+    'date' => 'date',
+    'schedule_start' => 'start time',
+    'schedule_end' => 'end time',
+];
+
+// Validate info before showing confirmation
+$validateBooking = action(function () use ($bookingRules, $bookingAttributes) {
+    abort_if(!auth()->user()->isMentor(), 403, 'Unauthorized Access');
+    
+    $profile = StudentProfiles::where('user_id', auth()->id())->first();
+    abort_if(!$profile, 422);
+
+    $hasActive = Bookings::where('student_id', $profile->id)
+        ->whereRaw("booking_status::text IN ('pending', 'accepted')")
+        ->exists();
+
+    if ($hasActive) {
+        $this->addError('mentor_id', 'You already have an active booking. Please wait for it to be completed or rejected before making a new one.');
         return;
     }
 
-    // If validation passes, open the confirmation modal
+    if ($this->mentor_id && $this->mentor_id !== 'any') {
+        $selectedMentor = MentorProfiles::find($this->mentor_id);
+        if ($selectedMentor && $selectedMentor->user_id === auth()->id()) {
+            $this->addError('mentor_id', 'You cannot book yourself as a mentor.');
+            return;
+        }
+    }
+    $validated = $this->validate($bookingRules, [], $bookingAttributes);
+
+    if ($validated['mentor_id'] === 'any') {
+        $dayOfWeek = strtolower(\Carbon\Carbon::parse($validated['date'])->format('l'));
+
+        $qualifiedMentors = \App\Models\User::whereHas('mentorProfile', function($trait) use ($validated, $dayOfWeek) {
+            $trait->whereHas('subjects', function($subTrait) use ($validated) {
+                $subTrait->where('subject_id', $validated['subject_id']);
+            })->whereHas('availabilities', function($availTrait) use ($validated, $dayOfWeek) {
+                $availTrait->where('day_of_week', $dayOfWeek)
+                           ->whereTime('start_time', '<=', $validated['schedule_start'])
+                           ->whereTime('end_time', '>=', $validated['schedule_end']);
+            });
+        })->where('id', '!=', auth()->id())->exists();
+
+        if (!$qualifiedMentors) {
+            $this->addError('mentor_id', 'No mentors are available for this specific date and timeframe.');
+            return;
+        }
+    }
     $this->dispatch('show-booking-confirm');
+});
+
+// Submit booking form
+$submitBooking = action(function () use ($bookingRules, $bookingAttributes) {
+    abort_if(!auth()->user()->isMentor(), 403, 'Unauthorized Access');
+    
+    $profile = StudentProfiles::where('user_id', auth()->id())->first();
+    abort_if(!$profile, 422);
+
+    $validated = $this->validate($bookingRules, [], $bookingAttributes);
+
+    // For "any" choice of peer mentor
+    if ($validated['mentor_id'] === 'any') {
+        $dayOfWeek = strtolower(\Carbon\Carbon::parse($validated['date'])->format('l'));
+
+        // Find all mentors who fit subject and timeslot criteria
+        $qualifiedMentors = \App\Models\User::whereHas('mentorProfile', function($trait) use ($validated, $dayOfWeek) {
+            $trait->whereHas('subjects', function($subTrait) use ($validated) {
+                $subTrait->where('subject_id', $validated['subject_id']);
+            })->whereHas('availabilities', function($availTrait) use ($validated, $dayOfWeek) {
+                $availTrait->where('day_of_week', $dayOfWeek)
+                           ->whereTime('start_time', '<=', $validated['schedule_start'])
+                           ->whereTime('end_time', '>=', $validated['schedule_end']);
+            });
+        })->where('id', '!=', auth()->id())->get();
+
+        // Check if there exists a mentor
+        if ($qualifiedMentors->isEmpty()) {
+            $this->addError('mentor_id', 'No mentors are available for this specific date and timeframe.');
+            return;
+        }
+
+        // Set mentor to null until someone accepts
+        $booking = Bookings::create([
+            ...$validated,
+            'student_id' => $profile->id,
+            'mentor_id' => null,
+            'booking_status' => 'pending',
+        ]);
+
+        $emails = $qualifiedMentors->pluck('email')->filter()->toArray();
+        if (!empty($emails)) {
+            Mail::to($emails)->send(new MentorBookingNotification($booking));
+        }
+    } else {
+        // Specific mentor chosen
+        $booking = Bookings::create([
+            ...$validated,
+            'student_id' => $profile->id,
+            'booking_status' => 'pending',
+        ]);
+
+        // Send email
+        $selectedMentor = MentorProfiles::find($validated['mentor_id']);
+        if ($selectedMentor && $selectedMentor->user->email) {
+            Mail::to($selectedMentor->user->email)->send(new MentorBookingNotification($booking));
+        }
+    }
+
+    $this->reset(['mentor_id', 'subject_id', 'topic', 'tutorialMode_id', 'date', 'schedule_start', 'schedule_end']);
+    $this->successMessage = true;
 });
 
 
@@ -242,91 +342,6 @@ $prevFeedbackStep = action(function () {
     }
 });
 
-// Submit booking form
-$submitBooking = action(function () {
-    abort_if(!auth()->user()->isMentor(), 403, 'Unauthorized Access');
-    abort_if(!auth()->user()->studentProfile, 422);
-
-    $profile = StudentProfiles::where('user_id', auth()->id())->first();
-
-    
-    $hasActive = Bookings::where('student_id', $profile->id)
-        ->whereRaw("booking_status::text IN ('pending', 'accepted')")
-        ->exists();
-
-    if ($hasActive) {
-        session()->flash('error', 'You already have an active booking. Please wait for it to be completed or rejected before making a new one.');
-        return;
-    }
-
-    $validated = $this->validate([
-        'mentor_id' => ['required'],
-        'subject_id' => ['required', 'exists:subjects,id'],
-        'topic' => ['required', 'string', 'max:255'],
-        'tutorialMode_id' => ['required', 'exists:tutorial_modes,id'],
-        'date' => ['required', 'date', 'after:today', function($attribute, $value, $fail) {
-            $sessionDate = \Carbon\Carbon::parse($value)->format('l, F j, Y');
-            if ($sessionDate === 'Sunday') {
-                $fail('The session cannot be on a Sunday. Please select another date.');
-            }
-        }],
-        'schedule_start' => ['required', 'date_format:H:i'],
-        'schedule_end' => ['required', 'date_format:H:i', 'after:schedule_start'],
-    ],  attributes: [
-        'mentor_id' => 'mentor',
-        'subject_id' => 'subject',
-        'topic' => 'topic',
-        'tutorialMode_id' => 'mode of tutorial',
-        'date' => 'date',
-        'schedule_start' => 'start time',
-        'schedule_end' => 'end time',
-    ]);
-
-    // For "any" choice of peer mentor
-    if($validated['mentor_id'] === 'any') {
-        $dayOfWeek = strtolower(\Carbon\Carbon::parse($validated['date'])->format('l'));
-
-        // Find all mentors who fit subject and timeslot criteria
-        $qualifiedMentors = \App\Models\User::whereHas('mentorProfile', function($trait) use ($validated, $dayOfWeek) {
-            $trait->whereHas('subjects', function($subTrait) use ($validated) {
-                $subTrait->where('subject_id', $validated['subject_id']);
-            })->whereHas('availabilities',function($availTrait) use ($validated, $dayOfWeek) {
-                $availTrait->where('day_of_week', $dayOfWeek)->whereTime('start_time', '<=', $validated['schedule_start'])->whereTime('end_time', '>=', $validated['schedule_end']);
-            });
-        })->where('id', '!=', auth()->id())->get();
-
-        // Check if there exists mentor
-        if($qualifiedMentors->isEmpty()) {
-            $this->addError('mentor_id', 'No mentors are available for this specific date and timeframe.');
-            return;
-        }
-        // Set mentor to null until someone accepts
-        $booking = Bookings::create([
-            ...$validated,
-            'student_id' => $profile->id,
-            'mentor_id' => null,
-            'booking_status' => 'pending',
-        ]);
-    } else {
-
-    $selectedMentor = MentorProfiles::find($validated['mentor_id']);
-
-    if ($selectedMentor && $selectedMentor->user_id === auth()->id()) {
-        $this->addError('mentor_id', 'You cannot book yourself as a mentor.');
-        return;
-    }
-
-    Bookings::create([
-        ...$validated,
-        'student_id' => $profile->id,
-        'booking_status' => 'pending',
-    ]);
-    }
-
-    $this->reset(['mentor_id', 'subject_id', 'topic', 'tutorialMode_id', 'date', 'schedule_start', 'schedule_end']);
-    $this->successMessage = true;
-});
-
 $dismissSuccessMessage = action(function () {
     $this->successMessage = false;
 });
@@ -344,6 +359,7 @@ $cancelBooking = action(function () {
 
     abort_if(!$booking, 404);
     $booking->update(['booking_status' => 'cancelled']);
+    Mail::to($booking->mentor->user->email)->send(new StudentCancelledSession($booking));
     $this->cancelledMessage = true;
 });
 
@@ -1394,12 +1410,12 @@ $dismissFeedbackSubmitted = action(function () {
                                 <option value="{{ $subject['id'] }}">{{ strtoupper($subject['code']) }} - {{ $subject['name'] }}</option>
                             @endforeach
                         </select>
-                        @error('subject_id') <span x-show="showError('subject_id')" x-cloak class="mt-1 text-xs text-red-600 block">{{ $message }}</span> @enderror
+                        @error('subject_id') <span x-show="showError('subject_id')" x-cloak class="mt-1 text-xs text-red-600 block" wire:loading.class="hidden" wire:target="validateBooking">{{ $message }}</span> @enderror
                     </div>
                     <div>
                         <label class="block text-base font-medium text-gray-700 mb-1">Topic<span class="text-red-500">*</span></label>
                         <input type="text" wire:model="topic" class="w-full rounded-lg border-gray-300 shadow-sm text-base px-2 py-1 transition-colors" placeholder="e.g. Integration by Parts." maxlength="255">
-                        @error('topic') <span x-show="showError('topic')" x-cloak class="mt-1 text-xs text-red-600 block">{{ $message }}</span> @enderror
+                        @error('topic') <span x-show="showError('topic')" x-cloak class="mt-1 text-xs text-red-600 block" wire:loading.class="hidden" wire:target="validateBooking">{{ $message }}</span> @enderror
                     </div>
                     <div>
                         <label class="block text-base font-medium text-gray-700 mb-1">Tutorial Mode<span class="text-red-500">*</span></label>
@@ -1409,7 +1425,7 @@ $dismissFeedbackSubmitted = action(function () {
                                 <option value="{{ $mode['id'] }}">{{ $mode['mode'] }}</option>
                             @endforeach
                         </select>
-                        @error('tutorialMode_id') <span x-show="showError('tutorialMode_id')" x-cloak class="mt-1 text-xs text-red-600 block">{{ $message }}</span> @enderror
+                        @error('tutorialMode_id') <span x-show="showError('tutorialMode_id')" x-cloak class="mt-1 text-xs text-red-600 block" wire:loading.class="hidden" wire:target="validateBooking">{{ $message }}</span> @enderror
                     </div>
 
                     {{-- ══ Date + Time row — Custom pickers (from v2) ══ --}}
@@ -1456,7 +1472,7 @@ $dismissFeedbackSubmitted = action(function () {
                             </div>
                             {{-- Hidden native input keeps wire:model in sync --}}
                             <input type="date" wire:model="date" id="bookingDateHidden" class="hidden" min="{{ \Carbon\Carbon::tomorrow()->format('Y-m-d') }}">
-                            @error('date') <span x-show="showError('date')" x-cloak class="mt-1 text-xs text-red-600 block">{{ $message }}</span> @enderror
+                            @error('date') <span x-show="showError('date')" x-cloak class="mt-1 text-xs text-red-600 block" wire:loading.class="hidden" wire:target="validateBooking">{{ $message }}</span> @enderror
                             <span x-show="dateError" x-cloak class="mt-1 text-xs text-red-600 block" x-text="dateError"></span>
                         </div>
 
@@ -1497,7 +1513,7 @@ $dismissFeedbackSubmitted = action(function () {
                             </div>
                             {{-- Hidden native input keeps wire:model in sync --}}
                             <input type="time" wire:model="schedule_start" id="startTimeHidden" class="hidden">
-                            @error('schedule_start') <span x-show="showError('schedule_start')" x-cloak class="mt-1 text-xs text-red-600 block">{{ $message }}</span> @enderror
+                            @error('schedule_start') <span x-show="showError('schedule_start')" x-cloak class="mt-1 text-xs text-red-600 block" wire:loading.class="hidden" wire:target="validateBooking">{{ $message }}</span> @enderror
                         </div>
 
                         {{-- End Time — Custom Picker (with manual input) --}}
@@ -1545,7 +1561,7 @@ $dismissFeedbackSubmitted = action(function () {
                             </div>
                             {{-- Hidden native input keeps wire:model in sync --}}
                             <input type="time" wire:model="schedule_end" id="endTimeHidden" class="hidden">
-                            @error('schedule_end') <span x-show="showError('schedule_end')" x-cloak class="mt-1 text-xs text-red-600 block">{{ $message }}</span> @enderror
+                            @error('schedule_end') <span x-show="showError('schedule_end')" x-cloak class="mt-1 text-xs text-red-600 block" wire:loading.class="hidden" wire:target="validateBooking">{{ $message }}</span> @enderror
                             <span x-show="timeError" x-cloak class="mt-1 text-xs text-red-600 block" x-text="timeError"></span>
                         </div>
                     </div>
@@ -1568,7 +1584,7 @@ $dismissFeedbackSubmitted = action(function () {
                             <span class="text-[11px] text-blue-600 font-bold"><i class="fa-solid fa-lock mr-1"></i> Mentor Locked.</span>
                             <a href="{{ route('student.bookings') }}" class="text-[10px] text-gray-400 hover:text-red-600 underline">Unlock & Clear</a>
                         </div>
-                        @error('mentor_id') <span x-show="showError('mentor_id')" x-cloak class="mt-1 text-xs text-red-600 block">{{ $message }}</span> @enderror
+                        @error('mentor_id') <span x-show="showError('mentor_id')" x-cloak class="mt-1 text-xs text-red-600 block" wire:loading.class="hidden" wire:target="validateBooking">{{ $message }}</span> @enderror
                     </div>
                     <div x-show="mentor_id === 'any' && filteredMentors.length > 0" x-cloak class="mt-3 bg-blue-50 border border-blue-200 rounded-lg p-3 animate-[slideDown_0.2s_ease]">
                         <p class="text-xs font-bold text-blue-800 mb-1">

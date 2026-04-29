@@ -5,6 +5,13 @@ use App\Models\Bookings;
 use App\Models\MentorProfiles;
 use App\Models\MentorAvailabilities;
 use App\Models\MentorSubjects;
+use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\SessionAccepted;
+use App\Mail\SessionCompleted;
+use App\Mail\SessionRejected;
+use App\Mail\AdminCancelledMentor;
+use App\Mail\AdminCancelledStudent;
 
 layout('layouts.app');
 
@@ -436,7 +443,9 @@ $summaryCounts = computed(function () {
                                     <th onclick="setSort('date')" class="cursor-pointer px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider select-none" style="width:14%;">
                                         <div class="flex items-center gap-1 hover:text-red-800 transition">Date & Time<span id="sort-date" class="text-[10px]"></span></div>
                                     </th>
-                                    <th class="px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider select-none" style="width:9%;">Mode</th>
+                                    <th onclick="setSort('mode')" class="cursor-pointer px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider select-none" style="width:9%;">
+                                        <div class="flex items-center gap-1 hover:text-red-800 transition">Mode<span id="sort-mode" class="text-[10px]"></span></div>
+                                    </th>
                                     <th onclick="setSort('status')" class="cursor-pointer px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider select-none text-center" style="width:10%;">
                                         <div class="flex items-center gap-1 hover:text-red-800 transition justify-center">Status<span id="sort-status" class="text-[10px]"></span></div>
                                     </th>

@@ -3,6 +3,9 @@
 use Illuminate\Support\Facades\Route;
 use Livewire\Volt\Volt;
 use App\Http\Controllers\AboutController;
+use App\Http\Controllers\AdminSessionController;
+use App\Http\Controllers\MentorSessionController;
+use App\Http\Controllers\MentorDashboardController;
 
 // Guest Routes
 Route::get('/', function () {
@@ -59,20 +62,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Volt::route('/feedbacks', 'pages.admin.feedbacks')
             ->name('admin.feedbacks');
 
-    Route::post('/sessions/update', function () {
-        $booking = \App\Models\Bookings::findOrFail(request('booking_id'));
-        $booking->booking_status = strtolower(request('booking_status'));
-
-        if ($booking->booking_status === 'completed') {
-            $booking->completed_at = now();
-        }
-
-        $booking->save();
-
-        return response()->json(['success' => true]);
-    })->name('admin.sessions.update');
-
-    Volt::route('/feedbacks', 'pages.admin.feedbacks')->name('admin.feedbacks');
+    Route::post('/sessions/update', [AdminSessionController::class, 'update'])->name('admin.sessions.update');
 
     });
 
@@ -82,25 +72,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Volt::route('/dashboard', 'pages.mentor.dashboard')
             ->name('mentor.dashboard');
 
-        Route::post('/dashboard/update', function () {
-            $mentorProfile = \App\Models\MentorProfiles::where('user_id', auth()->id())->first();
-
-        if ($mentorProfile) {
-            $booking = \App\Models\Bookings::where('id', request('id'))
-            ->where('mentor_id', $mentorProfile->id)
-            ->first();
-
-            if ($booking) {
-            $booking->booking_status = request('status');
-            if (request('status') === 'completed') {
-                $booking->completed_at = now();
-            }
-            $booking->save();
-            }
-            }
-
-        return response()->json(['success' => true]);
-        })->name('mentor.dashboard.update');
+        Route::post('/dashboard/update', [MentorDashboardController::class, 'update'])->name('mentor.dashboard.update');
 
         Volt::route('/bookings', 'pages.mentor.bookings')
             ->name('mentor.bookings');
@@ -114,36 +86,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Volt::route('/feedbacks', 'pages.mentor.feedbacks')
             ->name('mentor.feedbacks');
 
-        Route::post('/sessions/update', function () {
-
-        $mentorProfile = \App\Models\MentorProfiles::where('user_id', auth()->id())->first();
-
-        if ($mentorProfile) {
-            $booking = \App\Models\Bookings::where('id', request('booking_id'))
-                ->first();
-
-            if ($booking) {
-                $requestedStatus = strtolower(request('booking_status'));
-
-                if(is_null($booking->mentor_id) && $booking->booking_status === 'pending' && $requestedStatus === 'accepted') {
-                    $booking->mentor_id = $mentorProfile->id;
-                    $booking->booking_status = 'accepted';
-                    $booking->save();
-                }
-                elseif($booking->mentor_id === $mentorProfile->id) {
-                $booking->booking_status = $requestedStatus;
-
-                if ($booking->booking_status === 'completed') {
-                    $booking->completed_at = now();
-                }
-
-                $booking->save();
-                }
-            }
-        }
-
-        return redirect()->route('mentor.sessions');
-        })->name('mentor.sessions.update');
+        Route::post('/sessions/update', [MentorSessionController::class, 'update'])->name('mentor.sessions.update');
 
     });
 

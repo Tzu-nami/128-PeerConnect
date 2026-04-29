@@ -706,6 +706,11 @@ mount(function () {
                                     class="pl-8 pr-3 py-1.5 text-xs font-medium text-slate-700 placeholder-gray-400 border border-gray-200 rounded-lg bg-white outline-none focus:ring-1 focus:border-up-maroon focus:ring-up-maroon w-56 h-[34px] transition-shadow">
                             </div>
 
+                            <button wire:click="openSubjectModal" @click="$wire.showSubjectModal = true" 
+                                class="flex items-center gap-2 bg-slate-800 text-white px-4 py-1.5 rounded-lg text-xs font-bold hover:bg-black transition shadow-sm h-[34px]">
+                                <i class="fa-solid fa-book"></i> Add Subject
+                            </button>
+
                             <button wire:click="openModal" @click="$wire.showModal = true"
                                 class="flex items-center gap-2 bg-slate-800 text-white px-4 py-1.5 rounded-lg text-xs font-bold hover:bg-black transition shadow-sm h-[34px]">
                                 <i class="fa-solid fa-user-plus text-[10px]"></i> Add Mentor
