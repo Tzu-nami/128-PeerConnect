@@ -831,9 +831,9 @@ $dismissSuccessMessage = action(function () {
                             </div>
                         </div>
 
-                        <a href="{{ route('student.bookings') }}" class="block w-full mt-4 py-2 text-[10px] font-bold text-slate-400 hover:text-slate-600 border-t border-gray-50 transition text-center">
+                        <!-- <a href="{{ route('student.bookings') }}" class="block w-full mt-4 py-2 text-[10px] font-bold text-slate-400 hover:text-slate-600 border-t border-gray-50 transition text-center">
                             Book a New Session →
-                        </a>
+                        </a> -->
                     </div>
 
                 </div><!-- end right column -->
