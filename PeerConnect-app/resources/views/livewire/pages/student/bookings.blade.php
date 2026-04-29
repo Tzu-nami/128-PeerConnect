@@ -206,6 +206,7 @@ $validateBooking = action(function () {
     $this->dispatch('show-booking-confirm');
 });
 
+
 // Advance feedback step with per-step validation
 $nextFeedbackStep = action(function () {
     if ($this->feedbackStep === 1) {
@@ -407,7 +408,7 @@ $submitFeedback = action(function () {
     $this->feedbackSubmitted = true;
 });
 
-// ── NEW: Skip feedback — inserts a null-answer row so the student is never prompted again for this booking ──
+// ── Skip feedback — inserts a null-answer row so the student is never prompted again for this booking ──
 $skipFeedback = action(function () {
     abort_if(!auth()->user()->isStudent(), 403, 'Unauthorized Access');
 
@@ -458,6 +459,7 @@ $dismissFeedbackSubmitted = action(function () {
 
 <div>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
         :root { --sidebar-green: #1a3c2f; --header-maroon: #7b1d1d; --bg-light: #f4f7f6; --header-height: 80px; --sidebar-width: 260px; --sidebar-collapsed-width: 72px; }
         * { box-sizing: border-box; }
@@ -567,7 +569,7 @@ $dismissFeedbackSubmitted = action(function () {
         .booking-detail-item p { font-size: 14px; font-weight: 600; color: #1f2937; margin: 0; }
         .booking-detail-item.full { grid-column: 1 / -1; }
 
-        /* ── FEEDBACK CARD (now GREEN) ── */
+        /* ── FEEDBACK CARD (GREEN) ── */
         .feedback-card { background: white; border-radius: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.07); overflow: hidden; border: 2px solid #86efac; }
         .feedback-banner { display: flex; align-items: center; gap: 12px; padding: 16px 24px; background: linear-gradient(135deg,#f0fdf4,#dcfce7); border-bottom: 1px solid #bbf7d0; }
         .feedback-banner-icon { width: 40px; height: 40px; border-radius: 50%; background: #86efac; color: #14532d; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 16px; }
@@ -631,7 +633,7 @@ $dismissFeedbackSubmitted = action(function () {
         /* ── REMARKS ── */
         .feedback-textarea {
             width: 100%; min-height: 120px; border-radius: 10px; border: 1.5px solid #d1d5db;
-            padding: 12px 14px; font-size: 14px; font-family: inherit; color: #374151;
+            padding: 12px 14px; font-size: 14px; font-family: 'Inter', sans-serif; color: #374151;
             resize: vertical; transition: border-color 0.2s; outline: none;
         }
         .feedback-textarea:focus { border-color: #16a34a; box-shadow: 0 0 0 3px rgba(22,163,74,0.1); }
@@ -702,46 +704,156 @@ $dismissFeedbackSubmitted = action(function () {
             cursor: pointer; transition: background 0.15s;
         }
         .scm-btn-answer:hover { background: #15803d; }
-/* Hover tooltip */
-/* Hover tooltip */
-.hover-tooltip {
-    position: relative;
-    cursor: pointer;
-}
-.hover-tooltip::after {
-    content: attr(data-full);
-    position: absolute;
-    left: 0;
-    top: 110%;
-    background: rgba(0,0,0,0.85);
-    color: #fff;
-    padding: 8px 10px;
-    border-radius: 6px;
-    font-size: 11px;
-    line-height: 1.4;
-    white-space: normal;
-    word-break: break-word;
-    overflow-wrap: anywhere;
-    width: 320px;
-    max-width: 320px;
-    opacity: 0;
-    pointer-events: none;
-    transform: translateY(5px);
-    transition: 0.15s ease;
-    z-index: 9999;
-}
-.hover-tooltip:hover::after { opacity: 1; transform: translateY(0); }
-/* Allow hover-tooltip inside confirmation modal to escape clipping */
-#confirmMeta { overflow: visible; position: relative; }
-#confirmModalBox { overflow: visible; }
-#confirmMeta .hover-tooltip::after {
-    top: auto;
-    bottom: 110%;
-    transform: translateY(-5px);
-}
-#confirmMeta .hover-tooltip:hover::after {
-    transform: translateY(0);
-}
+
+        /* ── Hover tooltip ── */
+        .hover-tooltip { position: relative; cursor: pointer; }
+        .hover-tooltip::after {
+            content: attr(data-full);
+            position: absolute; left: 0; top: 110%;
+            background: rgba(0,0,0,0.85); color: #fff;
+            padding: 8px 10px; border-radius: 6px; font-size: 11px; line-height: 1.4;
+            white-space: normal; word-break: break-word; overflow-wrap: anywhere;
+            width: 320px; max-width: 320px;
+            opacity: 0; pointer-events: none; transform: translateY(5px);
+            transition: 0.15s ease; z-index: 9999;
+        }
+        .hover-tooltip:hover::after { opacity: 1; transform: translateY(0); }
+        #confirmMeta { overflow: visible; position: relative; }
+        #confirmModalBox { overflow: visible; }
+        #confirmMeta .hover-tooltip::after {
+            top: auto; bottom: 110%; transform: translateY(-5px);
+        }
+        #confirmMeta .hover-tooltip:hover::after { transform: translateY(0); }
+
+        /* ════════════════════════════════════════════
+           CUSTOM DATE PICKER — upward-opening
+           ════════════════════════════════════════════ */
+        .custom-date-picker { position: static; }
+        .custom-date-display {
+            width: 100%; border: 1px solid #d1d5db; border-radius: 8px;
+            padding: 7px 12px; font-size: 13px; font-weight: 500; color: #374151;
+            background: #fff; cursor: pointer; display: flex; align-items: center;
+            gap: 8px; transition: border-color 0.2s, box-shadow 0.2s; user-select: none;
+        }
+        .custom-date-display:hover { border-color: #16a34a; box-shadow: 0 0 0 3px rgba(22,163,74,0.08); }
+        .custom-date-display.active { border-color: #16a34a; box-shadow: 0 0 0 3px rgba(22,163,74,0.12); }
+        .custom-date-display .date-icon {
+            width: 24px; height: 24px; border-radius: 6px; background: #f0fdf4;
+            display: flex; align-items: center; justify-content: center;
+            color: #16a34a; font-size: 11px; flex-shrink: 0;
+        }
+        .custom-date-display .date-text { flex: 1; }
+        .custom-date-display .date-placeholder { color: #9ca3af; font-weight: 400; }
+        .custom-date-display .date-chevron { color: #9ca3af; font-size: 10px; transition: transform 0.2s; }
+        .custom-date-display.active .date-chevron { transform: rotate(180deg); }
+
+        .date-picker-dropdown {
+            display: none; position: fixed;
+            background: white; border: 1px solid #e5e7eb; border-radius: 12px;
+            box-shadow: 0 20px 60px -10px rgba(0,0,0,0.2), 0 4px 16px rgba(0,0,0,0.08);
+            z-index: 9999; padding: 14px; width: 270px;
+            animation: dpSlideUp 0.15s ease;
+        }
+        .date-picker-dropdown.show { display: block; }
+        @keyframes dpSlideUp { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+
+        .dp-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+        .dp-nav-btn {
+            width: 26px; height: 26px; border-radius: 6px; border: 1px solid #e5e7eb;
+            background: white; cursor: pointer; display: flex; align-items: center; justify-content: center;
+            color: #6b7280; font-size: 10px; transition: all 0.15s;
+        }
+        .dp-nav-btn:hover { background: #f0fdf4; border-color: #86efac; color: #16a34a; }
+        .dp-month-label { font-size: 12px; font-weight: 700; color: #1f2937; }
+
+        .dp-weekdays { display: grid; grid-template-columns: repeat(7,1fr); gap: 2px; margin-bottom: 3px; }
+        .dp-weekday { text-align: center; font-size: 9px; font-weight: 800; color: #9ca3af; text-transform: uppercase; padding: 3px 0; }
+
+        .dp-days { display: grid; grid-template-columns: repeat(7,1fr); gap: 2px; }
+        .dp-day {
+            aspect-ratio: 1; border-radius: 6px; display: flex; align-items: center; justify-content: center;
+            font-size: 11px; font-weight: 500; color: #374151; cursor: pointer;
+            transition: all 0.12s; border: 1.5px solid transparent;
+        }
+        .dp-day:hover:not(.dp-day-disabled):not(.dp-day-selected) { background: #f0fdf4; color: #16a34a; border-color: #bbf7d0; }
+        .dp-day-today { background: #fef2f2; color: #7b1d1d; font-weight: 800; }
+        .dp-day-selected { background: #16a34a; color: white; font-weight: 800; border-color: #15803d; box-shadow: 0 2px 8px rgba(22,163,74,0.35); }
+        .dp-day-disabled { color: #d1d5db; cursor: not-allowed; }
+        .dp-day-empty { cursor: default; }
+        .dp-day-sunday { color: #fca5a5; }
+        .dp-day-sunday:hover { background: #fef2f2; color: #dc2626; border-color: #fca5a5; }
+
+        /* ════════════════════════════════════════════
+           CUSTOM TIME PICKER — upward-opening
+           ════════════════════════════════════════════ */
+        .custom-time-picker { position: static; }
+        .custom-time-display {
+            width: 100%; border: 1px solid #d1d5db; border-radius: 8px;
+            padding: 7px 12px; font-size: 13px; font-weight: 500; color: #374151;
+            background: #fff; cursor: pointer; display: flex; align-items: center;
+            gap: 8px; transition: border-color 0.2s, box-shadow 0.2s; user-select: none;
+        }
+        .custom-time-display:hover { border-color: #16a34a; box-shadow: 0 0 0 3px rgba(22,163,74,0.08); }
+        .custom-time-display.active { border-color: #16a34a; box-shadow: 0 0 0 3px rgba(22,163,74,0.12); }
+        .custom-time-display .time-icon {
+            width: 24px; height: 24px; border-radius: 6px; background: #f0fdf4;
+            display: flex; align-items: center; justify-content: center;
+            color: #16a34a; font-size: 11px; flex-shrink: 0;
+        }
+        .custom-time-display .time-placeholder { color: #9ca3af; font-weight: 400; }
+
+        .time-picker-dropdown {
+            display: none; position: fixed;
+            background: white; border: 1px solid #e5e7eb; border-radius: 12px;
+            box-shadow: 0 20px 60px -10px rgba(0,0,0,0.2), 0 4px 16px rgba(0,0,0,0.08);
+            z-index: 9999; padding: 14px; width: 220px;
+            animation: dpSlideUp 0.15s ease;
+        }
+        .time-picker-dropdown.show { display: block; }
+
+        .tp-ampm { display: flex; gap: 6px; margin-bottom: 10px; }
+        .tp-ampm-btn {
+            flex: 1; padding: 5px; border-radius: 7px; border: 1.5px solid #e5e7eb;
+            background: white; font-size: 11px; font-weight: 700; color: #6b7280;
+            cursor: pointer; transition: all 0.15s; text-align: center;
+        }
+        .tp-ampm-btn.active { background: #16a34a; border-color: #16a34a; color: white; }
+
+        .tp-scroll-row { display: flex; gap: 8px; align-items: center; justify-content: center; }
+        .tp-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+        .tp-col-label { font-size: 9px; font-weight: 800; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2px; }
+        .tp-btn {
+            width: 34px; height: 24px; border-radius: 6px; border: 1.5px solid #e5e7eb;
+            background: white; cursor: pointer; display: flex; align-items: center; justify-content: center;
+            color: #6b7280; font-size: 9px; transition: all 0.15s;
+        }
+        .tp-btn:hover { background: #f0fdf4; border-color: #86efac; color: #16a34a; }
+
+        .tp-manual-input {
+            width: 42px; height: 38px; border-radius: 8px; border: 1.5px solid #16a34a;
+            background: #f0fdf4; text-align: center;
+            font-size: 16px; font-weight: 800; color: #15803d; outline: none;
+            -moz-appearance: textfield;
+        }
+        .tp-manual-input::-webkit-outer-spin-button,
+        .tp-manual-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        .tp-manual-input:focus { border-color: #15803d; box-shadow: 0 0 0 3px rgba(22,163,74,0.15); background: #dcfce7; }
+
+        .tp-val {
+            width: 42px; height: 38px; border-radius: 8px; border: 1.5px solid #16a34a;
+            background: #f0fdf4; display: flex; align-items: center; justify-content: center;
+            font-size: 16px; font-weight: 800; color: #15803d;
+        }
+
+        .tp-sep { font-size: 18px; font-weight: 800; color: #9ca3af; margin-top: 12px; }
+
+        .tp-quick { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 10px; padding-top: 8px; border-top: 1px solid #f1f5f9; }
+        .tp-quick-btn {
+            padding: 2px 6px; border-radius: 5px; border: 1.5px solid #e5e7eb;
+            background: white; font-size: 9px; font-weight: 600; color: #6b7280;
+            cursor: pointer; transition: all 0.12s;
+        }
+        .tp-quick-btn:hover { background: #f0fdf4; border-color: #86efac; color: #16a34a; }
     </style>
 
     <div class="app-wrapper">
@@ -788,6 +900,8 @@ $dismissFeedbackSubmitted = action(function () {
         <div class="main-content">
             <header class="top-header relative">
                 <div class="text-lg">Welcome, <span class="font-bold">{{ auth()->user()->name }}</span></div>
+                <div class="flex items-center gap-2">
+                <x-mentor-notifications />
                 
                 <button id="profileTrigger" class="flex items-center gap-2 px-3 py-1 bg-white rounded-full hover:bg-gray-100 transition shadow-sm border-2 border-white/20 group">
                     <div class="w-8 h-8 bg-red-900 text-white rounded-full flex items-center justify-center text-xs font-bold">
@@ -795,6 +909,8 @@ $dismissFeedbackSubmitted = action(function () {
                     </div>
                     <i class="fa-solid fa-chevron-down text-[10px] text-gray-500 group-hover:text-red-900 transition-transform duration-200"></i>
                 </button>
+                </div>
+
                 <div id="profileDropdown" class="profile-dropdown">
                     <div class="p-4 border-b border-gray-100 bg-slate-50">
                         <p class="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1">Signed in as</p>
@@ -878,7 +994,6 @@ $dismissFeedbackSubmitted = action(function () {
 
             {{-- ══════════════════════════════════
                  MULTI-STEP FEEDBACK FORM
-                 (shown when student has already acknowledged the completed session notification)
                  ══════════════════════════════════ --}}
             @if($completedBooking)
                 @php $cb = $completedBooking; @endphp
@@ -1126,7 +1241,7 @@ $dismissFeedbackSubmitted = action(function () {
                     </div>
                 </div>
 
-            {{-- ══ BOOKING FORM ══ --}}
+            {{-- ══ BOOKING FORM (with custom date/time pickers) ══ --}}
             @elseif(!$completedBooking)
             <div class="flex-1 min-w-0 items-center gap-4 rounded-lg pb-6 pt-0">
                 <h1 class="text-3xl font-extrabold tracking-tight text-transparent bg-clip-text bg-up-maroon flex items-center gap-3">
@@ -1134,7 +1249,7 @@ $dismissFeedbackSubmitted = action(function () {
                 </h1>
                 <p class="text-sm font-medium text-slate-500 leading-snug mt-1">Please fill out the details below. Your request will be reviewed by the peer mentor.</p>
             </div>
-            <div class="bg-white pl-6 pr-6 pb-6 pt-4 rounded-lg shadow-sm border-gray-200 overflow-hidden"
+            <div class="bg-white pl-6 pr-6 pb-6 pt-4 rounded-lg shadow-sm border-gray-200 overflow-visible"
                 x-data="{
                     // Validation of data
                     subject_id: $wire.entangle('subject_id'),
@@ -1296,26 +1411,146 @@ $dismissFeedbackSubmitted = action(function () {
                         </select>
                         @error('tutorialMode_id') <span x-show="showError('tutorialMode_id')" x-cloak class="mt-1 text-xs text-red-600 block">{{ $message }}</span> @enderror
                     </div>
+
+                    {{-- ══ Date + Time row — Custom pickers (from v2) ══ --}}
                     <div class="grid grid-cols-3 gap-4">
-                        <div>
+
+                        {{-- Preferred Day — Custom Calendar --}}
+                        <div x-data="bookingDatePicker()" x-init="init()" @click.outside="close()">
                             <label class="block text-base font-medium text-gray-700 mb-1">Preferred Day<span class="text-red-500">*</span></label>
-                            <input type="date" wire:model="date" class="w-full rounded-lg border-gray-300 shadow-sm text-base px-2 py-1 transition-colors" min="{{ \Carbon\Carbon::tomorrow()->format('Y-m-d') }}">
+                            <div class="custom-date-picker">
+                                <div class="custom-date-display" :class="{ active: open }" @click="toggle()">
+                                    <div class="date-icon"><i class="fa-solid fa-calendar-days"></i></div>
+                                    <span class="date-text text-sm">
+                                        <template x-if="selectedLabel"><span x-text="selectedLabel"></span></template>
+                                        <template x-if="!selectedLabel"><span class="date-placeholder">Pick a date</span></template>
+                                    </span>
+                                    <i class="fa-solid fa-chevron-down date-chevron"></i>
+                                </div>
+                                <div class="date-picker-dropdown" :class="{ show: open }">
+                                    <div class="dp-nav">
+                                        <button type="button" class="dp-nav-btn" @click.stop="prevMonth()"><i class="fa-solid fa-chevron-left"></i></button>
+                                        <span class="dp-month-label" x-text="monthLabel"></span>
+                                        <button type="button" class="dp-nav-btn" @click.stop="nextMonth()"><i class="fa-solid fa-chevron-right"></i></button>
+                                    </div>
+                                    <div class="dp-weekdays">
+                                        <div class="dp-weekday">Su</div><div class="dp-weekday">Mo</div><div class="dp-weekday">Tu</div>
+                                        <div class="dp-weekday">We</div><div class="dp-weekday">Th</div><div class="dp-weekday">Fr</div><div class="dp-weekday">Sa</div>
+                                    </div>
+                                    <div class="dp-days">
+                                        <template x-for="(day, idx) in calDays" :key="idx">
+                                            <div class="dp-day"
+                                                :class="{
+                                                    'dp-day-empty': !day.date,
+                                                    'dp-day-disabled': day.disabled,
+                                                    'dp-day-today': day.isToday,
+                                                    'dp-day-selected': day.isSelected,
+                                                    'dp-day-sunday': day.isSunday && !day.disabled && !day.isSelected,
+                                                }"
+                                                @click="day.date && !day.disabled && selectDay(day)"
+                                                x-text="day.label">
+                                            </div>
+                                        </template>
+                                    </div>
+                                </div>
+                            </div>
+                            {{-- Hidden native input keeps wire:model in sync --}}
+                            <input type="date" wire:model="date" id="bookingDateHidden" class="hidden" min="{{ \Carbon\Carbon::tomorrow()->format('Y-m-d') }}">
                             @error('date') <span x-show="showError('date')" x-cloak class="mt-1 text-xs text-red-600 block">{{ $message }}</span> @enderror
                             <span x-show="dateError" x-cloak class="mt-1 text-xs text-red-600 block" x-text="dateError"></span>
                         </div>
-                    
-                        <div>
+
+                        {{-- Start Time — Custom Picker --}}
+                        <div x-data="bookingTimePicker('schedule_start')" x-init="init()" @click.outside="close()">
                             <label class="block text-base font-medium text-gray-700 mb-1">Start Time<span class="text-red-500">*</span></label>
-                            <input type="time" wire:model="schedule_start" class="w-full rounded-lg border-gray-300 shadow-sm text-base px-2 py-1 transition-colors">
+                            <div class="custom-time-picker">
+                                <div class="custom-time-display" :class="{ active: open }" @click="toggle()">
+                                    <div class="time-icon"><i class="fa-regular fa-clock"></i></div>
+                                    <span class="text-sm" :class="selectedTime ? 'font-semibold text-gray-800' : 'time-placeholder'" x-text="selectedTime || 'Start time'"></span>
+                                </div>
+                                <div class="time-picker-dropdown" :class="{ show: open }">
+                                    <div class="tp-ampm">
+                                        <button type="button" class="tp-ampm-btn" :class="{ active: ampm === 'AM' }" @click="setAmpm('AM')">AM</button>
+                                        <button type="button" class="tp-ampm-btn" :class="{ active: ampm === 'PM' }" @click="setAmpm('PM')">PM</button>
+                                    </div>
+                                    <div class="tp-scroll-row">
+                                        <div class="tp-col">
+                                            <div class="tp-col-label">Hour</div>
+                                            <button type="button" class="tp-btn" @click="changeHour(1)"><i class="fa-solid fa-chevron-up"></i></button>
+                                            <div class="tp-val" x-text="String(hour).padStart(2,'0')"></div>
+                                            <button type="button" class="tp-btn" @click="changeHour(-1)"><i class="fa-solid fa-chevron-down"></i></button>
+                                        </div>
+                                        <div class="tp-sep">:</div>
+                                        <div class="tp-col">
+                                            <div class="tp-col-label">Min</div>
+                                            <button type="button" class="tp-btn" @click="changeMin(1)"><i class="fa-solid fa-chevron-up"></i></button>
+                                            <div class="tp-val" x-text="String(minute).padStart(2,'0')"></div>
+                                            <button type="button" class="tp-btn" @click="changeMin(-1)"><i class="fa-solid fa-chevron-down"></i></button>
+                                        </div>
+                                    </div>
+                                    <div class="tp-quick">
+                                        <template x-for="t in quickTimes" :key="t">
+                                            <button type="button" class="tp-quick-btn" @click="setQuick(t)" x-text="t"></button>
+                                        </template>
+                                    </div>
+                                </div>
+                            </div>
+                            {{-- Hidden native input keeps wire:model in sync --}}
+                            <input type="time" wire:model="schedule_start" id="startTimeHidden" class="hidden">
                             @error('schedule_start') <span x-show="showError('schedule_start')" x-cloak class="mt-1 text-xs text-red-600 block">{{ $message }}</span> @enderror
                         </div>
-                        <div>
+
+                        {{-- End Time — Custom Picker (with manual input) --}}
+                        <div x-data="bookingTimePicker('schedule_end')" x-init="init()" @click.outside="close()">
                             <label class="block text-base font-medium text-gray-700 mb-1">End Time<span class="text-red-500">*</span></label>
-                            <input type="time" wire:model="schedule_end" class="w-full rounded-lg border-gray-300 shadow-sm text-base px-2 py-1 transition-colors">
+                            <div class="custom-time-picker">
+                                <div class="custom-time-display" :class="{ active: open }" @click="toggle()">
+                                    <div class="time-icon"><i class="fa-regular fa-clock"></i></div>
+                                    <span class="text-sm" :class="selectedTime ? 'font-semibold text-gray-800' : 'time-placeholder'" x-text="selectedTime || 'End time'"></span>
+                                </div>
+                                <div class="time-picker-dropdown" :class="{ show: open }">
+                                    <div class="tp-ampm">
+                                        <button type="button" class="tp-ampm-btn" :class="{ active: ampm === 'AM' }" @click="setAmpm('AM')">AM</button>
+                                        <button type="button" class="tp-ampm-btn" :class="{ active: ampm === 'PM' }" @click="setAmpm('PM')">PM</button>
+                                    </div>
+                                    <div class="tp-scroll-row">
+                                        <div class="tp-col">
+                                            <div class="tp-col-label">Hour</div>
+                                            <button type="button" class="tp-btn" @click="changeHour(1)"><i class="fa-solid fa-chevron-up"></i></button>
+                                            <input class="tp-manual-input tp-hour-input" type="number" min="1" max="12"
+                                                :value="String(hour).padStart(2,'0')"
+                                                @change="onHourInput($event)"
+                                                @keydown.up.prevent="changeHour(1)"
+                                                @keydown.down.prevent="changeHour(-1)">
+                                            <button type="button" class="tp-btn" @click="changeHour(-1)"><i class="fa-solid fa-chevron-down"></i></button>
+                                        </div>
+                                        <div class="tp-sep">:</div>
+                                        <div class="tp-col">
+                                            <div class="tp-col-label">Min</div>
+                                            <button type="button" class="tp-btn" @click="changeMin(1)"><i class="fa-solid fa-chevron-up"></i></button>
+                                            <input class="tp-manual-input tp-min-input" type="number" min="0" max="59"
+                                                :value="String(minute).padStart(2,'0')"
+                                                @change="onMinInput($event)"
+                                                @keydown.up.prevent="changeMin(1)"
+                                                @keydown.down.prevent="changeMin(-1)">
+                                            <button type="button" class="tp-btn" @click="changeMin(-1)"><i class="fa-solid fa-chevron-down"></i></button>
+                                        </div>
+                                    </div>
+                                    <div class="tp-quick">
+                                        <template x-for="t in quickTimes" :key="t">
+                                            <button type="button" class="tp-quick-btn" @click="setQuick(t)" x-text="t"></button>
+                                        </template>
+                                    </div>
+                                </div>
+                            </div>
+                            {{-- Hidden native input keeps wire:model in sync --}}
+                            <input type="time" wire:model="schedule_end" id="endTimeHidden" class="hidden">
                             @error('schedule_end') <span x-show="showError('schedule_end')" x-cloak class="mt-1 text-xs text-red-600 block">{{ $message }}</span> @enderror
                             <span x-show="timeError" x-cloak class="mt-1 text-xs text-red-600 block" x-text="timeError"></span>
                         </div>
                     </div>
+                    {{-- ══ End Date + Time row ══ --}}
+
                     <div>
                         <label class="block text-base font-medium text-gray-700 mb-1">Preferred Mentor<span class="text-red-500">*</span></label>
                         <select wire:model="mentor_id" :disabled="isMentorLocked" class="w-full rounded-lg border-gray-300 shadow-sm text-base px-2 py-1 disabled:bg-gray-100 disabled:text-gray-900 disabled:cursor-not-allowed transition-colors">
@@ -1485,21 +1720,18 @@ $dismissFeedbackSubmitted = action(function () {
 >
     <p class="text-sm font-bold text-gray-800">{{ strtoupper($booking->subject->code) }}</p>
 
-    {{-- Mentor name: hover-tooltip only when truncated --}}
     <div :class="mentorTruncated ? 'hover-tooltip' : ''" :data-full="mentorTruncated ? mentor : ''">
         <p class="mentor-name text-xs font-medium text-gray-500 mt-0.5 truncate">
             Mentor: {{ strtoupper($booking->mentor->user->lastName ?? 'MENTOR') }}, {{ $booking->mentor->user->firstName ?? 'TBD' }}
         </p>
     </div>
 
-    {{-- Topic: always truncated, always has hover-tooltip --}}
     <div class="hover-tooltip" :data-full="topic">
         <p class="text-xs font-medium text-gray-500 truncate mt-0.5">
             Topic: {{ $booking->topic }}
         </p>
     </div>
 
-    {{-- Tutorial Mode --}}
     <p class="text-xs font-medium text-gray-400 mt-0.5">
         <i class="fa-solid fa-location-dot mr-1 text-gray-300"></i>{{ $booking->tutorialMode->mode ?? '—' }}
     </p>
@@ -1540,9 +1772,6 @@ $dismissFeedbackSubmitted = action(function () {
 
 {{-- ══════════════════════════════════════════════════════════════════
      SESSION COMPLETE NOTIFICATION MODAL
-     Shows once when a completed booking without feedback is detected.
-     Student can choose to answer the feedback form or skip.
-     Skipping inserts a null-answer feedback row so they won't be prompted again.
      ══════════════════════════════════════════════════════════════════ --}}
 @if($completedBooking)
 @php $cb = $completedBooking; @endphp
@@ -1550,18 +1779,15 @@ $dismissFeedbackSubmitted = action(function () {
      class="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm">
     <div class="session-complete-modal-box" id="sessionCompleteModalBox">
 
-        {{-- Icon --}}
         <div class="scm-icon-wrap">
             <i class="fa-solid fa-clipboard-check"></i>
         </div>
 
-        {{-- Badge --}}
         <div class="scm-badge">
             <i class="fa-solid fa-clipboard-list text-xs"></i>
             Feedback Form
         </div>
 
-        {{-- Title & description --}}
         <div class="scm-title">Your session has been completed!</div>
         <p class="scm-subtitle">
             Great news — your enrichment session has ended. We'd love to hear how it went!
@@ -1571,7 +1797,6 @@ $dismissFeedbackSubmitted = action(function () {
             It only takes a minute, and it's completely optional.
         </p>
 
-        {{-- Session info summary --}}
         <div class="scm-session-info">
             <div class="si-row">
                 <span class="si-label">Subject</span>
@@ -1591,9 +1816,7 @@ $dismissFeedbackSubmitted = action(function () {
             </div>
         </div>
 
-        {{-- Actions --}}
         <div class="scm-actions">
-            {{-- Skip: calls Livewire skipFeedback, then closes modal --}}
             <button type="button" class="scm-btn-skip" id="scmSkipBtn"
                     wire:loading.attr="disabled" wire:target="skipFeedback">
                 <span wire:loading.remove wire:target="skipFeedback">
@@ -1604,7 +1827,6 @@ $dismissFeedbackSubmitted = action(function () {
                 </span>
             </button>
 
-            {{-- Answer: closes the modal and scrolls to the feedback form below --}}
             <button type="button" class="scm-btn-answer" id="scmAnswerBtn">
                 <i class="fa-solid fa-clipboard-list mr-1.5 text-xs"></i> Answer Feedback Form
             </button>
@@ -1619,7 +1841,7 @@ $dismissFeedbackSubmitted = action(function () {
 </div>
 @endif
 
-{{-- ══ EXISTING CONFIRMATION MODAL (unchanged) ══ --}}
+{{-- ══ EXISTING CONFIRMATION MODAL ══ --}}
 <div id="confirmModal" style="display:none;" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
     <div class="bg-[#ffffff] rounded-xl p-6 max-w-sm w-full mx-4 shadow-2xl" id="confirmModalBox">
         <div class="flex items-center gap-3 mb-3">
@@ -1719,16 +1941,13 @@ $dismissFeedbackSubmitted = action(function () {
 
         if (!modal) return; // no completed booking, nothing to do
 
-        // Show the modal immediately on page load (it's a one-time notification)
         modal.style.display = 'flex';
 
-        // ── SKIP: call Livewire, then hide modal (Livewire inserts null-answer row) ──
         skipBtn.addEventListener('click', async () => {
             skipBtn.disabled = true;
             answerBtn.disabled = true;
 
             try {
-                // Find the Livewire component and call skipFeedback
                 const componentEl = modal.closest('[wire\\:id]') || document.querySelector('[wire\\:id]');
                 if (componentEl) {
                     const wire = Livewire.find(componentEl.getAttribute('wire:id'));
@@ -1745,20 +1964,17 @@ $dismissFeedbackSubmitted = action(function () {
             }
         });
 
-        // ── ANSWER: close modal and scroll to the feedback form card ──
         answerBtn.addEventListener('click', () => {
             modal.style.display = 'none';
             const feedbackCard = document.getElementById('feedbackFormCard');
             if (feedbackCard) {
                 feedbackCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                // Brief highlight pulse so the student knows where to look
                 feedbackCard.style.transition = 'box-shadow 0.3s';
                 feedbackCard.style.boxShadow = '0 0 0 4px rgba(22,163,74,0.35)';
                 setTimeout(() => { feedbackCard.style.boxShadow = ''; }, 1800);
             }
         });
 
-        // ── Listen for feedback-skipped Livewire event (fallback) ──
         window.addEventListener('feedback-skipped', () => {
             modal.style.display = 'none';
         });
@@ -1844,6 +2060,236 @@ $dismissFeedbackSubmitted = action(function () {
             },
         });
     });
+
+    /* ════════════════════════════════════════════════════════
+       BOOKING DATE PICKER — always opens UPWARD
+       ════════════════════════════════════════════════════════ */
+    function bookingDatePicker() {
+        return {
+            open: false,
+            viewYear: 0, viewMonth: 0,
+            selectedDate: null,
+            selectedLabel: '',
+            today: null,
+
+            init() {
+                const t = new Date();
+                this.today = new Date(t.getFullYear(), t.getMonth(), t.getDate());
+                this.viewYear  = this.today.getFullYear();
+                this.viewMonth = this.today.getMonth();
+
+                // Sync from wire:model changes (e.g. reset after submission)
+                this.$watch('$wire.date', val => {
+                    if (val) {
+                        const d = new Date(val + 'T00:00:00');
+                        this.selectedDate  = d;
+                        this.selectedLabel = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                        this.viewYear  = d.getFullYear();
+                        this.viewMonth = d.getMonth();
+                    } else {
+                        this.selectedDate  = null;
+                        this.selectedLabel = '';
+                    }
+                });
+            },
+
+            toggle() {
+                if (this.open) { this.close(); return; }
+                this.open = true;
+                this.$nextTick(() => this.position());
+            },
+
+            /* Always open ABOVE the trigger */
+            position() {
+                const trigger = this.$el.querySelector('.custom-date-display');
+                const drop    = this.$el.querySelector('.date-picker-dropdown');
+                if (!trigger || !drop) return;
+                const rect  = trigger.getBoundingClientRect();
+                const dropH = drop.offsetHeight || 300;
+                const dropW = drop.offsetWidth  || 270;
+
+                drop.style.top = (rect.top - dropH - 6) + 'px';
+
+                let left = rect.left;
+                if (left + dropW > window.innerWidth - 8) left = window.innerWidth - dropW - 8;
+                drop.style.left = Math.max(8, left) + 'px';
+            },
+
+            close() { this.open = false; },
+
+            get monthLabel() {
+                return new Date(this.viewYear, this.viewMonth, 1)
+                    .toLocaleString('en-US', { month: 'long', year: 'numeric' });
+            },
+            prevMonth() {
+                if (this.viewMonth === 0) { this.viewMonth = 11; this.viewYear--; }
+                else this.viewMonth--;
+            },
+            nextMonth() {
+                if (this.viewMonth === 11) { this.viewMonth = 0; this.viewYear++; }
+                else this.viewMonth++;
+            },
+
+            get calDays() {
+                const firstDay = new Date(this.viewYear, this.viewMonth, 1).getDay();
+                const daysInMonth = new Date(this.viewYear, this.viewMonth + 1, 0).getDate();
+                const tomorrow = new Date(this.today); tomorrow.setDate(tomorrow.getDate() + 1);
+                const days = [];
+                for (let i = 0; i < firstDay; i++) days.push({ label: '', date: null });
+                for (let d = 1; d <= daysInMonth; d++) {
+                    const date = new Date(this.viewYear, this.viewMonth, d);
+                    const isPast = date < tomorrow;
+                    const isSun  = date.getDay() === 0;
+                    days.push({
+                        label: d, date,
+                        isSunday:   isSun,
+                        disabled:   isPast,
+                        isToday:    date.getTime() === this.today.getTime(),
+                        isSelected: this.selectedDate && date.getTime() === this.selectedDate.getTime(),
+                    });
+                }
+                return days;
+            },
+
+            selectDay(day) {
+                this.selectedDate  = day.date;
+                const yyyy = day.date.getFullYear();
+                const mm   = String(day.date.getMonth() + 1).padStart(2, '0');
+                const dd   = String(day.date.getDate()).padStart(2, '0');
+                this.selectedLabel = day.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                /* Sync to the hidden native input so wire:model picks it up */
+                const hidden = document.getElementById('bookingDateHidden');
+                if (hidden) {
+                    hidden.value = `${yyyy}-${mm}-${dd}`;
+                    hidden.dispatchEvent(new Event('input'));
+                    hidden.dispatchEvent(new Event('change'));
+                }
+                this.open = false;
+            },
+        };
+    }
+
+    /* ════════════════════════════════════════════════════════
+       BOOKING TIME PICKER — always opens UPWARD
+       ════════════════════════════════════════════════════════ */
+    function bookingTimePicker(wireField) {
+        return {
+            open: false,
+            hour: 8,
+            minute: 0,
+            ampm: 'AM',
+            selectedTime: '',
+            quickTimes: ['7:00 AM','8:00 AM','9:00 AM','10:00 AM','11:00 AM','1:00 PM','2:00 PM','3:00 PM','4:00 PM','5:00 PM'],
+
+            init() {
+                // Sync display if wire:model already has a value (e.g. locked mentor flow)
+                this.$watch(`$wire.${wireField}`, val => {
+                    if (val) {
+                        const [h, m] = val.split(':').map(Number);
+                        this.ampm   = h >= 12 ? 'PM' : 'AM';
+                        this.hour   = h % 12 || 12;
+                        this.minute = m;
+                        this.updateDisplay();
+                    }
+                });
+            },
+
+            toggle() {
+                if (this.open) { this.close(); return; }
+                this.open = true;
+                this.$nextTick(() => this.position());
+            },
+
+            /* Always open ABOVE the trigger */
+            position() {
+                const trigger = this.$el.querySelector('.custom-time-display');
+                const drop    = this.$el.querySelector('.time-picker-dropdown');
+                if (!trigger || !drop) return;
+                const rect  = trigger.getBoundingClientRect();
+                const dropH = drop.offsetHeight || 240;
+                const dropW = drop.offsetWidth  || 220;
+
+                drop.style.top = (rect.top - dropH - 6) + 'px';
+
+                let left = rect.left;
+                if (left + dropW > window.innerWidth - 8) left = window.innerWidth - dropW - 8;
+                drop.style.left = Math.max(8, left) + 'px';
+            },
+
+            close() { this.open = false; },
+
+            changeHour(dir) {
+                this.hour = ((this.hour - 1 + dir + 12) % 12) + 1;
+                this.syncHourInput();
+                this.commit();
+            },
+            changeMin(dir) {
+                this.minute = (this.minute + dir * 15 + 60) % 60;
+                this.syncMinInput();
+                this.commit();
+            },
+            setAmpm(val) { this.ampm = val; this.commit(); },
+
+            onHourInput(e) {
+                let val = parseInt(e.target.value) || 1;
+                if (val < 1) val = 1;
+                if (val > 12) val = 12;
+                this.hour = val;
+                e.target.value = String(val).padStart(2, '0');
+                this.commit();
+            },
+            onMinInput(e) {
+                let val = parseInt(e.target.value);
+                if (isNaN(val) || val < 0) val = 0;
+                if (val > 59) val = 59;
+                this.minute = val;
+                e.target.value = String(val).padStart(2, '0');
+                this.commit();
+            },
+
+            syncHourInput() {
+                const el = this.$el.querySelector('.tp-hour-input');
+                if (el) el.value = String(this.hour).padStart(2, '0');
+            },
+            syncMinInput() {
+                const el = this.$el.querySelector('.tp-min-input');
+                if (el) el.value = String(this.minute).padStart(2, '0');
+            },
+
+            setQuick(label) {
+                const parts  = label.split(' ');
+                const period = parts[1];
+                const [h, m] = parts[0].split(':').map(Number);
+                this.hour    = h;
+                this.minute  = m;
+                this.ampm    = period;
+                this.syncHourInput();
+                this.syncMinInput();
+                this.commit();
+                this.open = false;
+            },
+
+            commit() {
+                let h24 = this.hour % 12;
+                if (this.ampm === 'PM') h24 += 12;
+                const val = `${String(h24).padStart(2,'0')}:${String(this.minute).padStart(2,'0')}`;
+                const hiddenId = wireField === 'schedule_start' ? 'startTimeHidden' : 'endTimeHidden';
+                const hidden = document.getElementById(hiddenId);
+                if (hidden) {
+                    hidden.value = val;
+                    hidden.dispatchEvent(new Event('input'));
+                    hidden.dispatchEvent(new Event('change'));
+                }
+                this.updateDisplay();
+            },
+
+            updateDisplay() {
+                const h = String(this.hour).padStart(2, '0');
+                const m = String(this.minute).padStart(2, '0');
+                this.selectedTime = `${h}:${m} ${this.ampm}`;
+            },
+        };
+    }
 </script>
 
     </div>
