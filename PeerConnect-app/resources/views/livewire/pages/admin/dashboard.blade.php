@@ -921,9 +921,8 @@ updateDate();
     <div class="grid grid-cols-2 gap-6">
                                 <div class="stats-column"><div class="stats-column-title">Monthly Session Trends</div><div class="h-44"><canvas id="lineChart"></canvas></div></div>
                                 <div class="stats-column"><div class="stats-column-title">Top Mentors</div><div class="h-44"><canvas id="pieChart"></canvas></div></div>
-                                <div class="stats-column"><div class="stats-column-title">Satisfaction Rate</div><div class="h-44 flex justify-center"><canvas id="doughnutChart"></canvas></div></div>
                                 <div class="stats-column"><div class="stats-column-title">Most Active Colleges (CS, CSS, CAC)</div><div class="h-44"><canvas id="activeCollegeChart"></canvas></div></div>
-                                <div class="stats-column col-span-2"><div class="stats-column-title">Most Booked Subjects</div><div class="h-44"><canvas id="topSubjectsChart"></canvas></div>
+                                <div class="stats-column"><div class="stats-column-title">Most Booked Subjects</div><div class="h-44"><canvas id="topSubjectsChart"></canvas></div>
 </div>
                             </div>
                         </div>
@@ -1192,10 +1191,6 @@ function submitReport() {
         ['Pending',                  statusSummary.pending],
         ['Rejected',                 statusSummary.rejected],
         [],
-        ['SATISFACTION RATE (All-Time)'],
-        ['Excellent (avg score 4–5)',     satisfaction[0] + '%'],
-        ['Good (avg score 3–4)',          satisfaction[1] + '%'],
-        ['Average (avg score below 3)',   satisfaction[2] + '%'],
         ['Total Hours Rendered', (() => {
     let mins = 0;
     filtered.forEach(r => {
@@ -1954,11 +1949,6 @@ document.getElementById('sidebarToggle').addEventListener('click', () => {
 
 <script>
 (function () {
-
-    // ── INDEX ──────────────────────────────────────────────────────────────
-    // Every piece of content on the dashboard lives here.
-    // `target` = the element id to scroll to on click.
-    // `action` = optional extra behaviour on click.
     const INDEX = [
 
         // ── STAT CARDS ──
@@ -1981,17 +1971,6 @@ document.getElementById('sidebarToggle').addEventListener('click', () => {
         { group: 'Sessions', label: 'Upcoming Sessions',       detail: 'View all upcoming sessions',                     target: 'section-schedule',  keywords: ['upcoming','future','scheduled'] },
         { group: 'Sessions', label: 'Pending Sessions',        detail: 'View sessions awaiting confirmation',             target: 'section-schedule',  keywords: ['pending','waiting','unconfirmed'] },
 
-        // ── ANALYTICS ──
-        { group: 'Analytics', label: 'Monthly Session Trends', detail: 'Weekly session volume — Week 1 to Week 4',               target: 'section-analytics', keywords: ['monthly','trends','sessions','volume','weekly','line chart','chart'] },
-        { group: 'Analytics', label: 'Top Mentors',            detail: 'Daniel D., Sarah J., James W. ranked by sessions', target: 'section-analytics', keywords: ['top','mentors','ranked','pie chart','leaderboard','best'] },
-        { group: 'Analytics', label: 'Satisfaction Rate',      detail: 'Excellent 70%, Good 20%, Average 10%',           target: 'section-analytics', keywords: ['satisfaction','rate','excellent','good','average','doughnut','donut','feedback'] },
-        { group: 'Analytics', label: 'Most Active Colleges',   detail: 'CS · CSS · CAC — session counts',                target: 'section-analytics', keywords: ['college','colleges','cs','css','cac','active','bar chart','campus'] },
-
-        // ── QUICK ACTIONS ──
-        { group: 'Quick Actions', label: 'Add Mentor',         detail: 'Register a new peer mentor',                     target: 'section-quickactions', keywords: ['add','mentor','register','new mentor','create mentor'] },
-        { group: 'Quick Actions', label: 'Create Session',     detail: 'Schedule a new mentoring session',               target: 'section-quickactions', keywords: ['create','session','schedule','new session','book'] },
-        { group: 'Quick Actions', label: 'Manage Subjects',    detail: 'View and edit available subjects',               target: 'section-quickactions', keywords: ['manage','subjects','subject','edit subjects','topics'] },
-        { group: 'Quick Actions', label: 'Generate Report',    detail: 'Export a summary report',                        target: 'section-quickactions', keywords: ['generate','report','export','download','summary'] },
 
         // ── NAVIGATION ──
         { group: 'Navigation', label: 'Dashboard',             detail: 'Go to the main dashboard',                       target: 'section-stats',     keywords: ['dashboard','home','overview','main'] },
