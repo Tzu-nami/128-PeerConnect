@@ -400,15 +400,18 @@ $rejectBooking = action(function (string $id) {
     $this->pendingBookings = Bookings::where('booking_status', 'pending')->count();
 });
 
-$allSessions = Bookings::with(['mentor.user', 'student.user'])
+$allSessions = Bookings::with(['mentor.user', 'student.user', 'subject'])
     ->orderBy('date')
     ->get()
     ->map(fn($b) => [
-        'date'   => $b->date,
-        'mentor' => $b->mentor->user->name  ?? 'Unknown',
-        'mentee' => $b->student->user->name ?? 'Unknown',
-        'time'   => Carbon::parse($b->start_time)->format('h:i A'),
-        'status' => ucfirst($b->booking_status),
+        'date'    => $b->date,
+        'mentor'  => $b->mentor->user->name  ?? 'Unknown',
+        'mentee'  => $b->student->user->name ?? 'Unknown',
+        'subject' => $b->subject->code       ?? 'N/A',
+        'time'    => Carbon::parse($b->schedule_start)->format('h:i A'),
+        'status'  => ucfirst($b->booking_status),
+        'start'   => $b->schedule_start,
+        'end'     => $b->schedule_end,
     ])
     ->toArray();
 
@@ -1062,30 +1065,21 @@ updateDate();
     style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); backdrop-filter:blur(4px); z-index:1000; align-items:center; justify-content:center; padding:24px;">
     <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden">
 
-        <div class="flex items-center gap-4 px-6 py-5 border-b border-gray-100">
-            <div class="w-12 h-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xl flex-shrink-0">
-                <i class="fa-solid fa-file-invoice"></i>
-            </div>
-            <div class="flex-1 min-w-0">
-                <h2 class="text-xl font-extrabold text-slate-800 tracking-tight mb-0.5">Generate Report</h2>
-                <p class="text-xs text-slate-500 leading-snug">Choose the report type and date range to export.</p>
-            </div>
-            <button onclick="document.getElementById('reportModal').style.display='none'"
-                class="text-gray-400 hover:text-red-600 transition">
-                <i class="fa-solid fa-xmark text-xl"></i>
-            </button>
-        </div>
+<div class="flex items-center gap-4 px-6 py-5 border-b border-gray-100">
+    <div class="w-12 h-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xl flex-shrink-0">
+        <i class="fa-solid fa-file-chart-column"></i>
+    </div>
+    <div class="flex-1 min-w-0">
+        <h2 class="text-xl font-extrabold text-slate-800 tracking-tight mb-0.5">Generate Weekly Report</h2>
+        <p class="text-xs text-slate-500 leading-snug">Exports full analytics — sessions, mentors, subjects, satisfaction & colleges. Max 7 days.</p>
+    </div>
+    <button onclick="document.getElementById('reportModal').style.display='none'"
+        class="text-gray-400 hover:text-red-600 transition">
+        <i class="fa-solid fa-xmark text-xl"></i>
+    </button>
+</div>
 
         <div class="px-6 py-5 space-y-4">
-            <div>
-                <label class="block text-xs font-bold text-slate-600 mb-1.5">Report Type <span class="text-red-500">*</span></label>
-                <select id="reportType" class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:border-red-900">
-                    <option value="sessions">Session Summary</option>
-                    <option value="mentors">Mentor Performance</option>
-                    <option value="feedback">Student Feedback</option>
-                    <option value="bookings">Booking Overview</option>
-                </select>
-            </div>
             <div class="grid grid-cols-2 gap-3">
                 <div>
                     <label class="block text-xs font-bold text-slate-600 mb-1.5">From</label>
@@ -1121,6 +1115,8 @@ function submitReport() {
     const to   = document.getElementById('reportTo').value;
     const err  = document.getElementById('reportError');
 
+    err.classList.add('hidden');
+
     if (!from || !to) {
         err.textContent = 'Please fill in both date fields.';
         err.classList.remove('hidden');
@@ -1131,93 +1127,163 @@ function submitReport() {
     const toDate   = new Date(to);
     toDate.setHours(23, 59, 59);
 
-    const diffDays = (toDate - fromDate) / (1000 * 60 * 60 * 24);
-    if (diffDays < 0) {
+    if (toDate < fromDate) {
         err.textContent = '"To" date must be after "From" date.';
         err.classList.remove('hidden');
         return;
     }
+
+    const diffDays = (toDate - fromDate) / (1000 * 60 * 60 * 24);
     if (diffDays > 7) {
-        err.textContent = 'Date range cannot exceed 7 days.';
+        err.textContent = 'Date range cannot exceed 7 days. Please narrow your selection.';
         err.classList.remove('hidden');
         return;
     }
 
-    err.classList.add('hidden');
-
-    const fromDate = new Date(from);
-    const toDate   = new Date(to);
-    toDate.setHours(23, 59, 59);
-
     // ── Raw data from Blade ──────────────────────────────────────────
-    const allSessions  = @json($allSessions);   
+    const allSessions  = @json($allSessions);
     const topMentors   = @json($this->topMentors);
     const topSubjects  = @json($this->topSubjects);
     const satisfaction = @json($this->satisfactionRate);
     const collegeData  = @json($this->collegeActivity);
     const monthlyData  = @json($this->monthlyTrends);
 
-    // ── Filter sessions by date range ────────────────────────────────
+    // ── Filter sessions within the 7-day range ───────────────────────
     const filtered = allSessions.filter(row => {
         const d = new Date(row.date);
         return d >= fromDate && d <= toDate;
     });
 
-    if (!filtered.length) {
-        err.textContent = 'No session data found for the selected range.';
-        err.classList.remove('hidden');
-        return;
-    }
+    // ── Per-mentor breakdown from filtered sessions ───────────────────
+    const mentorMap = {};
+    filtered.forEach(row => {
+        if (!mentorMap[row.mentor]) {
+            mentorMap[row.mentor] = { total: 0, completed: 0, accepted: 0, pending: 0, rejected: 0 };
+        }
+        mentorMap[row.mentor].total++;
+        const s = row.status.toLowerCase();
+        if (s === 'completed')     mentorMap[row.mentor].completed++;
+        else if (s === 'accepted') mentorMap[row.mentor].accepted++;
+        else if (s === 'pending')  mentorMap[row.mentor].pending++;
+        else if (s === 'rejected') mentorMap[row.mentor].rejected++;
+    });
+
+    // ── Status summary ───────────────────────────────────────────────
+    const statusSummary = { completed: 0, accepted: 0, pending: 0, rejected: 0 };
+    filtered.forEach(row => {
+        const s = row.status.toLowerCase();
+        if (statusSummary[s] !== undefined) statusSummary[s]++;
+    });
 
     const wb = XLSX.utils.book_new();
 
-    // ── Sheet 1: Sessions ────────────────────────────────────────────
-    const sessionRows = [
-        ['Date', 'Mentor', 'Mentee', 'Time', 'Status'],
-        ...filtered.map(r => [r.date, r.mentor, r.mentee, r.time, r.status])
+    // ── Sheet 1: Overview ────────────────────────────────────────────
+    const overviewRows = [
+        ['LRC PEERCONNECT — WEEKLY ANALYTICS REPORT'],
+        [],
+        ['Generated on', new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })],
+        ['Report Period', `${from}  to  ${to}`],
+        ['Total Days Covered', Math.round(diffDays) + ' day(s)'],
+        [],
+        ['SESSION SUMMARY'],
+        ['Total Sessions in Range',  filtered.length],
+        ['Completed',                statusSummary.completed],
+        ['Accepted',                 statusSummary.accepted],
+        ['Pending',                  statusSummary.pending],
+        ['Rejected',                 statusSummary.rejected],
+        [],
+        ['SATISFACTION RATE (All-Time)'],
+        ['Excellent (avg score 4–5)',     satisfaction[0] + '%'],
+        ['Good (avg score 3–4)',          satisfaction[1] + '%'],
+        ['Average (avg score below 3)',   satisfaction[2] + '%'],
+        ['Total Hours Rendered', (() => {
+    let mins = 0;
+    filtered.forEach(r => {
+        const s = new Date(`1970-01-01T${r.start}`);
+        const e = new Date(`1970-01-01T${r.end}`);
+        mins += Math.max(0, (e - s) / 60000);
+    });
+    const h = Math.floor(mins / 60);
+    const m = Math.round(mins % 60);
+    return `${h}h ${m}m`;
+})()],
     ];
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(sessionRows), 'Sessions');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(overviewRows), 'Overview');
 
-    // ── Sheet 2: Top Mentors ─────────────────────────────────────────
-    const mentorRows = [
-        ['Mentor', 'Total Sessions'],
-        ...topMentors.map(m => [m.name, m.count])
+ // ── Sheet 2: All Sessions in Range ───────────────────────────────
+const sessionRows = [];
+let totalMinutes = 0;
+
+if (filtered.length) {
+    filtered.forEach((r, i) => {
+        const start    = new Date(`1970-01-01T${r.start}`);
+        const end      = new Date(`1970-01-01T${r.end}`);
+        const mins     = Math.max(0, (end - start) / 60000);
+        const hrs      = Math.floor(mins / 60);
+        const rem      = Math.round(mins % 60);
+        const duration = hrs > 0 ? `${hrs}h ${rem}m` : `${rem}m`;
+        totalMinutes  += mins;
+
+        sessionRows.push([`SESSION ${i + 1}`]);
+        sessionRows.push(['Date',     r.date]);
+        sessionRows.push(['Mentor',   r.mentor]);
+        sessionRows.push(['Mentee',   r.mentee]);
+        sessionRows.push(['Subject',  r.subject ?? 'N/A']);
+        sessionRows.push(['Time',     r.time]);
+        sessionRows.push(['Duration', duration]);
+        sessionRows.push(['Status',   r.status]);
+        sessionRows.push([]);
+    });
+
+    // ── Total hours summary at the bottom ────────────────────────
+    const totalHrs = Math.floor(totalMinutes / 60);
+    const totalRem = Math.round(totalMinutes % 60);
+    sessionRows.push(['TOTAL HOURS RENDERED', `${totalHrs}h ${totalRem}m`]);
+    sessionRows.push(['Total Sessions', filtered.length]);
+} else {
+    sessionRows.push(['No sessions found in this date range.']);
+}
+XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(sessionRows), 'Sessions');
+
+    // ── Sheet 3: Mentor Performance (range) ──────────────────────────
+    const mentorBreakdownRows = Object.keys(mentorMap).length
+        ? [
+            ['Mentor', 'Total Sessions', 'Completed', 'Accepted', 'Pending', 'Rejected'],
+            ...Object.entries(mentorMap).map(([name, d]) => [name, d.total, d.completed, d.accepted, d.pending, d.rejected])
+          ]
+        : [['No mentor sessions in this date range.']];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(mentorBreakdownRows), 'Mentor Performance');
+
+    // ── Sheet 4: Top Mentors All-Time ────────────────────────────────
+    const topMentorRows = [
+        ['Rank', 'Mentor', 'Total Sessions (All-Time)'],
+        ...topMentors.map((m, i) => [i + 1, m.name, m.count])
     ];
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(mentorRows), 'Top Mentors');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(topMentorRows), 'Top Mentors (All-Time)');
 
-    // ── Sheet 3: Top Subjects ────────────────────────────────────────
+    // ── Sheet 5: Most Booked Subjects All-Time ───────────────────────
     const subjectRows = [
-        ['Subject Code', 'Total Bookings'],
-        ...topSubjects.map(s => [s.name, s.count])
+        ['Rank', 'Subject Code', 'Total Bookings (All-Time)'],
+        ...topSubjects.map((s, i) => [i + 1, s.name, s.count])
     ];
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(subjectRows), 'Top Subjects');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(subjectRows), 'Top Subjects (All-Time)');
 
-    // ── Sheet 4: Satisfaction Rate ───────────────────────────────────
-    const satisfactionRows = [
-        ['Rating Category', 'Percentage'],
-        ['Excellent (4-5)',  satisfaction[0] + '%'],
-        ['Good (3-4)',       satisfaction[1] + '%'],
-        ['Average (below 3)', satisfaction[2] + '%'],
-    ];
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(satisfactionRows), 'Satisfaction');
-
-    // ── Sheet 5: College Activity ────────────────────────────────────
+    // ── Sheet 6: College Activity All-Time ───────────────────────────
     const collegeRows = [
-        ['College', 'Student Count'],
+        ['College', 'Student Count (All-Time)'],
         ...Object.entries(collegeData).map(([college, count]) => [college, count])
     ];
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(collegeRows), 'College Activity');
 
-    // ── Sheet 6: Monthly Trends ──────────────────────────────────────
+    // ── Sheet 7: Monthly Trends ──────────────────────────────────────
     const trendRows = [
-        ['Week', 'Session Count'],
+        ['Week', 'Session Count (This Month)'],
         ...monthlyData.map((count, i) => [`Week ${i + 1}`, count])
     ];
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(trendRows), 'Monthly Trends');
 
     // ── Export ───────────────────────────────────────────────────────
-    XLSX.writeFile(wb, `lrc-analytics-report-${from}-to-${to}.xlsx`);
-
+    XLSX.writeFile(wb, `lrc-weekly-report-${from}-to-${to}.xlsx`);
     document.getElementById('reportModal').style.display = 'none';
 }
 </script>
