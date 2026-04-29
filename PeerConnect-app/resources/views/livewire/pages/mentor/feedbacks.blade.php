@@ -206,8 +206,8 @@ $totalPages = computed(function () {
         }
 
         /* FEEDBACK ROW */
-        .feedback-row { transition: background 0.15s; }
-        .feedback-row:hover { background: #f8fafc; }
+        .feedback-row { transition: background 0.15s; } 
+        .feedback-row:hover { background: #f1f5f9; cursor: pointer; }
 
 .hover-tooltip {
     position: relative;
@@ -560,7 +560,16 @@ $totalPages = computed(function () {
                                 ]);
                             @endphp
 
-                            <tr class="feedback-row">
+                            <tr class="feedback-row cursor-pointer" @click="openDetailModal({ 
+    mentor: fb.mentor_name, 
+    subject: fb.subject, 
+    topic: fb.topic, 
+    date: fb.date_formatted, 
+    avg: fb.avg, 
+    avgLabel: fb.avgLabel, 
+    q1: fb.q1, q2: fb.q2, q3: fb.q3, q4: fb.q4, q5: fb.q5, q6: fb.q6, q7: fb.q7, q8: fb.q8, q9: fb.q9, q10: fb.q10, 
+    feedback: fb.has_feedback ? fb.feedback : null 
+})">
 
                                 {{-- Date --}}
                                 <td class="px-5 py-5 align-middle col-date">
@@ -598,27 +607,7 @@ $totalPages = computed(function () {
 
                                 {{-- Rating — click opens full detail modal --}}
 <td class="px-5 py-5 align-middle col-rating text-right">
-    <button type="button"
-        onclick='openDetailModal({{ $modalData }})'
-        class="flex flex-col items-end gap-1 text-right ml-auto">
 
-        @if($avg !== null)
-            <span class="rating-pill {{ $avgClass }}">
-                <i class="fa-solid fa-star text-[10px]"></i>
-                {{ number_format($avg, 1) }} / 5 &dash; {{ $avgLabel }}
-            </span>
-        @else
-            <span class="text-xs text-gray-300 italic">No score</span>
-        @endif
-
-        @if(!is_null($fb->q10))
-            <span class="ontime-badge {{ $fb->q10 ? 'ontime-yes' : 'ontime-no' }}">
-                <i class="fa-solid {{ $fb->q10 ? 'fa-clock' : 'fa-clock-rotate-left' }} text-[9px]"></i>
-                {{ $fb->q10 ? 'On time' : 'Late' }}
-            </span>
-        @endif
-    </button>
-</td>
 
                             </tr>
                             @endforeach

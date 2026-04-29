@@ -181,7 +181,7 @@ $dashboardStats = computed(function () {
         .cell-text { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; max-width: 100%; }
         .cell-text-wrap { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; word-break: break-word; overflow-wrap: anywhere; }
         .feedback-row { transition: background 0.15s; }
-        .feedback-row:hover { background: #f8fafc; }
+        .feedback-row:hover { background: #f1f5f9; cursor: pointer; }
 
         .hover-tooltip { position: relative; cursor: pointer; }
         .hover-tooltip::after { content: attr(data-full); position: absolute; left: 0; top: 110%; background: rgba(0,0,0,0.85); color: #fff; padding: 8px 10px; border-radius: 6px; font-size: 11px; line-height: 1.4; white-space: normal; word-break: break-word; overflow-wrap: anywhere; width: max-content; max-width: 400px; opacity: 0; pointer-events: none; transform: translateY(5px); transition: 0.15s ease; z-index: 9999; }
@@ -401,7 +401,16 @@ $dashboardStats = computed(function () {
                                     </thead>
                                     <tbody class="divide-y divide-gray-100">
                                         <template x-for="fb in paginatedFeedbacks" :key="fb.id">
-                                            <tr class="feedback-row">
+                                            <tr class="feedback-row cursor-pointer" @click="openDetailModal({ 
+    mentor: fb.mentor_name, 
+    subject: fb.subject, 
+    topic: fb.topic, 
+    date: fb.date_formatted, 
+    avg: fb.avg, 
+    avgLabel: fb.avgLabel, 
+    q1: fb.q1, q2: fb.q2, q3: fb.q3, q4: fb.q4, q5: fb.q5, q6: fb.q6, q7: fb.q7, q8: fb.q8, q9: fb.q9, q10: fb.q10, 
+    feedback: fb.has_feedback ? fb.feedback : null 
+})">
                                                 <td class="px-5 py-5 align-middle col-date">
                                                     <span class="cell-text text-slate-700 text-[13px] font-semibold" x-text="fb.date_formatted"></span>
                                                 </td>
@@ -426,38 +435,29 @@ $dashboardStats = computed(function () {
                                                     </button>
                                                 </td>
 
-                                                <td class="px-5 py-5 align-middle col-rating text-right">
-                                                    <button type="button" @click="openDetailModal({ 
-                                                        mentor: fb.mentor_name, 
-                                                        subject: fb.subject, 
-                                                        topic: fb.topic, 
-                                                        date: fb.date_formatted, 
-                                                        avg: fb.avg, 
-                                                        avgLabel: fb.avgLabel, 
-                                                        q1: fb.q1, q2: fb.q2, q3: fb.q3, q4: fb.q4, q5: fb.q5, q6: fb.q6, q7: fb.q7, q8: fb.q8, q9: fb.q9, q10: fb.q10, 
-                                                        feedback: fb.has_feedback ? fb.feedback : null 
-                                                    })" class="flex flex-col items-end gap-1 text-right ml-auto">
-                                                        
-                                                        <template x-if="fb.avg !== null">
-                                                            <span :class="'rating-pill ' + fb.avgClass">
-                                                                <i class="fa-solid fa-star text-[10px]"></i>
-                                                                <span x-text="Number(fb.avg).toFixed(1) + ' / 5 &dash; ' + fb.avgLabel"></span>
-                                                            </span>
-                                                        </template>
-                                                        
-                                                        <template x-if="fb.avg === null">
-                                                            <span class="text-xs text-gray-300 italic">No score</span>
-                                                        </template>
+<td class="px-5 py-5 align-middle col-rating text-right">
+    <div class="flex flex-col items-end gap-1">
+        
+        <template x-if="fb.avg !== null">
+            <span :class="'rating-pill ' + fb.avgClass">
+                <i class="fa-solid fa-star text-[10px]"></i>
+                <span x-text="Number(fb.avg).toFixed(1) + ' / 5 &dash; ' + fb.avgLabel"></span>
+            </span>
+        </template>
+        
+        <template x-if="fb.avg === null">
+            <span class="text-xs text-gray-300 italic">No score</span>
+        </template>
 
-                                                        <template x-if="fb.q10 !== null">
-                                                            <span :class="'ontime-badge ' + (fb.q10 ? 'ontime-yes' : 'ontime-no')">
-                                                                <i :class="'fa-solid text-[9px] ' + (fb.q10 ? 'fa-clock' : 'fa-clock-rotate-left')"></i>
-                                                                <span x-text="fb.q10 ? 'On time' : 'Late'"></span>
-                                                            </span>
-                                                        </template>
+        <template x-if="fb.q10 !== null">
+            <span :class="'ontime-badge ' + (fb.q10 ? 'ontime-yes' : 'ontime-no')">
+                <i :class="'fa-solid text-[9px] ' + (fb.q10 ? 'fa-clock' : 'fa-clock-rotate-left')"></i>
+                <span x-text="fb.q10 ? 'On time' : 'Late'"></span>
+            </span>
+        </template>
 
-                                                    </button>
-                                                </td>
+    </div>
+</td>
                                             </tr>
                                         </template>
                                     </tbody>
