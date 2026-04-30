@@ -736,8 +736,8 @@ mount(function () {
         <th @click="setSort('email')" class="cursor-pointer px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider select-none" style="width:20%;">
             <div class="flex items-center gap-1 hover:text-red-800 transition">UP Mail<span x-text="sortIndicator('email')" class="text-[10px]"></span></div>
         </th>
-        <th class="px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider" style="width:27%;">Subjects</th>
-        <th class="px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider" style="width:13%;">
+        <th class="px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider" style="width:25%;">Subjects</th>
+        <th class="px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider" style="width:15%;">
             <div class="flex items-center justify-center">Actions</div>
         </th>
     </tr>
@@ -765,7 +765,7 @@ mount(function () {
                                             </div>
                                         </td>
 
-                                        <td class="px-5 py-4 align-middle" style="width:27%;">
+                                        <td class="px-5 py-4 align-middle" style="width:25%;">
                                             <div x-data="{ subs: mentor.subjectsTable ? mentor.subjectsTable.split(',').map(s=>s.trim()).filter(Boolean) : [] }" class="flex items-center flex-wrap gap-1">
                                                 <template x-for="(sub, index) in subs.slice(0, 3)" :key="index">
                                                     <span class="bg-red-50 text-red-700 px-2 py-0.5 rounded text-[10px] font-bold border border-red-100 whitespace-nowrap" x-text="sub"></span>
@@ -779,7 +779,7 @@ mount(function () {
                                             </div>
                                         </td>
 
-                                        <td class="px-5 py-4 align-middle text-center" style="width:13%;">
+                                        <td class="px-5 py-4 align-middle text-center" style="width:15%;">
                                             <div class="relative flex items-center justify-center flex-wrap" style="min-height:28px;">
 
                                                 {{-- idle dot --}}

@@ -267,7 +267,7 @@ mount(function () {
     .pagination-btn { padding: 4px 10px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 11px; font-weight: 600; color: #64748b; transition: all 0.2s; background: white; cursor: pointer; }
     .pagination-btn:hover:not(:disabled) { background: #f1f5f9; color: #7b1d1d; border-color: #7b1d1d; }
 
-    .hover-tooltip { position: relative; cursor: pointer; }
+    .hover-tooltip { position: relative; }
     .hover-tooltip::after {
         content: attr(data-full);
         position: absolute; left: 0; top: 110%;
@@ -412,33 +412,33 @@ mount(function () {
 
             {{-- Summary Stat Cards --}}
             <div class="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6">
-                <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-slate-400 flex items-center gap-4">
-                    <div class="text-2xl">
+                <div class="bg-white p-4 lg:p-5 rounded-xl shadow-sm border-l-4 border-slate-400 flex items-center gap-3 lg:gap-4">
+                    <div class="text-2xl flex-shrink-0">
                         <i class="fa-solid fa-book-open text-slate-500"></i>
                     </div>
-                    <div>
-                        <h3 class="text-xs font-bold text-gray-400 uppercase leading-none">Total Subjects</h3>
-                        <p class="text-2xl font-black text-slate-800" x-text="subjects.length"></p>
+                    <div class="min-w-0 flex-1">
+                        <h3 class="text-[10px] lg:text-xs font-bold text-gray-400 uppercase leading-none truncate" title="Total Subjects">Total Subjects</h3>
+                        <p class="text-xl lg:text-2xl font-black text-slate-800 truncate" x-bind:title="subjects.length" x-text="subjects.length"></p>
                     </div>
                 </div>
 
-                <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-green-600 flex items-center gap-4">
-                    <div class="text-2xl">
+                <div class="bg-white p-4 lg:p-5 rounded-xl shadow-sm border-l-4 border-green-600 flex items-center gap-3 lg:gap-4">
+                    <div class="text-2xl flex-shrink-0">
                         <i class="fa-solid fa-chalkboard-user text-green-600"></i>
                     </div>
-                    <div>
-                        <h3 class="text-xs font-bold text-gray-400 uppercase leading-none">Subjects With Mentors</h3>
-                        <p class="text-2xl font-black text-slate-800" x-text="subjects.filter(s => s.mentorCount > 0).length"></p>
+                    <div class="min-w-0 flex-1">
+                        <h3 class="text-[10px] lg:text-xs font-bold text-gray-400 uppercase leading-none truncate" title="Subjects With Mentors">Subjects With Mentors</h3>
+                        <p class="text-xl lg:text-2xl font-black text-slate-800 truncate" x-bind:title="subjects.filter(s => s.mentorCount > 0).length" x-text="subjects.filter(s => s.mentorCount > 0).length"></p>
                     </div>
                 </div>
 
-                <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-yellow-500 flex items-center gap-4">
-                    <div class="text-2xl">
+                <div class="bg-white p-4 lg:p-5 rounded-xl shadow-sm border-l-4 border-yellow-500 flex items-center gap-3 lg:gap-4">
+                    <div class="text-2xl flex-shrink-0">
                         <i class="fa-solid fa-user-slash text-yellow-500"></i>
                     </div>
-                    <div>
-                        <h3 class="text-xs font-bold text-gray-400 uppercase leading-none">Subjects With No Mentors</h3>
-                        <p class="text-2xl font-black text-slate-800" x-text="subjects.filter(s => s.mentorCount === 0).length"></p>
+                    <div class="min-w-0 flex-1">
+                        <h3 class="text-[10px] lg:text-xs font-bold text-gray-400 uppercase leading-none truncate" title="Subjects With No Mentors">Subjects With No Mentors</h3>
+                        <p class="text-xl lg:text-2xl font-black text-slate-800 truncate" x-bind:title="subjects.filter(s => s.mentorCount === 0).length" x-text="subjects.filter(s => s.mentorCount === 0).length"></p>
                     </div>
                 </div>
             </div>
@@ -499,7 +499,7 @@ mount(function () {
 
                         <thead class="bg-slate-50 border-b border-gray-100">
                             <tr>
-                                <th class="px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider w-[4%]">#</th>
+                                <th class="px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider w-[5%]">#</th>
                                 <th @click="setSort('code')" class="cursor-pointer px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider select-none" style="width:18%;">
                                     <div class="flex items-center gap-1 hover:text-red-800 transition">
                                         Subject Code
@@ -518,7 +518,7 @@ mount(function () {
                                         <span x-text="sortColumn === 'mentorCount' ? (sortDirection === 'asc' ? '↑' : '↓') : ''" class="text-[10px]"></span>
                                     </div>
                                 </th>
-                                <th class="px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider select-none text-center" style="width:14%;">Actions</th>
+                                <th class="px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider select-none text-center" style="width:13%;">Actions</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-50">
@@ -537,21 +537,21 @@ mount(function () {
                                             <p class="text-xs text-slate-600 truncate" x-text="sub.name"></p>
                                         </div>
                                     </td>
-                                    <td class="px-5 py-4 align-middle text-center" style="width:18%;">
+                                    <td class="px-5 py-4 align-middle text-center flex-wrap" style="width:18%;">
                                         <span @click="openViewModal(sub)"
-                                            class="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-xs font-bold border border-blue-100 cursor-pointer hover:bg-blue-100 transition"
+                                            class="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-xs font-bold border border-blue-100 cursor-pointer hover:bg-blue-100 transition whitespace-nowrap"
                                             x-text="sub.mentorCount + (sub.mentorCount === 1 ? ' Mentor' : ' Mentors')">
                                         </span>
                                     </td>
                                     <td class="px-5 py-4 align-middle text-center" style="width:14%;">
-                                        <div class="relative flex items-center justify-center" style="min-height:28px;">
+                                        <div class="relative flex items-center justify-center flex-wrap" style="min-height:28px;">
                                             {{-- idle dot --}}
                                             <div class="action-idle absolute inset-0 flex items-center justify-center pointer-events-none">
                                                 <span class="w-2 h-2 rounded-full bg-slate-300 inline-block"></span>
                                             </div>
 
                                             {{-- revealed buttons --}}
-                                            <div class="action-buttons flex items-center justify-center gap-1">
+                                            <div class="action-buttons flex items-center justify-center flex-wrap gap-1">
                                                 <div class="hover-tooltip" data-full="View Mentors">
                                                     <button @click="openViewModal(sub)"
                                                         class="w-7 h-7 rounded-lg bg-gray-100 hover:bg-gray-200 text-slate-600 flex items-center justify-center transition-all hover:scale-110 hover:shadow-sm"
@@ -675,7 +675,7 @@ mount(function () {
     </template>
 
     {{-- ── ADD SUBJECT MODAL ── --}}
-    <div x-show="$wire.showSubjectModal" x-cloak class="modal-overlay">
+    <div x-show="$wire.showSubjectModal" x-cloak class="modal-overlay" x-data="{ isVerifying: false }">
         <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden" @click.stop>
             <div class="flex items-center gap-4 px-6 py-5 bg-white border-b border-gray-100">
                 <div class="w-12 h-12 rounded-full bg-green-100 text-green-600 flex items-center justify-center text-xl flex-shrink-0">
@@ -685,7 +685,7 @@ mount(function () {
                     <h2 class="text-xl font-extrabold text-slate-800 tracking-tight mb-0.5">Add New Subject</h2>
                     <p class="text-xs text-slate-500 leading-snug">This subject will become available for mentor assignments.</p>
                 </div>
-                <button type="button" @click="$wire.showSubjectModal = false; $wire.closeSubjectModal()" class="text-gray-400 hover:text-red-600 transition ml-2">
+                <button type="button" @click="$wire.showSubjectModal = false; $wire.closeSubjectModal()" x-bind:disabled="isVerifying" class="text-gray-400 hover:text-red-600 transition ml-2 disabled:cursor-not-allowed">
                     <i class="fa-solid fa-xmark text-xl"></i>
                 </button>
             </div>
@@ -703,19 +703,19 @@ mount(function () {
                 </div>
             </div>
 
-            <div class="px-6 py-5 bg-gray-50 border-t border-gray-100">
+            <div class="px-6 py-5 border-t border-gray-100">
                 <div class="flex gap-3">
                     <button type="button" @click="$wire.showSubjectModal = false; $wire.closeSubjectModal()"
-                        class="flex-1 py-2.5 text-sm font-bold text-gray-600 bg-white border border-gray-200 hover:bg-gray-100 rounded-xl transition">
+                        x-bind:disabled="isVerifying"
+                        class="flex-1 py-2.5 text-sm font-bold text-gray-600 bg-white border border-gray-200 hover:bg-gray-100 rounded-xl transition disabled:cursor-not-allowed">
                         Cancel
                     </button>
                     <button type="button"
-                        @click="$wire.validateSubject()"
-                        wire:loading.attr="disabled"
-                        wire:target="validateSubject"
-                        class="flex-1 bg-slate-800 text-white py-2.5 rounded-xl text-sm font-bold shadow-md hover:bg-black transition disabled:opacity-60 disabled:cursor-not-allowed">
-                        <span wire:loading.remove wire:target="validateSubject">Add Subject</span>
-                        <span wire:loading wire:target="validateSubject"><i class="fa-solid fa-spinner fa-spin mr-1"></i>Verifying...</span>
+                        @click="isVerifying = true; $wire.validateSubject().finally(() => isVerifying = false)"
+                        x-bind:disabled="isVerifying"
+                        class="flex-1 bg-emerald-600 text-white py-2.5 rounded-xl text-sm font-bold shadow-md hover:bg-emerald-700 transition disabled:cursor-not-allowed">
+                        <span x-show="!isVerifying">Add Subject</span>
+                        <span x-show="isVerifying" style="display: none;"><i class="fa-solid fa-spinner fa-spin mr-1"></i>Validating...</span>
                     </button>
                 </div>
             </div>
@@ -723,7 +723,17 @@ mount(function () {
     </div>
 
     {{-- ── EDIT SUBJECT MODAL ── --}}
-    <div x-show="showEditModal" x-cloak class="modal-overlay">
+    <div x-show="showEditModal" x-cloak class="modal-overlay" 
+        x-data="
+        { isVerifying: false, 
+        // Check if there are changes to any input
+        get hasChanges() {
+            if (originalForm.code !== editForm.code) return true;
+            if (originalForm.name !== editForm.name) return true;
+            
+            return false;
+            }
+        }">
         <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden" @click.stop>
             <div class="flex items-center gap-4 px-6 py-5 bg-white border-b border-gray-100">
                 <div class="w-12 h-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xl flex-shrink-0">
@@ -733,7 +743,7 @@ mount(function () {
                     <h2 class="text-xl font-extrabold text-slate-800 tracking-tight mb-0.5">Edit Subject</h2>
                     <p class="text-xs text-slate-500 leading-snug">Update the course code or the descriptive name.</p>
                 </div>
-                <button type="button" @click="showEditModal = false; $wire.closeEditModal()" class="text-gray-400 hover:text-red-600 transition ml-2">
+                <button type="button" @click="showEditModal = false; $wire.closeEditModal()" class="text-gray-400 hover:text-red-600 transition ml-2 disabled:cursor-not-allowed" x-bind:disabled="isVerifying">
                     <i class="fa-solid fa-xmark text-xl"></i>
                 </button>
             </div>
@@ -754,16 +764,16 @@ mount(function () {
             <div class="px-6 py-5 bg-gray-50 border-t border-gray-100">
                 <div class="flex gap-3">
                     <button type="button" @click="showEditModal = false; $wire.closeEditModal()"
-                        class="flex-1 py-2.5 text-sm font-bold text-gray-600 bg-white border border-gray-200 hover:bg-gray-100 rounded-xl transition">
+                        class="flex-1 py-2.5 text-sm font-bold text-gray-600 bg-white border border-gray-200 hover:bg-gray-100 rounded-xl transition disabled:cursor-not-allowed" x-bind:disabled="isVerifying">
                         Cancel
                     </button>
                     <button type="button"
-                        @click="$wire.validateEditSubject(editingSubject.id, editForm.code, editForm.name)"
-                        wire:loading.attr="disabled"
-                        wire:target="validateEditSubject"
-                        class="flex-1 bg-amber-500 text-white py-2.5 rounded-xl text-sm font-bold shadow-md hover:bg-amber-600 transition disabled:opacity-60 disabled:cursor-not-allowed">
-                        <span wire:loading.remove wire:target="validateEditSubject">Save Changes</span>
-                        <span wire:loading wire:target="validateEditSubject"><i class="fa-solid fa-spinner fa-spin mr-1"></i>Verifying...</span>
+                        @click="if (hasChanges) { isVerifying = true; $wire.validateEditSubject(editingSubject.id, editForm.code, editForm.name).finally(() => isVerifying = false) }"
+                        x-bind:disabled="isVerifying || !hasChanges"
+                        class="flex-1 bg-blue-500 text-white py-2.5 rounded-xl text-sm font-bold shadow-md hover:bg-blue-600 transition"
+                        :class="(!hasChanges || isVerifying) ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-600'">
+                        <span x-show="!isVerifying">Save Changes</span>
+                        <span x-show="isVerifying" style="display: none;"><i class="fa-solid fa-spinner fa-spin mr-1"></i>Verifying...</span>
                     </button>
                 </div>
             </div>
@@ -996,6 +1006,7 @@ confirmOkBtn.onclick = async () => {
             showEditModal: false,
             editingSubject: null,
             editForm: { code: '', name: '' },
+            originalForm: { code: '', name: '' },
 
             init() {
                 // Listen for mentor filter changes from vanilla checkboxes
@@ -1066,6 +1077,10 @@ confirmOkBtn.onclick = async () => {
                 this.editingSubject = sub;
                 this.editForm.code  = sub.code;
                 this.editForm.name  = sub.name;
+                this.originalForm = {
+                    code: this.editForm.code,
+                    name: this.editForm.name
+                };
                 this.showEditModal  = true;
             },
 
