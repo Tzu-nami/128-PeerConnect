@@ -722,8 +722,8 @@ mount(function () {
                     </div>
 
                     {{-- Table --}}
-                    <div style="overflow:hidden;">
-                        <table class="w-full text-left text-sm table-fixed" style="overflow:hidden;">
+                    <div style="overflow:visible;">
+                        <table class="w-full text-left text-sm table-fixed" style="overflow:visible;">
 <thead class="bg-slate-50 border-b border-gray-100">
     <tr>
         <th class="px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider" style="width:5%;">#</th>
