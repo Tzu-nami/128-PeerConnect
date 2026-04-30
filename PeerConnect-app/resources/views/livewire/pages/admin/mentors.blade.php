@@ -508,7 +508,7 @@ mount(function () {
     .pagination-btn { padding: 4px 10px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 11px; font-weight: 600; color: #64748b; transition: all 0.2s; background: white; cursor: pointer; }
     .pagination-btn:hover:not(:disabled) { background: #f1f5f9; color: #7b1d1d; border-color: #7b1d1d; }
 
-    .hover-tooltip { position: relative; cursor: pointer; }
+    .hover-tooltip { position: relative; }
     .hover-tooltip::after {
         content: attr(data-full);
         position: absolute; left: 0; top: 110%;
@@ -660,32 +660,35 @@ mount(function () {
 
 {{-- Summary Stat Cards --}}
 <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-    <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-slate-400 flex items-center gap-4">
-        <div class="text-2xl"><i class="fa-solid fa-chalkboard-user text-slate-500"></i></div>
-        <div>
-            <h3 class="text-xs font-bold text-gray-400 uppercase leading-none">Total Mentors</h3>
-            <p class="text-2xl font-black text-slate-800">{{ $this->mentorStats['total'] }}</p>
+    <div class="bg-white p-4 lg:p-5 rounded-xl shadow-sm border-l-4 border-slate-400 flex items-center gap-3 lg:gap-4">
+        <div class="text-2xl flex-shrink-0"><i class="fa-solid fa-chalkboard-user text-slate-500"></i></div>
+        <div class="min-w-0 flex-1">
+            <h3 class="text-[10px] lg:text-xs font-bold text-gray-400 uppercase leading-none truncate">Total Mentors</h3>
+            <p class="text-xl lg:text-2xl font-black text-slate-800 truncate">{{ $this->mentorStats['total'] }}</p>
         </div>
     </div>
-    <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-green-600 flex items-center gap-4">
-        <div class="text-2xl"><i class="fa-solid fa-circle-check text-green-600"></i></div>
-        <div>
-            <h3 class="text-xs font-bold text-gray-400 uppercase leading-none">Accepted This Week</h3>
-            <p class="text-2xl font-black text-slate-800">{{ $this->mentorStats['acceptedThisWeek'] }}</p>
+    
+    <div class="bg-white p-4 lg:p-5 rounded-xl shadow-sm border-l-4 border-green-600 flex items-center gap-3 lg:gap-4">
+        <div class="text-2xl flex-shrink-0"><i class="fa-solid fa-circle-check text-green-600"></i></div>
+        <div class="min-w-0 flex-1">
+            <h3 class="text-[10px] lg:text-xs font-bold text-gray-400 uppercase leading-none truncate">Accepted This Week</h3>
+            <p class="text-xl lg:text-2xl font-black text-slate-800 truncate">{{ $this->mentorStats['acceptedThisWeek'] }}</p>
         </div>
     </div>
-    <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-yellow-500 flex items-center gap-4">
-        <div class="text-2xl"><i class="fa-solid fa-hourglass-half text-yellow-500"></i></div>
-        <div>
-            <h3 class="text-xs font-bold text-gray-400 uppercase leading-none">Pending This Week</h3>
-            <p class="text-2xl font-black text-slate-800">{{ $this->mentorStats['pendingThisWeek'] }}</p>
+    
+    <div class="bg-white p-4 lg:p-5 rounded-xl shadow-sm border-l-4 border-yellow-500 flex items-center gap-3 lg:gap-4">
+        <div class="text-2xl flex-shrink-0"><i class="fa-solid fa-hourglass-half text-yellow-500"></i></div>
+        <div class="min-w-0 flex-1">
+            <h3 class="text-[10px] lg:text-xs font-bold text-gray-400 uppercase leading-none truncate">Pending This Week</h3>
+            <p class="text-xl lg:text-2xl font-black text-slate-800 truncate">{{ $this->mentorStats['pendingThisWeek'] }}</p>
         </div>
     </div>
-    <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-purple-600 flex items-center gap-4">
-        <div class="text-2xl"><i class="fa-solid fa-trophy text-purple-600"></i></div>
-        <div>
-            <h3 class="text-xs font-bold text-gray-400 uppercase leading-none">Most Active</h3>
-            <p class="text-lg font-black text-slate-800 leading-tight">{{ $this->mentorStats['mostActive'] }}</p>
+    
+    <div class="bg-white p-4 lg:p-5 rounded-xl shadow-sm border-l-4 border-purple-600 flex items-center gap-3 lg:gap-4">
+        <div class="text-2xl flex-shrink-0"><i class="fa-solid fa-trophy text-purple-600"></i></div>
+        <div class="min-w-0 flex-1">
+            <h3 class="text-[10px] lg:text-xs font-bold text-gray-400 uppercase leading-none truncate">Most Active</h3>
+            <p class="text-base lg:text-lg font-black text-slate-800 leading-tight truncate">{{ $this->mentorStats['mostActive'] }}</p>
         </div>
     </div>
 </div>
@@ -697,13 +700,13 @@ mount(function () {
                     <div class="p-5 border-b border-gray-100 flex flex-wrap gap-3 items-center justify-between">
                         <div>
                             <h2 class="font-bold text-slate-800 text-m">All Mentors</h2>
-                            <p class="text-xs text-gray-400 font-medium" id="mentorCountLabel">— mentors found</p>
+                            <p class="text-xs text-gray-400 font-medium" x-text="`${filteredMentors.length} Mentor${filteredMentors.length !== 1 ? 's' : ''} found`"></p>
                         </div>
                         <div class="flex gap-2 items-center flex-wrap">
                             <div class="relative">
                                 <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-300 text-xs"></i>
-                                <input type="text" x-model="searchQuery" @input="currentPage = 1" placeholder="Search mentors..."
-                                    class="pl-8 pr-3 py-1.5 text-xs font-medium text-slate-700 placeholder-gray-400 border border-gray-200 rounded-lg bg-white outline-none focus:ring-1 focus:border-up-maroon focus:ring-up-maroon w-56 h-[34px] transition-shadow">
+                                <input type="text" x-model="searchQuery" @input="currentPage = 1" placeholder="Search mentors, email, subjects..."
+                                    class="pl-8 pr-3 py-1.5 text-xs font-medium text-slate-700 placeholder-gray-400 border border-gray-200 rounded-lg bg-white outline-none focus:ring-1 focus:border-up-maroon focus:ring-up-maroon w-60 h-[34px] transition-shadow">
                             </div>
 
                             <button wire:click="openSubjectModal" @click="$wire.showSubjectModal = true" 
@@ -723,7 +726,7 @@ mount(function () {
                         <table class="w-full text-left text-sm table-fixed" style="overflow:visible;">
 <thead class="bg-slate-50 border-b border-gray-100">
     <tr>
-        <th class="px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider" style="width:4%;">#</th>
+        <th class="px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider" style="width:5%;">#</th>
         <th @click="setSort('name')" class="cursor-pointer px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider select-none" style="width:22%;">
             <div class="flex items-center gap-1 hover:text-red-800 transition">Mentor Name<span x-text="sortIndicator('name')" class="text-[10px]"></span></div>
         </th>
@@ -734,7 +737,7 @@ mount(function () {
             <div class="flex items-center gap-1 hover:text-red-800 transition">UP Mail<span x-text="sortIndicator('email')" class="text-[10px]"></span></div>
         </th>
         <th class="px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider" style="width:27%;">Subjects</th>
-        <th class="px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider" style="width:14%;">
+        <th class="px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider" style="width:13%;">
             <div class="flex items-center justify-center">Actions</div>
         </th>
     </tr>
@@ -743,7 +746,7 @@ mount(function () {
                                 <template x-for="(mentor, idx) in paginatedMentors" :key="mentor.id">
                                     <tr class="mentor-row border-b border-gray-50 hover:bg-slate-50 transition">
 
-                                        <td class="px-5 py-4 align-middle text-gray-400 text-xs font-medium" style="width:4%;">
+                                        <td class="px-5 py-4 align-middle text-gray-400 text-xs font-medium" style="width:5%;">
                                             <span x-text="(currentPage - 1) * perPage + idx + 1"></span>
                                         </td>
 
@@ -763,14 +766,12 @@ mount(function () {
                                         </td>
 
                                         <td class="px-5 py-4 align-middle" style="width:27%;">
-                                            <div x-data="{ subs: mentor.subjectsTable ? mentor.subjectsTable.split(',').map(s=>s.trim()).filter(Boolean) : [] }" class="flex items-center flex-nowrap gap-1">
+                                            <div x-data="{ subs: mentor.subjectsTable ? mentor.subjectsTable.split(',').map(s=>s.trim()).filter(Boolean) : [] }" class="flex items-center flex-wrap gap-1">
                                                 <template x-for="(sub, index) in subs.slice(0, 3)" :key="index">
                                                     <span class="bg-red-50 text-red-700 px-2 py-0.5 rounded text-[10px] font-bold border border-red-100 whitespace-nowrap" x-text="sub"></span>
                                                 </template>
                                                 <template x-if="subs.length > 3">
-                                                    <span class="bg-slate-100 text-slate-600 px-2 py-0.5 rounded text-[10px] font-bold border border-slate-200 whitespace-nowrap"
-                                                        x-text="'+' + (subs.length - 3)"
-                                                        :title="mentor.subjects.slice(3, 10).map(s => s.code).join('\n') + (mentor.subjects.length > 8 ? '\n...and more' : '')"></span>
+                                                    <span class="bg-slate-100 text-slate-600 px-2 py-0.5 rounded text-[10px] font-bold border border-slate-200 whitespace-nowrap hover-tooltip" x-text="'+' + (subs.length - 3)" :data-full="mentor.subjects.slice(3).map(s => s.code).join(', ')"></span>
                                                 </template>
                                                 <template x-if="subs.length === 0">
                                                     <span class="text-[10px] text-gray-300 italic">No subjects</span>
@@ -778,16 +779,16 @@ mount(function () {
                                             </div>
                                         </td>
 
-                                        <td class="px-5 py-4 align-middle text-center" style="width:14%;">
-                                            <div class="relative flex items-center justify-center" style="min-height:28px;">
+                                        <td class="px-5 py-4 align-middle text-center" style="width:13%;">
+                                            <div class="relative flex items-center justify-center flex-wrap" style="min-height:28px;">
 
                                                 {{-- idle dot --}}
                                                 <div class="action-idle absolute inset-0 flex items-center justify-center pointer-events-none">
-                                                    <span class="w-2 h-2 rounded-full bg-green-400 inline-block"></span>
+                                                    <span class="w-2 h-2 rounded-full bg-gray-400 inline-block"></span>
                                                 </div>
 
                                                 {{-- revealed buttons --}}
-                                                <div class="action-buttons flex items-center justify-center gap-1">
+                                                <div class="action-buttons flex items-center justify-center flex-wrap gap-1">
                                                     <div class="hover-tooltip" data-full="View Details">
                                                         <button @click="openViewModal(mentor)"
                                                             class="w-7 h-7 rounded-lg bg-gray-100 hover:bg-gray-200 text-slate-600 hover:text-slate-800 flex items-center justify-center transition-all hover:scale-110">
@@ -1090,7 +1091,7 @@ mount(function () {
                     </button>
                     <button type="button" @click="isVerifying = true; $wire.confirmMentor().finally(() => isVerifying = false)"
                         x-bind:disabled="isVerifying"
-                        class="flex-1 bg-red-900 text-white py-3 rounded-xl text-xs font-bold shadow-lg hover:bg-red-800 transition disabled:cursor-not-allowed">
+                        class="flex-1 bg-red-800 text-white py-3 rounded-xl text-xs font-bold shadow-lg hover:bg-red-900 transition disabled:cursor-not-allowed">
                         <span x-show="!isVerifying">Register Mentor</span>
                         <span x-show="isVerifying" style="display: none;"><i class="fa-solid fa-spinner fa-spin mr-1"></i>Validating...</span>
                     </button>
@@ -1102,7 +1103,7 @@ mount(function () {
     {{-- ── CONFIRM ADD MENTOR ── --}}
     <div x-show="$wire.showConfirm" x-cloak class="modal-overlay flex items-center justify-center" style="z-index: 1100;" wire:click.self="$set('showConfirm', false)">
         <div class="bg-white w-full max-w-sm rounded-2xl shadow-2xl p-8 text-center m-4">
-            <div class="w-16 h-16 bg-amber-100 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-5">
+            <div class="w-16 h-16 bg-blue-100 text-blue-500 rounded-full flex items-center justify-center mx-auto mb-5">
                 <i class="fa-solid fa-user-plus text-3xl"></i>
             </div>
             <h3 class="text-xl font-black text-slate-800">Confirm Mentor Registration</h3>
@@ -1110,7 +1111,7 @@ mount(function () {
             <div class="flex gap-3" x-data="{ isSaving: false }">
                 <button type="button" @click="$wire.showConfirm = false" class="flex-1 py-3 text-xs font-bold text-gray-800 bg-gray-200 hover:bg-gray-300 rounded-xl transition disabled:cursor-not-allowed" x-bind:disabled="isSaving">Cancel</button>
                 <button type="button" @click="isSaving = true; $wire.saveMentor().finally(() => isSaving = false)"
-                    class="flex-1 bg-red-900 text-white py-3 rounded-xl text-xs font-bold shadow-lg hover:bg-red-800 transition disabled:cursor-not-allowed" x-bind:disabled="isSaving"
+                    class="flex-1 bg-red-800 text-white py-3 rounded-xl text-xs font-bold shadow-lg hover:bg-red-900 transition disabled:cursor-not-allowed" x-bind:disabled="isSaving"
                     >
                     <span x-show="!isSaving">Save</span>
                     <span x-show="isSaving" style="display: none;"><i class="fa-solid fa-spinner fa-spin mr-1"></i>Saving...</span>
@@ -1121,7 +1122,21 @@ mount(function () {
 
     {{-- ── EDIT MENTOR MODAL ── --}}
     <div x-show="showEditModal" x-cloak class="modal-overlay" 
-        x-data="{ fileName: '', isVerifying: false }" 
+        x-data="{ fileName: '', isVerifying: false,
+        // Check if there are changes to any input
+        get hasChanges() {
+            if (this.fileName !== '') return true;
+            
+            const origSubs = [...originalForm.subjects].sort().join(',');
+            const newSubs = [...editForm.subjects].sort().join(',');
+            if (origSubs !== newSubs) return true;
+            
+            const clean = arr => arr.map(a => `${a.day_of_week}-${a.start_time}-${a.end_time}`).sort().join('|');
+            if (clean(originalForm.availabilities) !== clean(editForm.availabilities)) return true;
+            
+            return false;
+            }
+        }" 
         x-init="$watch('showEditModal', val => { if (!val) { fileName = ''; document.getElementById('edit-avatar-upload').value = ''; } })">
         <div class="bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col" style="max-height: 90vh;">
             <div class="px-8 py-6 bg-white border-b flex justify-between items-center flex-shrink-0">
@@ -1262,8 +1277,9 @@ mount(function () {
                 <div class="flex gap-3">
                     <button type="button" @click="showEditModal = false; $wire.closeEditModal()" x-bind:disabled="isVerifying"
                         class="flex-1 py-3 text-xs font-bold text-gray-800 bg-gray-200 hover:bg-gray-300 rounded-xl transition disabled:cursor-not-allowed">Cancel</button>
-                    <button type="button" @click="isVerifying = true; $wire.confirmEdit(editingMentor.id, editForm.subjects, editForm.availabilities).finally(() => isVerifying = false)" x-bind:disabled="isVerifying"
-                        class="flex-1 bg-red-900 text-white py-3 rounded-xl text-xs font-bold shadow-lg hover:bg-red-800 transition"
+                    <button type="button" @click="if(hasChanges) { isVerifying = true; $wire.confirmEdit(editingMentor.id, editForm.subjects, editForm.availabilities).finally(() => isVerifying = false) }" x-bind:disabled="isVerifying !! !hasChanges"
+                        :class="(!hasChanges) ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700'"
+                        class="flex-1 bg-blue-600 text-white py-3 rounded-xl text-xs font-bold shadow-lg hover:bg-blue-700 transition"
                         >
                         <span x-show="!isVerifying">Save Changes</span>
                         <span x-show="isVerifying" style="display: none;"><i class="fa-solid fa-spinner fa-spin mr-1"></i>Validating...</span>
@@ -1322,7 +1338,7 @@ mount(function () {
                     <button type="button" wire:click="closeSubjectModal" @click="$wire.showSubjectModal = false" x-bind:disabled="isVerifying"
                         class="flex-1 py-3 text-xs font-bold text-gray-800 bg-gray-200 hover:bg-gray-300 rounded-xl transition disabled:cursor-not-allowed">Cancel</button>
                     <button type="button" @click="isVerifying = true; $wire.confirmSubject().finally(() => isVerifying = false)" x-bind:disabled="isVerifying"
-                        class="flex-1 bg-red-900 text-white py-3 rounded-xl text-xs font-bold shadow-lg hover:bg-red-800 transition disabled:cursor-not-allowed"
+                        class="flex-1 bg-red-800 text-white py-3 rounded-xl text-xs font-bold shadow-lg hover:bg-red-900 transition disabled:cursor-not-allowed"
                         >
                         <span x-show="!isVerifying">Add Subject</span>
                         <span x-show="isVerifying" style="display: none;"><i class="fa-solid fa-spinner fa-spin mr-1"></i>Validating...</span>
@@ -1335,7 +1351,7 @@ mount(function () {
     {{-- ── CONFIRM SUBJECT ── --}}
     <div x-show="$wire.showSubjectConfirm" x-cloak class="modal-overlay flex items-center justify-center" style="z-index: 1100;" wire:click.self="$set('showSubjectConfirm', false)">
         <div class="bg-white w-full max-w-sm rounded-2xl shadow-2xl p-8 text-center m-4">
-            <div class="w-16 h-16 bg-amber-100 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-5">
+            <div class="w-16 h-16 bg-blue-100 text-blue-500 rounded-full flex items-center justify-center mx-auto mb-5">
                 <i class="fa-solid fa-book text-3xl"></i>
             </div>
             <h3 class="text-xl font-black text-slate-800">Confirm New Subject</h3>
@@ -1387,6 +1403,7 @@ function mentorManagement(initialMentors, wire) {
         showEditModal: false,
         editingMentor: null,
         editForm: { subjects: [], availabilities: [] },
+        originalForm:  { subjects: [], availabilities: [] },
         showDeleteConfirm: false,
         mentorToDelete: null,
         weekDays: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'],
@@ -1456,17 +1473,6 @@ function mentorManagement(initialMentors, wire) {
             return [1, '...', current - 1, current, current + 1, '...', total];
         },
 
-        init() {
-            this.$watch('filteredMentors', () => {
-                const label = document.getElementById('mentorCountLabel');
-                if (label) label.textContent = this.filteredMentors.length + ' Mentor' + (this.filteredMentors.length !== 1 ? 's' : '') + ' found';
-            });
-            this.$nextTick(() => {
-                const label = document.getElementById('mentorCountLabel');
-                if (label) label.textContent = this.filteredMentors.length + ' Mentor' + (this.filteredMentors.length !== 1 ? 's' : '') + ' found';
-            });
-        },
-
         convertTime(timeStr) {
             if (!timeStr) return '';
             const [time, modifier] = timeStr.split(' ');
@@ -1499,6 +1505,17 @@ function mentorManagement(initialMentors, wire) {
                 avails.push({ id: Date.now() + Math.random(), day_of_week: '', start_time: '', end_time: '' });
             }
             this.editForm.availabilities = avails;
+            
+            // Check if there are any new inputs
+            this.originalForm = {
+                subjects: [...this.editForm.subjects],
+                availabilities: this.editForm.availabilities.map(a => ({
+                    day_of_week: a.day_of_week,
+                    start_time: a.start_time,
+                    end_time: a.end_time,
+                }))
+            };
+
             this.showEditModal = true;
             this.$nextTick(() => {
                 const scrollBox = document.getElementById('editModalScroll');
