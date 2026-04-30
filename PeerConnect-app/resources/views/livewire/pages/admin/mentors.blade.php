@@ -784,7 +784,7 @@ mount(function () {
 
                                                 {{-- idle dot --}}
                                                 <div class="action-idle absolute inset-0 flex items-center justify-center pointer-events-none">
-                                                    <span class="w-2 h-2 rounded-full bg-gray-400 inline-block"></span>
+                                                    <span class="w-2 h-2 rounded-full bg-gray-100 inline-block"></span>
                                                 </div>
 
                                                 {{-- revealed buttons --}}
