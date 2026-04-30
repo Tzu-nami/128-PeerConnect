@@ -1277,7 +1277,7 @@ mount(function () {
                 <div class="flex gap-3">
                     <button type="button" @click="showEditModal = false; $wire.closeEditModal()" x-bind:disabled="isVerifying"
                         class="flex-1 py-3 text-xs font-bold text-gray-800 bg-gray-200 hover:bg-gray-300 rounded-xl transition disabled:cursor-not-allowed">Cancel</button>
-                    <button type="button" @click="if(hasChanges) { isVerifying = true; $wire.confirmEdit(editingMentor.id, editForm.subjects, editForm.availabilities).finally(() => isVerifying = false) }" x-bind:disabled="isVerifying !! !hasChanges"
+                    <button type="button" @click="if(hasChanges) { isVerifying = true; $wire.confirmEdit(editingMentor.id, editForm.subjects, editForm.availabilities).finally(() => isVerifying = false) }" x-bind:disabled="isVerifying || !hasChanges"
                         :class="(!hasChanges) ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700'"
                         class="flex-1 bg-blue-600 text-white py-3 rounded-xl text-xs font-bold shadow-lg hover:bg-blue-700 transition"
                         >
