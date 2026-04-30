@@ -826,8 +826,10 @@ $allSessions = Bookings::with(['mentor.user', 'student.user', 'subject'])
         </div>
     </div>
 
- <div class="grid grid-cols-5 gap-4 mb-8">
-  <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-green-600 flex items-center gap-4">
+<div class="grid grid-cols-5 gap-4 mb-8">
+  
+  <a href="{{ route('admin.mentors') }}" wire:navigate
+    class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-green-600 flex items-center gap-4 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer">
     <div class="text-2xl">
       <i class="fa-solid fa-users text-green-600"></i>
     </div>
@@ -835,9 +837,10 @@ $allSessions = Bookings::with(['mentor.user', 'student.user', 'subject'])
       <h3 class="text-xs font-bold text-gray-400 uppercase leading-none">Total Mentors</h3>
       <p class="text-2xl font-black">{{ $totalMentors }}</p>
     </div>
-  </div>
+  </a>
 
-  <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-blue-600 flex items-center gap-4">
+  <a href="{{ route('admin.sessions') }}" wire:navigate
+    class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-blue-600 flex items-center gap-4 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer">
     <div class="text-2xl">
       <i class="fa-solid fa-calendar-day text-blue-600"></i>
     </div>
@@ -845,9 +848,10 @@ $allSessions = Bookings::with(['mentor.user', 'student.user', 'subject'])
       <h3 class="text-xs font-bold text-gray-400 uppercase leading-none">Sessions Today</h3>
       <p class="text-2xl font-black">{{ $sessionsToday }}</p>
     </div>
-  </div>
+  </a>
 
-  <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-yellow-500 flex items-center gap-4">
+  <a href="{{ route('admin.sessions') }}" wire:navigate
+    class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-yellow-500 flex items-center gap-4 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer">
     <div class="text-2xl">
       <i class="fa-solid fa-clock text-yellow-500"></i>
     </div>
@@ -855,9 +859,10 @@ $allSessions = Bookings::with(['mentor.user', 'student.user', 'subject'])
       <h3 class="text-xs font-bold text-gray-400 uppercase leading-none">Pending</h3>
       <p class="text-2xl font-black">{{ $pendingBookings }}</p>
     </div>
-  </div>
+  </a>
 
-  <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-red-600 flex items-center gap-4">
+  <a href="{{ route('admin.feedbacks') }}" wire:navigate
+    class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-red-600 flex items-center gap-4 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer">
     <div class="text-2xl">
       <i class="fa-solid fa-star text-red-600"></i>
     </div>
@@ -865,9 +870,10 @@ $allSessions = Bookings::with(['mentor.user', 'student.user', 'subject'])
       <h3 class="text-xs font-bold text-gray-400 uppercase leading-none">Average Ratings</h3>
       <p class="text-2xl font-black">{{ $this->dashboardStats['avg'] }}</p>
     </div>
-  </div>
+  </a>
 
-  <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-pink-600 flex items-center gap-4">
+  <a href="{{ route('admin.mentors') }}" wire:navigate
+    class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-pink-600 flex items-center gap-4 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer">
     <div class="text-2xl">
       <i class="fa-solid fa-user-graduate text-pink-600"></i>
     </div>
@@ -875,7 +881,8 @@ $allSessions = Bookings::with(['mentor.user', 'student.user', 'subject'])
       <h3 class="text-xs font-bold text-gray-400 uppercase leading-none">Total Mentees</h3>
       <p class="text-2xl font-black">{{ $totalStudents }}</p>
     </div>
-  </div>
+  </a>
+
 </div>
 
                 <div class="grid grid-cols-3 gap-8">
