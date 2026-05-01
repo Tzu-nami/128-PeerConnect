@@ -10,7 +10,7 @@ layout('layouts.app');
 
 state([
     // Form States
-    'showSubjectModal' => false,
+    //'showSubjectModal' => false,
     'newSubjectCode' => '',
     'newSubjectName' => '',
 
@@ -52,15 +52,15 @@ $allSubjects = computed(function () {
 
 
 // ── ADD SUBJECT ──────────────────────────────────────────────
-$openSubjectModal = action(function () {
+$resetSubjectForm = action(function () {
     $this->reset(['newSubjectCode', 'newSubjectName']);
-    $this->showSubjectModal = true;
+    //$this->showSubjectModal = true;
 });
 
-$closeSubjectModal = action(function () {
-    $this->showSubjectModal = false;
-    $this->reset(['newSubjectCode', 'newSubjectName', 'showSubjectModal']);
-});
+// $closeSubjectModal = action(function () {
+//     $this->showSubjectModal = false;
+//     $this->reset(['newSubjectCode', 'newSubjectName', 'showSubjectModal']);
+// });
 
 // Validate only — dispatches event to JS so confirmation modal can open first
 $validateSubject = action(function () {
@@ -80,7 +80,7 @@ $saveSubject = action(function () {
         'name' => trim($this->newSubjectName),
     ]);
     session()->flash('successMessage', "{$this->newSubjectCode} has been successfully added.");
-    $this->closeSubjectModal();
+    //$this->closeSubjectModal();
     $this->redirect(route('admin.courses'), navigate: true);
 });
 
@@ -145,7 +145,7 @@ mount(function () {
          confirmText: 'Save Subject',
          loadingText: 'Saving...',
          onConfirm: async () => {
-             $wire.showSubjectModal = false;
+             showSubjectModal = false;
              await $wire.saveSubject();
          }
      })"
@@ -486,7 +486,7 @@ mount(function () {
                             </div>
                         </div>
 
-                        <button @click="$wire.showSubjectModal = true; $wire.openSubjectModal()"
+                        <button @click="showSubjectModal = true; $wire.resetSubjectForm()"
                             class="flex items-center gap-2 bg-slate-800 text-white px-4 py-1.5 rounded-lg text-xs font-bold hover:bg-black transition shadow-sm h-[34px]">
                             <i class="fa-solid fa-book-medical text-[11px]"></i> Add Subject
                         </button>
@@ -675,7 +675,7 @@ mount(function () {
     </template>
 
     {{-- ── ADD SUBJECT MODAL ── --}}
-    <div x-show="$wire.showSubjectModal" x-cloak class="modal-overlay" x-data="{ isVerifying: false }">
+    <div x-show="showSubjectModal" x-cloak class="modal-overlay" wire:ignore.self x-data="{ isVerifying: false }">
         <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden" @click.stop>
             <div class="flex items-center gap-4 px-6 py-5 bg-white border-b border-gray-100">
                 <div class="w-12 h-12 rounded-full bg-green-100 text-green-600 flex items-center justify-center text-xl flex-shrink-0">
@@ -685,7 +685,7 @@ mount(function () {
                     <h2 class="text-xl font-extrabold text-slate-800 tracking-tight mb-0.5">Add New Subject</h2>
                     <p class="text-xs text-slate-500 leading-snug">This subject will become available for mentor assignments.</p>
                 </div>
-                <button type="button" @click="$wire.showSubjectModal = false; $wire.closeSubjectModal()" x-bind:disabled="isVerifying" class="text-gray-400 hover:text-red-600 transition ml-2 disabled:cursor-not-allowed">
+                <button type="button" @click="showSubjectModal = false; $wire.resetSubjectForm()" x-bind:disabled="isVerifying" class="text-gray-400 hover:text-red-600 transition ml-2 disabled:cursor-not-allowed">
                     <i class="fa-solid fa-xmark text-xl"></i>
                 </button>
             </div>
@@ -705,7 +705,7 @@ mount(function () {
 
             <div class="px-6 py-5 border-t border-gray-100">
                 <div class="flex gap-3">
-                    <button type="button" @click="$wire.showSubjectModal = false; $wire.closeSubjectModal()"
+                    <button type="button" @click="showSubjectModal = false; $wire.resetSubjectForm()"
                         x-bind:disabled="isVerifying"
                         class="flex-1 py-2.5 text-sm font-bold text-gray-600 bg-white border border-gray-200 hover:bg-gray-100 rounded-xl transition disabled:cursor-not-allowed">
                         Cancel
@@ -1002,6 +1002,7 @@ confirmOkBtn.onclick = async () => {
 
             // Modals
             showViewModal: false,
+            showSubjectModal: false,
             selectedSubject: null,
             showEditModal: false,
             editingSubject: null,
