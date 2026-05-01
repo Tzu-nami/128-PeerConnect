@@ -67,7 +67,7 @@ $mentorStats = computed(function () {
         ->filter(fn($b) => $b->booking_status === 'completed' && $b->mentor?->user)
         ->groupBy('mentor_id')
         ->map(fn($group) => [
-            'name'  => $group->first()->mentor->user->firstName . ' ' . $group->first()->mentor->user->lastName,
+            'name'  => $group->first()->mentor->user->lastName . ', ' . substr($group->first()->mentor->user->firstName, 0, 1) . '.',
             'count' => $group->count(),
         ])
         ->sortByDesc('count')
@@ -556,7 +556,7 @@ mount(function () {
 </style>
 
     <div class="app-wrapper">
-        <aside class="sidebar" id="sidebar">
+        <aside class="sidebar" id="sidebar" :class="sidebarCollapsed ? 'collapsed' : ''">
             <div class="sidebar-logo-container">
                 <div class="logo-content">
                     <i class="fa-solid fa-graduation-cap logo-icon"></i>
@@ -564,7 +564,7 @@ mount(function () {
                 </div>
             </div>
 
-            <button class="sidebar-toggle-btn" id="sidebarToggle" aria-label="Toggle sidebar">
+            <button class="sidebar-toggle-btn" id="sidebarToggle" aria-label="Toggle sidebar" @click.stop="sidebarCollapsed = !sidebarCollapsed">
                 <span class="toggle-icon">
                     <i class="fa-solid fa-chevron-right" id="toggleIcon"></i>
                 </span>
@@ -604,7 +604,7 @@ mount(function () {
                 <div class="flex items-center gap-2">
                     <x-admin-notifications />
 
-                    <button id="profileTrigger" class="flex items-center gap-2 px-3 py-1 bg-white rounded-full hover:bg-gray-100 transition shadow-sm border-2 border-white/20 group">
+                    <button @click.stop="profileOpen = !profileOpen" id="profileTrigger" class="flex items-center gap-2 px-3 py-1 bg-white rounded-full hover:bg-gray-100 transition shadow-sm border-2 border-white/20 group">
                         <div class="w-8 h-8 bg-red-900 text-white rounded-full flex items-center justify-center text-xs font-bold">
                             {{ strtoupper(substr(auth()->user()->name, 0, 2)) }}
                         </div>
@@ -612,7 +612,7 @@ mount(function () {
                     </button>
                 </div>
 
-                <div id="profileDropdown" class="profile-dropdown">
+                <div id="profileDropdown" class="profile-dropdown" :class="profileOpen ? 'show' : ''">
                     <div class="p-4 border-b border-gray-100 bg-slate-50">
                         <p class="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1">Signed in as</p>
                         <p class="text-sm font-bold text-slate-800 truncate">{{ auth()->user()->name }}</p>
@@ -1408,6 +1408,17 @@ function mentorManagement(initialMentors, wire) {
         mentorToDelete: null,
         weekDays: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'],
 
+        // Profile
+        profileOpen: false,
+        sidebarCollapsed: false,
+
+        init() {
+            window.addEventListener('click', () => {
+                this.profileOpen = false;
+                document.getElementById('mentorDropdown')?.classList.add('hidden');
+            });
+        },
+
         setSort(col) {
             if (this.sortColumn === col) {
                 this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
@@ -1530,22 +1541,22 @@ function mentorManagement(initialMentors, wire) {
     };
 }
 
-        document.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('sidebarToggle').addEventListener('click', () => {
-                document.getElementById('sidebar').classList.toggle('collapsed');
-            });
+        // document.addEventListener('DOMContentLoaded', () => {
+        //     document.getElementById('sidebarToggle').addEventListener('click', () => {
+        //         document.getElementById('sidebar').classList.toggle('collapsed');
+        //     });
 
-            const profileTrigger  = document.getElementById('profileTrigger');
-            const profileDropdown = document.getElementById('profileDropdown');
+        //     const profileTrigger  = document.getElementById('profileTrigger');
+        //     const profileDropdown = document.getElementById('profileDropdown');
 
-            profileTrigger.addEventListener('click', e => {
-                e.stopPropagation();
-                profileDropdown.classList.toggle('show');
-            });
+        //     profileTrigger.addEventListener('click', e => {
+        //         e.stopPropagation();
+        //         profileDropdown.classList.toggle('show');
+        //     });
 
-            window.addEventListener('click', () => {
-                profileDropdown.classList.remove('show');
-            });
-        });
+        //     window.addEventListener('click', () => {
+        //         profileDropdown.classList.remove('show');
+        //     });
+        // });
     </script>
 </div>
