@@ -411,14 +411,14 @@ mount(function () {
             </div>
 
             {{-- Summary Stat Cards --}}
-            <div class="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6">
+            <div class="grid grid-cols-[repeat(autofit,_minmax(250px, 1fr))] sm:grid-cols-3 gap-4 mb-6">
                 <div class="bg-white p-4 lg:p-5 rounded-xl shadow-sm border-l-4 border-slate-400 flex items-center gap-3 lg:gap-4">
                     <div class="text-2xl flex-shrink-0">
                         <i class="fa-solid fa-book-open text-slate-500"></i>
                     </div>
                     <div class="min-w-0 flex-1">
-                        <h3 class="text-[10px] lg:text-xs font-bold text-gray-400 uppercase leading-none truncate" title="Total Subjects">Total Subjects</h3>
-                        <p class="text-xl lg:text-2xl font-black text-slate-800 truncate" x-bind:title="subjects.length" x-text="subjects.length"></p>
+                        <h3 class="text-[10px] lg:text-xs font-bold text-gray-400 uppercase leading-none truncate">Total Subjects</h3>
+                        <p class="text-xl lg:text-2xl font-black text-slate-800 truncate" x-text="subjects.length"></p>
                     </div>
                 </div>
 
@@ -427,8 +427,8 @@ mount(function () {
                         <i class="fa-solid fa-chalkboard-user text-green-600"></i>
                     </div>
                     <div class="min-w-0 flex-1">
-                        <h3 class="text-[10px] lg:text-xs font-bold text-gray-400 uppercase leading-none truncate" title="Subjects With Mentors">Subjects With Mentors</h3>
-                        <p class="text-xl lg:text-2xl font-black text-slate-800 truncate" x-bind:title="subjects.filter(s => s.mentorCount > 0).length" x-text="subjects.filter(s => s.mentorCount > 0).length"></p>
+                        <h3 class="text-[10px] lg:text-xs font-bold text-gray-400 uppercase leading-none truncate">Subjects With Mentors</h3>
+                        <p class="text-xl lg:text-2xl font-black text-slate-800 truncate" x-text="subjects.filter(s => s.mentorCount > 0).length"></p>
                     </div>
                 </div>
 
@@ -437,8 +437,8 @@ mount(function () {
                         <i class="fa-solid fa-user-slash text-yellow-500"></i>
                     </div>
                     <div class="min-w-0 flex-1">
-                        <h3 class="text-[10px] lg:text-xs font-bold text-gray-400 uppercase leading-none truncate" title="Subjects With No Mentors">Subjects With No Mentors</h3>
-                        <p class="text-xl lg:text-2xl font-black text-slate-800 truncate" x-bind:title="subjects.filter(s => s.mentorCount === 0).length" x-text="subjects.filter(s => s.mentorCount === 0).length"></p>
+                        <h3 class="text-[10px] lg:text-xs font-bold text-gray-400 uppercase leading-none truncate">Subjects With No Mentors</h3>
+                        <p class="text-xl lg:text-2xl font-black text-slate-800 truncate" x-text="subjects.filter(s => s.mentorCount === 0).length"></p>
                     </div>
                 </div>
             </div>

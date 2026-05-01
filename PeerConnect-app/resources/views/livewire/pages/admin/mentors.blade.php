@@ -659,7 +659,7 @@ mount(function () {
                 </div>
 
 {{-- Summary Stat Cards --}}
-<div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+<div class="grid grid-cols-[repeat(autofit,_minmax(250px, 1fr))] sm:grid-cols-4 gap-4 mb-6">
     <div class="bg-white p-4 lg:p-5 rounded-xl shadow-sm border-l-4 border-slate-400 flex items-center gap-3 lg:gap-4">
         <div class="text-2xl flex-shrink-0"><i class="fa-solid fa-chalkboard-user text-slate-500"></i></div>
         <div class="min-w-0 flex-1">

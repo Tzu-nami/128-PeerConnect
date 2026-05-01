@@ -329,33 +329,33 @@ $dashboardStats = computed(function () {
                     </div>
                 </div>
                 <div class="space-y-6">
-                    <div class="grid grid-cols-3 gap-4">
+                    <div class="grid grid-cols-[repeat(autofit,_minmax(250px, 1fr))] sm:grid-cols-3 gap-4 mb-6">
 
-                        <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-blue-600">
-                            <div class="flex items-center gap-3">
-                                <i class="fa-solid fa-chart-bar text-blue-600 text-2xl"></i>
-                                <div>
-                                    <p class="text-xs font-bold text-gray-400 uppercase">Total Responses</p>
-                                    <p class="text-2xl font-black text-slate-800">{{ $this->dashboardStats['total'] }}</p>
-                                </div>
+                        <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-blue-600 flex items-center gap-3 lg:gap-4">
+                            <div class="text-2xl flex-shrink-0">
+                                <i class="fa-solid fa-chart-bar text-blue-600"></i>
+                            </div>
+                            <div class="min-w-0 flex-1">
+                                <h3 class="text-xs font-bold text-gray-400 uppercase leading-none truncate">Total Responses</p>
+                                <p class="text-xl font-black text-slate-800 truncate">{{ $this->dashboardStats['total'] }}</p>
                             </div>
                         </div>
-                        <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-yellow-500">
-                            <div class="flex items-center gap-3">
-                                <i class="fa-solid fa-chalkboard-user text-yellow-500 text-2xl"></i>
-                                <div>
-                                    <p class="text-xs font-bold text-gray-400 uppercase">Total Sessions</p>
-                                    <p class="text-2xl font-black text-slate-800">{{ $this->dashboardStats['sessions'] }}</p>
-                                </div>
+                        <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-yellow-500 flex items-center gap-3 lg:gap-4">
+                            <div class="text-2xl flex-shrink-0">
+                                <i class="fa-solid fa-chalkboard-user text-yellow-500"></i>
+                            </div>
+                            <div class="min-w-0 flex-1">
+                                <h3 class="text-xs font-bold text-gray-400 uppercase leading-none truncate">Total Sessions</p>
+                                <p class="text-xl font-black text-slate-800 truncate">{{ $this->dashboardStats['sessions'] }}</p>
                             </div>
                         </div>
-                        <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-green-600">
-                            <div class="flex items-center gap-3">
-                                <i class="fa-solid fa-star text-green-600 text-2xl"></i>
-                                <div>
-                                    <p class="text-xs font-bold text-gray-400 uppercase">Average Rating</p>
-                                    <p class="text-2xl font-black text-slate-800">{{ $this->dashboardStats['avg'] }} <span class="text-lg text-gray-400">/ 5.0</span></p>
-                                </div>
+                        <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-green-600 flex items-center gap-3 lg:gap-4">
+                            <div class="text-2xl flex-shrink-0">
+                                <i class="fa-solid fa-star text-green-600"></i>
+                            </div>
+                            <div class="min-w-0 flex-1">
+                                <h3 class="text-xs font-bold text-gray-400 uppercase leading-none truncate">Average Rating</p>
+                                <p class="text-xl font-black text-slate-800 truncate">{{ $this->dashboardStats['avg'] }} <span class="text-lg text-gray-400">/ 5.0</span></p>
                             </div>
                         </div>
                     </div>

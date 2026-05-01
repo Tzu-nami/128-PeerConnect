@@ -327,40 +327,40 @@ $summaryCounts = computed(function () {
                 </div>
 
                 {{-- Summary Stat Cards --}}
-                <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-6">
-                    <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-slate-400 flex items-center gap-4">
-                        <div class="text-2xl"><i class="fa-solid fa-list-check text-slate-500"></i></div>
-                        <div>
-                            <h3 class="text-xs font-bold text-gray-400 uppercase leading-none">Total</h3>
-                            <p class="text-2xl font-black text-slate-800" id="statTotal">{{ $this->summaryCounts['total'] }}</p>
+                <div class="grid grid-cols-[repeat(autofit,_minmax(250px, 1fr))] sm:grid-cols-5 gap-4 mb-6">
+                    <div class="bg-white p-4 lg:p-5 rounded-xl shadow-sm border-l-4 border-slate-400 flex items-center gap-3 lg:gap-4">
+                        <div class="text-2xl flex-shrink-0"><i class="fa-solid fa-list-check text-slate-500"></i></div>
+                        <div class="min-w-0 flex-1">
+                            <h3 class="text-xs font-bold text-gray-400 uppercase leading-none truncate">Total</h3>
+                            <p class="text-2xl font-black text-slate-800 truncate" id="statTotal">{{ $this->summaryCounts['total'] }}</p>
                         </div>
                     </div>
-                    <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-green-600 flex items-center gap-4">
-                        <div class="text-2xl"><i class="fa-solid fa-circle-check text-green-600"></i></div>
-                        <div>
-                            <h3 class="text-xs font-bold text-gray-400 uppercase leading-none">Accepted</h3>
-                            <p class="text-2xl font-black text-slate-800" id="statAccepted">{{ $this->summaryCounts['accepted'] }}</p>
+                    <div class="bg-white p-4 lg:p-5 rounded-xl shadow-sm border-l-4 border-green-600 flex items-center gap-3 lg:gap-4">
+                        <div class="text-2xl flex-shrink-0"><i class="fa-solid fa-circle-check text-green-600"></i></div>
+                        <div class="min-w-0 flex-1">
+                            <h3 class="text-xs font-bold text-gray-400 uppercase leading-none truncate">Accepted</h3>
+                            <p class="text-2xl font-black text-slate-800 truncate" id="statAccepted">{{ $this->summaryCounts['accepted'] }}</p>
                         </div>
                     </div>
-                    <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-yellow-500 flex items-center gap-4">
-                        <div class="text-2xl"><i class="fa-solid fa-hourglass-half text-yellow-500"></i></div>
-                        <div>
-                            <h3 class="text-xs font-bold text-gray-400 uppercase leading-none">Pending</h3>
-                            <p class="text-2xl font-black text-slate-800" id="statPending">{{ $this->summaryCounts['pending'] }}</p>
+                    <div class="bg-white p-4 lg:p-5 rounded-xl shadow-sm border-l-4 border-yellow-500 flex items-center gap-3 lg:gap-4">
+                        <div class="text-2xl flex-shrink-0"><i class="fa-solid fa-hourglass-half text-yellow-500"></i></div>
+                        <div class="min-w-0 flex-1">
+                            <h3 class="text-xs font-bold text-gray-400 uppercase leading-none truncate">Pending</h3>
+                            <p class="text-2xl font-black text-slate-800 truncate" id="statPending">{{ $this->summaryCounts['pending'] }}</p>
                         </div>
                     </div>
-                    <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-blue-600 flex items-center gap-4">
-                        <div class="text-2xl"><i class="fa-solid fa-flag-checkered text-blue-600"></i></div>
-                        <div>
-                            <h3 class="text-xs font-bold text-gray-400 uppercase leading-none">Completed</h3>
-                            <p class="text-2xl font-black text-slate-800" id="statCompleted">{{ $this->summaryCounts['completed'] }}</p>
+                    <div class="bg-white p-4 lg:p-5 rounded-xl shadow-sm border-l-4 border-blue-600 flex items-center gap-3 lg:gap-4">
+                        <div class="text-2xl flex-shrink-0"><i class="fa-solid fa-flag-checkered text-blue-600"></i></div>
+                        <div class="min-w-0 flex-1">
+                            <h3 class="text-xs font-bold text-gray-400 uppercase leading-none truncate">Completed</h3>
+                            <p class="text-2xl font-black text-slate-800 truncate" id="statCompleted">{{ $this->summaryCounts['completed'] }}</p>
                         </div>
                     </div>
-                    <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-purple-600 flex items-center gap-4">
-                        <div class="text-2xl"><i class="fa-solid fa-stopwatch text-purple-600"></i></div>
-                        <div>
-                            <h3 class="text-xs font-bold text-gray-400 uppercase leading-none">Total Hours</h3>
-                            <p class="text-2xl font-black text-slate-800" id="statHours">{{ $this->summaryCounts['totalHours'] }}</p>
+                    <div class="bg-white p-4 lg:p-5 rounded-xl shadow-sm border-l-4 border-purple-600 flex items-center gap-3 lg:gap-4">
+                        <div class="text-2xl flex-shrink-0"><i class="fa-solid fa-stopwatch text-purple-600"></i></div>
+                        <div class="min-w-0 flex-1">
+                            <h3 class="text-xs font-bold text-gray-400 uppercase leading-none truncate">Total Hours</h3>
+                            <p class="text-2xl font-black text-slate-800 truncate" id="statHours">{{ $this->summaryCounts['totalHours'] }}</p>
                         </div>
                     </div>
                 </div>
