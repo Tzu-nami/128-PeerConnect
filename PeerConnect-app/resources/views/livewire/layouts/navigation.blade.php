@@ -30,12 +30,15 @@ new class extends Component {
         @endif
 
         {{-- Profile trigger --}}
-        <button id="profileTrigger" type="button"
-                class="flex items-center gap-2 px-3 py-1 bg-white rounded-full hover:bg-gray-100 transition shadow-sm border-2 border-white/20 group">
-            <div class="w-8 h-8 bg-red-900 text-white rounded-full flex items-center justify-center text-xs font-bold">
-                {{ strtoupper(substr(auth()->user()->name, 0, 2)) }}
-            </div>
-            <i class="fa-solid fa-chevron-down text-[10px] text-gray-500 group-hover:text-red-900 transition"></i>
+        <button id="profileTrigger" class="flex items-center gap-2 px-3 py-1 bg-white rounded-full hover:bg-gray-100 transition shadow-sm border-2 border-white/20 group">
+            @if(auth()->user()->avatar)
+                <img src="{{ auth()->user()->avatar }}" alt="Profile Picture" class="w-8 h-8 rounded-full object-cover shadow-sm border border-gray-100">
+            @else
+                <div class="w-8 h-8 bg-red-900 text-white rounded-full flex items-center justify-center text-xs font-bold">
+                    {{ strtoupper(substr(auth()->user()->name, 0, 2)) }}
+                </div>
+            @endif
+            <i class="fa-solid fa-chevron-down text-[10px] text-gray-500 group-hover:text-red-900 transition-transform duration-200"></i>
         </button>
     </div>
 
