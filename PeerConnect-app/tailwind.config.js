@@ -29,7 +29,8 @@ export default {
                 'cream-dark':    '#EEE8DA',
                 'cream-border':  '#D6CFC0',
                 'text-brown':    '#554444',
-                'text-brown-light': '#998888'
+                'text-brown-light': '#998888',
+                'sidebar-green':  '#1A3C2F'
             },
             keyframes: {
                 fadeUp: {

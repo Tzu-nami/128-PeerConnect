@@ -1,4 +1,4 @@
-<x-layout.landing :noMargin="true">
+<x-layouts.landing :noMargin="true">
     {{-- Hero section --}}
     <section class="relative w-full min-h-[520px] sm:min-h-[600px] xl:h-screen flex flex-col justify-between overflow-hidden animate-fade-up"
              style="background-image: url('https://cwpbwqcxlccbittkhasq.supabase.co/storage/v1/object/public/assets/images/landing-page/library.jpeg');
@@ -242,4 +242,4 @@
             <button class="swiper-nav-btn" id="btn-next">&#8250;</button>
         </div>
     </section>
-</x-layout.landing>
+</x-layouts.landing>

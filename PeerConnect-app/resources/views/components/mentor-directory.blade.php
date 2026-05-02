@@ -1,72 +1,11 @@
-<?php
-use function Livewire\Volt\{layout, mount, computed, uses};
-use App\Models\MentorProfiles;
-use App\Models\Subjects;
-use App\Services\Avatar;
+@props(['subjects', 'mentors', 'isAuthenticated' => false])
 
-$allMentors = computed(function () {
-    $query = MentorProfiles::with([
-        'user.studentProfile.college',
-        'user.studentProfile.degreeProgram',
-        'user.studentProfile.yearLevel',
-        'subjects',
-        'availabilities',
-    ]);
+<div x-data="mentorDirectory(@js($mentors))">
 
-    return $query->get()->map(function ($mp) {
-        $dayOrder = ['monday' => 1, 'tuesday' => 2, 'wednesday' => 3, 'thursday' => 4, 'friday' => 5, 'saturday' => 6];
-        $activeDays = $mp->availabilities->pluck('day_of_week')->unique()->sortBy(fn($day) => $dayOrder[strtolower($day)] ?? 99)->map(fn($day) => ucfirst(substr($day, 0, 3)))->values()->toArray();
-        $schedule = $mp->availabilities
-            ->groupBy(fn($item) => strtolower($item->day_of_week))
-            ->map(fn($slots, $day) => [
-                'slots' => $slots->sortBy(fn($time) => \Carbon\Carbon::parse($time->start_time)->timestamp)->map(fn($time) => [
-                    'start' => \Carbon\Carbon::parse($time->start_time)->format('g:i A'),
-                    'end'   => \Carbon\Carbon::parse($time->end_time)->format('g:i A'),
-                ])->values()->toArray(),
-            ])->toArray();
-
-        if (empty($schedule)) {
-            $schedule = new \stdClass();
-        }
-
-        return [
-            'id'            => $mp->id,
-            'user_id'       => $mp->user_id,
-            'lastName'      => strtoupper($mp->user->lastName),
-            'firstName'     => $mp->user->firstName,
-            'middleInitial' => $mp->user->middleInitial ? $mp->user->middleInitial . '.' : '',
-            'email'         => $mp->user->email,
-            'avatar'        => $mp->user->avatar ?? app(Avatar::class)->placeholder($mp->user->firstName . ' ' . $mp->user->lastName),
-            'subjects'      => $mp->subjects->unique('id')->map(fn($s) => ['id' => $s->id, 'code' => $s->code, 'name' => $s->name])->sortBy('code')->values()->toArray(),
-            'days'          => $activeDays,
-            'schedule'      => $schedule,
-            'yearLevel'     => $mp->user->studentProfile->yearLevel->name,
-            'degreeProgram' => $mp->user->studentProfile->degreeProgram->name,
-            'college'       => $mp->user->studentProfile->college->name,
-            'bookingUrl'    => route('student.bookings', ['mentor' => $mp->id]),
-        ];
-    })->sortBy('lastName')->values();
-});
-
-$subjects = computed(function () {
-    return Subjects::orderBy('code')->get();
-});
-
-mount(function () {
-    abort_if(!auth()->user()->isStudent(), 403, 'Unauthorized Access');
-});
-?>
-
-<div x-data="mentorDirectory(@js($this->allMentors))">
-    <div class="mb-3 pb-4 border-b border-gray-200 flex flex-wrap items-center justify-between gap-4 animate-fade-up">
-        <div>
-            <h1 class="text-3xl font-extrabold tracking-tight text-transparent bg-clip-text bg-up-maroon flex items-center gap-3">
-                Our Peer Mentors
-            </h1>
-            <p class="text-sm font-medium text-slate-500 mt-1">Browse available mentors and their expertise.</p>
-        </div>
-
+    {{-- Filters --}}
+    <div class="mb-3 pb-4 border-b border-gray-200 flex flex-wrap items-center justify-between gap-4 animate-[slideDown_0.3s_ease]">
         <div class="flex flex-wrap items-center gap-3">
+
             {{-- Search --}}
             <div class="relative shadow-sm">
                 <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
@@ -97,18 +36,17 @@ mount(function () {
                 <select x-model="selectedSubject" @change="currentPage = 1"
                         class="appearance-none border border-gray-200 rounded-lg pl-8 pr-8 py-1.5 text-xs font-medium text-slate-700 outline-none cursor-pointer focus:ring-1 focus:border-up-maroon focus:ring-up-maroon bg-white h-[34px]">
                     <option value="">All Subjects</option>
-                    @foreach($this->subjects as $subject)
+                    @foreach($subjects as $subject)
                         <option value="{{ $subject->id }}">{{ $subject->code }}</option>
                     @endforeach
                 </select>
             </div>
         </div>
-    </div>
 
-    {{-- Count --}}
-    <div class="pb-4">
-    <span class="ml-auto text-sm font-medium text-slate-500"
-          x-text="'Showing ' + filteredMentors.length + ' mentor' + (filteredMentors.length !== 1 ? 's' : '')"></span>
+        {{-- Count --}}
+        <span class="text-sm font-medium text-slate-500"
+              x-text="'Showing ' + filteredMentors.length + ' mentor' + (filteredMentors.length !== 1 ? 's' : '')">
+        </span>
     </div>
 
     {{-- Empty state --}}
@@ -121,7 +59,7 @@ mount(function () {
 
     {{-- Mentor cards --}}
     <div x-show="filteredMentors.length > 0" x-cloak
-         class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 justify-items-center animate-fade-up [animation-delay:150ms]">
+         class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 justify-items-center animate-fade-up [animation-delay:250ms]">
         <template x-for="mentor in paginatedMentors" :key="mentor.id">
             <div class="mentor-card group flex flex-col w-full" @click="openModal(mentor)">
 
@@ -149,13 +87,13 @@ mount(function () {
                     <p class="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Subjects</p>
                     <div class="flex gap-1">
                         <template x-for="(subject, index) in mentor.subjects.slice(0, 3)" :key="index">
-                        <span class="bg-red-50 text-red-700 border border-red-100 px-2 py-0.5 rounded text-[10px] font-bold whitespace-nowrap"
-                              x-text="subject.code"></span>
+                            <span class="bg-red-50 text-red-700 border border-red-100 px-2 py-0.5 rounded text-[10px] font-bold whitespace-nowrap"
+                                  x-text="subject.code"></span>
                         </template>
                         <template x-if="mentor.subjects.length > 3">
-                        <span class="bg-slate-100 text-slate-600 px-2 py-0.5 rounded text-[10px] font-bold border border-slate-200 whitespace-nowrap"
-                              x-text="'+' + (mentor.subjects.length - 3)"
-                              :title="mentor.subjects.slice(3, 10).map(s => s.code).join('\n') + (mentor.subjects.length > 8 ? '\n...and more' : '')"></span>
+                            <span class="bg-slate-100 text-slate-600 px-2 py-0.5 rounded text-[10px] font-bold border border-slate-200 whitespace-nowrap"
+                                  x-text="'+' + (mentor.subjects.length - 3)"
+                                  :title="mentor.subjects.slice(3, 10).map(s => s.code).join('\n') + (mentor.subjects.length > 8 ? '\n...and more' : '')"></span>
                         </template>
                     </div>
                 </div>
@@ -174,9 +112,9 @@ mount(function () {
                         </div>
                     </div>
                     <div class="flex-shrink-0">
-                    <span class="text-[11px] font-bold text-slate-400 group-hover:text-[#1a3c2f] transition-colors flex items-center gap-1 tracking-widest whitespace-nowrap">
-                        View <i class="fa-solid fa-chevron-right text-[9px] transition-transform group-hover:translate-x-1"></i>
-                    </span>
+                        <span class="text-[11px] font-bold text-slate-400 group-hover:text-[#1a3c2f] transition-colors flex items-center gap-1 tracking-widest whitespace-nowrap">
+                            View <i class="fa-solid fa-chevron-right text-[9px] transition-transform group-hover:translate-x-1"></i>
+                        </span>
                     </div>
                 </div>
 
@@ -213,6 +151,7 @@ mount(function () {
             <div class="bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col" style="max-height: 90vh;">
                 <template x-if="selectedMentor">
                     <div class="contents">
+
                         {{-- Modal Header --}}
                         <div class="flex-shrink-0 flex items-start gap-5 p-6 bg-[#1a3c2f]">
                             <div class="w-36 h-36 rounded-2xl overflow-hidden flex-shrink-0 border-2 border-white/20 shadow-lg bg-gray-200">
@@ -241,8 +180,8 @@ mount(function () {
                                 <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Teachable Subjects</p>
                                 <div class="flex flex-wrap gap-2">
                                     <template x-for="(subject, index) in selectedMentor.subjects" :key="index">
-                                    <span class="bg-red-50 text-red-700 border border-red-100 text-xs px-3 py-1 rounded font-bold"
-                                          x-text="subject.code"></span>
+                                        <span class="bg-red-50 text-red-700 border border-red-100 text-xs px-3 py-1 rounded font-bold"
+                                              x-text="subject.code"></span>
                                     </template>
                                     <template x-if="selectedMentor.subjects.length === 0">
                                         <p class="text-xs text-gray-400">No subjects listed.</p>
@@ -279,14 +218,23 @@ mount(function () {
 
                         {{-- Modal Footer --}}
                         <div class="flex-shrink-0 px-6 py-4 bg-[#fffffa] border-t border-gray-100">
-                            <a :href="selectedMentor.bookingUrl"
-                               class="block w-full text-center bg-[#1a3c2f] hover:bg-[#2d5c47] text-white text-sm font-bold py-3 rounded-xl transition shadow-sm">
-                                <i class="fa-solid fa-calendar-check mr-2"></i> Book a Session
-                            </a>
+                            @if($isAuthenticated)
+                                <a :href="selectedMentor.bookingUrl"
+                                   class="block w-full text-center bg-[#1a3c2f] hover:bg-[#2d5c47] text-white text-sm font-bold py-3 rounded-xl transition shadow-sm">
+                                    <i class="fa-solid fa-calendar-check mr-2"></i> Book a Session
+                                </a>
+                            @else
+                                <a href="{{ route('login') }}"
+                                   class="block w-full text-center bg-[#1a3c2f] hover:bg-[#2d5c47] text-white text-sm font-bold py-3 rounded-xl transition shadow-sm">
+                                    <i class="fa-solid fa-right-to-bracket mr-2"></i> Log in to Book a Session
+                                </a>
+                            @endif
                         </div>
+
                     </div>
                 </template>
             </div>
         </div>
     </template>
+
 </div>

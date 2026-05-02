@@ -11,7 +11,7 @@ use App\Http\Controllers\Auth\GoogleController;
 // Guest Routes
 Route::get('/', function () {
     return view('welcome');
-});
+})->name('home');
 
 // Google Routes
 Route::get('/auth/google', [GoogleController::class, 'redirect'])->name('auth.google');
