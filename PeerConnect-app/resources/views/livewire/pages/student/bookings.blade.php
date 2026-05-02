@@ -19,6 +19,8 @@ use function Livewire\Volt\{layout, state, mount, action, computed, updated};
 
 // ── Mount ────────────────────────────────────────────────────────────────────
 
+layout('components.layouts.app');
+
 mount(function () {
     abort_if(!auth()->user()->isStudent(), 403, 'Unauthorized Access');
 
@@ -510,10 +512,6 @@ $cancelBooking = action(function () {
 });
 
 ?>
-
-{{-- ═══════════════════════════════════════════════════════════════════════
-     TEMPLATE
-     ═══════════════════════════════════════════════════════════════════════ --}}
 <div>
 {{-- ── Page body ── --}}
     {{-- Flash messages --}}
@@ -1173,117 +1171,99 @@ $cancelBooking = action(function () {
                                 <span x-show="dateError" x-cloak class="mt-1 text-xs text-red-600 block" x-text="dateError"></span>
                             </div>
 
-                            {{-- Start Time --}}
-                            <div x-data="bookingTimePicker('schedule_start')" x-init="init()" @click.outside="close()">
-                                <label class="block text-base font-medium text-gray-700 mb-1">
-                                    Start Time<span class="text-red-500">*</span>
-                                </label>
-                                <div class="custom-time-picker">
-                                    <div class="custom-time-display" :class="{ active: open }" @click="toggle()">
-                                        <div class="time-icon"><i class="fa-regular fa-clock"></i></div>
-                                        <span class="text-sm"
-                                              :class="selectedTime ? 'font-semibold text-gray-800' : 'time-placeholder'"
-                                              x-text="selectedTime || 'Start time'">
-                                        </span>
+                        {{-- Start Time — Custom Picker --}}
+                        <div x-data="bookingTimePicker('schedule_start')" x-init="init()" @click.outside="close()">
+                            <label class="block text-base font-medium text-gray-700 mb-1">Start Time<span class="text-red-500">*</span></label>
+                            <div class="custom-time-picker">
+                                <div class="custom-time-display" :class="{ active: open }" @click="toggle()">
+                                    <div class="time-icon"><i class="fa-regular fa-clock"></i></div>
+                                    <span class="text-sm" :class="selectedTime ? 'font-semibold text-gray-800' : 'time-placeholder'" x-text="selectedTime || 'Start time'"></span>
+                                </div>
+                                <div class="time-picker-dropdown" :class="{ show: open }">
+                                    <div class="tp-ampm">
+                                        <button type="button" class="tp-ampm-btn" :class="{ active: ampm === 'AM' }" @click="setAmpm('AM')">AM</button>
+                                        <button type="button" class="tp-ampm-btn" :class="{ active: ampm === 'PM' }" @click="setAmpm('PM')">PM</button>
                                     </div>
-                                    <div class="time-picker-dropdown" :class="{ show: open }">
-                                        <div class="tp-ampm">
-                                            <button type="button" class="tp-ampm-btn" :class="{ active: ampm === 'AM' }" @click="setAmpm('AM')">AM</button>
-                                            <button type="button" class="tp-ampm-btn" :class="{ active: ampm === 'PM' }" @click="setAmpm('PM')">PM</button>
+                                    <div class="tp-scroll-row">
+                                        <div class="tp-col">
+                                            <div class="tp-col-label">Hour</div>
+                                            <button type="button" class="tp-btn" @click="changeHour(1)"><i class="fa-solid fa-chevron-up"></i></button>
+                                            <input class="tp-manual-input tp-hour-input" type="number" min="1" max="12"
+                                                @input="$el.value = $el.value.slice(0,2)" 
+                                                :value="String(hour).padStart(2,'0')"
+                                                @change="onHourInput($event)"
+                                                @keydown.up.prevent="changeHour(1)"
+                                                @keydown.down.prevent="changeHour(-1)">
+                                                
+                                            <button type="button" class="tp-btn" @click="changeHour(-1)"><i class="fa-solid fa-chevron-down"></i></button>
                                         </div>
-                                        <div class="tp-scroll-row">
-                                            <div class="tp-col">
-                                                <div class="tp-col-label">Hour</div>
-                                                <button type="button" class="tp-btn" @click="changeHour(1)"><i class="fa-solid fa-chevron-up"></i></button>
-                                                <div class="tp-val" x-text="String(hour).padStart(2,'0')"></div>
-                                                <button type="button" class="tp-btn" @click="changeHour(-1)"><i class="fa-solid fa-chevron-down"></i></button>
-                                            </div>
-                                            <div class="tp-sep">:</div>
-                                            <div class="tp-col">
-                                                <div class="tp-col-label">Min</div>
-                                                <button type="button" class="tp-btn" @click="changeMin(1)"><i class="fa-solid fa-chevron-up"></i></button>
-                                                <div class="tp-val" x-text="String(minute).padStart(2,'0')"></div>
-                                                <button type="button" class="tp-btn" @click="changeMin(-1)"><i class="fa-solid fa-chevron-down"></i></button>
-                                            </div>
-                                        </div>
-                                        <div class="tp-quick">
-                                            <template x-for="t in quickTimes" :key="t">
-                                                <button type="button" class="tp-quick-btn" @click="setQuick(t)" x-text="t"></button>
-                                            </template>
+                                        <div class="tp-sep">:</div>
+                                        <div class="tp-col">
+                                            <div class="tp-col-label">Min</div>
+                                            <button type="button" class="tp-btn" @click="changeMin(1)"><i class="fa-solid fa-chevron-up"></i></button>
+                                            <input class="tp-manual-input tp-min-input" type="number" min="0" max="59"
+                                                @input="$el.value = $el.value.slice(0,2)"
+                                                :value="String(minute).padStart(2,'0')"
+                                                @change="onMinInput($event)"
+                                                @keydown.up.prevent="changeMin(1)"
+                                                @keydown.down.prevent="changeMin(-1)">
+                                                
+                                            <button type="button" class="tp-btn" @click="changeMin(-1)"><i class="fa-solid fa-chevron-down"></i></button>
                                         </div>
                                     </div>
                                 </div>
-                                <input type="time" wire:model="schedule_start" id="startTimeHidden" class="hidden">
-                                @error('schedule_start')
-                                <span x-show="showError('schedule_start')" x-cloak
-                                      class="mt-1 text-xs text-red-600 block"
-                                      wire:loading.class="hidden" wire:target="validateBooking">
-                                        {{ $message }}
-                                    </span>
-                                @enderror
                             </div>
-
-                            {{-- End Time --}}
-                            <div x-data="bookingTimePicker('schedule_end')" x-init="init()" @click.outside="close()">
-                                <label class="block text-base font-medium text-gray-700 mb-1">
-                                    End Time<span class="text-red-500">*</span>
-                                </label>
-                                <div class="custom-time-picker">
-                                    <div class="custom-time-display" :class="{ active: open }" @click="toggle()">
-                                        <div class="time-icon"><i class="fa-regular fa-clock"></i></div>
-                                        <span class="text-sm"
-                                              :class="selectedTime ? 'font-semibold text-gray-800' : 'time-placeholder'"
-                                              x-text="selectedTime || 'End time'">
-                                        </span>
-                                    </div>
-                                    <div class="time-picker-dropdown" :class="{ show: open }">
-                                        <div class="tp-ampm">
-                                            <button type="button" class="tp-ampm-btn" :class="{ active: ampm === 'AM' }" @click="setAmpm('AM')">AM</button>
-                                            <button type="button" class="tp-ampm-btn" :class="{ active: ampm === 'PM' }" @click="setAmpm('PM')">PM</button>
-                                        </div>
-                                        <div class="tp-scroll-row">
-                                            <div class="tp-col">
-                                                <div class="tp-col-label">Hour</div>
-                                                <button type="button" class="tp-btn" @click="changeHour(1)"><i class="fa-solid fa-chevron-up"></i></button>
-                                                <input class="tp-manual-input tp-hour-input" type="number" min="1" max="12"
-                                                       :value="String(hour).padStart(2,'0')"
-                                                       @change="onHourInput($event)"
-                                                       @keydown.up.prevent="changeHour(1)"
-                                                       @keydown.down.prevent="changeHour(-1)">
-                                                <button type="button" class="tp-btn" @click="changeHour(-1)"><i class="fa-solid fa-chevron-down"></i></button>
-                                            </div>
-                                            <div class="tp-sep">:</div>
-                                            <div class="tp-col">
-                                                <div class="tp-col-label">Min</div>
-                                                <button type="button" class="tp-btn" @click="changeMin(1)"><i class="fa-solid fa-chevron-up"></i></button>
-                                                <input class="tp-manual-input tp-min-input" type="number" min="0" max="59"
-                                                       :value="String(minute).padStart(2,'0')"
-                                                       @change="onMinInput($event)"
-                                                       @keydown.up.prevent="changeMin(1)"
-                                                       @keydown.down.prevent="changeMin(-1)">
-                                                <button type="button" class="tp-btn" @click="changeMin(-1)"><i class="fa-solid fa-chevron-down"></i></button>
-                                            </div>
-                                        </div>
-                                        <div class="tp-quick">
-                                            <template x-for="t in quickTimes" :key="t">
-                                                <button type="button" class="tp-quick-btn" @click="setQuick(t)" x-text="t"></button>
-                                            </template>
-                                        </div>
-                                    </div>
-                                </div>
-                                <input type="time" wire:model="schedule_end" id="endTimeHidden" class="hidden">
-                                @error('schedule_end')
-                                <span x-show="showError('schedule_end')" x-cloak
-                                      class="mt-1 text-xs text-red-600 block"
-                                      wire:loading.class="hidden" wire:target="validateBooking">
-                                        {{ $message }}
-                                    </span>
-                                @enderror
-                                <span x-show="timeError" x-cloak class="mt-1 text-xs text-red-600 block" x-text="timeError"></span>
-                            </div>
-
+                            <input type="time" wire:model="schedule_start" id="startTimeHidden" class="hidden">
+                            @error('schedule_start') <span x-show="showError('schedule_start')" x-cloak class="mt-1 text-xs text-red-600 block" wire:loading.class="hidden" wire:target="validateBooking">{{ $message }}</span> @enderror
                         </div>
-                        {{-- /date-time grid --}}
+
+                        {{-- End Time — Custom Picker (with manual input) --}}
+                        <div x-data="bookingTimePicker('schedule_end')" x-init="init()" @click.outside="close()">
+                            <label class="block text-base font-medium text-gray-700 mb-1">End Time<span class="text-red-500">*</span></label>
+                            <div class="custom-time-picker">
+                                <div class="custom-time-display" :class="{ active: open }" @click="toggle()">
+                                    <div class="time-icon"><i class="fa-regular fa-clock"></i></div>
+                                    <span class="text-sm" :class="selectedTime ? 'font-semibold text-gray-800' : 'time-placeholder'" x-text="selectedTime || 'End time'"></span>
+                                </div>
+                                <div class="time-picker-dropdown" :class="{ show: open }">
+                                    <div class="tp-ampm">
+                                        <button type="button" class="tp-ampm-btn" :class="{ active: ampm === 'AM' }" @click="setAmpm('AM')">AM</button>
+                                        <button type="button" class="tp-ampm-btn" :class="{ active: ampm === 'PM' }" @click="setAmpm('PM')">PM</button>
+                                    </div>
+                                    <div class="tp-scroll-row">
+                                        <div class="tp-col">
+                                            <div class="tp-col-label">Hour</div>
+                                            <button type="button" class="tp-btn" @click="changeHour(1)"><i class="fa-solid fa-chevron-up"></i></button>
+                                            <input class="tp-manual-input tp-hour-input" type="number" min="1" max="12"
+                                                @input="$el.value = $el.value.slice(0,2)"
+                                                :value="String(hour).padStart(2,'0')"
+                                                @change="onHourInput($event)"
+                                                @keydown.up.prevent="changeHour(1)"
+                                                @keydown.down.prevent="changeHour(-1)">
+                                            <button type="button" class="tp-btn" @click="changeHour(-1)"><i class="fa-solid fa-chevron-down"></i></button>
+                                        </div>
+                                        <div class="tp-sep">:</div>
+                                        <div class="tp-col">
+                                            <div class="tp-col-label">Min</div>
+                                            <button type="button" class="tp-btn" @click="changeMin(1)"><i class="fa-solid fa-chevron-up"></i></button>
+                                            <input class="tp-manual-input tp-min-input" type="number" min="0" max="59"
+                                                @input="$el.value = $el.value.slice(0,2)"
+                                                :value="String(minute).padStart(2,'0')"
+                                                @change="onMinInput($event)"
+                                                @keydown.up.prevent="changeMin(1)"
+                                                @keydown.down.prevent="changeMin(-1)">
+                                            <button type="button" class="tp-btn" @click="changeMin(-1)"><i class="fa-solid fa-chevron-down"></i></button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {{-- Hidden native input keeps wire:model in sync --}}
+                            <input type="time" wire:model="schedule_end" id="endTimeHidden" class="hidden">
+                            @error('schedule_end') <span x-show="showError('schedule_end')" x-cloak class="mt-1 text-xs text-red-600 block" wire:loading.class="hidden" wire:target="validateBooking">{{ $message }}</span> @enderror
+                            <span x-show="timeError" x-cloak class="mt-1 text-xs text-red-600 block" x-text="timeError"></span>
+                        </div>
+                    </div>
+                    {{-- ══ End Date + Time row ══ --}}
 
                         {{-- Preferred Mentor --}}
                         <div>
@@ -1373,25 +1353,52 @@ $cancelBooking = action(function () {
              RIGHT SIDEBAR
              ════════════════════════════ --}}
         <div class="lg:col-span-1 space-y-6">
-
-            {{-- Student Profile panel --}}
-            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"
-                 x-data="{
-                    open:       $wire.entangle('toggleProfileOpen'),
-                    isLocked:   $wire.entangle('isProfileLocked'),
-                    college:    $wire.entangle('college_id'),
-                    degree:     $wire.entangle('degreeProgram_id'),
+            
+            {{-- 1. Student Profile Toggle --}}
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden" 
+                x-data="{ 
+                    open: $wire.entangle('toggleProfileOpen'),
+                    isLocked: $wire.entangle('isProfileLocked'),
+                    student_num: $wire.entangle('student_num'),
+                    college: $wire.entangle('college_id'),
+                    degree: $wire.entangle('degreeProgram_id'),
+                    year_level: $wire.entangle('yearLevel_id'),
                     showSuccess: false,
                     allDegrees: @js($this->degreePrograms),
+                    original: { student_num: '', college: '', degree: '', year_level: '' },
+
+                    init() {
+                        this.original.student_num = this.student_num || '';
+                        this.original.college = this.college || '';
+                        this.original.degree = this.degree || '';
+                        this.original.year_level = this.year_level || '';
+
+                        this.$watch('college', (val, oldVal) => { 
+                            if (oldVal !== undefined && oldVal !== '') { this.degree = ''; } 
+                        });
+                        
+                        this.$nextTick(() => { let s = this.degree; this.degree = ''; this.degree = s; });
+                    },
+
                     get filteredDeProgs() {
                         if (!this.college) return [];
-                        return this.allDegrees.filter(d => d.college_id == this.college);
+                        return this.allDegrees.filter(deprog => deprog.college_id == this.college);
+                    },
+
+                    get hasChanges() {
+                        return (this.student_num || '') != this.original.student_num ||
+                               (this.college || '') != this.original.college ||
+                               (this.degree || '') != this.original.degree ||
+                               (this.year_level || '') != this.original.year_level;
                     }
                 }"
-                 @profile-updated.window="showSuccess = true; setTimeout(() => showSuccess = false, 10000)"
-                 x-init="
-                    $watch('college', (val, oldVal) => { if (oldVal !== undefined && oldVal !== '') { degree = ''; } });
-                    $nextTick(() => { let s = degree; degree = ''; degree = s; });
+                @profile-updated.window="
+                    showSuccess = true; 
+                    original.student_num = student_num || '';
+                    original.college = college || '';
+                    original.degree = degree || '';
+                    original.year_level = year_level || '';
+                    setTimeout(() => showSuccess = false, 10000);
                 ">
 
                 <button @click="open = !open" type="button"
@@ -1417,15 +1424,9 @@ $cancelBooking = action(function () {
                     </div>
                     <form wire:submit.prevent="saveProfile" class="space-y-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">
-                                Student Number<span class="text-red-500">*</span>
-                            </label>
-                            <input type="text" wire:model="student_num" :disabled="isLocked"
-                                   class="w-full rounded-lg border-gray-200 shadow-sm text-sm px-3 py-2 disabled:bg-gray-100 disabled:text-gray-500"
-                                   placeholder="e.g 2023-00000" maxlength="10">
-                            @error('student_num')
-                            <span class="mt-1 text-xs text-red-600">{{ $message }}</span>
-                            @enderror
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Student Number<span class="text-red-500">*</span></label>
+                            <input type="text" x-model="student_num" :disabled="isLocked" class="w-full rounded-lg border-gray-200 shadow-sm text-sm px-3 py-2 disabled:bg-gray-100 disabled:text-gray-500" placeholder="e.g 2023-00000" maxlength="10">
+                            @error('student_num') <span class="mt-1 text-xs text-red-600">{{ $message }}</span> @enderror
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">
@@ -1458,11 +1459,8 @@ $cancelBooking = action(function () {
                             @enderror
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">
-                                Year Level<span class="text-red-500">*</span>
-                            </label>
-                            <select wire:model="yearLevel_id" :disabled="isLocked"
-                                    class="w-full rounded-lg border-gray-200 shadow-sm text-sm px-3 py-2 disabled:bg-gray-100 disabled:text-gray-500">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Year Level<span class="text-red-500">*</span></label>
+                            <select x-model="year_level" :disabled="isLocked" class="w-full rounded-lg border-gray-200 shadow-sm text-sm px-3 py-2 disabled:bg-gray-100 disabled:text-gray-500">
                                 <option value="">--- Year Level ---</option>
                                 @foreach ($this->yearLevels as $level)
                                     <option value="{{ $level['id'] }}">{{ $level['name'] }}</option>
@@ -1481,17 +1479,12 @@ $cancelBooking = action(function () {
                                 </button>
                             </template>
                             <template x-if="!isLocked">
-                                <button type="submit"
-                                        class="w-full bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white font-bold py-2.5 px-4 rounded-lg text-sm transition-colors"
-                                        wire:loading.attr="disabled"
-                                        wire:loading.class="opacity-60 cursor-not-allowed"
-                                        wire:target="saveProfile">
-                                    <span wire:loading.remove wire:target="saveProfile">
-                                        {{ auth()->user()->studentProfile ? 'Update Profile' : 'Save Profile' }}
-                                    </span>
-                                    <span wire:loading wire:target="saveProfile">
-                                        <i class="fa-solid fa-spinner fa-spin mr-2"></i>Saving...
-                                    </span>
+                                <button type="submit" 
+                                    :disabled="!hasChanges"
+                                    class="w-full bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-2.5 px-4 rounded-lg text-sm transition-colors"
+                                    wire:loading.attr="disabled" wire:loading.class="opacity-60 cursor-not-allowed" wire:target="saveProfile">
+                                    <span wire:loading.remove wire:target="saveProfile">{{ auth()->user()->studentProfile ? 'Update Profile' : 'Save Profile' }}</span>
+                                    <span wire:loading wire:target="saveProfile"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Saving...</span>
                                 </button>
                             </template>
                         </div>
@@ -1682,8 +1675,232 @@ $cancelBooking = action(function () {
          SCRIPTS
          ════════════════════════════════════════════════════════════════════ --}}
 
-</div>
+<script>
+    document.addEventListener('alpine:init', () => {
+        Alpine.data('bookingDatePicker', () => ({
+                open:          false,
+                viewYear:      0,
+                viewMonth:     0,
+                selectedDate:  null,
+                selectedLabel: '',
+                today:         null,
 
+                init() {
+                    const t = new Date();
+                    this.today     = new Date(t.getFullYear(), t.getMonth(), t.getDate());
+                    this.viewYear  = this.today.getFullYear();
+                    this.viewMonth = this.today.getMonth();
+
+                    this.$watch('$wire.date', val => {
+                        if (val) {
+                            const d = new Date(val + 'T00:00:00');
+                            this.selectedDate  = d;
+                            this.selectedLabel = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                            this.viewYear      = d.getFullYear();
+                            this.viewMonth     = d.getMonth();
+                        } else {
+                            this.selectedDate  = null;
+                            this.selectedLabel = '';
+                        }
+                    });
+                },
+
+            toggle() {
+                if (this.open) { this.close(); return; }
+                this.open = true;
+                //this.$nextTick(() => this.position());
+            },
+
+            /* Always open ABOVE the trigger */
+            position() {
+            //     const trigger = this.$el.querySelector('.custom-date-display');
+            //     const drop    = this.$el.querySelector('.date-picker-dropdown');
+            //     if (!trigger || !drop) return;
+            //     const rect  = trigger.getBoundingClientRect();
+            //     const dropH = drop.offsetHeight || 300;
+            //     const dropW = drop.offsetWidth  || 270;
+
+                drop.style.top = (rect.top - dropH - 6) + 'px';
+
+                let left = rect.left;
+                if (left + dropW > window.innerWidth - 8) left = window.innerWidth - dropW - 8;
+                drop.style.left = Math.max(8, left) + 'px';
+            },
+
+                close() { this.open = false; },
+
+                get monthLabel() {
+                    return new Date(this.viewYear, this.viewMonth, 1)
+                        .toLocaleString('en-US', { month: 'long', year: 'numeric' });
+                },
+
+                prevMonth() {
+                    if (this.viewMonth === 0) { this.viewMonth = 11; this.viewYear--; }
+                    else this.viewMonth--;
+                },
+
+                nextMonth() {
+                    if (this.viewMonth === 11) { this.viewMonth = 0; this.viewYear++; }
+                    else this.viewMonth++;
+                },
+
+                get calDays() {
+                    const firstDay    = new Date(this.viewYear, this.viewMonth, 1).getDay();
+                    const daysInMonth = new Date(this.viewYear, this.viewMonth + 1, 0).getDate();
+                    const tomorrow    = new Date(this.today);
+                    tomorrow.setDate(tomorrow.getDate() + 1);
+                    const days = [];
+                    for (let i = 0; i < firstDay; i++) days.push({ label: '', date: null });
+                    for (let d = 1; d <= daysInMonth; d++) {
+                        const date   = new Date(this.viewYear, this.viewMonth, d);
+                        const isPast = date < tomorrow;
+                        const isSun  = date.getDay() === 0;
+                        days.push({
+                            label:      d,
+                            date,
+                            isSunday:   isSun,
+                            disabled:   isPast,
+                            isToday:    date.getTime() === this.today.getTime(),
+                            isSelected: this.selectedDate && date.getTime() === this.selectedDate.getTime(),
+                        });
+                    }
+                    return days;
+                },
+
+                selectDay(day) {
+                    this.selectedDate = day.date;
+                    const yyyy = day.date.getFullYear();
+                    const mm   = String(day.date.getMonth() + 1).padStart(2, '0');
+                    const dd   = String(day.date.getDate()).padStart(2, '0');
+                    this.selectedLabel = day.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                    const hidden = document.getElementById('bookingDateHidden');
+                    if (hidden) {
+                        hidden.value = `${yyyy}-${mm}-${dd}`;
+                        hidden.dispatchEvent(new Event('input'));
+                        hidden.dispatchEvent(new Event('change'));
+                    }
+                    this.open = false;
+                },
+        }));
+
+        Alpine.data('bookingTimePicker', () => ({
+            open: false,
+            hour: 8,
+            minute: 0,
+            ampm: 'AM',
+            selectedTime: '',
+            //quickTimes: ['7:00 AM','8:00 AM','9:00 AM','10:00 AM','11:00 AM','1:00 PM','2:00 PM','3:00 PM','4:00 PM','5:00 PM'],
+
+                init() {
+                    this.$watch(`$wire.${wireField}`, val => {
+                        if (val) {
+                            const [h, m] = val.split(':').map(Number);
+                            this.ampm   = h >= 12 ? 'PM' : 'AM';
+                            this.hour   = h % 12 || 12;
+                            this.minute = m;
+                            this.updateDisplay();
+                        }
+                    });
+                },
+
+                toggle() {
+                    if (this.open) { this.close(); return; }
+                    this.open = true;
+                    this.$nextTick(() => this.position());
+                },
+
+                position() {
+                    const trigger = this.$el.querySelector('.custom-time-display');
+                    const drop    = this.$el.querySelector('.time-picker-dropdown');
+                    if (!trigger || !drop) return;
+                    const rect  = trigger.getBoundingClientRect();
+                    const dropH = drop.offsetHeight || 240;
+                    const dropW = drop.offsetWidth  || 220;
+
+                    drop.style.top = (rect.top - dropH - 6) + 'px';
+
+                    let left = rect.left;
+                    if (left + dropW > window.innerWidth - 8) left = window.innerWidth - dropW - 8;
+                    drop.style.left = Math.max(8, left) + 'px';
+                },
+
+                close() { this.open = false; },
+
+                changeHour(dir) {
+                    this.hour = ((this.hour - 1 + dir + 12) % 12) + 1;
+                    this.syncHourInput();
+                    this.commit();
+                },
+                changeMin(dir) {
+                    this.minute = (this.minute + dir * 15 + 60) % 60;
+                    this.syncMinInput();
+                    this.commit();
+                },
+                setAmpm(val) { this.ampm = val; this.commit(); },
+
+                onHourInput(e) {
+                    let val = parseInt(e.target.value) || 1;
+                    if (val < 1)  val = 1;
+                    if (val > 12) val = 12;
+                    this.hour = val;
+                    e.target.value = String(val).padStart(2, '0');
+                    this.commit();
+                },
+                onMinInput(e) {
+                    let val = parseInt(e.target.value);
+                    if (isNaN(val) || val < 0) val = 0;
+                    if (val > 59) val = 59;
+                    this.minute = val;
+                    e.target.value = String(val).padStart(2, '0');
+                    this.commit();
+                },
+
+                syncHourInput() {
+                    const el = this.$el.querySelector('.tp-hour-input');
+                    if (el) el.value = String(this.hour).padStart(2, '0');
+                },
+                syncMinInput() {
+                    const el = this.$el.querySelector('.tp-min-input');
+                    if (el) el.value = String(this.minute).padStart(2, '0');
+                },
+
+                setQuick(label) {
+                    const parts  = label.split(' ');
+                    const period = parts[1];
+                    const [h, m] = parts[0].split(':').map(Number);
+                    this.hour    = h;
+                    this.minute  = m;
+                    this.ampm    = period;
+                    this.syncHourInput();
+                    this.syncMinInput();
+                    this.commit();
+                    this.open = false;
+                },
+
+                commit() {
+                    let h24 = this.hour % 12;
+                    if (this.ampm === 'PM') h24 += 12;
+                    const val      = `${String(h24).padStart(2, '0')}:${String(this.minute).padStart(2, '0')}`;
+                    const hiddenId = wireField === 'schedule_start' ? 'startTimeHidden' : 'endTimeHidden';
+                    const hidden   = document.getElementById(hiddenId);
+                    if (hidden) {
+                        hidden.value = val;
+                        hidden.dispatchEvent(new Event('input'));
+                        hidden.dispatchEvent(new Event('change'));
+                    }
+                    this.updateDisplay();
+                },
+
+                updateDisplay() {
+                    const h = String(this.hour).padStart(2, '0');
+                    const m = String(this.minute).padStart(2, '0');
+                    this.selectedTime = `${h}:${m} ${this.ampm}`;
+                },
+        }));
+    });
+</script>
+
+@script
 <script>
         // ── Confirmation modal ────────────────────────────────────────────────
         const confirmModal     = document.getElementById('confirmModal');
@@ -1885,230 +2102,7 @@ $cancelBooking = action(function () {
                 },
             });
         });
-
-        // ── Custom date picker ────────────────────────────────────────────────
-        function bookingDatePicker() {
-            return {
-                open:          false,
-                viewYear:      0,
-                viewMonth:     0,
-                selectedDate:  null,
-                selectedLabel: '',
-                today:         null,
-
-                init() {
-                    const t = new Date();
-                    this.today     = new Date(t.getFullYear(), t.getMonth(), t.getDate());
-                    this.viewYear  = this.today.getFullYear();
-                    this.viewMonth = this.today.getMonth();
-
-                    this.$watch('$wire.date', val => {
-                        if (val) {
-                            const d = new Date(val + 'T00:00:00');
-                            this.selectedDate  = d;
-                            this.selectedLabel = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-                            this.viewYear      = d.getFullYear();
-                            this.viewMonth     = d.getMonth();
-                        } else {
-                            this.selectedDate  = null;
-                            this.selectedLabel = '';
-                        }
-                    });
-                },
-
-                toggle() {
-                    if (this.open) { this.close(); return; }
-                    this.open = true;
-                    this.$nextTick(() => this.position());
-                },
-
-                position() {
-                    const trigger = this.$el.querySelector('.custom-date-display');
-                    const drop    = this.$el.querySelector('.date-picker-dropdown');
-                    if (!trigger || !drop) return;
-                    const rect  = trigger.getBoundingClientRect();
-                    const dropH = drop.offsetHeight || 300;
-                    const dropW = drop.offsetWidth  || 270;
-
-                    drop.style.top = (rect.top - dropH - 6) + 'px';
-
-                    let left = rect.left;
-                    if (left + dropW > window.innerWidth - 8) left = window.innerWidth - dropW - 8;
-                    drop.style.left = Math.max(8, left) + 'px';
-                },
-
-                close() { this.open = false; },
-
-                get monthLabel() {
-                    return new Date(this.viewYear, this.viewMonth, 1)
-                        .toLocaleString('en-US', { month: 'long', year: 'numeric' });
-                },
-
-                prevMonth() {
-                    if (this.viewMonth === 0) { this.viewMonth = 11; this.viewYear--; }
-                    else this.viewMonth--;
-                },
-
-                nextMonth() {
-                    if (this.viewMonth === 11) { this.viewMonth = 0; this.viewYear++; }
-                    else this.viewMonth++;
-                },
-
-                get calDays() {
-                    const firstDay    = new Date(this.viewYear, this.viewMonth, 1).getDay();
-                    const daysInMonth = new Date(this.viewYear, this.viewMonth + 1, 0).getDate();
-                    const tomorrow    = new Date(this.today);
-                    tomorrow.setDate(tomorrow.getDate() + 1);
-                    const days = [];
-                    for (let i = 0; i < firstDay; i++) days.push({ label: '', date: null });
-                    for (let d = 1; d <= daysInMonth; d++) {
-                        const date   = new Date(this.viewYear, this.viewMonth, d);
-                        const isPast = date < tomorrow;
-                        const isSun  = date.getDay() === 0;
-                        days.push({
-                            label:      d,
-                            date,
-                            isSunday:   isSun,
-                            disabled:   isPast,
-                            isToday:    date.getTime() === this.today.getTime(),
-                            isSelected: this.selectedDate && date.getTime() === this.selectedDate.getTime(),
-                        });
-                    }
-                    return days;
-                },
-
-                selectDay(day) {
-                    this.selectedDate = day.date;
-                    const yyyy = day.date.getFullYear();
-                    const mm   = String(day.date.getMonth() + 1).padStart(2, '0');
-                    const dd   = String(day.date.getDate()).padStart(2, '0');
-                    this.selectedLabel = day.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-                    const hidden = document.getElementById('bookingDateHidden');
-                    if (hidden) {
-                        hidden.value = `${yyyy}-${mm}-${dd}`;
-                        hidden.dispatchEvent(new Event('input'));
-                        hidden.dispatchEvent(new Event('change'));
-                    }
-                    this.open = false;
-                },
-            };
-        }
-
-        // ── Custom time picker ────────────────────────────────────────────────
-        function bookingTimePicker(wireField) {
-            return {
-                open:         false,
-                hour:         8,
-                minute:       0,
-                ampm:         'AM',
-                selectedTime: '',
-                quickTimes:   ['7:00 AM','8:00 AM','9:00 AM','10:00 AM','11:00 AM','1:00 PM','2:00 PM','3:00 PM','4:00 PM','5:00 PM'],
-
-                init() {
-                    this.$watch(`$wire.${wireField}`, val => {
-                        if (val) {
-                            const [h, m] = val.split(':').map(Number);
-                            this.ampm   = h >= 12 ? 'PM' : 'AM';
-                            this.hour   = h % 12 || 12;
-                            this.minute = m;
-                            this.updateDisplay();
-                        }
-                    });
-                },
-
-                toggle() {
-                    if (this.open) { this.close(); return; }
-                    this.open = true;
-                    this.$nextTick(() => this.position());
-                },
-
-                position() {
-                    const trigger = this.$el.querySelector('.custom-time-display');
-                    const drop    = this.$el.querySelector('.time-picker-dropdown');
-                    if (!trigger || !drop) return;
-                    const rect  = trigger.getBoundingClientRect();
-                    const dropH = drop.offsetHeight || 240;
-                    const dropW = drop.offsetWidth  || 220;
-
-                    drop.style.top = (rect.top - dropH - 6) + 'px';
-
-                    let left = rect.left;
-                    if (left + dropW > window.innerWidth - 8) left = window.innerWidth - dropW - 8;
-                    drop.style.left = Math.max(8, left) + 'px';
-                },
-
-                close() { this.open = false; },
-
-                changeHour(dir) {
-                    this.hour = ((this.hour - 1 + dir + 12) % 12) + 1;
-                    this.syncHourInput();
-                    this.commit();
-                },
-                changeMin(dir) {
-                    this.minute = (this.minute + dir * 15 + 60) % 60;
-                    this.syncMinInput();
-                    this.commit();
-                },
-                setAmpm(val) { this.ampm = val; this.commit(); },
-
-                onHourInput(e) {
-                    let val = parseInt(e.target.value) || 1;
-                    if (val < 1)  val = 1;
-                    if (val > 12) val = 12;
-                    this.hour = val;
-                    e.target.value = String(val).padStart(2, '0');
-                    this.commit();
-                },
-                onMinInput(e) {
-                    let val = parseInt(e.target.value);
-                    if (isNaN(val) || val < 0) val = 0;
-                    if (val > 59) val = 59;
-                    this.minute = val;
-                    e.target.value = String(val).padStart(2, '0');
-                    this.commit();
-                },
-
-                syncHourInput() {
-                    const el = this.$el.querySelector('.tp-hour-input');
-                    if (el) el.value = String(this.hour).padStart(2, '0');
-                },
-                syncMinInput() {
-                    const el = this.$el.querySelector('.tp-min-input');
-                    if (el) el.value = String(this.minute).padStart(2, '0');
-                },
-
-                setQuick(label) {
-                    const parts  = label.split(' ');
-                    const period = parts[1];
-                    const [h, m] = parts[0].split(':').map(Number);
-                    this.hour    = h;
-                    this.minute  = m;
-                    this.ampm    = period;
-                    this.syncHourInput();
-                    this.syncMinInput();
-                    this.commit();
-                    this.open = false;
-                },
-
-                commit() {
-                    let h24 = this.hour % 12;
-                    if (this.ampm === 'PM') h24 += 12;
-                    const val      = `${String(h24).padStart(2, '0')}:${String(this.minute).padStart(2, '0')}`;
-                    const hiddenId = wireField === 'schedule_start' ? 'startTimeHidden' : 'endTimeHidden';
-                    const hidden   = document.getElementById(hiddenId);
-                    if (hidden) {
-                        hidden.value = val;
-                        hidden.dispatchEvent(new Event('input'));
-                        hidden.dispatchEvent(new Event('change'));
-                    }
-                    this.updateDisplay();
-                },
-
-                updateDisplay() {
-                    const h = String(this.hour).padStart(2, '0');
-                    const m = String(this.minute).padStart(2, '0');
-                    this.selectedTime = `${h}:${m} ${this.ampm}`;
-                },
-            };
-        }
+        
     </script>
+    @endscript
+</div>

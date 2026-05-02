@@ -1,7 +1,7 @@
 import './bootstrap';
 import Swiper from 'swiper';
 import { Pagination } from 'swiper/modules';
-import Alpine from 'alpinejs';
+// import Alpine from 'alpinejs';
 
 if (history.scrollRestoration) {
     history.scrollRestoration = 'manual';
@@ -173,9 +173,9 @@ Alpine.data('mentorDirectory', (initialMentors = [], perPage = 8) => ({
     },
 }));
 
-window.Alpine = Alpine;
+// window.Alpine = Alpine;
 
-Alpine.start();
+// Alpine.start();
 
 
 

@@ -894,7 +894,7 @@ body.app-layout {
 #confirmMeta .hover-tooltip:hover::after { transform: translateY(0); }
 
 /* ── Custom date picker ── */
-.custom-date-picker { position: static; }
+.custom-date-picker { position: relative; }
 .custom-date-display {
     width: 100%; border: 1px solid #d1d5db; border-radius: 8px;
     padding: 7px 12px; font-size: 13px; font-weight: 500; color: #374151;
@@ -914,7 +914,9 @@ body.app-layout {
 .custom-date-display.active .date-chevron { transform: rotate(180deg); }
 
 .date-picker-dropdown {
-    display: none; position: fixed;
+    display: none; position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
     background: white; border: 1px solid #e5e7eb; border-radius: 12px;
     box-shadow: 0 20px 60px -10px rgba(0,0,0,0.2), 0 4px 16px rgba(0,0,0,0.08);
     z-index: 9999; padding: 14px; width: 270px;
@@ -953,7 +955,7 @@ body.app-layout {
 .dp-day-sunday:hover { background: #fef2f2; color: #dc2626; border-color: #fca5a5; }
 
 /* ── Custom time picker ── */
-.custom-time-picker { position: static; }
+.custom-time-picker { position: relative; }
 .custom-time-display {
     width: 100%; border: 1px solid #d1d5db; border-radius: 8px;
     padding: 7px 12px; font-size: 13px; font-weight: 500; color: #374151;
@@ -970,7 +972,9 @@ body.app-layout {
 .custom-time-display .time-placeholder { color: #9ca3af; font-weight: 400; }
 
 .time-picker-dropdown {
-    display: none; position: fixed;
+    display: none; position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
     background: white; border: 1px solid #e5e7eb; border-radius: 12px;
     box-shadow: 0 20px 60px -10px rgba(0,0,0,0.2), 0 4px 16px rgba(0,0,0,0.08);
     z-index: 9999; padding: 14px; width: 220px;
@@ -997,7 +1001,7 @@ body.app-layout {
 .tp-btn:hover { background: #f0fdf4; border-color: #86efac; color: #16a34a; }
 
 .tp-manual-input {
-    width: 42px; height: 38px; border-radius: 8px; border: 1.5px solid #16a34a;
+    width: 48px; height: 38px; border-radius: 8px; border: 1.5px solid #16a34a;
     background: #f0fdf4; text-align: center;
     font-size: 16px; font-weight: 800; color: #15803d; outline: none;
     -moz-appearance: textfield;
