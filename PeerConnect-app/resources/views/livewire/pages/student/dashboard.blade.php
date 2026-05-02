@@ -367,7 +367,7 @@ $dismissSuccessMessage = action(function () {
 
 <div>
     {{-- ── GLOBAL SEARCH ── --}}
-    <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-6 relative animate-fade-up z-50"
+    <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-6 relative animate-fade-up z-30"
          x-data="{
              query: '',
              open: false,
