@@ -10,7 +10,7 @@ use App\Http\Controllers\MentorDashboardController;
 // Guest Routes
 Route::get('/', function () {
     return view('welcome');
-});
+})->name('home');
 
 Route::get('/mentors', function() {
     return view('public.mentors');
