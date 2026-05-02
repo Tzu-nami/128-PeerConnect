@@ -6,11 +6,16 @@ use App\Http\Controllers\AboutController;
 use App\Http\Controllers\AdminSessionController;
 use App\Http\Controllers\MentorSessionController;
 use App\Http\Controllers\MentorDashboardController;
+use App\Http\Controllers\Auth\GoogleController;
 
 // Guest Routes
 Route::get('/', function () {
     return view('welcome');
 });
+
+// Google Routes
+Route::get('/auth/google', [GoogleController::class, 'redirect'])->name('auth.google');
+Route::get('/auth/google/callback', [GoogleController::class, 'callback'])->name('auth.google.callback');
 
 Route::get('/mentors', function() {
     return view('public.mentors');
@@ -29,8 +34,6 @@ Route::get('/about', [AboutController::class, 'index'])->name('public.about');
 Route::get('/contact', function() {
     return view('public.contact');
 })->name('public.contact');
-
-
 
 // Authenticated Routes
 Route::middleware(['auth', 'verified'])->group(function () {

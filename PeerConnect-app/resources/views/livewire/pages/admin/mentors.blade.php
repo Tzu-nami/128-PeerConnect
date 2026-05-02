@@ -387,6 +387,13 @@ $saveSubject = action(function () {
 // ── DELETE MENTOR ─────────────────────────────────────────────
 $deleteMentor = action(function ($id) {
     $mentorProf = MentorProfiles::with('user')->findOrFail($id);
+    $user = $mentorProf->user;
+    if ($user->avatar && Str::contains($user->avatar, config('filesystems.disks.s3.public_url'))) {
+        $filename = basename($user->avatar);
+        Storage::disk('s3')->delete($filename);
+        $user->update(['avatar' => null]);
+    }
+
     $mentorProf->user->update(['user_roles' => 'student']);
     MentorSubjects::where('mentor_id', $mentorProf->id)->delete();
     MentorAvailabilities::where('mentor_id', $mentorProf->id)->delete();
@@ -1369,7 +1376,7 @@ mount(function () {
 
     {{-- ── DELETE CONFIRM MODAL ── --}}
     <template x-teleport="body">
-        <div x-show="showDeleteConfirm" x-cloak class="modal-overlay flex items-center justify-center" style="z-index: 1100;" @click.self="showDeleteConfirm = false">
+        <div x-show="showDeleteConfirm" x-cloak class="modal-overlay flex items-center justify-center" style="z-index: 1100;" @click.self="if(!isSaving) showDeleteConfirm = false" x-data="{ isSaving: false }">
             <div class="bg-white w-full max-w-sm rounded-2xl shadow-2xl p-8 text-center m-4">
                 <div class="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center mx-auto mb-5">
                     <i class="fa-solid fa-triangle-exclamation text-3xl"></i>
@@ -1377,12 +1384,12 @@ mount(function () {
                 <h3 class="text-xl font-black text-slate-800">Remove Mentor?</h3>
                 <p class="text-sm text-gray-500 mt-2 mb-8">Are you sure you want to remove this mentor? Their schedule and subjects will be deleted.</p>
                 <div class="flex gap-3">
-                    <button type="button" @click="showDeleteConfirm = false" class="flex-1 py-3 text-xs font-bold text-gray-800 bg-gray-200 hover:bg-gray-300 rounded-xl transition">Cancel</button>
-                    <button type="button" wire:click="deleteMentor(mentorToDelete.id).then(() => showDeleteConfirm = false)"
-                        class="flex-1 bg-red-900 text-white py-3 rounded-xl text-xs font-bold shadow-lg hover:bg-red-600 transition"
-                        wire:loading.attr="disabled" wire:target="deleteMentor">
-                        <span wire:loading.remove wire:target="deleteMentor">Confirm</span>
-                        <span wire:loading wire:target="deleteMentor"><i class="fa-solid fa-spinner fa-spin mr-1"></i>Deleting...</span>
+                    <button type="button" @click="showDeleteConfirm = false" class="flex-1 py-3 text-xs font-bold text-gray-800 bg-gray-200 hover:bg-gray-300 rounded-xl transition disabled:cursor-not-allowed" x-bind:disabled="isSaving">Cancel</button>
+                    <button type="button" @click="isSaving = true; $wire.deleteMentor(mentorToDelete.id).then(() => showDeleteConfirm = false).finally(() => isSaving  = false)" x-bind:disabled="isSaving"
+                        class="flex-1 bg-red-900 text-white py-3 rounded-xl text-xs font-bold shadow-lg hover:bg-red-600 transition disabled:cursor-not-allowed"
+                        >
+                        <span x-show="!isSaving">Confirm</span>
+                        <span x-show="isSaving" style="display: none;"><i class="fa-solid fa-spinner fa-spin mr-1"></i>Deleting...</span>
                     </button>
                 </div>
             </div>
