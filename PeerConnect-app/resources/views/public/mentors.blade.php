@@ -1,4 +1,4 @@
-<x-layout.landing>
+<x-layouts.landing>
     {{-- Header --}}
     <section class="grid grid-cols-1 md:grid-cols-2 px-6 md:px-20 py-10 gap-6">
 
@@ -25,4 +25,4 @@
     <section class="px-6 md:px-20 pb-20">
         <livewire:mentor-index />
     </section>
-</x-layout.landing>
+</x-layouts.landing>
