@@ -24,10 +24,9 @@ new class extends Component {
             ],
             $user->isStudent() => [
                 ['route' => 'student.dashboard', 'icon' => 'fa-solid fa-gauge',             'label' => 'Dashboard'],
+                ['route' => 'student.mentors',   'icon' => 'fa-solid fa-chalkboard-user',   'label' => 'Mentors'],
                 ['route' => 'student.bookings',  'icon' => 'fa-solid fa-calendar-check',    'label' => 'Book a Session'],
                 ['route' => 'student.history',   'icon' => 'fa-solid fa-clock-rotate-left', 'label' => 'History'],
-                ['route' => 'student.mentors',   'icon' => 'fa-solid fa-chalkboard-user',   'label' => 'Mentors'],
-                ['route' => 'student.about',     'icon' => 'fa-solid fa-circle-info',       'label' => 'About Us'],
             ],
             default => [],
         };
@@ -39,13 +38,13 @@ new class extends Component {
 
     {{-- Logo --}}
     <div class="sidebar-logo-container">
-        <div class="logo-content">
-            <i class="fa-solid fa-graduation-cap"></i>
+        <a href="{{ route('home')  }}" class="logo-content">
+            <i class="fa-solid fa-graduation-cap logo-icon"></i>
             <span class="logo-text">LRC PeerConnect</span>
-        </div>
+        </a>
     </div>
 
-    {{-- Floating toggle button --}}
+    {{-- Collapse toggle --}}
     <button class="sidebar-toggle-btn" id="sidebarToggle" aria-label="Toggle sidebar">
         <span class="toggle-icon">
             <i class="fa-solid fa-chevron-right"></i>
@@ -76,4 +75,3 @@ new class extends Component {
     </div>
 
 </aside>
-
