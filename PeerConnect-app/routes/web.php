@@ -89,6 +89,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Volt::route('/feedbacks', 'pages.mentor.feedbacks')
             ->name('mentor.feedbacks');
 
+        Volt::route('/mentors', 'pages.mentor.mentors')
+            ->name('mentor.mentors');
+
         Route::post('/sessions/update', [MentorSessionController::class, 'update'])->name('mentor.sessions.update');
 
     });
