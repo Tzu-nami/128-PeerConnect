@@ -11,28 +11,35 @@ use App\Models\DegreePrograms;
 use App\Models\YearLevels;
 use App\Models\MentorSubjects;
 use App\Models\MentorAvailabilities;
-use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\MentorBookingNotification;
 use App\Mail\StudentCancelledSession;
-use function Livewire\Volt\{layout, state, mount, action, computed, updated};
+use function Livewire\Volt\{layout, state, mount, action, computed};
 
-// ── Mount ────────────────────────────────────────────────────────────────────
-
-layout('components.layouts.app');
-
+// Mount
 mount(function () {
     abort_if(!auth()->user()->isStudent(), 403, 'Unauthorized Access');
 
     $profile = StudentProfiles::where('user_id', auth()->id())->first();
 
     if ($profile) {
-        $this->student_num      = $profile->student_num;
-        $this->college_id       = $profile->college_id;
-        $this->degreeProgram_id = $profile->degreeProgram_id;
-        $this->yearLevel_id     = $profile->yearLevel_id;
+        $this->student_num       = $profile->student_num;
+        $this->college_id        = $profile->college_id;
+        $this->degreeProgram_id  = $profile->degreeProgram_id;
+        $this->yearLevel_id      = $profile->yearLevel_id;
         $this->toggleProfileOpen = false;
         $this->isProfileLocked   = true;
+
+        $this->showFeedbackModal = Bookings::where('student_id', $profile->id)
+            ->where('booking_status', 'completed')
+            ->where(function ($q) {
+                $q->whereNull('completed_at')
+                    ->orWhere('completed_at', '>=', now()->subDays(2));
+            })
+            ->whereNotIn('id', fn($q) => $q->select('booking_id')->from('feedback'))
+            ->exists();
+    } else {
+        $this->showFeedbackModal = false;
     }
 
     if (request()->has('mentor')) {
@@ -41,9 +48,9 @@ mount(function () {
     }
 });
 
-// ── Booking form state ───────────────────────────────────────────────────────
-
+// State
 state([
+    // Booking form
     'mentor_id'        => '',
     'isMentorLocked'   => false,
     'subject_id'       => '',
@@ -54,11 +61,12 @@ state([
     'schedule_end'     => '',
     'successMessage'   => false,
     'cancelledMessage' => false,
-    // Feedback form state
+
+    // Feedback modal + form
+    'showFeedbackModal' => true,
     'feedbackText'      => '',
     'feedbackSubmitted' => false,
-    // Multi-step feedback
-    'feedbackStep' => 1,   // 1 = Q1–Q5 | 2 = Q6–Q10 | 3 = remarks
+    'feedbackStep'      => 1,
     'q1'  => null,
     'q2'  => null,
     'q3'  => null,
@@ -68,11 +76,19 @@ state([
     'q7'  => null,
     'q8'  => null,
     'q9'  => null,
-    'q10' => null,   // bool: null | "1" | "0"
+    'q10' => null,
+
+    // Student profile
+    'toggleProfileOpen' => true,
+    'isProfileLocked'   => false,
+    'profileSaved'      => false,
+    'student_num'       => '',
+    'college_id'        => '',
+    'degreeProgram_id'  => '',
+    'yearLevel_id'      => '',
 ]);
 
-// ── Computed properties ──────────────────────────────────────────────────────
-
+// Computed Properties
 $mentors = computed(function () {
     return MentorProfiles::with('user')
         ->get()
@@ -123,9 +139,7 @@ $tutorialModes = computed(function () {
 
 $studentBookings = computed(function () {
     $profile = StudentProfiles::where('user_id', auth()->id())->first();
-    if (!$profile) {
-        return collect();
-    }
+    if (!$profile) return collect();
     return Bookings::with(['mentor', 'subject', 'tutorialMode'])
         ->where('student_id', $profile->id)
         ->latest()
@@ -133,17 +147,30 @@ $studentBookings = computed(function () {
         ->get();
 });
 
-// ── Student profile state ────────────────────────────────────────────────────
+$completedBooking = computed(function () {
+    $profile = StudentProfiles::where('user_id', auth()->id())->first();
+    if (!$profile) return null;
+    return Bookings::with(['mentor.user', 'subject', 'tutorialMode'])
+        ->where('student_id', $profile->id)
+        ->where('booking_status', 'completed')
+        ->where(function ($q) {
+            $q->whereNull('completed_at')
+                ->orWhere('completed_at', '>=', now()->subDays(2));
+        })
+        ->whereNotIn('id', fn($q) => $q->select('booking_id')->from('feedback'))
+        ->latest()
+        ->first();
+});
 
-state([
-    'toggleProfileOpen' => true,
-    'isProfileLocked'   => false,
-    'profileSaved'      => false,
-    'student_num'       => '',
-    'college_id'        => '',
-    'degreeProgram_id'  => '',
-    'yearLevel_id'      => '',
-]);
+$activeBooking = computed(function () {
+    $profile = StudentProfiles::where('user_id', auth()->id())->first();
+    if (!$profile) return null;
+    return Bookings::with(['mentor.user', 'subject', 'tutorialMode'])
+        ->where('student_id', $profile->id)
+        ->whereRaw("booking_status::text IN ('pending', 'accepted')")
+        ->latest()
+        ->first();
+});
 
 $colleges = computed(function () {
     return Colleges::orderBy('name')->get();
@@ -157,8 +184,7 @@ $yearLevels = computed(function () {
     return YearLevels::orderBy('name')->get();
 });
 
-// ── Profile actions ──────────────────────────────────────────────────────────
-
+// Student Profile Actions
 $toggleProfile = action(function () {
     $this->toggleProfileOpen = !$this->toggleProfileOpen;
 });
@@ -168,10 +194,10 @@ $saveProfile = action(function () {
 
     $validated = $this->validate(
         [
-            'student_num'       => ['required', 'string', 'max:10', 'regex:/-/'],
-            'college_id'        => ['required', 'exists:colleges,id'],
-            'degreeProgram_id'  => ['required', 'exists:degree_programs,id'],
-            'yearLevel_id'      => ['required', 'exists:year_levels,id'],
+            'student_num'      => ['required', 'string', 'max:10', 'regex:/-/'],
+            'college_id'       => ['required', 'exists:colleges,id'],
+            'degreeProgram_id' => ['required', 'exists:degree_programs,id'],
+            'yearLevel_id'     => ['required', 'exists:year_levels,id'],
         ],
         messages: [
             'student_num.regex' => 'The student number must include a hyphen (-).',
@@ -195,8 +221,7 @@ $saveProfile = action(function () {
     $this->dispatch('profile-updated');
 });
 
-// ── Booking validation rules ─────────────────────────────────────────────────
-
+// Booking Validation Rules
 $bookingRules = [
     'mentor_id'       => ['required'],
     'subject_id'      => ['required', 'exists:subjects,id'],
@@ -226,8 +251,7 @@ $bookingAttributes = [
     'schedule_end'    => 'end time',
 ];
 
-// ── Booking actions ──────────────────────────────────────────────────────────
-
+// Booking Actions
 $validateBooking = action(function () use ($bookingRules, $bookingAttributes) {
     abort_if(!auth()->user()->isStudent(), 403, 'Unauthorized Access');
 
@@ -338,8 +362,30 @@ $submitBooking = action(function () use ($bookingRules, $bookingAttributes) {
     $this->successMessage = true;
 });
 
-// ── Feedback actions ─────────────────────────────────────────────────────────
+$cancelBooking = action(function () {
+    abort_if(!auth()->user()->isStudent(), 403, 'Unauthorized Access');
 
+    $profile = StudentProfiles::where('user_id', auth()->id())->first();
+    abort_if(!$profile, 422);
+
+    $booking = Bookings::where('student_id', $profile->id)
+        ->whereRaw("booking_status::text IN ('pending', 'accepted')")
+        ->latest()
+        ->first();
+
+    abort_if(!$booking, 404);
+
+    $booking->update(['booking_status' => 'cancelled']);
+
+    // Guard against null mentor (e.g. "any mentor" bookings not yet accepted)
+    if ($booking->mentor && $booking->mentor->user && $booking->mentor->user->email) {
+        Mail::to($booking->mentor->user->email)->send(new StudentCancelledSession($booking));
+    }
+
+    $this->cancelledMessage = true;
+});
+
+// Feedback Actions
 $nextFeedbackStep = action(function () {
     if ($this->feedbackStep === 1) {
         $this->validate(
@@ -407,14 +453,7 @@ $submitFeedback = action(function () {
         'q10' => ['required', 'in:0,1'],
     ]);
 
-    $booking = Bookings::with(['subject'])
-        ->where('student_id', $profile->id)
-        ->where('booking_status', 'completed')
-        ->where('completed_at', '>=', now()->subDays(2))
-        ->whereNotIn('id', fn($q) => $q->select('booking_id')->from('feedback'))
-        ->latest()
-        ->first();
-
+    $booking = $this->completedBooking;
     abort_if(!$booking, 404);
 
     \DB::table('feedback')->insert([
@@ -439,6 +478,8 @@ $submitFeedback = action(function () {
     $this->reset(['feedbackText', 'q1', 'q2', 'q3', 'q4', 'q5', 'q6', 'q7', 'q8', 'q9', 'q10']);
     $this->feedbackStep      = 1;
     $this->feedbackSubmitted = true;
+
+    unset($this->completedBooking);
 });
 
 $skipFeedback = action(function () {
@@ -447,14 +488,7 @@ $skipFeedback = action(function () {
     $profile = StudentProfiles::where('user_id', auth()->id())->first();
     abort_if(!$profile, 422);
 
-    $booking = Bookings::with(['subject'])
-        ->where('student_id', $profile->id)
-        ->where('booking_status', 'completed')
-        ->where('completed_at', '>=', now()->subDays(2))
-        ->whereNotIn('id', fn($q) => $q->select('booking_id')->from('feedback'))
-        ->latest()
-        ->first();
-
+    $booking = $this->completedBooking;
     if (!$booking) return;
 
     \DB::table('feedback')->insert([
@@ -476,69 +510,41 @@ $skipFeedback = action(function () {
         'q10' => null,
     ]);
 
-    $this->dispatch('feedback-skipped');
-});
+    $this->showFeedbackModal = false;
 
-// ── Misc actions ─────────────────────────────────────────────────────────────
-
-$dismissSuccessMessage = action(function () {
-    $this->successMessage = false;
-});
-
-$dismissCancelledMessage = action(function () {
-    $this->cancelledMessage = false;
-});
-
-$dismissFeedbackSubmitted = action(function () {
-    $this->feedbackSubmitted = false;
-});
-
-$cancelBooking = action(function () {
-    abort_if(!auth()->user()->isStudent(), 403, 'Unauthorized Access');
-
-    $profile = StudentProfiles::where('user_id', auth()->id())->first();
-    abort_if(!$profile, 422);
-
-    $booking = Bookings::where('student_id', $profile->id)
-        ->whereRaw("booking_status::text IN ('pending', 'accepted')")
-        ->latest()
-        ->first();
-
-    abort_if(!$booking, 404);
-
-    $booking->update(['booking_status' => 'cancelled']);
-    Mail::to($booking->mentor->user->email)->send(new StudentCancelledSession($booking));
-    $this->cancelledMessage = true;
+    unset($this->completedBooking);
 });
 
 ?>
 <div>
-{{-- ── Page body ── --}}
-    {{-- Flash messages --}}
+    {{-- ── Flash messages ── --}}
     @if ($successMessage)
-        <div class="mb-6 flex items-center justify-between bg-green-100 border border-green-400 text-green-800 px-4 py-3 rounded">
+        <div x-data="autoFade()"
+             x-show="show"
+             x-transition.opacity
+             class="mb-6 flex items-center justify-between bg-green-100 border border-green-400 text-green-800 px-4 py-3 rounded">
             <span>Your session has been booked and is now <strong>pending</strong> approval.</span>
-            <button wire:click="dismissSuccessMessage" class="text-green-600 hover:text-green-800 font-bold ml-4">X</button>
         </div>
     @endif
 
     @if ($cancelledMessage)
-        <div class="mb-6 flex items-center justify-between bg-red-50 border border-red-300 text-red-800 px-4 py-3 rounded">
-            <span>
-                <i class="fa-solid fa-circle-xmark mr-2"></i>
-                Your booking has been <strong>cancelled</strong>. You may now request a new session.
-            </span>
-            <button wire:click="dismissCancelledMessage" class="text-red-500 hover:text-red-700 font-bold ml-4">X</button>
+        <div x-data="autoFade()"
+             x-show="show"
+             x-transition.opacity
+             class="mb-6 flex items-center justify-between bg-green-100 border border-green-400 text-green-800 px-4 py-3 rounded">
+            <span>Your booking has been <strong>cancelled</strong>. You may now request a new session.</span>
         </div>
     @endif
 
     @if ($feedbackSubmitted)
-        <div class="mb-6 flex items-center justify-between bg-green-50 border border-green-300 text-green-800 px-4 py-3 rounded">
+        <div x-data="autoFade()"
+             x-show="show"
+             x-transition.opacity
+             class="mb-6 flex items-center justify-between bg-green-100 border border-green-400 text-green-800 px-4 py-3 rounded">
             <span>
                 <i class="fa-solid fa-circle-check mr-2"></i>
                 Thank you for your feedback! You may now request a new session.
             </span>
-            <button wire:click="dismissFeedbackSubmitted" class="text-green-500 hover:text-green-700 font-bold ml-4">X</button>
         </div>
     @endif
 
@@ -548,36 +554,100 @@ $cancelBooking = action(function () {
         </div>
     @endif
 
-    {{-- ────────────────────────────────────────────────────
-         MAIN GRID
-         ──────────────────────────────────────────────────── --}}
+    {{-- ── Session Complete Modal --}}
+    <div
+        x-data="{ show: {{ ($this->completedBooking && $showFeedbackModal) ? 'true' : 'false' }} }"
+        x-show="show"
+        x-cloak
+        class="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+
+        @if ($this->completedBooking)
+            @php $cb = $this->completedBooking; @endphp
+            <div class="session-complete-modal-box" id="sessionCompleteModalBox">
+
+                <div class="scm-icon-wrap">
+                    <i class="fa-solid fa-clipboard-check"></i>
+                </div>
+
+                <div class="scm-badge">
+                    <i class="fa-solid fa-clipboard-list text-xs"></i>
+                    Feedback Form
+                </div>
+
+                <div class="scm-title">Your session has been completed!</div>
+                <p class="scm-subtitle">
+                    Great news — your enrichment session has ended. We'd love to hear how it went!
+                    Your feedback helps us improve the peer mentoring program.
+                    <br><br>
+                    <span class="font-semibold text-gray-700">Would you like to answer the Feedback Form?</span>
+                    It only takes a minute, and it's completely optional.
+                </p>
+
+                <div class="scm-session-info">
+                    <div class="si-row">
+                        <span class="si-label">Subject</span>
+                        <span class="si-value">{{ ($cb->subject->code ?? '—') . ($cb->subject->name ? ' — ' . $cb->subject->name : '') }}</span>
+                    </div>
+                    <div class="si-row">
+                        <span class="si-label">Mentor</span>
+                        <span class="si-value">{{ strtoupper($cb->mentor->user->lastName ?? 'UNKNOWN') }}, {{ $cb->mentor->user->firstName ?? '' }}</span>
+                    </div>
+                    <div class="si-row">
+                        <span class="si-label">Date</span>
+                        <span class="si-value">{{ \Carbon\Carbon::parse($cb->date)->format('F j, Y') }}</span>
+                    </div>
+                    <div class="si-row">
+                        <span class="si-label">Topic</span>
+                        <span class="si-value truncate" style="max-width:180px;" title="{{ $cb->topic }}">{{ $cb->topic }}</span>
+                    </div>
+                </div>
+
+                <div class="scm-actions">
+                    <button type="button" class="scm-btn-skip"
+                            wire:click="skipFeedback"
+                            @click="show = false; window.location.reload()"
+                            wire:loading.attr="disabled"
+                            wire:target="skipFeedback">
+                        <span wire:loading.remove wire:target="skipFeedback">
+                            <i class="fa-solid fa-forward-step mr-1 text-xs"></i> Skip for now
+                        </span>
+                        <span wire:loading wire:target="skipFeedback">
+                            <i class="fa-solid fa-spinner fa-spin mr-1 text-xs"></i> Skipping...
+                        </span>
+                    </button>
+                    <button type="button" class="scm-btn-answer"
+                            @click="
+                                show = false;
+                                $nextTick(() => {
+                                    const card = document.getElementById('feedbackFormCard');
+                                    if (card) {
+                                        card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                        card.style.transition = 'box-shadow 0.3s';
+                                        card.style.boxShadow  = '0 0 0 4px rgba(22,163,74,0.35)';
+                                        setTimeout(() => { card.style.boxShadow = ''; }, 1800);
+                                    }
+                                })"
+                    >
+                        <i class="fa-solid fa-clipboard-list mr-1.5 text-xs"></i> Answer Feedback Form
+                    </button>
+                </div>
+
+                <p class="text-[10px] text-gray-400 text-center mt-4 leading-snug">
+                    Skipping will dismiss this prompt permanently for this session.<br>
+                    You will not be asked again for this specific session.
+                </p>
+
+            </div>
+        @endif
+    </div>
+
+    {{-- ── Main content grid ── --}}
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
-        {{-- Left column (2/3) --}}
+        {{-- LEFT COLUMN --}}
         <div class="lg:col-span-2">
 
             @php
-                $studentProfileForCheck = \App\Models\StudentProfiles::where('user_id', auth()->id())->first();
-
-                $activeBooking = $studentProfileForCheck
-                    ? \App\Models\Bookings::with(['mentor.user', 'subject', 'tutorialMode'])
-                        ->where('student_id', $studentProfileForCheck->id)
-                        ->whereRaw("booking_status::text IN ('pending', 'accepted')")
-                        ->latest()
-                        ->first()
-                    : null;
-
-                $completedBooking = null;
-                if ($studentProfileForCheck) {
-                    $completedBooking = \App\Models\Bookings::with(['mentor.user', 'subject', 'tutorialMode'])
-                        ->where('student_id', $studentProfileForCheck->id)
-                        ->where('booking_status', 'completed')
-                        ->where('completed_at', '>=', now()->subDays(2))
-                        ->whereNotIn('id', fn($q) => $q->select('booking_id')->from('feedback'))
-                        ->latest()
-                        ->first();
-                }
-
                 $questions = [
                     1 => 'The topics have been discussed very well.',
                     2 => 'I have learned a lot from the Tutorial Session.',
@@ -588,15 +658,12 @@ $cancelBooking = action(function () {
                     7 => 'The mentor introduces new techniques or simpler approach to the subject.',
                     8 => 'I will recommend the Tutorial Sessions to my classmates.',
                     9 => 'I am coming back to attend more Tutorial Sessions.',
-                    // Q10 is boolean, handled separately
                 ];
             @endphp
 
-            {{-- ════════════════════════════
-                 MULTI-STEP FEEDBACK FORM
-                 ════════════════════════════ --}}
-            @if ($completedBooking)
-                @php $cb = $completedBooking; @endphp
+            {{-- Feedback Form --}}
+            @if ($this->completedBooking && $showFeedbackModal)
+                @php $cb = $this->completedBooking; @endphp
 
                 <div class="feedback-card" id="feedbackFormCard">
                     <div class="feedback-banner">
@@ -641,7 +708,7 @@ $cancelBooking = action(function () {
                             <div class="fs-item full min-w-0">
                                 <label>Topic &amp; Date</label>
                                 <p class="truncate" title="{{ $cb->topic }}">{{ $cb->topic }}</p>
-                                <p class="shrink-0">&mdash; {{ \Carbon\Carbon::parse($cb->date)->format('F j, Y') }}</p>
+                                <p class="shrink-0">{{ \Carbon\Carbon::parse($cb->date)->format('l, F j, Y') }}</p>
                             </div>
                         </div>
 
@@ -734,7 +801,15 @@ $cancelBooking = action(function () {
                             @enderror
 
                             <div class="feedback-nav">
-                                <button type="button" wire:click="prevFeedbackStep" class="feedback-btn-back">&larr; Back</button>
+                                <button type="button" wire:click="prevFeedbackStep"
+                                        wire:loading.attr="disabled" wire:target="prevFeedbackStep"
+                                        class="feedback-btn-back">
+                                    <span wire:loading.remove wire:target="prevFeedbackStep">&larr; Back </span>
+                                    <span wire:loading wire:target="prevFeedbackStep">
+                                        <i class="fa-solid fa-spinner fa-spin mr-1"></i>
+                                    </span>
+                                </button>
+
                                 <button type="button" wire:click="nextFeedbackStep"
                                         wire:loading.attr="disabled" wire:target="nextFeedbackStep"
                                         class="feedback-btn-next">
@@ -773,7 +848,15 @@ $cancelBooking = action(function () {
                                 </p>
 
                                 <div class="feedback-nav">
-                                    <button type="button" wire:click="prevFeedbackStep" class="feedback-btn-back">&larr; Back</button>
+                                    <button type="button" wire:click="prevFeedbackStep"
+                                            wire:loading.attr="disabled" wire:target="prevFeedbackStep"
+                                            class="feedback-btn-back">
+                                        <span wire:loading.remove wire:target="prevFeedbackStep">&larr; Back</span>
+                                        <span wire:loading wire:target="prevFeedbackStep">
+                                            <i class="fa-solid fa-spinner fa-spin mr-1"></i>
+                                        </span>
+                                    </button>
+
                                     <button type="submit"
                                             wire:loading.attr="disabled"
                                             wire:loading.class="opacity-60 cursor-not-allowed"
@@ -789,18 +872,14 @@ $cancelBooking = action(function () {
                                 </div>
                             </form>
                         @endif
-
-                    </div>{{-- /feedback-body --}}
-                </div>{{-- /feedback-card --}}
+                    </div>
+                </div>
             @endif
-            {{-- /completedBooking --}}
 
-            {{-- ════════════════════════════
-                 ACTIVE BOOKING VIEW
-                 ════════════════════════════ --}}
-            @if ($activeBooking)
+            {{-- Active Booking View --}}
+            @if ($this->activeBooking)
                 @php
-                    $ab          = $activeBooking;
+                    $ab          = $this->activeBooking;
                     $isPending   = $ab->booking_status === 'pending';
                     $statusClass = $isPending ? 'pending' : 'accepted';
                     $statusLabel = $isPending ? 'Awaiting Approval' : 'Accepted';
@@ -812,7 +891,7 @@ $cancelBooking = action(function () {
                         : 'Your session has been confirmed! Please be on time.';
                 @endphp
 
-                <div class="active-booking-card" x-data="{ confirmCancel: false }">
+                <div class="active-booking-card">
                     <div class="active-booking-banner {{ $statusClass }}">
                         <div class="active-booking-banner-icon w-12 h-12 text-xl">{!! $statusIcon !!}</div>
                         <div class="flex-1 min-w-0">
@@ -874,9 +953,8 @@ $cancelBooking = action(function () {
                                 <i class="fa-solid fa-circle-info text-gray-500 flex-shrink-0 font-bold"></i>
                                 You may cancel this booking at any time.
                             </p>
-                            <div>
-                                <button type="button"
-                                        @click="openConfirmModal({
+                            <button type="button"
+                                    @click="window.openConfirmModal({
                                         title:       'Cancel Booking?',
                                         body:        'Are you sure you want to cancel this session? You will need to submit a new request if you change your mind.',
                                         variant:     'cancel',
@@ -884,19 +962,15 @@ $cancelBooking = action(function () {
                                         loadingText: 'Cancelling...',
                                         onConfirm:   async () => { await $wire.cancelBooking(); }
                                     })"
-                                        class="flex-shrink-0 flex items-center gap-2 px-4 py-2 bg-red-50 hover:bg-red-100 text-red-700 font-semibold text-sm rounded-lg border border-red-200 transition-colors">
-                                    <i class="fa-solid fa-ban"></i> Cancel Booking
-                                </button>
-                            </div>
+                                    class="flex-shrink-0 flex items-center gap-2 px-4 py-2 bg-red-50 hover:bg-red-100 text-red-700 font-semibold text-sm rounded-lg border border-red-200 transition-colors">
+                                <i class="fa-solid fa-ban"></i> Cancel Booking
+                            </button>
                         </div>
                     </div>
                 </div>
-                {{-- /active-booking-card --}}
 
-                {{-- ════════════════════════════
-                     BOOKING FORM
-                     ════════════════════════════ --}}
-            @elseif (!$completedBooking)
+                {{-- Booking Form --}}
+            @elseif (!$this->completedBooking)
                 <div class="flex-1 min-w-0 items-center gap-4 rounded-lg pb-6 pt-0">
                     <h1 class="text-3xl font-extrabold tracking-tight text-transparent bg-clip-text bg-up-maroon flex items-center gap-3">
                         Request An Enrichment Session
@@ -1044,7 +1118,7 @@ $cancelBooking = action(function () {
                         }
                     }">
 
-                    <form id="bookingForm" wire:submit.prevent="submitBooking" class="space-y-3">
+                    <form id="bookingForm" class="space-y-3">
 
                         {{-- Subject --}}
                         <div>
@@ -1054,8 +1128,8 @@ $cancelBooking = action(function () {
                             <select wire:model="subject_id" class="w-full rounded-lg border-gray-300 shadow-sm text-base px-2 py-1 transition-colors">
                                 <option value="" disabled>--- Select a Subject ---</option>
                                 @foreach ($this->subjects as $subject)
-                                    <option value="{{ $subject['id'] }}">
-                                        {{ strtoupper($subject['code']) }} - {{ $subject['name'] }}
+                                    <option value="{{ $subject->id }}">
+                                        {{ strtoupper($subject->code) }} - {{ $subject->name }}
                                     </option>
                                 @endforeach
                             </select>
@@ -1063,8 +1137,8 @@ $cancelBooking = action(function () {
                             <span x-show="showError('subject_id')" x-cloak
                                   class="mt-1 text-xs text-red-600 block"
                                   wire:loading.class="hidden" wire:target="validateBooking">
-                                    {{ $message }}
-                                </span>
+                                {{ $message }}
+                            </span>
                             @enderror
                         </div>
 
@@ -1081,8 +1155,8 @@ $cancelBooking = action(function () {
                             <span x-show="showError('topic')" x-cloak
                                   class="mt-1 text-xs text-red-600 block"
                                   wire:loading.class="hidden" wire:target="validateBooking">
-                                    {{ $message }}
-                                </span>
+                                {{ $message }}
+                            </span>
                             @enderror
                         </div>
 
@@ -1094,15 +1168,15 @@ $cancelBooking = action(function () {
                             <select wire:model="tutorialMode_id" class="w-full rounded-lg border-gray-300 shadow-sm text-base px-2 py-1 transition-colors">
                                 <option value="" disabled>--- Select Mode of Tutoring ---</option>
                                 @foreach ($this->tutorialModes as $mode)
-                                    <option value="{{ $mode['id'] }}">{{ $mode['mode'] }}</option>
+                                    <option value="{{ $mode->id }}">{{ $mode->mode }}</option>
                                 @endforeach
                             </select>
                             @error('tutorialMode_id')
                             <span x-show="showError('tutorialMode_id')" x-cloak
                                   class="mt-1 text-xs text-red-600 block"
                                   wire:loading.class="hidden" wire:target="validateBooking">
-                                    {{ $message }}
-                                </span>
+                                {{ $message }}
+                            </span>
                             @enderror
                         </div>
 
@@ -1165,105 +1239,106 @@ $cancelBooking = action(function () {
                                 <span x-show="showError('date')" x-cloak
                                       class="mt-1 text-xs text-red-600 block"
                                       wire:loading.class="hidden" wire:target="validateBooking">
-                                        {{ $message }}
-                                    </span>
+                                    {{ $message }}
+                                </span>
                                 @enderror
                                 <span x-show="dateError" x-cloak class="mt-1 text-xs text-red-600 block" x-text="dateError"></span>
                             </div>
 
-                        {{-- Start Time — Custom Picker --}}
-                        <div x-data="bookingTimePicker('schedule_start')" x-init="init()" @click.outside="close()">
-                            <label class="block text-base font-medium text-gray-700 mb-1">Start Time<span class="text-red-500">*</span></label>
-                            <div class="custom-time-picker">
-                                <div class="custom-time-display" :class="{ active: open }" @click="toggle()">
-                                    <div class="time-icon"><i class="fa-regular fa-clock"></i></div>
-                                    <span class="text-sm" :class="selectedTime ? 'font-semibold text-gray-800' : 'time-placeholder'" x-text="selectedTime || 'Start time'"></span>
-                                </div>
-                                <div class="time-picker-dropdown" :class="{ show: open }">
-                                    <div class="tp-ampm">
-                                        <button type="button" class="tp-ampm-btn" :class="{ active: ampm === 'AM' }" @click="setAmpm('AM')">AM</button>
-                                        <button type="button" class="tp-ampm-btn" :class="{ active: ampm === 'PM' }" @click="setAmpm('PM')">PM</button>
+                            {{-- Start Time --}}
+                            <div x-data="bookingTimePicker('schedule_start')" x-init="init()" @click.outside="close()">
+                                <label class="block text-base font-medium text-gray-700 mb-1">Start Time<span class="text-red-500">*</span></label>
+                                <div class="custom-time-picker">
+                                    <div class="custom-time-display" :class="{ active: open }" @click="toggle()">
+                                        <div class="time-icon"><i class="fa-regular fa-clock"></i></div>
+                                        <span class="text-sm" :class="selectedTime ? 'font-semibold text-gray-800' : 'time-placeholder'" x-text="selectedTime || 'Start time'"></span>
                                     </div>
-                                    <div class="tp-scroll-row">
-                                        <div class="tp-col">
-                                            <div class="tp-col-label">Hour</div>
-                                            <button type="button" class="tp-btn" @click="changeHour(1)"><i class="fa-solid fa-chevron-up"></i></button>
-                                            <input class="tp-manual-input tp-hour-input" type="number" min="1" max="12"
-                                                @input="$el.value = $el.value.slice(0,2)" 
-                                                :value="String(hour).padStart(2,'0')"
-                                                @change="onHourInput($event)"
-                                                @keydown.up.prevent="changeHour(1)"
-                                                @keydown.down.prevent="changeHour(-1)">
-                                                
-                                            <button type="button" class="tp-btn" @click="changeHour(-1)"><i class="fa-solid fa-chevron-down"></i></button>
+                                    <div class="time-picker-dropdown" :class="{ show: open }">
+                                        <div class="tp-ampm">
+                                            <button type="button" class="tp-ampm-btn" :class="{ active: ampm === 'AM' }" @click="setAmpm('AM')">AM</button>
+                                            <button type="button" class="tp-ampm-btn" :class="{ active: ampm === 'PM' }" @click="setAmpm('PM')">PM</button>
                                         </div>
-                                        <div class="tp-sep">:</div>
-                                        <div class="tp-col">
-                                            <div class="tp-col-label">Min</div>
-                                            <button type="button" class="tp-btn" @click="changeMin(1)"><i class="fa-solid fa-chevron-up"></i></button>
-                                            <input class="tp-manual-input tp-min-input" type="number" min="0" max="59"
-                                                @input="$el.value = $el.value.slice(0,2)"
-                                                :value="String(minute).padStart(2,'0')"
-                                                @change="onMinInput($event)"
-                                                @keydown.up.prevent="changeMin(1)"
-                                                @keydown.down.prevent="changeMin(-1)">
-                                                
-                                            <button type="button" class="tp-btn" @click="changeMin(-1)"><i class="fa-solid fa-chevron-down"></i></button>
+                                        <div class="tp-scroll-row">
+                                            <div class="tp-col">
+                                                <div class="tp-col-label">Hour</div>
+                                                <button type="button" class="tp-btn" @click="changeHour(1)"><i class="fa-solid fa-chevron-up"></i></button>
+                                                <input class="tp-manual-input tp-hour-input" type="number" min="1" max="12"
+                                                       @input="$el.value = $el.value.slice(0,2)"
+                                                       :value="String(hour).padStart(2,'0')"
+                                                       @change="onHourInput($event)"
+                                                       @keydown.up.prevent="changeHour(1)"
+                                                       @keydown.down.prevent="changeHour(-1)">
+                                                <button type="button" class="tp-btn" @click="changeHour(-1)"><i class="fa-solid fa-chevron-down"></i></button>
+                                            </div>
+                                            <div class="tp-sep">:</div>
+                                            <div class="tp-col">
+                                                <div class="tp-col-label">Min</div>
+                                                <button type="button" class="tp-btn" @click="changeMin(1)"><i class="fa-solid fa-chevron-up"></i></button>
+                                                <input class="tp-manual-input tp-min-input" type="number" min="0" max="59"
+                                                       @input="$el.value = $el.value.slice(0,2)"
+                                                       :value="String(minute).padStart(2,'0')"
+                                                       @change="onMinInput($event)"
+                                                       @keydown.up.prevent="changeMin(1)"
+                                                       @keydown.down.prevent="changeMin(-1)">
+                                                <button type="button" class="tp-btn" @click="changeMin(-1)"><i class="fa-solid fa-chevron-down"></i></button>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
+                                <input type="time" wire:model="schedule_start" id="startTimeHidden" class="hidden">
+                                @error('schedule_start')
+                                <span x-show="showError('schedule_start')" x-cloak class="mt-1 text-xs text-red-600 block" wire:loading.class="hidden" wire:target="validateBooking">{{ $message }}</span>
+                                @enderror
                             </div>
-                            <input type="time" wire:model="schedule_start" id="startTimeHidden" class="hidden">
-                            @error('schedule_start') <span x-show="showError('schedule_start')" x-cloak class="mt-1 text-xs text-red-600 block" wire:loading.class="hidden" wire:target="validateBooking">{{ $message }}</span> @enderror
-                        </div>
 
-                        {{-- End Time — Custom Picker (with manual input) --}}
-                        <div x-data="bookingTimePicker('schedule_end')" x-init="init()" @click.outside="close()">
-                            <label class="block text-base font-medium text-gray-700 mb-1">End Time<span class="text-red-500">*</span></label>
-                            <div class="custom-time-picker">
-                                <div class="custom-time-display" :class="{ active: open }" @click="toggle()">
-                                    <div class="time-icon"><i class="fa-regular fa-clock"></i></div>
-                                    <span class="text-sm" :class="selectedTime ? 'font-semibold text-gray-800' : 'time-placeholder'" x-text="selectedTime || 'End time'"></span>
-                                </div>
-                                <div class="time-picker-dropdown" :class="{ show: open }">
-                                    <div class="tp-ampm">
-                                        <button type="button" class="tp-ampm-btn" :class="{ active: ampm === 'AM' }" @click="setAmpm('AM')">AM</button>
-                                        <button type="button" class="tp-ampm-btn" :class="{ active: ampm === 'PM' }" @click="setAmpm('PM')">PM</button>
+                            {{-- End Time --}}
+                            <div x-data="bookingTimePicker('schedule_end')" x-init="init()" @click.outside="close()">
+                                <label class="block text-base font-medium text-gray-700 mb-1">End Time<span class="text-red-500">*</span></label>
+                                <div class="custom-time-picker">
+                                    <div class="custom-time-display" :class="{ active: open }" @click="toggle()">
+                                        <div class="time-icon"><i class="fa-regular fa-clock"></i></div>
+                                        <span class="text-sm" :class="selectedTime ? 'font-semibold text-gray-800' : 'time-placeholder'" x-text="selectedTime || 'End time'"></span>
                                     </div>
-                                    <div class="tp-scroll-row">
-                                        <div class="tp-col">
-                                            <div class="tp-col-label">Hour</div>
-                                            <button type="button" class="tp-btn" @click="changeHour(1)"><i class="fa-solid fa-chevron-up"></i></button>
-                                            <input class="tp-manual-input tp-hour-input" type="number" min="1" max="12"
-                                                @input="$el.value = $el.value.slice(0,2)"
-                                                :value="String(hour).padStart(2,'0')"
-                                                @change="onHourInput($event)"
-                                                @keydown.up.prevent="changeHour(1)"
-                                                @keydown.down.prevent="changeHour(-1)">
-                                            <button type="button" class="tp-btn" @click="changeHour(-1)"><i class="fa-solid fa-chevron-down"></i></button>
+                                    <div class="time-picker-dropdown" :class="{ show: open }">
+                                        <div class="tp-ampm">
+                                            <button type="button" class="tp-ampm-btn" :class="{ active: ampm === 'AM' }" @click="setAmpm('AM')">AM</button>
+                                            <button type="button" class="tp-ampm-btn" :class="{ active: ampm === 'PM' }" @click="setAmpm('PM')">PM</button>
                                         </div>
-                                        <div class="tp-sep">:</div>
-                                        <div class="tp-col">
-                                            <div class="tp-col-label">Min</div>
-                                            <button type="button" class="tp-btn" @click="changeMin(1)"><i class="fa-solid fa-chevron-up"></i></button>
-                                            <input class="tp-manual-input tp-min-input" type="number" min="0" max="59"
-                                                @input="$el.value = $el.value.slice(0,2)"
-                                                :value="String(minute).padStart(2,'0')"
-                                                @change="onMinInput($event)"
-                                                @keydown.up.prevent="changeMin(1)"
-                                                @keydown.down.prevent="changeMin(-1)">
-                                            <button type="button" class="tp-btn" @click="changeMin(-1)"><i class="fa-solid fa-chevron-down"></i></button>
+                                        <div class="tp-scroll-row">
+                                            <div class="tp-col">
+                                                <div class="tp-col-label">Hour</div>
+                                                <button type="button" class="tp-btn" @click="changeHour(1)"><i class="fa-solid fa-chevron-up"></i></button>
+                                                <input class="tp-manual-input tp-hour-input" type="number" min="1" max="12"
+                                                       @input="$el.value = $el.value.slice(0,2)"
+                                                       :value="String(hour).padStart(2,'0')"
+                                                       @change="onHourInput($event)"
+                                                       @keydown.up.prevent="changeHour(1)"
+                                                       @keydown.down.prevent="changeHour(-1)">
+                                                <button type="button" class="tp-btn" @click="changeHour(-1)"><i class="fa-solid fa-chevron-down"></i></button>
+                                            </div>
+                                            <div class="tp-sep">:</div>
+                                            <div class="tp-col">
+                                                <div class="tp-col-label">Min</div>
+                                                <button type="button" class="tp-btn" @click="changeMin(1)"><i class="fa-solid fa-chevron-up"></i></button>
+                                                <input class="tp-manual-input tp-min-input" type="number" min="0" max="59"
+                                                       @input="$el.value = $el.value.slice(0,2)"
+                                                       :value="String(minute).padStart(2,'0')"
+                                                       @change="onMinInput($event)"
+                                                       @keydown.up.prevent="changeMin(1)"
+                                                       @keydown.down.prevent="changeMin(-1)">
+                                                <button type="button" class="tp-btn" @click="changeMin(-1)"><i class="fa-solid fa-chevron-down"></i></button>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
+                                <input type="time" wire:model="schedule_end" id="endTimeHidden" class="hidden">
+                                @error('schedule_end')
+                                <span x-show="showError('schedule_end')" x-cloak class="mt-1 text-xs text-red-600 block" wire:loading.class="hidden" wire:target="validateBooking">{{ $message }}</span>
+                                @enderror
+                                <span x-show="timeError" x-cloak class="mt-1 text-xs text-red-600 block" x-text="timeError"></span>
                             </div>
-                            {{-- Hidden native input keeps wire:model in sync --}}
-                            <input type="time" wire:model="schedule_end" id="endTimeHidden" class="hidden">
-                            @error('schedule_end') <span x-show="showError('schedule_end')" x-cloak class="mt-1 text-xs text-red-600 block" wire:loading.class="hidden" wire:target="validateBooking">{{ $message }}</span> @enderror
-                            <span x-show="timeError" x-cloak class="mt-1 text-xs text-red-600 block" x-text="timeError"></span>
                         </div>
-                    </div>
-                    {{-- ══ End Date + Time row ══ --}}
+                        {{-- ── End Date + Time row ── --}}
 
                         {{-- Preferred Mentor --}}
                         <div>
@@ -1274,8 +1349,8 @@ $cancelBooking = action(function () {
                                     class="w-full rounded-lg border-gray-300 shadow-sm text-base px-2 py-1 disabled:bg-gray-100 disabled:text-gray-900 disabled:cursor-not-allowed transition-colors">
                                 <option value=""
                                         x-text="filteredMentors.length === 0
-                                        ? '--- No mentors available. Please select a different date or time slot. ---'
-                                        : '--- Select a mentor ---'"
+                                            ? '--- No mentors available. Please select a different date or time slot. ---'
+                                            : '--- Select a mentor ---'"
                                         disabled>
                                 </option>
                                 <template x-if="filteredMentors.length > 0 && !isMentorLocked">
@@ -1299,8 +1374,8 @@ $cancelBooking = action(function () {
                             <span x-show="showError('mentor_id')" x-cloak
                                   class="mt-1 text-xs text-red-600 block"
                                   wire:loading.class="hidden" wire:target="validateBooking">
-                                    {{ $message }}
-                                </span>
+                                {{ $message }}
+                            </span>
                             @enderror
                         </div>
 
@@ -1344,19 +1419,15 @@ $cancelBooking = action(function () {
                     </form>
                 </div>
             @endif
-            {{-- /booking form --}}
 
         </div>
-        {{-- /left column --}}
 
-        {{-- ════════════════════════════
-             RIGHT SIDEBAR
-             ════════════════════════════ --}}
+        {{-- RIGHT COLUMN --}}
         <div class="lg:col-span-1 space-y-6">
-            
-            {{-- 1. Student Profile Toggle --}}
-            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden" 
-                x-data="{ 
+
+            {{-- Student Profile --}}
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"
+                 x-data="{
                     open: $wire.entangle('toggleProfileOpen'),
                     isLocked: $wire.entangle('isProfileLocked'),
                     student_num: $wire.entangle('student_num'),
@@ -1369,14 +1440,14 @@ $cancelBooking = action(function () {
 
                     init() {
                         this.original.student_num = this.student_num || '';
-                        this.original.college = this.college || '';
-                        this.original.degree = this.degree || '';
-                        this.original.year_level = this.year_level || '';
+                        this.original.college     = this.college || '';
+                        this.original.degree      = this.degree || '';
+                        this.original.year_level  = this.year_level || '';
 
-                        this.$watch('college', (val, oldVal) => { 
-                            if (oldVal !== undefined && oldVal !== '') { this.degree = ''; } 
+                        this.$watch('college', (val, oldVal) => {
+                            if (oldVal !== undefined && oldVal !== '') { this.degree = ''; }
                         });
-                        
+
                         this.$nextTick(() => { let s = this.degree; this.degree = ''; this.degree = s; });
                     },
 
@@ -1387,17 +1458,17 @@ $cancelBooking = action(function () {
 
                     get hasChanges() {
                         return (this.student_num || '') != this.original.student_num ||
-                               (this.college || '') != this.original.college ||
-                               (this.degree || '') != this.original.degree ||
-                               (this.year_level || '') != this.original.year_level;
+                               (this.college || '')     != this.original.college     ||
+                               (this.degree || '')      != this.original.degree      ||
+                               (this.year_level || '')  != this.original.year_level;
                     }
                 }"
-                @profile-updated.window="
-                    showSuccess = true; 
+                 @profile-updated.window="
+                    showSuccess = true;
                     original.student_num = student_num || '';
-                    original.college = college || '';
-                    original.degree = degree || '';
-                    original.year_level = year_level || '';
+                    original.college     = college || '';
+                    original.degree      = degree || '';
+                    original.year_level  = year_level || '';
                     setTimeout(() => showSuccess = false, 10000);
                 ">
 
@@ -1425,28 +1496,24 @@ $cancelBooking = action(function () {
                     <form wire:submit.prevent="saveProfile" class="space-y-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Student Number<span class="text-red-500">*</span></label>
-                            <input type="text" x-model="student_num" :disabled="isLocked" class="w-full rounded-lg border-gray-200 shadow-sm text-sm px-3 py-2 disabled:bg-gray-100 disabled:text-gray-500" placeholder="e.g 2023-00000" maxlength="10">
+                            <input type="text" x-model="student_num" :disabled="isLocked"
+                                   class="w-full rounded-lg border-gray-200 shadow-sm text-sm px-3 py-2 disabled:bg-gray-100 disabled:text-gray-500"
+                                   placeholder="e.g 2023-00000" maxlength="10">
                             @error('student_num') <span class="mt-1 text-xs text-red-600">{{ $message }}</span> @enderror
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">
-                                College<span class="text-red-500">*</span>
-                            </label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">College<span class="text-red-500">*</span></label>
                             <select x-model="college" :disabled="isLocked"
                                     class="w-full rounded-lg border-gray-200 shadow-sm text-sm px-3 py-2 disabled:bg-gray-100 disabled:text-gray-500">
                                 <option value="">--- College ---</option>
                                 @foreach ($this->colleges as $c)
-                                    <option value="{{ $c['id'] }}">{{ $c['name'] }}</option>
+                                    <option value="{{ $c->id }}">{{ $c->name }}</option>
                                 @endforeach
                             </select>
-                            @error('college_id')
-                            <span class="mt-1 text-xs text-red-600">{{ $message }}</span>
-                            @enderror
+                            @error('college_id') <span class="mt-1 text-xs text-red-600">{{ $message }}</span> @enderror
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">
-                                Degree Program<span class="text-red-500">*</span>
-                            </label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Degree Program<span class="text-red-500">*</span></label>
                             <select x-model="degree" :disabled="!college || isLocked"
                                     class="w-full rounded-lg border-gray-200 shadow-sm text-sm px-3 py-2 disabled:bg-gray-100 disabled:text-gray-500">
                                 <option value="">--- Degree Program ---</option>
@@ -1454,21 +1521,18 @@ $cancelBooking = action(function () {
                                     <option :value="deprog.id" x-text="deprog.name"></option>
                                 </template>
                             </select>
-                            @error('degreeProgram_id')
-                            <span class="mt-1 text-xs text-red-600">{{ $message }}</span>
-                            @enderror
+                            @error('degreeProgram_id') <span class="mt-1 text-xs text-red-600">{{ $message }}</span> @enderror
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Year Level<span class="text-red-500">*</span></label>
-                            <select x-model="year_level" :disabled="isLocked" class="w-full rounded-lg border-gray-200 shadow-sm text-sm px-3 py-2 disabled:bg-gray-100 disabled:text-gray-500">
+                            <select x-model="year_level" :disabled="isLocked"
+                                    class="w-full rounded-lg border-gray-200 shadow-sm text-sm px-3 py-2 disabled:bg-gray-100 disabled:text-gray-500">
                                 <option value="">--- Year Level ---</option>
                                 @foreach ($this->yearLevels as $level)
-                                    <option value="{{ $level['id'] }}">{{ $level['name'] }}</option>
+                                    <option value="{{ $level->id }}">{{ $level->name }}</option>
                                 @endforeach
                             </select>
-                            @error('yearLevel_id')
-                            <span class="mt-1 text-xs text-red-600">{{ $message }}</span>
-                            @enderror
+                            @error('yearLevel_id') <span class="mt-1 text-xs text-red-600">{{ $message }}</span> @enderror
                         </div>
 
                         <div class="mt-2">
@@ -1479,10 +1543,10 @@ $cancelBooking = action(function () {
                                 </button>
                             </template>
                             <template x-if="!isLocked">
-                                <button type="submit" 
-                                    :disabled="!hasChanges"
-                                    class="w-full bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-2.5 px-4 rounded-lg text-sm transition-colors"
-                                    wire:loading.attr="disabled" wire:loading.class="opacity-60 cursor-not-allowed" wire:target="saveProfile">
+                                <button type="submit"
+                                        :disabled="!hasChanges"
+                                        class="w-full bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-2.5 px-4 rounded-lg text-sm transition-colors"
+                                        wire:loading.attr="disabled" wire:loading.class="opacity-60 cursor-not-allowed" wire:target="saveProfile">
                                     <span wire:loading.remove wire:target="saveProfile">{{ auth()->user()->studentProfile ? 'Update Profile' : 'Save Profile' }}</span>
                                     <span wire:loading wire:target="saveProfile"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Saving...</span>
                                 </button>
@@ -1491,9 +1555,8 @@ $cancelBooking = action(function () {
                     </form>
                 </div>
             </div>
-            {{-- /student profile panel --}}
 
-            {{-- Recent Bookings panel --}}
+            {{-- Recent Bookings --}}
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden" x-data="{ open: false }">
                 <button @click="open = !open" type="button"
                         class="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-gray-50 transition-colors">
@@ -1573,84 +1636,11 @@ $cancelBooking = action(function () {
                     @endforelse
                 </div>
             </div>
-            {{-- /recent bookings panel --}}
+
         </div>
-        {{-- /right sidebar --}}
     </div>
 
-    {{-- ════════════════════════════════════════════════════════════════════
-         SESSION COMPLETE NOTIFICATION MODAL
-         ════════════════════════════════════════════════════════════════════ --}}
-    @if ($completedBooking)
-        @php $cb = $completedBooking; @endphp
-        <div id="sessionCompleteModal"
-             class="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm">
-            <div class="session-complete-modal-box" id="sessionCompleteModalBox">
-
-                <div class="scm-icon-wrap">
-                    <i class="fa-solid fa-clipboard-check"></i>
-                </div>
-
-                <div class="scm-badge">
-                    <i class="fa-solid fa-clipboard-list text-xs"></i>
-                    Feedback Form
-                </div>
-
-                <div class="scm-title">Your session has been completed!</div>
-                <p class="scm-subtitle">
-                    Great news — your enrichment session has ended. We'd love to hear how it went!
-                    Your feedback helps us improve the peer mentoring program.
-                    <br><br>
-                    <span class="font-semibold text-gray-700">Would you like to answer the Feedback Form?</span>
-                    It only takes a minute, and it's completely optional.
-                </p>
-
-                <div class="scm-session-info">
-                    <div class="si-row">
-                        <span class="si-label">Subject</span>
-                        <span class="si-value">{{ ($cb->subject->code ?? '—') . ($cb->subject->name ? ' — ' . $cb->subject->name : '') }}</span>
-                    </div>
-                    <div class="si-row">
-                        <span class="si-label">Mentor</span>
-                        <span class="si-value">{{ strtoupper($cb->mentor->user->lastName ?? 'UNKNOWN') }}, {{ $cb->mentor->user->firstName ?? '' }}</span>
-                    </div>
-                    <div class="si-row">
-                        <span class="si-label">Date</span>
-                        <span class="si-value">{{ \Carbon\Carbon::parse($cb->date)->format('F j, Y') }}</span>
-                    </div>
-                    <div class="si-row">
-                        <span class="si-label">Topic</span>
-                        <span class="si-value truncate" style="max-width:180px;" title="{{ $cb->topic }}">{{ $cb->topic }}</span>
-                    </div>
-                </div>
-
-                <div class="scm-actions">
-                    <button type="button" class="scm-btn-skip" id="scmSkipBtn"
-                            wire:loading.attr="disabled" wire:target="skipFeedback">
-                        <span wire:loading.remove wire:target="skipFeedback">
-                            <i class="fa-solid fa-forward-step mr-1 text-xs"></i> Skip for now
-                        </span>
-                        <span wire:loading wire:target="skipFeedback">
-                            <i class="fa-solid fa-spinner fa-spin mr-1 text-xs"></i> Skipping...
-                        </span>
-                    </button>
-                    <button type="button" class="scm-btn-answer" id="scmAnswerBtn">
-                        <i class="fa-solid fa-clipboard-list mr-1.5 text-xs"></i> Answer Feedback Form
-                    </button>
-                </div>
-
-                <p class="text-[10px] text-gray-400 text-center mt-4 leading-snug">
-                    Skipping will dismiss this prompt permanently for this session.<br>
-                    You will not be asked again for this specific session.
-                </p>
-
-            </div>
-        </div>
-    @endif
-
-    {{-- ════════════════════════════════════════════════════════════════════
-         CONFIRMATION MODAL
-         ════════════════════════════════════════════════════════════════════ --}}
+    {{-- Confirmation Modal --}}
     <div id="confirmModal" style="display:none;"
          class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
         <div class="bg-[#ffffff] rounded-xl p-6 max-w-sm w-full mx-4 shadow-2xl" id="confirmModalBox">
@@ -1671,238 +1661,185 @@ $cancelBooking = action(function () {
         </div>
     </div>
 
-    {{-- ════════════════════════════════════════════════════════════════════
-         SCRIPTS
-         ════════════════════════════════════════════════════════════════════ --}}
+</div>
 
 <script>
+    // ── Alpine component registrations ────────────────────────────────────────
     document.addEventListener('alpine:init', () => {
+
         Alpine.data('bookingDatePicker', () => ({
-                open:          false,
-                viewYear:      0,
-                viewMonth:     0,
-                selectedDate:  null,
-                selectedLabel: '',
-                today:         null,
+            open:          false,
+            viewYear:      0,
+            viewMonth:     0,
+            selectedDate:  null,
+            selectedLabel: '',
+            today:         null,
 
-                init() {
-                    const t = new Date();
-                    this.today     = new Date(t.getFullYear(), t.getMonth(), t.getDate());
-                    this.viewYear  = this.today.getFullYear();
-                    this.viewMonth = this.today.getMonth();
+            init() {
+                const t = new Date();
+                this.today     = new Date(t.getFullYear(), t.getMonth(), t.getDate());
+                this.viewYear  = this.today.getFullYear();
+                this.viewMonth = this.today.getMonth();
 
-                    this.$watch('$wire.date', val => {
-                        if (val) {
-                            const d = new Date(val + 'T00:00:00');
-                            this.selectedDate  = d;
-                            this.selectedLabel = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-                            this.viewYear      = d.getFullYear();
-                            this.viewMonth     = d.getMonth();
-                        } else {
-                            this.selectedDate  = null;
-                            this.selectedLabel = '';
-                        }
+                this.$watch('$wire.date', val => {
+                    if (val) {
+                        const d = new Date(val + 'T00:00:00');
+                        this.selectedDate  = d;
+                        this.selectedLabel = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                        this.viewYear      = d.getFullYear();
+                        this.viewMonth     = d.getMonth();
+                    } else {
+                        this.selectedDate  = null;
+                        this.selectedLabel = '';
+                    }
+                });
+            },
+
+            toggle() { if (this.open) { this.close(); return; } this.open = true; },
+            close()  { this.open = false; },
+
+            get monthLabel() {
+                return new Date(this.viewYear, this.viewMonth, 1)
+                    .toLocaleString('en-US', { month: 'long', year: 'numeric' });
+            },
+
+            prevMonth() {
+                if (this.viewMonth === 0) { this.viewMonth = 11; this.viewYear--; }
+                else this.viewMonth--;
+            },
+
+            nextMonth() {
+                if (this.viewMonth === 11) { this.viewMonth = 0; this.viewYear++; }
+                else this.viewMonth++;
+            },
+
+            get calDays() {
+                const firstDay    = new Date(this.viewYear, this.viewMonth, 1).getDay();
+                const daysInMonth = new Date(this.viewYear, this.viewMonth + 1, 0).getDate();
+                const tomorrow    = new Date(this.today);
+                tomorrow.setDate(tomorrow.getDate() + 1);
+                const days = [];
+                for (let i = 0; i < firstDay; i++) days.push({ label: '', date: null });
+                for (let d = 1; d <= daysInMonth; d++) {
+                    const date   = new Date(this.viewYear, this.viewMonth, d);
+                    const isPast = date < tomorrow;
+                    const isSun  = date.getDay() === 0;
+                    days.push({
+                        label:      d,
+                        date,
+                        isSunday:   isSun,
+                        disabled:   isPast,
+                        isToday:    date.getTime() === this.today.getTime(),
+                        isSelected: this.selectedDate && date.getTime() === this.selectedDate.getTime(),
                     });
-                },
+                }
+                return days;
+            },
+
+            selectDay(day) {
+                this.selectedDate  = day.date;
+                const yyyy = day.date.getFullYear();
+                const mm   = String(day.date.getMonth() + 1).padStart(2, '0');
+                const dd   = String(day.date.getDate()).padStart(2, '0');
+                this.selectedLabel = day.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                const hidden = document.getElementById('bookingDateHidden');
+                if (hidden) {
+                    hidden.value = `${yyyy}-${mm}-${dd}`;
+                    hidden.dispatchEvent(new Event('input'));
+                    hidden.dispatchEvent(new Event('change'));
+                }
+                this.open = false;
+            },
+        }));
+
+        Alpine.data('bookingTimePicker', (wireField) => ({
+            open:         false,
+            hour:         8,
+            minute:       0,
+            ampm:         'AM',
+            selectedTime: '',
+
+            init() {
+                this.$watch(`$wire.${wireField}`, val => {
+                    if (val) {
+                        const [h, m] = val.split(':').map(Number);
+                        this.ampm   = h >= 12 ? 'PM' : 'AM';
+                        this.hour   = h % 12 || 12;
+                        this.minute = m;
+                        this.updateDisplay();
+                    }
+                });
+            },
 
             toggle() {
                 if (this.open) { this.close(); return; }
                 this.open = true;
-                //this.$nextTick(() => this.position());
+                this.$nextTick(() => this.position());
             },
 
-            /* Always open ABOVE the trigger */
             position() {
-            //     const trigger = this.$el.querySelector('.custom-date-display');
-            //     const drop    = this.$el.querySelector('.date-picker-dropdown');
-            //     if (!trigger || !drop) return;
-            //     const rect  = trigger.getBoundingClientRect();
-            //     const dropH = drop.offsetHeight || 300;
-            //     const dropW = drop.offsetWidth  || 270;
-
-                drop.style.top = (rect.top - dropH - 6) + 'px';
-
+                const trigger = this.$el.querySelector('.custom-time-display');
+                const drop    = this.$el.querySelector('.time-picker-dropdown');
+                if (!trigger || !drop) return;
+                const rect  = trigger.getBoundingClientRect();
+                const dropH = drop.offsetHeight || 240;
+                const dropW = drop.offsetWidth  || 220;
+                drop.style.top  = (rect.top - dropH - 6) + 'px';
                 let left = rect.left;
                 if (left + dropW > window.innerWidth - 8) left = window.innerWidth - dropW - 8;
                 drop.style.left = Math.max(8, left) + 'px';
             },
 
-                close() { this.open = false; },
+            close() { this.open = false; },
 
-                get monthLabel() {
-                    return new Date(this.viewYear, this.viewMonth, 1)
-                        .toLocaleString('en-US', { month: 'long', year: 'numeric' });
-                },
+            changeHour(dir) { this.hour = ((this.hour - 1 + dir + 12) % 12) + 1; this.syncHourInput(); this.commit(); },
+            changeMin(dir)  { this.minute = (this.minute + dir * 15 + 60) % 60; this.syncMinInput(); this.commit(); },
+            setAmpm(val)    { this.ampm = val; this.commit(); },
 
-                prevMonth() {
-                    if (this.viewMonth === 0) { this.viewMonth = 11; this.viewYear--; }
-                    else this.viewMonth--;
-                },
+            onHourInput(e) {
+                let val = parseInt(e.target.value) || 1;
+                if (val < 1)  val = 1;
+                if (val > 12) val = 12;
+                this.hour = val;
+                e.target.value = String(val).padStart(2, '0');
+                this.commit();
+            },
+            onMinInput(e) {
+                let val = parseInt(e.target.value);
+                if (isNaN(val) || val < 0) val = 0;
+                if (val > 59) val = 59;
+                this.minute = val;
+                e.target.value = String(val).padStart(2, '0');
+                this.commit();
+            },
 
-                nextMonth() {
-                    if (this.viewMonth === 11) { this.viewMonth = 0; this.viewYear++; }
-                    else this.viewMonth++;
-                },
+            syncHourInput() { const el = this.$el.querySelector('.tp-hour-input'); if (el) el.value = String(this.hour).padStart(2, '0'); },
+            syncMinInput()  { const el = this.$el.querySelector('.tp-min-input');  if (el) el.value = String(this.minute).padStart(2, '0'); },
 
-                get calDays() {
-                    const firstDay    = new Date(this.viewYear, this.viewMonth, 1).getDay();
-                    const daysInMonth = new Date(this.viewYear, this.viewMonth + 1, 0).getDate();
-                    const tomorrow    = new Date(this.today);
-                    tomorrow.setDate(tomorrow.getDate() + 1);
-                    const days = [];
-                    for (let i = 0; i < firstDay; i++) days.push({ label: '', date: null });
-                    for (let d = 1; d <= daysInMonth; d++) {
-                        const date   = new Date(this.viewYear, this.viewMonth, d);
-                        const isPast = date < tomorrow;
-                        const isSun  = date.getDay() === 0;
-                        days.push({
-                            label:      d,
-                            date,
-                            isSunday:   isSun,
-                            disabled:   isPast,
-                            isToday:    date.getTime() === this.today.getTime(),
-                            isSelected: this.selectedDate && date.getTime() === this.selectedDate.getTime(),
-                        });
-                    }
-                    return days;
-                },
+            commit() {
+                let h24    = this.hour % 12;
+                if (this.ampm === 'PM') h24 += 12;
+                const val      = `${String(h24).padStart(2, '0')}:${String(this.minute).padStart(2, '0')}`;
+                const hiddenId = wireField === 'schedule_start' ? 'startTimeHidden' : 'endTimeHidden';
+                const hidden   = document.getElementById(hiddenId);
+                if (hidden) {
+                    hidden.value = val;
+                    hidden.dispatchEvent(new Event('input'));
+                    hidden.dispatchEvent(new Event('change'));
+                }
+                this.updateDisplay();
+            },
 
-                selectDay(day) {
-                    this.selectedDate = day.date;
-                    const yyyy = day.date.getFullYear();
-                    const mm   = String(day.date.getMonth() + 1).padStart(2, '0');
-                    const dd   = String(day.date.getDate()).padStart(2, '0');
-                    this.selectedLabel = day.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-                    const hidden = document.getElementById('bookingDateHidden');
-                    if (hidden) {
-                        hidden.value = `${yyyy}-${mm}-${dd}`;
-                        hidden.dispatchEvent(new Event('input'));
-                        hidden.dispatchEvent(new Event('change'));
-                    }
-                    this.open = false;
-                },
-        }));
-
-        Alpine.data('bookingTimePicker', () => ({
-            open: false,
-            hour: 8,
-            minute: 0,
-            ampm: 'AM',
-            selectedTime: '',
-            //quickTimes: ['7:00 AM','8:00 AM','9:00 AM','10:00 AM','11:00 AM','1:00 PM','2:00 PM','3:00 PM','4:00 PM','5:00 PM'],
-
-                init() {
-                    this.$watch(`$wire.${wireField}`, val => {
-                        if (val) {
-                            const [h, m] = val.split(':').map(Number);
-                            this.ampm   = h >= 12 ? 'PM' : 'AM';
-                            this.hour   = h % 12 || 12;
-                            this.minute = m;
-                            this.updateDisplay();
-                        }
-                    });
-                },
-
-                toggle() {
-                    if (this.open) { this.close(); return; }
-                    this.open = true;
-                    this.$nextTick(() => this.position());
-                },
-
-                position() {
-                    const trigger = this.$el.querySelector('.custom-time-display');
-                    const drop    = this.$el.querySelector('.time-picker-dropdown');
-                    if (!trigger || !drop) return;
-                    const rect  = trigger.getBoundingClientRect();
-                    const dropH = drop.offsetHeight || 240;
-                    const dropW = drop.offsetWidth  || 220;
-
-                    drop.style.top = (rect.top - dropH - 6) + 'px';
-
-                    let left = rect.left;
-                    if (left + dropW > window.innerWidth - 8) left = window.innerWidth - dropW - 8;
-                    drop.style.left = Math.max(8, left) + 'px';
-                },
-
-                close() { this.open = false; },
-
-                changeHour(dir) {
-                    this.hour = ((this.hour - 1 + dir + 12) % 12) + 1;
-                    this.syncHourInput();
-                    this.commit();
-                },
-                changeMin(dir) {
-                    this.minute = (this.minute + dir * 15 + 60) % 60;
-                    this.syncMinInput();
-                    this.commit();
-                },
-                setAmpm(val) { this.ampm = val; this.commit(); },
-
-                onHourInput(e) {
-                    let val = parseInt(e.target.value) || 1;
-                    if (val < 1)  val = 1;
-                    if (val > 12) val = 12;
-                    this.hour = val;
-                    e.target.value = String(val).padStart(2, '0');
-                    this.commit();
-                },
-                onMinInput(e) {
-                    let val = parseInt(e.target.value);
-                    if (isNaN(val) || val < 0) val = 0;
-                    if (val > 59) val = 59;
-                    this.minute = val;
-                    e.target.value = String(val).padStart(2, '0');
-                    this.commit();
-                },
-
-                syncHourInput() {
-                    const el = this.$el.querySelector('.tp-hour-input');
-                    if (el) el.value = String(this.hour).padStart(2, '0');
-                },
-                syncMinInput() {
-                    const el = this.$el.querySelector('.tp-min-input');
-                    if (el) el.value = String(this.minute).padStart(2, '0');
-                },
-
-                setQuick(label) {
-                    const parts  = label.split(' ');
-                    const period = parts[1];
-                    const [h, m] = parts[0].split(':').map(Number);
-                    this.hour    = h;
-                    this.minute  = m;
-                    this.ampm    = period;
-                    this.syncHourInput();
-                    this.syncMinInput();
-                    this.commit();
-                    this.open = false;
-                },
-
-                commit() {
-                    let h24 = this.hour % 12;
-                    if (this.ampm === 'PM') h24 += 12;
-                    const val      = `${String(h24).padStart(2, '0')}:${String(this.minute).padStart(2, '0')}`;
-                    const hiddenId = wireField === 'schedule_start' ? 'startTimeHidden' : 'endTimeHidden';
-                    const hidden   = document.getElementById(hiddenId);
-                    if (hidden) {
-                        hidden.value = val;
-                        hidden.dispatchEvent(new Event('input'));
-                        hidden.dispatchEvent(new Event('change'));
-                    }
-                    this.updateDisplay();
-                },
-
-                updateDisplay() {
-                    const h = String(this.hour).padStart(2, '0');
-                    const m = String(this.minute).padStart(2, '0');
-                    this.selectedTime = `${h}:${m} ${this.ampm}`;
-                },
+            updateDisplay() {
+                const h = String(this.hour).padStart(2, '0');
+                const m = String(this.minute).padStart(2, '0');
+                this.selectedTime = `${h}:${m} ${this.ampm}`;
+            },
         }));
     });
-</script>
 
-@script
-<script>
-        // ── Confirmation modal ────────────────────────────────────────────────
+    // ── Confirmation modal ────────────────────────────────────────────────────
+    (function () {
         const confirmModal     = document.getElementById('confirmModal');
         const confirmModalBox  = document.getElementById('confirmModalBox');
         const confirmTitle     = document.getElementById('confirmTitle');
@@ -1912,17 +1849,22 @@ $cancelBooking = action(function () {
         const confirmCancelBtn = document.getElementById('confirmCancelBtn');
         const confirmIconWrap  = document.getElementById('confirmIconWrap');
 
-        confirmModal.addEventListener('click', (e) => {
-            if (!confirmModalBox.contains(e.target)) closeConfirmModal();
-        });
-        confirmCancelBtn.addEventListener('click', closeConfirmModal);
-
-        function closeConfirmModal() {
-            confirmModal.style.display = 'none';
-            confirmOkBtn.onclick = null;
+        function iconCheck(color) {
+            return `<svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M4 10l4.5 4.5L16 6" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+        }
+        function iconX(color) {
+            return `<svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M5 5l10 10M15 5L5 15" stroke="${color}" stroke-width="2" stroke-linecap="round"/></svg>`;
+        }
+        function iconInfo(color) {
+            return `<svg width="18" height="18" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="8.5" stroke="${color}" stroke-width="1.5"/><path d="M10 9v5" stroke="${color}" stroke-width="1.5" stroke-linecap="round"/><circle cx="10" cy="6.5" r="0.8" fill="${color}"/></svg>`;
         }
 
-        function openConfirmModal({ title, body, meta, confirmText, loadingText, variant, onConfirm }) {
+        window.closeConfirmModal = function () {
+            confirmModal.style.display = 'none';
+            confirmOkBtn.onclick = null;
+        };
+
+        window.openConfirmModal = function ({ title, body, meta, confirmText, loadingText, variant, onConfirm }) {
             const variants = {
                 accept:  { iconHtml: iconCheck('#059669'), iconBg: '#d1fae5', btnClass: 'bg-emerald-600 hover:bg-emerald-700', label: 'Confirm' },
                 reject:  { iconHtml: iconX('#dc2626'),     iconBg: '#fee2e2', btnClass: 'bg-red-600 hover:bg-red-700',         label: 'Reject'  },
@@ -1957,152 +1899,103 @@ $cancelBooking = action(function () {
                     confirmOkBtn.style.pointerEvents = 'auto';
                     confirmCancelBtn.disabled = false;
                     confirmCancelBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-                    closeConfirmModal();
+                    window.closeConfirmModal();
                 }
             };
 
             confirmModal.style.display = 'flex';
-        }
+        };
 
-        function iconCheck(color) {
-            return `<svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M4 10l4.5 4.5L16 6" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
-        }
-        function iconX(color) {
-            return `<svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M5 5l10 10M15 5L5 15" stroke="${color}" stroke-width="2" stroke-linecap="round"/></svg>`;
-        }
-        function iconInfo(color) {
-            return `<svg width="18" height="18" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="8.5" stroke="${color}" stroke-width="1.5"/><path d="M10 9v5" stroke="${color}" stroke-width="1.5" stroke-linecap="round"/><circle cx="10" cy="6.5" r="0.8" fill="${color}"/></svg>`;
-        }
-
-        // ── Session complete modal ────────────────────────────────────────────
-        (function () {
-            const modal     = document.getElementById('sessionCompleteModal');
-            const skipBtn   = document.getElementById('scmSkipBtn');
-            const answerBtn = document.getElementById('scmAnswerBtn');
-
-            if (!modal) return;
-
-            modal.style.display = 'flex';
-
-            skipBtn.addEventListener('click', async () => {
-                skipBtn.disabled   = true;
-                answerBtn.disabled = true;
-                try {
-                    const componentEl = modal.closest('[wire\\:id]') || document.querySelector('[wire\\:id]');
-                    if (componentEl) {
-                        const wire = Livewire.find(componentEl.getAttribute('wire:id'));
-                        if (wire) await wire.skipFeedback();
-                    }
-                } catch (e) {
-                    console.error('skipFeedback error:', e);
-                } finally {
-                    modal.style.display = 'none';
-                    skipBtn.disabled    = false;
-                    answerBtn.disabled  = false;
-                }
-            });
-
-            answerBtn.addEventListener('click', () => {
-                modal.style.display = 'none';
-                const feedbackCard = document.getElementById('feedbackFormCard');
-                if (feedbackCard) {
-                    feedbackCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    feedbackCard.style.transition = 'box-shadow 0.3s';
-                    feedbackCard.style.boxShadow  = '0 0 0 4px rgba(22,163,74,0.35)';
-                    setTimeout(() => { feedbackCard.style.boxShadow = ''; }, 1800);
-                }
-            });
-
-            window.addEventListener('feedback-skipped', () => {
-                modal.style.display = 'none';
-            });
-        })();
-
-        // ── Booking submit intercept ──────────────────────────────────────────
-        window.addEventListener('show-booking-confirm', function () {
-            const subjectEl      = document.querySelector('[wire\\:model="subject_id"]');
-            const topicEl        = document.querySelector('[wire\\:model="topic"]');
-            const tutorialModeEl = document.querySelector('[wire\\:model="tutorialMode_id"]');
-            const dateEl         = document.querySelector('[wire\\:model="date"]');
-            const startEl        = document.querySelector('[wire\\:model="schedule_start"]');
-            const endEl          = document.querySelector('[wire\\:model="schedule_end"]');
-            const mentorEl       = document.querySelector('[wire\\:model="mentor_id"]');
-
-            const subjectText      = subjectEl?.options[subjectEl.selectedIndex]?.text || '—';
-            const topicText        = topicEl?.value || '—';
-            const tutorialModeText = tutorialModeEl?.options[tutorialModeEl.selectedIndex]?.text || '—';
-            const dateText         = dateEl?.value
-                ? new Date(dateEl.value + 'T00:00:00').toLocaleDateString('en-US', {
-                    weekday: 'long', month: 'long', day: 'numeric', year: 'numeric'
-                })
-                : '—';
-            const startText = formatTime(startEl?.value) || '—';
-            const endText   = formatTime(endEl?.value)   || '—';
-
-            let mentorText = '—';
-            if (mentorEl && mentorEl.selectedIndex >= 0 && mentorEl.options[mentorEl.selectedIndex].value !== '') {
-                mentorText = mentorEl.options[mentorEl.selectedIndex].text;
-            } else {
-                const rootScope = document.querySelector('.livewire-root-scope') || document.querySelector('[wire\\:id]');
-                if (rootScope) {
-                    const livewireComponent = Livewire.find(rootScope.getAttribute('wire:id'));
-                    if (livewireComponent && livewireComponent.get('isMentorLocked')) {
-                        const lockedId  = livewireComponent.get('mentor_id');
-                        const mentorObj = livewireComponent.get('mentors').find(m => m.profile_id == lockedId);
-                        if (mentorObj) mentorText = mentorObj.name;
-                    }
-                }
-            }
-
-            function formatTime(t) {
-                if (!t) return '';
-                const [h, m] = t.split(':').map(Number);
-                const ampm   = h >= 12 ? 'PM' : 'AM';
-                const hr     = h % 12 || 12;
-                return `${hr}:${String(m).padStart(2, '0')} ${ampm}`;
-            }
-
-            const metaHtml = `
-                <div class="flex justify-between items-start gap-4 mb-1">
-                    <span class="text-gray-400 shrink-0">Subject</span>
-                    <span class="font-semibold text-gray-700 text-right truncate">${subjectText}</span>
-                </div>
-                <div class="flex justify-between items-start gap-4 mb-1">
-                    <span class="text-gray-400 shrink-0">Topic</span>
-                    <span class="font-semibold text-gray-700 text-right truncate" style="max-width:190px;">${topicText}</span>
-                </div>
-                <div class="flex justify-between items-start gap-4 mb-1">
-                    <span class="text-gray-400 shrink-0">Mode</span>
-                    <span class="font-semibold text-gray-700 text-right truncate">${tutorialModeText}</span>
-                </div>
-                <div class="flex justify-between items-start gap-4 mb-1">
-                    <span class="text-gray-400 shrink-0">Mentor</span>
-                    <span class="font-semibold text-gray-700 text-right truncate">${mentorText}</span>
-                </div>
-                <div class="flex justify-between items-start gap-4 mb-1">
-                    <span class="text-gray-400 shrink-0">Date</span>
-                    <span class="font-semibold text-gray-700 text-right">${dateText}</span>
-                </div>
-                <div class="flex justify-between items-start gap-4">
-                    <span class="text-gray-400 shrink-0">Time</span>
-                    <span class="font-semibold text-gray-700 text-right">${startText} – ${endText}</span>
-                </div>
-            `;
-
-            openConfirmModal({
-                title:       'Confirm booking request?',
-                body:        'Please review your session details before submitting. Your request will be reviewed by the peer mentor.',
-                meta:        metaHtml,
-                variant:     'accept',
-                confirmText: 'Submit Booking',
-                loadingText: 'Submitting...',
-                onConfirm:   async () => {
-                    const component = Livewire.find(document.querySelector('[wire\\:id]').getAttribute('wire:id'));
-                    await component.submitBooking();
-                },
-            });
+        confirmModal.addEventListener('click', (e) => {
+            if (!confirmModalBox.contains(e.target)) window.closeConfirmModal();
         });
-        
-    </script>
-    @endscript
-</div>
+        confirmCancelBtn.addEventListener('click', window.closeConfirmModal);
+    })();
+
+    // ── Booking submit intercept ──────────────────────────────────────────────
+    window.addEventListener('show-booking-confirm', function () {
+        const subjectEl      = document.querySelector('[wire\\:model="subject_id"]');
+        const topicEl        = document.querySelector('[wire\\:model="topic"]');
+        const tutorialModeEl = document.querySelector('[wire\\:model="tutorialMode_id"]');
+        const dateEl         = document.querySelector('[wire\\:model="date"]');
+        const startEl        = document.querySelector('[wire\\:model="schedule_start"]');
+        const endEl          = document.querySelector('[wire\\:model="schedule_end"]');
+        const mentorEl       = document.querySelector('[wire\\:model="mentor_id"]');
+
+        const subjectText      = subjectEl?.options[subjectEl.selectedIndex]?.text || '—';
+        const topicText        = topicEl?.value || '—';
+        const tutorialModeText = tutorialModeEl?.options[tutorialModeEl.selectedIndex]?.text || '—';
+        const dateText         = dateEl?.value
+            ? new Date(dateEl.value + 'T00:00:00').toLocaleDateString('en-US', {
+                weekday: 'long', month: 'long', day: 'numeric', year: 'numeric'
+            })
+            : '—';
+
+        function formatTime(t) {
+            if (!t) return '';
+            const [h, m] = t.split(':').map(Number);
+            const ampm   = h >= 12 ? 'PM' : 'AM';
+            const hr     = h % 12 || 12;
+            return `${hr}:${String(m).padStart(2, '0')} ${ampm}`;
+        }
+
+        const startText = formatTime(startEl?.value) || '—';
+        const endText   = formatTime(endEl?.value)   || '—';
+
+        let mentorText = '—';
+        if (mentorEl && mentorEl.selectedIndex >= 0 && mentorEl.options[mentorEl.selectedIndex].value !== '') {
+            mentorText = mentorEl.options[mentorEl.selectedIndex].text;
+        } else {
+            const rootEl = document.querySelector('[wire\\:id]');
+            if (rootEl) {
+                const wire = Livewire.find(rootEl.getAttribute('wire:id'));
+                if (wire && wire.get('isMentorLocked')) {
+                    const lockedId  = wire.get('mentor_id');
+                    const mentorObj = wire.get('mentors').find(m => m.profile_id == lockedId);
+                    if (mentorObj) mentorText = mentorObj.name;
+                }
+            }
+        }
+
+        const metaHtml = `
+            <div class="flex justify-between items-start gap-4 mb-1">
+                <span class="text-gray-400 shrink-0">Subject</span>
+                <span class="font-semibold text-gray-700 text-right truncate">${subjectText}</span>
+            </div>
+            <div class="flex justify-between items-start gap-4 mb-1">
+                <span class="text-gray-400 shrink-0">Topic</span>
+                <span class="font-semibold text-gray-700 text-right truncate" style="max-width:190px;">${topicText}</span>
+            </div>
+            <div class="flex justify-between items-start gap-4 mb-1">
+                <span class="text-gray-400 shrink-0">Mode</span>
+                <span class="font-semibold text-gray-700 text-right truncate">${tutorialModeText}</span>
+            </div>
+            <div class="flex justify-between items-start gap-4 mb-1">
+                <span class="text-gray-400 shrink-0">Mentor</span>
+                <span class="font-semibold text-gray-700 text-right truncate">${mentorText}</span>
+            </div>
+            <div class="flex justify-between items-start gap-4 mb-1">
+                <span class="text-gray-400 shrink-0">Date</span>
+                <span class="font-semibold text-gray-700 text-right">${dateText}</span>
+            </div>
+            <div class="flex justify-between items-start gap-4">
+                <span class="text-gray-400 shrink-0">Time</span>
+                <span class="font-semibold text-gray-700 text-right">${startText} – ${endText}</span>
+            </div>
+        `;
+
+        window.openConfirmModal({
+            title:       'Confirm booking request?',
+            body:        'Please review your session details before submitting. Your request will be reviewed by the peer mentor.',
+            meta:        metaHtml,
+            variant:     'accept',
+            confirmText: 'Submit Booking',
+            loadingText: 'Submitting...',
+            onConfirm: async () => {
+                const root = document.getElementById('bookingForm').closest('[wire\\:id]');
+                const wire = Livewire.find(root.getAttribute('wire:id'));
+                await wire.submitBooking();
+            },
+        });
+    });
+</script>
