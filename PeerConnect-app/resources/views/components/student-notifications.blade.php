@@ -5,37 +5,15 @@
     $studentProfile = StudentProfiles::where('user_id', auth()->id())->first();
     $notifications = collect();
 
-    /*
-    |--------------------------------------------------------------------------
-    | STUDENT NOTIFICATIONS
-    |--------------------------------------------------------------------------
-    | Student receives ONLY their own session-related notifications:
-    | - booking sent
-    | - accepted
-    | - rejected
-    | - cancelled
-    | - completed
-    | - no-show
-    |--------------------------------------------------------------------------
-    */
-
     if ($studentProfile) {
-        $bookings = Bookings::with([
-            'mentor.user',
-            'subject',
-        ])
-        ->where('student_id', $studentProfile->id)
-        ->whereIn('booking_status', [
-            'pending',
-            'accepted',
-            'rejected',
-            'cancelled',
-            'completed',
-            'no_show',
-        ])
-        ->orderBy('updated_at', 'desc')
-        ->take(100)
-        ->get();
+        $bookings = Bookings::with(['mentor.user', 'subject'])
+            ->where('student_id', $studentProfile->id)
+            ->whereIn('booking_status', [
+                'pending', 'accepted', 'rejected', 'cancelled', 'completed', 'no_show',
+            ])
+            ->orderBy('updated_at', 'desc')
+            ->take(100)
+            ->get();
 
         foreach ($bookings as $b) {
             $mentor = optional(optional($b->mentor)->user);
@@ -62,7 +40,6 @@
                         $icon = 'fa-paper-plane';
                         $iconBg = 'bg-purple-100';
                         $iconColor = 'text-purple-700';
-
                         $message = "You created an open session request for <strong>{$subject}</strong>";
                         $badge = 'bg-purple-100 text-purple-700';
                         $badgeText = 'Open Session';
@@ -70,7 +47,6 @@
                         $icon = 'fa-paper-plane';
                         $iconBg = 'bg-blue-100';
                         $iconColor = 'text-blue-500';
-
                         $message = "You requested a <strong>{$subject}</strong> session with <strong>{$mentorName}</strong>";
                         $badge = 'bg-blue-100 text-blue-700';
                         $badgeText = 'Booking Sent';
@@ -81,7 +57,6 @@
                     $icon = 'fa-circle-check';
                     $iconBg = 'bg-green-100';
                     $iconColor = 'text-green-600';
-
                     $message = "<strong>{$mentorName}</strong> accepted your <strong>{$subject}</strong> session";
                     $badge = 'bg-green-100 text-green-700';
                     $badgeText = 'Accepted';
@@ -91,7 +66,6 @@
                     $icon = 'fa-circle-xmark';
                     $iconBg = 'bg-red-100';
                     $iconColor = 'text-red-500';
-
                     $message = "<strong>{$mentorName}</strong> rejected your <strong>{$subject}</strong> request";
                     $badge = 'bg-red-100 text-red-600';
                     $badgeText = 'Rejected';
@@ -101,7 +75,6 @@
                     $icon = 'fa-ban';
                     $iconBg = 'bg-red-100';
                     $iconColor = 'text-red-500';
-
                     $message = "Your <strong>{$subject}</strong> session on <strong>{$date}</strong> was cancelled";
                     $badge = 'bg-red-100 text-red-600';
                     $badgeText = 'Cancelled';
@@ -111,7 +84,6 @@
                     $icon = 'fa-flag-checkered';
                     $iconBg = 'bg-slate-100';
                     $iconColor = 'text-slate-500';
-
                     $message = "Your <strong>{$subject}</strong> session with <strong>{$mentorName}</strong> was completed";
                     $badge = 'bg-slate-100 text-slate-600';
                     $badgeText = 'Completed';
@@ -121,7 +93,6 @@
                     $icon = 'fa-user-slash';
                     $iconBg = 'bg-orange-100';
                     $iconColor = 'text-orange-500';
-
                     $message = "You were marked no-show for your <strong>{$subject}</strong> session";
                     $badge = 'bg-orange-100 text-orange-600';
                     $badgeText = 'No Show';
@@ -154,42 +125,53 @@
     $latestTimestamp = $notifications->max('timestamp') ?? 0;
 @endphp
 
-<div class="relative" x-data="{
-    open: false,
-    showAll: false,
-    hasNew: false,
-    lastSeen: parseInt(localStorage.getItem('mentor_notif_last_seen') || '0'),
-    latestTs: {{ $latestTimestamp }},
+<div class="relative"
+     x-data="{
+         showAll: false,
+         hasNew: false,
+         lastSeen: parseInt(localStorage.getItem('student_notif_last_seen') || '0'),
+         latestTs: {{ $latestTimestamp }},
+         get open() { return $store.dropdowns.active === 'notifications' },
 
-    init() {
-        this.hasNew = this.latestTs > this.lastSeen;
-    },
+         init() {
+             this.hasNew = this.latestTs > this.lastSeen;
+         },
 
-    toggle() {
-        this.open = !this.open;
-        if (this.open && this.hasNew) {
-            this.hasNew = false;
-            this.lastSeen = this.latestTs;
-            localStorage.setItem('mentor_notif_last_seen', this.latestTs);
-        }
-        this.showAll = false;
-    }
-}" @click.outside="open = false; showAll = false">
+         openBell() {
+             const willOpen = $store.dropdowns.active !== 'notifications';
+             $store.dropdowns.toggle('notifications');
+
+             if (willOpen && this.hasNew) {
+                 this.hasNew = false;
+                 this.lastSeen = this.latestTs;
+                 localStorage.setItem('student_notif_last_seen', this.latestTs);
+             }
+
+             if (!willOpen) this.showAll = false;
+         }
+     }"
+     @click.outside="$store.dropdowns.active === 'notifications' && ($store.dropdowns.close(), showAll = false)">
 
     {{-- Bell Button --}}
-    <button @click="toggle()"
+    <button @click.stop="openBell()"
             class="relative p-2 rounded-full text-white/70 hover:bg-red-800 hover:text-white transition-all duration-200 focus:outline-none">
         <i class="fa-solid fa-bell text-xl"></i>
         <span x-show="hasNew" x-cloak class="absolute top-1.5 right-1.5 flex h-2.5 w-2.5">
             <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
             <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500 border border-white"></span>
         </span>
+{{--        <span x-show="hasNew" x-cloak--}}
+{{--              class="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 border-2 border-red-900 text-white text-[10px] font-bold flex items-center justify-center">--}}
+{{--            {{ $notifications->count() }}--}}
+{{--        </span>--}}
     </button>
 
     {{-- Dropdown --}}
-    <div x-show="open" x-cloak x-transition
-         class="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-xl border border-gray-100 z-50 overflow-hidden"
-         style="top: calc(100% + 4px);">
+    <div x-show="open"
+         x-cloak
+         x-transition
+         @click.stop
+         class="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-xl border border-gray-100 z-50 overflow-hidden">
 
         {{-- Header --}}
         <div class="px-4 py-3 border-b border-gray-100 bg-slate-50 flex items-center justify-between">
@@ -207,8 +189,7 @@
 
             @forelse($notifications->take(3) as $notif)
                 <div class="px-4 py-3 border-b border-gray-50 hover:bg-gray-50 transition cursor-default
-                    {{ !$loop->last ? '' : 'border-b-0' }}"
-                     x-show="true">
+                    {{ $loop->last ? 'border-b-0' : '' }}">
                     <div class="flex items-start gap-3">
                         <div class="w-8 h-8 rounded-full {{ $notif['iconBg'] }} flex items-center justify-center flex-shrink-0 mt-0.5">
                             <i class="fa-solid {{ $notif['icon'] }} {{ $notif['iconColor'] }} text-xs"></i>
@@ -231,7 +212,6 @@
                 </div>
             @endforelse
 
-            {{-- Remaining notifications (shown when showAll = true) --}}
             @foreach($notifications->skip(3) as $notif)
                 <div class="px-4 py-3 border-b border-gray-50 hover:bg-gray-50 transition cursor-default"
                      x-show="showAll" x-cloak x-transition>
