@@ -1,14 +1,14 @@
 import './bootstrap';
 import Swiper from 'swiper';
 import { Pagination } from 'swiper/modules';
-// import Alpine from 'alpinejs';
 
+// Prevent automatic scrolling down of pages
 if (history.scrollRestoration) {
     history.scrollRestoration = 'manual';
 }
 
+// Swiper for Image Carousel
 document.addEventListener('DOMContentLoaded', () => {
-    // ── Swiper (only on pages that have it) ──────────────────────────────────
     const swiperEl = document.getElementById('activities-swiper');
     if (swiperEl) {
         const swiper = new Swiper('#activities-swiper', {
@@ -33,7 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('btn-next')?.addEventListener('click', () => swiper.slideNext());
     }
 
-    // ── Sidebar toggle (app layout only) ─────────────────────────────────────
+    // Sidebar toggle
     const sidebar       = document.getElementById('sidebar');
     const sidebarToggle = document.getElementById('sidebarToggle');
     if (sidebar && sidebarToggle) {
@@ -44,43 +44,86 @@ document.addEventListener('DOMContentLoaded', () => {
             }, 310);
         });
     }
-
-    // ── Profile dropdown ──────────────────────────────────────────────────────
-    const profileTrigger  = document.getElementById('profileTrigger');
-    const profileDropdown = document.getElementById('profileDropdown');
-    if (profileTrigger && profileDropdown) {
-        profileTrigger.addEventListener('click', (e) => {
-            e.stopPropagation();
-            profileDropdown.classList.toggle('show');
-        });
-        window.addEventListener('click', () => {
-            profileDropdown.classList.remove('show');
-        });
-    }
-
 });
 
-Alpine.data('tableManager', (initialData = [], perPage = 5) => ({
+// Event listener for Alpine dropdowns
+document.addEventListener('alpine:init', () => {
+    if (!Alpine.store('dropdowns')) {
+        Alpine.store('dropdowns', {
+            active: null,
+            toggle(name) {
+                this.active = this.active === name ? null : name;
+            },
+            close() {
+                this.active = null;
+            },
+        });
+    }
+});
+
+// Auto fade for Display Messages
+Alpine.data('autoFade', () => ({
+    show:true,
+    init() {
+        setTimeout(() => this.show = false, 5000);
+    }
+}));
+
+// Session History Script
+Alpine.data('sessionHistory', (initialData = [], perPage = 5) => ({
     search: '',
     filterStatuses: [],
     currentPage: 1,
     perPage: perPage,
     items: initialData,
 
-    statusOrder: { accepted: 1, pending: 2, completed: 3, cancelled: 4, rejected: 5, no_show: 6 },
+    // Default: newest first
+    sortCol: 'date',
+    sortDir: 'desc',
+
+    toggleSort(col) {
+        if (this.sortCol === col) {
+            this.sortDir = (this.sortDir === 'asc') ? 'desc' : 'asc';
+        } else {
+            this.sortCol = col;
+            this.sortDir = col === 'date' ? 'desc' : 'asc';
+        }
+        this.currentPage = 1;
+    },
 
     get filteredItems() {
         const term = this.search.toLowerCase();
-        const filtered = this.items.filter(item => {
-            const matchSearch = Object.values(item).some(val =>
+
+        let result = this.items.filter(item => {
+            const matchSearch = term === '' || Object.values(item).some(val =>
                 val !== null && val !== undefined && String(val).toLowerCase().includes(term)
             );
             const matchStatus = this.filterStatuses.length === 0 ||
                 (item.raw_status && this.filterStatuses.includes(item.raw_status));
             return matchSearch && matchStatus;
         });
-        const order = this.statusOrder;
-        return filtered.sort((a, b) => (order[a.raw_status] ?? 99) - (order[b.raw_status] ?? 99));
+
+        const col = this.sortCol;
+        const dir = this.sortDir;
+
+        result = [...result].sort((a, b) => {
+            let aVal, bVal;
+
+            if (col === 'date') {
+                // Combine Y-m-d + H:i for a stable chronological comparison
+                aVal = (a.rawDate ?? '') + ' ' + (a.rawTime ?? '');
+                bVal = (b.rawDate ?? '') + ' ' + (b.rawTime ?? '');
+            } else {
+                aVal = String(a[col] ?? '').toLowerCase();
+                bVal = String(b[col] ?? '').toLowerCase();
+            }
+
+            if (aVal < bVal) return dir === 'asc' ? -1 : 1;
+            if (aVal > bVal) return dir === 'asc' ?  1 : -1;
+            return 0;
+        });
+
+        return result;
     },
 
     get paginatedItems() {
@@ -101,7 +144,7 @@ Alpine.data('tableManager', (initialData = [], perPage = 5) => ({
     },
 
     get pages() {
-        const total = this.totalPages;
+        const total   = this.totalPages;
         const current = this.currentPage;
         if (total <= 8) return Array.from({ length: total }, (_, i) => i + 1);
         if (current <= 4) return [1, 2, 3, 4, 5, '...', total];
@@ -119,13 +162,14 @@ Alpine.data('tableManager', (initialData = [], perPage = 5) => ({
     },
 }));
 
+// Mentor Table
 Alpine.data('mentorDirectory', (initialMentors = [], perPage = 8) => ({
     mentors: initialMentors,
     searchQuery: '',
     selectedSubject: '',
     selectedDay: '',
     currentPage: 1,
-    perPage: perPage,  // ← same pattern
+    perPage: perPage,
     showModal: false,
     selectedMentor: null,
     weekDays: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'],
@@ -133,10 +177,10 @@ Alpine.data('mentorDirectory', (initialMentors = [], perPage = 8) => ({
     get filteredMentors() {
         const term = this.searchQuery.toLowerCase();
         return this.mentors.filter(mentor => {
-            const fullName = (mentor.firstName + ' ' + mentor.lastName).toLowerCase();
-            const matchesSearch = term === '' || fullName.includes(term);
-            const matchesSub = this.selectedSubject === '' || mentor.subjects.some(s => s.id == this.selectedSubject);
-            const matchesDay = this.selectedDay === '' || mentor.days.includes(this.selectedDay);
+            const fullName     = (mentor.firstName + ' ' + mentor.lastName).toLowerCase();
+            const matchesSearch  = term === '' || fullName.includes(term);
+            const matchesSub   = this.selectedSubject === '' || mentor.subjects.some(s => s.id == this.selectedSubject);
+            const matchesDay   = this.selectedDay === '' || mentor.days.includes(this.selectedDay);
             return matchesSearch && matchesSub && matchesDay;
         });
     },
@@ -159,7 +203,7 @@ Alpine.data('mentorDirectory', (initialMentors = [], perPage = 8) => ({
     },
 
     get pages() {
-        const total = this.totalPages;
+        const total   = this.totalPages;
         const current = this.currentPage;
         if (total <= 8) return Array.from({ length: total }, (_, i) => i + 1);
         if (current <= 4) return [1, 2, 3, 4, 5, '...', total];
@@ -172,10 +216,3 @@ Alpine.data('mentorDirectory', (initialMentors = [], perPage = 8) => ({
         this.showModal = true;
     },
 }));
-
-// window.Alpine = Alpine;
-
-// Alpine.start();
-
-
-
