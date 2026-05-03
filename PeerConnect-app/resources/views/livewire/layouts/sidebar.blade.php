@@ -19,14 +19,18 @@ new class extends Component {
             $user->isMentor() => [
                 ['route' => 'mentor.dashboard', 'icon' => 'fa-solid fa-gauge',          'label' => 'Dashboard'],
                 ['route' => 'mentor.bookings',  'icon' => 'fa-solid fa-calendar-check', 'label' => 'Booking Form'],
+                ['route' => 'mentor.history',   'icon' => 'fa-solid fa-clock-rotate-left', 'label' => 'Booking History'],
                 ['route' => 'mentor.sessions',  'icon' => 'fa-solid fa-clock',          'label' => 'Tutorial Sessions'],
                 ['route' => 'mentor.feedbacks', 'icon' => 'fa-solid fa-comment-dots',   'label' => 'Student Feedbacks'],
+                ['route' => 'mentor.mentors',   'icon' => 'fa-solid fa-chalkboard-user',   'label' => 'Mentors'],
+
             ],
             $user->isStudent() => [
                 ['route' => 'student.dashboard', 'icon' => 'fa-solid fa-gauge',             'label' => 'Dashboard'],
+                ['route' => 'student.bookings',  'icon' => 'fa-solid fa-calendar-check',    'label' => 'Booking Form'],
+                ['route' => 'student.history',   'icon' => 'fa-solid fa-clock-rotate-left', 'label' => 'Booking History'],
                 ['route' => 'student.mentors',   'icon' => 'fa-solid fa-chalkboard-user',   'label' => 'Mentors'],
-                ['route' => 'student.bookings',  'icon' => 'fa-solid fa-calendar-check',    'label' => 'Book a Session'],
-                ['route' => 'student.history',   'icon' => 'fa-solid fa-clock-rotate-left', 'label' => 'History'],
+
             ],
             default => [],
         };
