@@ -13,21 +13,8 @@ use App\Models\MentorAvailabilities;
 use Illuminate\Support\Facades\Cache;
 use function Livewire\Volt\{layout, state, mount, action, computed, updated};
 
-// ─── STATE ───────────────────────────────────────────────────────────────────
-
+// STATE
 state([
-    // Booking form
-    'mentor_id'      => '',
-    'subject_id'     => '',
-    'topic'          => '',
-    'tutorialMode_id'=> '',
-    'date'           => '',
-    'schedule_start' => '',
-    'schedule_end'   => '',
-    'successMessage' => false,
-    'sessions'       => [],
-    'globalSearchTerm' => '',
-
     // Student profile form
     'toggleProfileOpen' => true,
     'profileSaved'      => false,
@@ -37,12 +24,10 @@ state([
     'yearLevel_id'      => '',
 ]);
 
-// ─── MOUNT ───────────────────────────────────────────────────────────────────
-
+// MOUNT
 mount(function () {
     abort_if(!auth()->user()->isStudent(), 403, 'Unauthorized Access');
 
-    // Single query — reused below instead of querying StudentProfiles twice
     $profile = StudentProfiles::where('user_id', auth()->id())->first();
 
     if (!$profile) return;
@@ -54,7 +39,7 @@ mount(function () {
     $this->yearLevel_id     = $profile->yearLevel_id;
     $this->toggleProfileOpen = false;
 
-    // Load sessions — single query with eager-loaded relationships
+    // Load sessions
     $this->sessions = Bookings::with(['mentor.user', 'subject'])
         ->where('student_id', $profile->id)
         ->get()
@@ -81,19 +66,14 @@ mount(function () {
         ->toArray();
 });
 
-// ─── COMPUTED: SEARCH INDEX ──────────────────────────────────────────────────
-// Cached for 5 minutes per user — this was the biggest performance killer.
-// Previously: N+1 on mentors (studentProfile->yearLevel, ->degreeProgram per mentor),
-//             plus 3 separate uncached DB queries every page load.
-
+// SEARCH INDEX
 $searchIndex = computed(function () {
     $userId = auth()->id();
 
     return Cache::remember("search_index_student_{$userId}", now()->addMinutes(5), function () use ($userId) {
         $index = [];
 
-        // ── Mentors ──
-        // Eager-load everything needed — no more N+1 per mentor
+        // Mentors
         $mentors = \App\Models\User::where('user_roles', 'mentor')
             ->with([
                 'studentProfile.yearLevel',
@@ -117,12 +97,11 @@ $searchIndex = computed(function () {
             ];
         }
 
-        // ── Subjects ──
-        // Load all mentor-subject relationships in one query instead of filtering per subject
+        // Subjects
         $allMentorProfiles = \App\Models\MentorProfiles::with(['user', 'subjects'])->get()
             ->sortBy(fn($mp) => $mp->user->lastName);
 
-        // Build a subject → mentor names map once, not inside foreach
+        // Subject -> Mentor map
         $subjectMentorMap = [];
         foreach ($allMentorProfiles as $mp) {
             foreach ($mp->subjects as $s) {
@@ -148,7 +127,7 @@ $searchIndex = computed(function () {
             ];
         }
 
-        // ── Recent Sessions ──
+        // Recent Sessions
         $studentProfileId = StudentProfiles::where('user_id', $userId)->value('id');
 
         $bookings = \App\Models\Bookings::with(['mentor.user', 'subject'])
@@ -185,103 +164,11 @@ $searchIndex = computed(function () {
                 ])),
             ];
         }
-
         return $index;
     });
 });
 
-// ─── COMPUTED: BOOKING FORM DATA ─────────────────────────────────────────────
-// These are short-lived lookups — cached briefly to avoid repeated hits
-// if Livewire re-renders (e.g. on validation errors).
-
-$mentors = computed(function () {
-    return Cache::remember('mentor_list', now()->addMinutes(10), function () {
-        return MentorProfiles::with('user')
-            ->get()
-            ->sortBy(fn($mp) => $mp->user->lastName)
-            ->values()
-            ->map(fn($mp) => [
-                'id'         => $mp->user->id,
-                'profile_id' => $mp->id,
-                'name'       => strtoupper($mp->user->lastName) . ', ' . $mp->user->firstName,
-            ])
-            ->toArray();
-    });
-});
-
-$mentorAvailabilities = computed(function () {
-    return Cache::remember('mentor_availabilities', now()->addMinutes(10), function () {
-        return MentorAvailabilities::all()
-            ->map(fn($a) => [
-                'mentorProfile_id' => $a->mentor_id,
-                'day_of_week'      => $a->day_of_week,
-                'start_time'       => $a->start_time,
-                'end_time'         => $a->end_time,
-            ])
-            ->values()
-            ->toArray();
-    });
-});
-
-$mentorSubjects = computed(function () {
-    return Cache::remember('mentor_subjects', now()->addMinutes(10), function () {
-        return MentorSubjects::all()
-            ->map(fn($s) => [
-                'mentorProfile_id' => $s->mentor_id,
-                'subject_id'       => $s->subject_id,
-            ])
-            ->values()
-            ->toArray();
-    });
-});
-
-$subjects = computed(function () {
-    return Cache::remember('subjects_list', now()->addMinutes(10), function () {
-        return Subjects::orderBy('code')->get();
-    });
-});
-
-$tutorialModes = computed(function () {
-    return Cache::remember('tutorial_modes', now()->addMinutes(60), function () {
-        return TutorialMode::orderBy('id')->get();
-    });
-});
-
-// ─── COMPUTED: STUDENT BOOKINGS (sidebar/widget) ──────────────────────────────
-
-$studentBookings = computed(function () {
-    $profile = StudentProfiles::where('user_id', auth()->id())->first();
-    if (!$profile) return collect();
-
-    return Bookings::with(['mentor.user', 'subject', 'tutorialMode'])
-        ->where('student_id', $profile->id)
-        ->latest()
-        ->take(3)
-        ->get();
-});
-
-// ─── COMPUTED: PROFILE DROPDOWNS ─────────────────────────────────────────────
-
-$colleges = computed(function () {
-    return Cache::remember('colleges_list', now()->addMinutes(60), function () {
-        return Colleges::orderBy('name')->get();
-    });
-});
-
-$degreePrograms = computed(function () {
-    return Cache::remember('degree_programs_list', now()->addMinutes(60), function () {
-        return DegreePrograms::orderBy('name')->get();
-    });
-});
-
-$yearLevels = computed(function () {
-    return Cache::remember('year_levels_list', now()->addMinutes(60), function () {
-        return YearLevels::orderBy('name')->get();
-    });
-});
-
-// ─── ACTIONS ─────────────────────────────────────────────────────────────────
-
+//  ACTIONS
 $toggleProfile = action(function () {
     $this->toggleProfileOpen = !$this->toggleProfileOpen;
 });
@@ -315,52 +202,6 @@ $saveProfile = action(function () {
     Cache::forget('search_index_student_' . auth()->id());
 
     $this->dispatch('profile-updated');
-});
-
-$submitBooking = action(function () {
-    abort_if(!auth()->user()->isStudent(), 403, 'Unauthorized Access');
-    abort_if(!auth()->user()->studentProfile, 422);
-
-    $validated = $this->validate([
-        'mentor_id'      => ['required', 'exists:mentor_profiles,id'],
-        'subject_id'     => ['required', 'exists:subjects,id'],
-        'topic'          => ['required', 'string', 'max:255'],
-        'tutorialMode_id'=> ['required', 'exists:tutorial_modes,id'],
-        'date'           => ['required', 'date', 'after:today', function ($attribute, $value, $fail) {
-            if (\Carbon\Carbon::parse($value)->format('l') === 'Sunday') {
-                $fail('The session cannot be on a Sunday. Please select another date.');
-            }
-        }],
-        'schedule_start' => ['required', 'date_format:H:i'],
-        'schedule_end'   => ['required', 'date_format:H:i', 'after:schedule_start'],
-    ], attributes: [
-        'mentor_id'      => 'mentor',
-        'subject_id'     => 'subject',
-        'topic'          => 'topic',
-        'tutorialMode_id'=> 'mode of tutorial',
-        'date'           => 'date',
-        'schedule_start' => 'start time',
-        'schedule_end'   => 'end time',
-    ]);
-
-    $profile = StudentProfiles::where('user_id', auth()->id())->first();
-
-    Bookings::create([
-        ...$validated,
-        'student_id'     => $profile->id,
-        'booking_status' => 'pending',
-    ]);
-
-    $this->reset(['mentor_id', 'subject_id', 'topic', 'tutorialMode_id', 'date', 'schedule_start', 'schedule_end']);
-
-    // Bust the per-user search index so the new booking appears
-    Cache::forget('search_index_student_' . auth()->id());
-
-    $this->successMessage = true;
-});
-
-$dismissSuccessMessage = action(function () {
-    $this->successMessage = false;
 });
 
 ?>
@@ -802,572 +643,556 @@ $dismissSuccessMessage = action(function () {
 </div>
 
 <script>
-// ─── DATA FROM SERVER ────────────────────────────────────────────────────────
-const allSessions = @json($this->sessions);
+    // DATA FROM SERVER
+    const allSessions = @json($this->sessions);
 
-// ─── STATE ───────────────────────────────────────────────────────────────────
-const today = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Manila" }));
-const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
-let selectedDateStr = todayStr;
-let viewDate = new Date(today.getFullYear(), today.getMonth(), 1);
+    // STATE
+    const today = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Manila" }));
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+    let selectedDateStr = todayStr;
+    let viewDate = new Date(today.getFullYear(), today.getMonth(), 1);
 
-let tablePage = 0;
-const TABLE_PER_PAGE = 5;
-let sortColumn = 'start';
-let sortDirection = 'asc';
-let upcomingPage = 0;
-const UPCOMING_PER_PAGE = 5;
+    let tablePage = 0;
+    const TABLE_PER_PAGE = 5;
+    let sortColumn = 'start';
+    let sortDirection = 'asc';
+    let upcomingPage = 0;
+    const UPCOMING_PER_PAGE = 5;
 
-// ─── DOM ELEMENTS ────────────────────────────────────────────────────────────
-const searchInput         = document.getElementById('liveSearchInput');
-const statusFilter        = document.getElementById('statusFilter');
+    // DOM ELEMENTS
+    const searchInput         = document.getElementById('liveSearchInput');
+    const statusFilter        = document.getElementById('statusFilter');
 
 
-// ─── CLOCK ───────────────────────────────────────────────────────────────────
-function updateClock() {
-    const now = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Manila" }));
-    document.getElementById('liveClock').innerText = now.toLocaleTimeString('en-US', { hour12: false });
-    document.getElementById('liveDate').innerText  = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
-}
-setInterval(updateClock, 1000);
-
-// ─── HELPERS ─────────────────────────────────────────────────────────────────
-function formatTimeTo12Hour(timeStr) {
-    const [hour, minute] = timeStr.split(':');
-    let h = parseInt(hour);
-    const ampm = h >= 12 ? 'PM' : 'AM';
-    h = h % 12 || 12;
-    return `${h}:${minute} ${ampm}`;
-}
-
-function getStatusColor(status) {
-    switch (status) {
-        case 'pending':   return 'bg-yellow-100 text-yellow-800';
-        case 'accepted':  return 'bg-green-100 text-green-800';
-        case 'completed': return 'text-gray-900 bg-gray-100';
-        case 'rejected':  return 'bg-red-100 text-red-800';
-        case 'cancelled': return 'bg-red-100 text-red-800';
-        case 'no_show':   return 'bg-red-100 text-red-800';
-        default:          return 'bg-gray-100 text-gray-800';
+    // CLOCK
+    function updateClock() {
+        const now = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Manila" }));
+        document.getElementById('liveClock').innerText = now.toLocaleTimeString('en-US', { hour12: false });
+        document.getElementById('liveDate').innerText  = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
     }
-}
+    setInterval(updateClock, 1000);
 
-function getStatusLabel(status) {
-    switch (status) {
-        case 'no_show':   return 'No Show';
-        case 'accepted':  return 'Accepted';
-        case 'completed': return 'Completed';
-        case 'rejected':  return 'Rejected';
-        case 'cancelled': return 'Cancelled';
-        case 'pending':   return 'Pending';
-        default: return status ? status.charAt(0).toUpperCase() + status.slice(1) : '—';
-    }
-}
-
-// ─── TOGGLE NAME HELPERS ─────────────────────────────────────────────────────
-function toggleName(id) {
-    const nameEl = document.getElementById('name-' + id);
-    const btn    = document.getElementById('toggle-' + id);
-    if (!nameEl || !btn) return;
-    if (btn.innerText === 'Show more') {
-        nameEl.style.whiteSpace = 'normal'; nameEl.style.overflow = 'visible';
-        nameEl.style.textOverflow = 'unset'; nameEl.style.wordBreak = 'break-all';
-        btn.innerText = 'Show less';
-    } else {
-        nameEl.style.whiteSpace = 'nowrap'; nameEl.style.overflow = 'hidden';
-        nameEl.style.textOverflow = 'ellipsis'; nameEl.style.wordBreak = 'normal';
-        btn.innerText = 'Show more';
-    }
-}
-
-function toggleUpcomingName(id) {
-    const nameEl = document.getElementById('uname-' + id);
-    const btn    = document.getElementById('utoggle-' + id);
-    if (!nameEl || !btn) return;
-    if (btn.innerText === 'Show more') {
-        nameEl.style.whiteSpace = 'normal'; nameEl.style.overflow = 'visible';
-        nameEl.style.textOverflow = 'unset'; nameEl.style.wordBreak = 'break-all';
-        btn.innerText = 'Show less';
-    } else {
-        nameEl.style.whiteSpace = 'nowrap'; nameEl.style.overflow = 'hidden';
-        nameEl.style.textOverflow = 'ellipsis'; nameEl.style.wordBreak = 'normal';
-        btn.innerText = 'Show more';
-    }
-}
-
-// ─── SORT ─────────────────────────────────────────────────────────────────────
-function toggleSort(col) {
-    if (sortColumn === col) {
-        sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
-    } else {
-        sortColumn = col;
-        sortDirection = 'asc';
-    }
-    tablePage = 0;
-    applyFilters();
-}
-
-// ─── TODAY'S TABLE ────────────────────────────────────────────────────────────
-function applyFilters() {
-    const tbody          = document.getElementById('tableBody');
-    const searchTerm     = searchInput.value.toLowerCase();
-    const selectedStatus = statusFilter.value;
-
-    let filtered = allSessions.filter(item => {
-        const matchesDate   = item.date === selectedDateStr;
-        const matchesMentor = item.mentor.toLowerCase().includes(searchTerm);
-        const matchesStatus = selectedStatus === '' || item.status === selectedStatus;
-        return matchesDate && matchesMentor && matchesStatus;
-    });
-
-    filtered.sort((a, b) => {
-        let aVal, bVal;
-        if      (sortColumn === 'start')   { aVal = a.start;               bVal = b.start;               }
-        else if (sortColumn === 'mentor')  { aVal = a.mentor.toLowerCase(); bVal = b.mentor.toLowerCase(); }
-        else if (sortColumn === 'subject') { aVal = a.subject.toLowerCase();bVal = b.subject.toLowerCase();}
-        else if (sortColumn === 'status')  { aVal = a.status;               bVal = b.status;               }
-        if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
-        if (aVal > bVal) return sortDirection === 'asc' ?  1 : -1;
-        return 0;
-    });
-
-    const total   = filtered.length;
-    const maxPage = Math.max(0, Math.ceil(total / TABLE_PER_PAGE) - 1);
-    if (tablePage > maxPage) tablePage = 0;
-
-    const start   = tablePage * TABLE_PER_PAGE;
-    const visible = filtered.slice(start, start + TABLE_PER_PAGE);
-
-    if (!total) {
-        tbody.innerHTML = `<tr><td colspan="4" class="py-12 text-center text-gray-400 italic">No sessions for this date.</td></tr>`;
-    } else {
-        tbody.innerHTML = visible.map(row => `
-            <tr class="border-b last:border-0 hover:bg-slate-50 transition">
-                <td class="py-4 text-slate-700" style="width:35%">
-                    <div class="hover-tooltip" data-full="${row.mentor}" style="max-width:260px;">
-                        <div id="name-${row.id}" style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis;max-width:90%;">${row.mentor}</div>
-                    </div>
-                </td>
-                <td class="text-slate-500" style="width:30%;white-space:nowrap;">${formatTimeTo12Hour(row.start)} - ${formatTimeTo12Hour(row.end)}</td>
-                <td class="text-slate-600 truncate" style="width:20%">${row.subject}</td>
-                <td style="width:20%">
-                    <div class="flex items-center justify-center">
-                        <span class="${getStatusColor(row.status)} font-bold text-xs px-2.5 py-1 rounded-full capitalize">
-                            ${getStatusLabel(row.status)}
-                        </span>
-                    </div>
-                </td>
-            </tr>
-        `).join('');
+    // HELPERS
+    function formatTimeTo12Hour(timeStr) {
+        const [hour, minute] = timeStr.split(':');
+        let h = parseInt(hour);
+        const ampm = h >= 12 ? 'PM' : 'AM';
+        h = h % 12 || 12;
+        return `${h}:${minute} ${ampm}`;
     }
 
-    // Sort header indicators
-    ['mentor', 'start', 'subject', 'status'].forEach(col => {
-        const el = document.getElementById('sortHead-' + col);
-        if (!el) return;
-        const icon = el.querySelector('.sort-icon');
-        if (sortColumn === col) {
-            el.style.color = '#7b1d1d';
-            icon.innerHTML = sortDirection === 'asc'
-                ? '<i class="fa-solid fa-arrow-up" style="font-size:8px;"></i>'
-                : '<i class="fa-solid fa-arrow-down" style="font-size:8px;"></i>';
-        } else {
-            el.style.color = '#94a3b8';
-            icon.innerHTML = '<i class="fa-solid fa-arrow-up-arrow-down" style="font-size:8px;opacity:0.4;"></i>';
+    function getStatusColor(status) {
+        switch (status) {
+            case 'pending':   return 'bg-yellow-100 text-yellow-800';
+            case 'accepted':  return 'bg-green-100 text-green-800';
+            case 'completed': return 'text-gray-900 bg-gray-100';
+            case 'rejected':  return 'bg-red-100 text-red-800';
+            case 'cancelled': return 'bg-red-100 text-red-800';
+            case 'no_show':   return 'bg-red-100 text-red-800';
+            default:          return 'bg-gray-100 text-gray-800';
         }
-    });
-
-    document.getElementById('pageIndicator').innerText =
-        total ? `Showing ${start + 1}–${Math.min(start + TABLE_PER_PAGE, total)} of ${total}` : 'Showing 0 results';
-
-    const prevBtn = document.getElementById('prevBtn');
-    const nextBtn = document.getElementById('nextBtn');
-    prevBtn.disabled = tablePage === 0;
-    nextBtn.disabled = tablePage >= maxPage;
-    prevBtn.classList.toggle('opacity-30', tablePage === 0);
-    nextBtn.classList.toggle('opacity-30', tablePage >= maxPage);
-}
-
-document.getElementById('prevBtn').addEventListener('click', () => { tablePage--; applyFilters(); });
-document.getElementById('nextBtn').addEventListener('click', () => { tablePage++; applyFilters(); });
-searchInput.addEventListener('input',   () => { tablePage = 0; applyFilters(); });
-statusFilter.addEventListener('change', () => { tablePage = 0; applyFilters(); });
-
-// ─── WEEKLY SCHEDULE (grid-based, from mentor dashboard) ─────────────────────
-function getCurrentWeekRange() {
-    const selected = new Date(selectedDateStr);
-    const day  = selected.getDay();
-    const diff = selected.getDate() - day + (day === 0 ? -6 : 1);
-    const monday = new Date(selected);
-    monday.setDate(diff);
-    monday.setHours(0, 0, 0, 0);
-    const friday = new Date(monday);
-    friday.setDate(monday.getDate() + 4);
-    return { monday, friday };
-}
-
-function updateWeekHeaders() {
-    const { monday } = getCurrentWeekRange();
-    ['monHead', 'tueHead', 'wedHead', 'thuHead', 'friHead'].forEach((id, i) => {
-        const d = new Date(monday);
-        d.setDate(monday.getDate() + i);
-        document.getElementById(id).innerText = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-    });
-}
-
-function generateWeeklySchedule() {
-    const ALLOWED_STATUSES = ['accepted', 'pending', 'completed'];
-
-    const container = document.getElementById("weeklyScheduleBody");
-    container.innerHTML = "";
-
-    const tableEl = container.closest('table');
-    if (!tableEl) return;
-    const wrapper = tableEl.parentElement;
-
-    let gridWrap = document.getElementById('weeklyGridWrap');
-    if (gridWrap) gridWrap.remove();
-
-    const week = getCurrentWeekRange();
-    const SLOT_HEIGHT = 28;
-    const TIME_COL_W  = 52;
-
-    function timeToMinutes(t) {
-        const [h, m] = t.split(":").map(Number);
-        return h * 60 + m;
     }
 
-    const weekSessions = allSessions.filter(s => {
-        if (!s.date || !s.start || !s.end) return false;
-        if (!ALLOWED_STATUSES.includes(s.status)) return false;
-        const d = new Date(s.date + "T00:00:00").setHours(0,0,0,0);
-        return d >= week.monday.getTime() && d <= week.friday.getTime();
-    });
-
-    let startHour = 8, endHour = 18;
-
-    const totalSlots  = (endHour - startHour) * 2;
-    const totalHeight = totalSlots * SLOT_HEIGHT;
-
-    const fmtHour = h => {
-        const ampm = h >= 12 ? 'PM' : 'AM';
-        const display = h % 12 || 12;
-        return `${display}:00 ${ampm}`;
-    };
-    const rangeEl = document.getElementById('weeklyScheduleRange');
-    if (rangeEl) rangeEl.innerText = `${fmtHour(startHour)} – ${fmtHour(endHour)}`;
-
-    const days     = ["Monday","Tuesday","Wednesday","Thursday","Friday"];
-    const dayCount = days.length;
-
-    gridWrap = document.createElement('div');
-    gridWrap.id = 'weeklyGridWrap';
-    gridWrap.style.cssText = `
-        position:relative;
-        display:grid;
-        grid-template-columns:${TIME_COL_W}px repeat(${dayCount},1fr);
-        width:100%;
-        min-width:480px;
-        border:1px solid #c9c9c9;
-        border-radius:6px;
-        overflow:hidden;
-        background:#fff;
-        font-size:9px;
-    `;
-
-    // Header row — time cell
-    const hdrTime = document.createElement('div');
-    hdrTime.style.cssText = `background:#f8fafc;border-bottom:1px solid #e5e7eb;border-right:1px solid #e5e7eb;padding:6px 4px;font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;text-align:center;`;
-    hdrTime.innerText = 'Time';
-    gridWrap.appendChild(hdrTime);
-
-    // Header row — day cells
-    days.forEach((day, i) => {
-        const d = new Date(week.monday);
-        d.setDate(week.monday.getDate() + i);
-        const label = d.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' });
-        const hdrDay = document.createElement('div');
-        hdrDay.style.cssText = `background:#f8fafc;border-bottom:1px solid #e5e7eb;${i < dayCount-1?'border-right:1px solid #e5e7eb;':''}padding:6px 4px;font-size:9px;font-weight:700;color:#64748b;text-transform:uppercase;text-align:center;`;
-        hdrDay.innerText = label;
-        gridWrap.appendChild(hdrDay);
-        // Keep th elements in sync for updateWeekHeaders compatibility
-        const thId = ['monHead','tueHead','wedHead','thuHead','friHead'][i];
-        const th = document.getElementById(thId);
-        if (th) th.innerText = label;
-    });
-
-    // Time label column
-    const timeCol = document.createElement('div');
-    timeCol.style.cssText = `position:relative;height:${totalHeight}px;border-right:1px solid #e5e7eb;background:#fafafa;`;
-
-    for (let slot = 0; slot < totalSlots; slot++) {
-        const totalMins = startHour * 60 + slot * 30;
-        const h = Math.floor(totalMins / 60);
-        const m = totalMins % 60;
-        const displayH = h > 12 ? h - 12 : (h === 0 ? 12 : h);
-        const ampm = h >= 12 ? 'PM' : 'AM';
-        const label = `${displayH}:${m === 0 ? '00' : '30'} ${ampm}`;
-
-        const tick = document.createElement('div');
-        const isHour = slot % 2 === 0;
-        tick.style.cssText = `
-            position:absolute;
-            top:${slot * SLOT_HEIGHT}px;
-            left:0;right:0;
-            height:${SLOT_HEIGHT}px;
-            border-top:1px solid ${isHour ? '#afafaf' : '#d8d8d8'};
-            padding:2px 4px;
-            color:#94a3b8;
-            font-size:8px;
-            font-weight:600;
-            white-space:nowrap;
-            display:flex;
-            align-items:flex-start;
-        `;
-        if (m === 0) tick.innerText = label;
-        timeCol.appendChild(tick);
+    function getStatusLabel(status) {
+        switch (status) {
+            case 'no_show':   return 'No Show';
+            case 'accepted':  return 'Accepted';
+            case 'completed': return 'Completed';
+            case 'rejected':  return 'Rejected';
+            case 'cancelled': return 'Cancelled';
+            case 'pending':   return 'Pending';
+            default: return status ? status.charAt(0).toUpperCase() + status.slice(1) : '—';
+        }
     }
-    gridWrap.appendChild(timeCol);
 
-    // Day columns
-    const statusLabel = { pending: 'Pending', accepted: 'Accepted', completed: 'Completed' };
+    // TOGGLE NAME
+    function toggleUpcomingName(id) {
+        const nameEl = document.getElementById('uname-' + id);
+        const btn    = document.getElementById('utoggle-' + id);
+        if (!nameEl || !btn) return;
+        if (btn.innerText === 'Show more') {
+            nameEl.style.whiteSpace = 'normal'; nameEl.style.overflow = 'visible';
+            nameEl.style.textOverflow = 'unset'; nameEl.style.wordBreak = 'break-all';
+            btn.innerText = 'Show less';
+        } else {
+            nameEl.style.whiteSpace = 'nowrap'; nameEl.style.overflow = 'hidden';
+            nameEl.style.textOverflow = 'ellipsis'; nameEl.style.wordBreak = 'normal';
+            btn.innerText = 'Show more';
+        }
+    }
 
-    days.forEach((day, di) => {
-        const dayCol = document.createElement('div');
-        dayCol.style.cssText = `
+    // SORT
+    function toggleSort(col) {
+        if (sortColumn === col) {
+            sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+        } else {
+            sortColumn = col;
+            sortDirection = 'asc';
+        }
+        tablePage = 0;
+        applyFilters();
+    }
+
+    // TODAY'S TABLE
+    function applyFilters() {
+        const tbody          = document.getElementById('tableBody');
+        const searchTerm     = searchInput.value.toLowerCase();
+        const selectedStatus = statusFilter.value;
+
+        let filtered = allSessions.filter(item => {
+            const matchesDate   = item.date === selectedDateStr;
+            const matchesMentor = item.mentor.toLowerCase().includes(searchTerm);
+            const matchesStatus = selectedStatus === '' || item.status === selectedStatus;
+            return matchesDate && matchesMentor && matchesStatus;
+        });
+
+        filtered.sort((a, b) => {
+            let aVal, bVal;
+            if      (sortColumn === 'start')   { aVal = a.start;               bVal = b.start;               }
+            else if (sortColumn === 'mentor')  { aVal = a.mentor.toLowerCase(); bVal = b.mentor.toLowerCase(); }
+            else if (sortColumn === 'subject') { aVal = a.subject.toLowerCase();bVal = b.subject.toLowerCase();}
+            else if (sortColumn === 'status')  { aVal = a.status;               bVal = b.status;               }
+            if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
+            if (aVal > bVal) return sortDirection === 'asc' ?  1 : -1;
+            return 0;
+        });
+
+        const total   = filtered.length;
+        const maxPage = Math.max(0, Math.ceil(total / TABLE_PER_PAGE) - 1);
+        if (tablePage > maxPage) tablePage = 0;
+
+        const start   = tablePage * TABLE_PER_PAGE;
+        const visible = filtered.slice(start, start + TABLE_PER_PAGE);
+
+        if (!total) {
+            tbody.innerHTML = `<tr><td colspan="4" class="py-12 text-center text-gray-400 italic">No sessions for this date.</td></tr>`;
+        } else {
+            tbody.innerHTML = visible.map(row => `
+                <tr class="border-b last:border-0 hover:bg-slate-50 transition">
+                    <td class="py-4 text-slate-700" style="width:35%">
+                        <div class="hover-tooltip" data-full="${row.mentor}" style="max-width:260px;">
+                            <div id="name-${row.id}" style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis;max-width:90%;">${row.mentor}</div>
+                        </div>
+                    </td>
+                    <td class="text-slate-500" style="width:30%;white-space:nowrap;">${formatTimeTo12Hour(row.start)} - ${formatTimeTo12Hour(row.end)}</td>
+                    <td class="text-slate-600 truncate" style="width:20%">${row.subject}</td>
+                    <td style="width:20%">
+                        <div class="flex items-center justify-center">
+                            <span class="${getStatusColor(row.status)} font-bold text-xs px-2.5 py-1 rounded-full capitalize">
+                                ${getStatusLabel(row.status)}
+                            </span>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // Sort header indicators
+        ['mentor', 'start', 'subject', 'status'].forEach(col => {
+            const el = document.getElementById('sortHead-' + col);
+            if (!el) return;
+            const icon = el.querySelector('.sort-icon');
+            if (sortColumn === col) {
+                el.style.color = '#7b1d1d';
+                icon.innerHTML = sortDirection === 'asc'
+                    ? '<i class="fa-solid fa-arrow-up" style="font-size:8px;"></i>'
+                    : '<i class="fa-solid fa-arrow-down" style="font-size:8px;"></i>';
+            } else {
+                el.style.color = '#94a3b8';
+                icon.innerHTML = '<i class="fa-solid fa-arrow-up-arrow-down" style="font-size:8px;opacity:0.4;"></i>';
+            }
+        });
+
+        document.getElementById('pageIndicator').innerText =
+            total ? `Showing ${start + 1}–${Math.min(start + TABLE_PER_PAGE, total)} of ${total}` : 'Showing 0 results';
+
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        prevBtn.disabled = tablePage === 0;
+        nextBtn.disabled = tablePage >= maxPage;
+        prevBtn.classList.toggle('opacity-30', tablePage === 0);
+        nextBtn.classList.toggle('opacity-30', tablePage >= maxPage);
+    }
+
+    document.getElementById('prevBtn').addEventListener('click', () => { tablePage--; applyFilters(); });
+    document.getElementById('nextBtn').addEventListener('click', () => { tablePage++; applyFilters(); });
+    searchInput.addEventListener('input',   () => { tablePage = 0; applyFilters(); });
+    statusFilter.addEventListener('change', () => { tablePage = 0; applyFilters(); });
+
+    // WEEKLY SCHEDULE
+    function getCurrentWeekRange() {
+        const selected = new Date(selectedDateStr);
+        const day  = selected.getDay();
+        const diff = selected.getDate() - day + (day === 0 ? -6 : 1);
+        const monday = new Date(selected);
+        monday.setDate(diff);
+        monday.setHours(0, 0, 0, 0);
+        const friday = new Date(monday);
+        friday.setDate(monday.getDate() + 4);
+        return { monday, friday };
+    }
+
+    function updateWeekHeaders() {
+        const { monday } = getCurrentWeekRange();
+        ['monHead', 'tueHead', 'wedHead', 'thuHead', 'friHead'].forEach((id, i) => {
+            const d = new Date(monday);
+            d.setDate(monday.getDate() + i);
+            document.getElementById(id).innerText = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+        });
+    }
+
+    function generateWeeklySchedule() {
+        const ALLOWED_STATUSES = ['accepted', 'pending', 'completed'];
+
+        const container = document.getElementById("weeklyScheduleBody");
+        container.innerHTML = "";
+
+        const tableEl = container.closest('table');
+        if (!tableEl) return;
+        const wrapper = tableEl.parentElement;
+
+        let gridWrap = document.getElementById('weeklyGridWrap');
+        if (gridWrap) gridWrap.remove();
+
+        const week = getCurrentWeekRange();
+        const SLOT_HEIGHT = 28;
+        const TIME_COL_W  = 52;
+
+        function timeToMinutes(t) {
+            const [h, m] = t.split(":").map(Number);
+            return h * 60 + m;
+        }
+
+        const weekSessions = allSessions.filter(s => {
+            if (!s.date || !s.start || !s.end) return false;
+            if (!ALLOWED_STATUSES.includes(s.status)) return false;
+            const d = new Date(s.date + "T00:00:00").setHours(0,0,0,0);
+            return d >= week.monday.getTime() && d <= week.friday.getTime();
+        });
+
+        let startHour = 8, endHour = 18;
+
+        const totalSlots  = (endHour - startHour) * 2;
+        const totalHeight = totalSlots * SLOT_HEIGHT;
+
+        const fmtHour = h => {
+            const ampm = h >= 12 ? 'PM' : 'AM';
+            const display = h % 12 || 12;
+            return `${display}:00 ${ampm}`;
+        };
+        const rangeEl = document.getElementById('weeklyScheduleRange');
+        if (rangeEl) rangeEl.innerText = `${fmtHour(startHour)} – ${fmtHour(endHour)}`;
+
+        const days     = ["Monday","Tuesday","Wednesday","Thursday","Friday"];
+        const dayCount = days.length;
+
+        gridWrap = document.createElement('div');
+        gridWrap.id = 'weeklyGridWrap';
+        gridWrap.style.cssText = `
             position:relative;
-            height:${totalHeight}px;
-            ${di < dayCount-1 ? 'border-right:1px solid #e5e7eb;' : ''}
+            display:grid;
+            grid-template-columns:${TIME_COL_W}px repeat(${dayCount},1fr);
+            width:100%;
+            min-width:480px;
+            border:1px solid #c9c9c9;
+            border-radius:6px;
+            overflow:hidden;
             background:#fff;
+            font-size:9px;
         `;
 
-        // Grid lines
+        // Header row — time cell
+        const hdrTime = document.createElement('div');
+        hdrTime.style.cssText = `background:#f8fafc;border-bottom:1px solid #e5e7eb;border-right:1px solid #e5e7eb;padding:6px 4px;font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;text-align:center;`;
+        hdrTime.innerText = 'Time';
+        gridWrap.appendChild(hdrTime);
+
+        // Header row — day cells
+        days.forEach((day, i) => {
+            const d = new Date(week.monday);
+            d.setDate(week.monday.getDate() + i);
+            const label = d.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' });
+            const hdrDay = document.createElement('div');
+            hdrDay.style.cssText = `background:#f8fafc;border-bottom:1px solid #e5e7eb;${i < dayCount-1?'border-right:1px solid #e5e7eb;':''}padding:6px 4px;font-size:9px;font-weight:700;color:#64748b;text-transform:uppercase;text-align:center;`;
+            hdrDay.innerText = label;
+            gridWrap.appendChild(hdrDay);
+            const thId = ['monHead','tueHead','wedHead','thuHead','friHead'][i];
+            const th = document.getElementById(thId);
+            if (th) th.innerText = label;
+        });
+
+        // Time label column
+        const timeCol = document.createElement('div');
+        timeCol.style.cssText = `position:relative;height:${totalHeight}px;border-right:1px solid #e5e7eb;background:#fafafa;`;
+
         for (let slot = 0; slot < totalSlots; slot++) {
+            const totalMins = startHour * 60 + slot * 30;
+            const h = Math.floor(totalMins / 60);
+            const m = totalMins % 60;
+            const displayH = h > 12 ? h - 12 : (h === 0 ? 12 : h);
+            const ampm = h >= 12 ? 'PM' : 'AM';
+            const label = `${displayH}:${m === 0 ? '00' : '30'} ${ampm}`;
+
+            const tick = document.createElement('div');
             const isHour = slot % 2 === 0;
-            const line = document.createElement('div');
-            line.style.cssText = `
+            tick.style.cssText = `
                 position:absolute;
                 top:${slot * SLOT_HEIGHT}px;
                 left:0;right:0;
                 height:${SLOT_HEIGHT}px;
                 border-top:1px solid ${isHour ? '#afafaf' : '#d8d8d8'};
-                pointer-events:none;
-            `;
-            dayCol.appendChild(line);
-        }
-
-        // Sessions for this day
-        const daySessions = weekSessions.filter(s => {
-            const date    = new Date(s.date + "T00:00:00");
-            const dayName = date.toLocaleDateString('en-US', { weekday:'long' });
-            return dayName === day;
-        });
-
-        daySessions.forEach(s => {
-            const sStart   = timeToMinutes(s.start);
-            const sEnd     = timeToMinutes(s.end);
-            const topPx    = ((sStart - startHour * 60) / 30) * SLOT_HEIGHT;
-            const heightPx = Math.max(((sEnd - sStart) / 30) * SLOT_HEIGHT - 2, 16);
-
-            const sk  = (s.status || 'pending').toLowerCase().replace(/[^a-z_]/g, '');
-            const lbl = statusLabel[sk] || s.status;
-
-            const block = document.createElement('div');
-            block.className = `schedule-block status-${sk}`;
-            // Tooltip shows mentor name instead of student name
-            block.title = `${s.mentor}\n${s.subject} • ${formatTimeTo12Hour(s.start)}–${formatTimeTo12Hour(s.end)}`;
-            block.style.cssText = `
-                position:absolute;
-                top:${topPx + 1}px;
-                left:2px;
-                right:2px;
-                height:${heightPx}px;
-                overflow:hidden;
-                border-radius:4px;
                 padding:2px 4px;
+                color:#94a3b8;
+                font-size:8px;
+                font-weight:600;
+                white-space:nowrap;
                 display:flex;
-                flex-direction:column;
-                justify-content:flex-start;
-                z-index:2;
-                cursor:default;
-                margin-bottom:0;
+                align-items:flex-start;
             `;
-
-            const showTime  = heightPx >= 28;
-            const showLabel = heightPx >= 42;
-
-            block.innerHTML = `
-                <div style="font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.3;">${s.subject}</div>
-                ${showTime  ? `<div style="opacity:0.75;line-height:1.3;">${formatTimeTo12Hour(s.start)}–${formatTimeTo12Hour(s.end)}</div>` : ''}
-                ${showLabel ? `<div style="font-size:8px;font-weight:700;opacity:0.65;text-transform:uppercase;letter-spacing:0.04em;">${lbl}</div>` : ''}
-            `;
-
-            dayCol.appendChild(block);
-        });
-
-        gridWrap.appendChild(dayCol);
-    });
-
-    tableEl.style.display = 'none';
-    wrapper.appendChild(gridWrap);
-}
-
-// ─── CALENDAR ─────────────────────────────────────────────────────────────────
-function hasSessionOnDate(dateStr) {
-    return allSessions.some(s =>
-        s.date === dateStr &&
-        s.status === 'accepted' &&
-        s.date >= todayStr
-    );
-}
-
-function renderCalendar() {
-    const grid      = document.getElementById('calendarGrid');
-    const monthDisp = document.getElementById('monthDisplay');
-    grid.innerHTML  = '';
-
-    const localToday = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
-
-    monthDisp.innerText = viewDate.toLocaleString('en-US', { month: 'long', year: 'numeric' });
-
-    const lastDay  = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 0).getDate();
-    const startDay = new Date(viewDate.getFullYear(), viewDate.getMonth(), 1).getDay();
-
-    for (let i = 0; i < startDay; i++) grid.innerHTML += '<div></div>';
-
-    for (let i = 1; i <= lastDay; i++) {
-        const dateStr = `${viewDate.getFullYear()}-${String(viewDate.getMonth()+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;
-        const dateObj = new Date(viewDate.getFullYear(), viewDate.getMonth(), i);
-        const dayEl   = document.createElement('div');
-        dayEl.className = 'cal-day';
-
-        if (dateObj < localToday) dayEl.style.color = '#9ca3af';
-        if (dateStr === todayStr)          dayEl.classList.add('cal-today');
-        if (dateStr === selectedDateStr)   dayEl.classList.add('cal-selected');
-
-        const hasSession = hasSessionOnDate(dateStr);
-        dayEl.innerHTML = `<span style="position:relative;z-index:1;">${i}</span>${hasSession ? `<div class="notif-dot"></div>` : ''}`;
-
-        dayEl.onclick = () => {
-            selectedDateStr = dateStr;
-            tablePage = 0;
-            refreshSchedules();
-            updateWeekHeaders();
-            renderCalendar();
-            updateTableDate();
-        };
-
-        grid.appendChild(dayEl);
-    }
-}
-
-function changeMonth(dir) {
-    viewDate.setMonth(viewDate.getMonth() + dir);
-    renderCalendar();
-}
-
-function updateTableDate() {
-    const date = new Date(selectedDateStr);
-    document.getElementById('tableSubtitle').innerText = date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-}
-
-// ─── MY UPCOMING SESSIONS PANEL ───────────────────────────────────────────────
-function renderUpcomingSessions() {
-    const container  = document.getElementById('upcomingSessionsList');
-    const badge      = document.getElementById('upcomingBadge');
-    const pagination = document.getElementById('upcomingPagination');
-    const pageInfo   = document.getElementById('upcomingPageInfo');
-    const prevBtn    = document.getElementById('upcomingPrevBtn');
-    const nextBtn    = document.getElementById('upcomingNextBtn');
-
-    const upcoming = allSessions
-        .filter(s => s.status === 'accepted' && s.date >= todayStr)
-        .sort((a, b) => {
-            if (a.date !== b.date) return a.date > b.date ? 1 : -1;
-            return a.start > b.start ? 1 : -1;
-        });
-
-    const total = upcoming.length;
-    badge.innerText = `${total} ${total === 1 ? 'Session' : 'Sessions'}`;
-
-    if (!total) {
-        container.innerHTML = `<p class="text-xs text-gray-400 italic">No upcoming sessions. <a href="{{ route('student.bookings') }}" class="text-red-700 font-semibold">Book one now →</a></p>`;
-        pagination.classList.add('hidden');
-        return;
-    }
-
-    const maxPage = Math.ceil(total / UPCOMING_PER_PAGE) - 1;
-    if (upcomingPage > maxPage) upcomingPage = maxPage;
-    if (upcomingPage < 0) upcomingPage = 0;
-
-    const start   = upcomingPage * UPCOMING_PER_PAGE;
-    const visible = upcoming.slice(start, start + UPCOMING_PER_PAGE);
-    const hasPrev = upcomingPage > 0;
-    const hasNext = upcomingPage < maxPage;
-
-    container.innerHTML = visible.map(s => `
-        <div class="flex items-center justify-between group">
-            <div class="flex items-center gap-3">
-                <div class="w-8 h-8 rounded-full bg-green-100 text-green-700 flex items-center justify-center text-[10px] font-bold flex-shrink-0">
-                    ${s.mentor.slice(0, 2).toUpperCase()}
-                </div>
-                <div>
-                    <div style="max-width:180px;">
-                        <div id="uname-${s.id}" style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-size:11px;font-weight:700;color:#1e293b;" title="${s.mentor}">${s.mentor}</div>
-                        <button onclick="toggleUpcomingName('${s.id}')" id="utoggle-${s.id}" style="font-size:9px;color:#7b1d1d;font-weight:600;margin-top:1px;background:none;border:none;cursor:pointer;padding:0;display:none;">Show more</button>
-                    </div>
-                    <p class="text-[9px] text-gray-400 font-medium">${s.subject} • ${formatTimeTo12Hour(s.start)} – ${formatTimeTo12Hour(s.end)}</p>
-                    <p class="text-[9px] text-gray-400">${new Date(s.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
-                </div>
-            </div>
-            <span class="${getStatusColor(s.status)} font-bold text-xs px-2.5 py-1 rounded-full capitalize flex-shrink-0">
-                ${getStatusLabel(s.status)}
-            </span>
-        </div>
-    `).join('');
-
-    visible.forEach(s => {
-        const nameEl   = document.getElementById('uname-' + s.id);
-        const toggleEl = document.getElementById('utoggle-' + s.id);
-        if (nameEl && toggleEl && nameEl.scrollWidth > nameEl.clientWidth) {
-            toggleEl.style.display = 'block';
+            if (m === 0) tick.innerText = label;
+            timeCol.appendChild(tick);
         }
-    });
+        gridWrap.appendChild(timeCol);
 
-    if (total > UPCOMING_PER_PAGE) {
-        pagination.classList.remove('hidden');
-        pageInfo.innerText = `${start + 1}–${Math.min(start + UPCOMING_PER_PAGE, total)} of ${total}`;
-        prevBtn.disabled = !hasPrev;
-        prevBtn.classList.toggle('opacity-30', !hasPrev);
-        prevBtn.classList.toggle('cursor-not-allowed', !hasPrev);
-        nextBtn.disabled = !hasNext;
-        nextBtn.classList.toggle('opacity-30', !hasNext);
-        nextBtn.classList.toggle('cursor-not-allowed', !hasNext);
-    } else {
-        pagination.classList.add('hidden');
+        // Day columns
+        const statusLabel = { pending: 'Pending', accepted: 'Accepted', completed: 'Completed' };
+
+        days.forEach((day, di) => {
+            const dayCol = document.createElement('div');
+            dayCol.style.cssText = `
+                position:relative;
+                height:${totalHeight}px;
+                ${di < dayCount-1 ? 'border-right:1px solid #e5e7eb;' : ''}
+                background:#fff;
+            `;
+
+            // Grid lines
+            for (let slot = 0; slot < totalSlots; slot++) {
+                const isHour = slot % 2 === 0;
+                const line = document.createElement('div');
+                line.style.cssText = `
+                    position:absolute;
+                    top:${slot * SLOT_HEIGHT}px;
+                    left:0;right:0;
+                    height:${SLOT_HEIGHT}px;
+                    border-top:1px solid ${isHour ? '#afafaf' : '#d8d8d8'};
+                    pointer-events:none;
+                `;
+                dayCol.appendChild(line);
+            }
+
+            // Sessions for this day
+            const daySessions = weekSessions.filter(s => {
+                const date    = new Date(s.date + "T00:00:00");
+                const dayName = date.toLocaleDateString('en-US', { weekday:'long' });
+                return dayName === day;
+            });
+
+            daySessions.forEach(s => {
+                const sStart   = timeToMinutes(s.start);
+                const sEnd     = timeToMinutes(s.end);
+                const topPx    = ((sStart - startHour * 60) / 30) * SLOT_HEIGHT;
+                const heightPx = Math.max(((sEnd - sStart) / 30) * SLOT_HEIGHT - 2, 16);
+
+                const sk  = (s.status || 'pending').toLowerCase().replace(/[^a-z_]/g, '');
+                const lbl = statusLabel[sk] || s.status;
+
+                const block = document.createElement('div');
+                block.className = `schedule-block status-${sk}`;
+                // Tooltip shows mentor name instead of student name
+                block.title = `${s.mentor}\n${s.subject} • ${formatTimeTo12Hour(s.start)}–${formatTimeTo12Hour(s.end)}`;
+                block.style.cssText = `
+                    position:absolute;
+                    top:${topPx + 1}px;
+                    left:2px;
+                    right:2px;
+                    height:${heightPx}px;
+                    overflow:hidden;
+                    border-radius:4px;
+                    padding:2px 4px;
+                    display:flex;
+                    flex-direction:column;
+                    justify-content:flex-start;
+                    z-index:2;
+                    cursor:default;
+                    margin-bottom:0;
+                `;
+
+                const showTime  = heightPx >= 28;
+                const showLabel = heightPx >= 42;
+
+                block.innerHTML = `
+                    <div style="font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.3;">${s.subject}</div>
+                    ${showTime  ? `<div style="opacity:0.75;line-height:1.3;">${formatTimeTo12Hour(s.start)}–${formatTimeTo12Hour(s.end)}</div>` : ''}
+                    ${showLabel ? `<div style="font-size:8px;font-weight:700;opacity:0.65;text-transform:uppercase;letter-spacing:0.04em;">${lbl}</div>` : ''}
+                `;
+
+                dayCol.appendChild(block);
+            });
+
+            gridWrap.appendChild(dayCol);
+        });
+
+        tableEl.style.display = 'none';
+        wrapper.appendChild(gridWrap);
     }
-}
 
-document.getElementById('upcomingPrevBtn').addEventListener('click', () => { upcomingPage--; renderUpcomingSessions(); });
-document.getElementById('upcomingNextBtn').addEventListener('click', () => { upcomingPage++; renderUpcomingSessions(); });
+    // CALENDAR
+    function hasSessionOnDate(dateStr) {
+        return allSessions.some(s =>
+            s.date === dateStr &&
+            s.status === 'accepted' &&
+            s.date >= todayStr
+        );
+    }
 
-// ─── REFRESH ALL ──────────────────────────────────────────────────────────────
-function refreshSchedules() {
-    applyFilters();
-    generateWeeklySchedule();
-    updateWeekHeaders();
-    renderUpcomingSessions();
-}
+    function renderCalendar() {
+        const grid      = document.getElementById('calendarGrid');
+        const monthDisp = document.getElementById('monthDisplay');
+        grid.innerHTML  = '';
 
-// ─── INIT ─────────────────────────────────────────────────────────────────────
-function initDashboard() {
-    renderCalendar();
-    refreshSchedules();
-    updateTableDate();
-    updateClock();
-    renderStatCards();
-}
+        const localToday = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
 
-window.addEventListener('load', initDashboard);
-document.addEventListener('livewire:navigated', initDashboard);
+        monthDisp.innerText = viewDate.toLocaleString('en-US', { month: 'long', year: 'numeric' });
+
+        const lastDay  = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 0).getDate();
+        const startDay = new Date(viewDate.getFullYear(), viewDate.getMonth(), 1).getDay();
+
+        for (let i = 0; i < startDay; i++) grid.innerHTML += '<div></div>';
+
+        for (let i = 1; i <= lastDay; i++) {
+            const dateStr = `${viewDate.getFullYear()}-${String(viewDate.getMonth()+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;
+            const dateObj = new Date(viewDate.getFullYear(), viewDate.getMonth(), i);
+            const dayEl   = document.createElement('div');
+            dayEl.className = 'cal-day';
+
+            if (dateObj < localToday) dayEl.style.color = '#9ca3af';
+            if (dateStr === todayStr)          dayEl.classList.add('cal-today');
+            if (dateStr === selectedDateStr)   dayEl.classList.add('cal-selected');
+
+            const hasSession = hasSessionOnDate(dateStr);
+            dayEl.innerHTML = `<span style="position:relative;z-index:1;">${i}</span>${hasSession ? `<div class="notif-dot"></div>` : ''}`;
+
+            dayEl.onclick = () => {
+                selectedDateStr = dateStr;
+                tablePage = 0;
+                refreshSchedules();
+                updateWeekHeaders();
+                renderCalendar();
+                updateTableDate();
+            };
+
+            grid.appendChild(dayEl);
+        }
+    }
+
+    function changeMonth(dir) {
+        viewDate.setMonth(viewDate.getMonth() + dir);
+        renderCalendar();
+    }
+
+    function updateTableDate() {
+        const date = new Date(selectedDateStr);
+        document.getElementById('tableSubtitle').innerText = date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    }
+
+    // UPCOMING SESSIONS
+    function renderUpcomingSessions() {
+        const container  = document.getElementById('upcomingSessionsList');
+        const badge      = document.getElementById('upcomingBadge');
+        const pagination = document.getElementById('upcomingPagination');
+        const pageInfo   = document.getElementById('upcomingPageInfo');
+        const prevBtn    = document.getElementById('upcomingPrevBtn');
+        const nextBtn    = document.getElementById('upcomingNextBtn');
+
+        const upcoming = allSessions
+            .filter(s => s.status === 'accepted' && s.date >= todayStr)
+            .sort((a, b) => {
+                if (a.date !== b.date) return a.date > b.date ? 1 : -1;
+                return a.start > b.start ? 1 : -1;
+            });
+
+        const total = upcoming.length;
+        badge.innerText = `${total} ${total === 1 ? 'Session' : 'Sessions'}`;
+
+        if (!total) {
+            container.innerHTML = `<p class="text-xs text-gray-400 italic">No upcoming sessions. <a href="{{ route('student.bookings') }}" class="text-red-700 font-semibold">Book one now →</a></p>`;
+            pagination.classList.add('hidden');
+            return;
+        }
+
+        const maxPage = Math.ceil(total / UPCOMING_PER_PAGE) - 1;
+        if (upcomingPage > maxPage) upcomingPage = maxPage;
+        if (upcomingPage < 0) upcomingPage = 0;
+
+        const start   = upcomingPage * UPCOMING_PER_PAGE;
+        const visible = upcoming.slice(start, start + UPCOMING_PER_PAGE);
+        const hasPrev = upcomingPage > 0;
+        const hasNext = upcomingPage < maxPage;
+
+        container.innerHTML = visible.map(s => `
+            <div class="flex items-center justify-between group">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-full bg-green-100 text-green-700 flex items-center justify-center text-[10px] font-bold flex-shrink-0">
+                        ${s.mentor.slice(0, 2).toUpperCase()}
+                    </div>
+                    <div>
+                        <div style="max-width:180px;">
+                            <div id="uname-${s.id}" style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-size:11px;font-weight:700;color:#1e293b;" title="${s.mentor}">${s.mentor}</div>
+                            <button onclick="toggleUpcomingName('${s.id}')" id="utoggle-${s.id}" style="font-size:9px;color:#7b1d1d;font-weight:600;margin-top:1px;background:none;border:none;cursor:pointer;padding:0;display:none;">Show more</button>
+                        </div>
+                        <p class="text-[9px] text-gray-400 font-medium">${s.subject} • ${formatTimeTo12Hour(s.start)} – ${formatTimeTo12Hour(s.end)}</p>
+                        <p class="text-[9px] text-gray-400">${new Date(s.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+                    </div>
+                </div>
+                <span class="${getStatusColor(s.status)} font-bold text-xs px-2.5 py-1 rounded-full capitalize flex-shrink-0">
+                    ${getStatusLabel(s.status)}
+                </span>
+            </div>
+        `).join('');
+
+        visible.forEach(s => {
+            const nameEl   = document.getElementById('uname-' + s.id);
+            const toggleEl = document.getElementById('utoggle-' + s.id);
+            if (nameEl && toggleEl && nameEl.scrollWidth > nameEl.clientWidth) {
+                toggleEl.style.display = 'block';
+            }
+        });
+
+        if (total > UPCOMING_PER_PAGE) {
+            pagination.classList.remove('hidden');
+            pageInfo.innerText = `${start + 1}–${Math.min(start + UPCOMING_PER_PAGE, total)} of ${total}`;
+            prevBtn.disabled = !hasPrev;
+            prevBtn.classList.toggle('opacity-30', !hasPrev);
+            prevBtn.classList.toggle('cursor-not-allowed', !hasPrev);
+            nextBtn.disabled = !hasNext;
+            nextBtn.classList.toggle('opacity-30', !hasNext);
+            nextBtn.classList.toggle('cursor-not-allowed', !hasNext);
+        } else {
+            pagination.classList.add('hidden');
+        }
+    }
+
+    document.getElementById('upcomingPrevBtn').addEventListener('click', () => { upcomingPage--; renderUpcomingSessions(); });
+    document.getElementById('upcomingNextBtn').addEventListener('click', () => { upcomingPage++; renderUpcomingSessions(); });
+
+    // REFRESH ALL
+    function refreshSchedules() {
+        applyFilters();
+        generateWeeklySchedule();
+        updateWeekHeaders();
+        renderUpcomingSessions();
+    }
+
+    // INIT
+    function initDashboard() {
+        renderCalendar();
+        refreshSchedules();
+        updateTableDate();
+        updateClock();
+        renderStatCards();
+    }
+
+    window.addEventListener('load', initDashboard);
+    document.addEventListener('livewire:navigated', initDashboard);
 </script>
