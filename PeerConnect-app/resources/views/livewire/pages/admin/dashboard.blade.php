@@ -97,15 +97,15 @@ $this->todaySessions = Bookings::with(['mentor.user', 'student.user', 'subject']
     ->orderBy('date')
     ->get()
     ->map(fn($b) => [
-        'date'    => $b->date,
+        'date' => \Carbon\Carbon::parse($b->date)->format('Y-m-d'),
         'mentor'  => $b->mentor->user->name  ?? 'Unknown',
         'mentee'  => $b->student->user->name ?? 'Unknown',
         'subject' => $b->subject->code       ?? 'N/A',
         'topic'   => $b->topic               ?? '—',
         'time'    => Carbon::parse($b->schedule_start)->format('h:i A'),
         'status'  => ucfirst($b->booking_status),
-        'start'   => $b->schedule_start,
-        'end'     => $b->schedule_end,
+'start' => \Carbon\Carbon::parse($b->schedule_start)->format('Y-m-d\TH:i:s'),
+'end'   => \Carbon\Carbon::parse($b->schedule_end)->format('Y-m-d\TH:i:s'),
         'mode'    => $b->mode                ?? 'One-on-One Tutorial',
     ])
     ->toArray();
@@ -1059,15 +1059,20 @@ updateDate();
 <script>
 function getWeekRange() {
     const now = new Date();
-    
+
+    // Find this week's Monday at 00:00:00
+    const day = now.getDay(); // 0=Sun, 1=Mon ... 6=Sat
+    const diffToMonday = (day === 0) ? -6 : 1 - day; // if Sunday, go back 6 days
     const mon = new Date(now);
-    mon.setDate(now.getDate() - 6); 
-    mon.setHours(0, 0, 0, 0);
+    mon.setDate(now.getDate() + diffToMonday);
+    mon.setHours(0, 0, 0, 0); // ← midnight, not current time
 
-    const end = new Date(now);
-    end.setHours(23, 59, 59, 999);
+    // Sunday at 23:59:59
+    const sun = new Date(mon);
+    sun.setDate(mon.getDate() + 6);
+    sun.setHours(23, 59, 59, 999);
 
-    return { mon, sun: end };
+    return { mon, sun };
 }
 
 function formatDisplay(d) {
@@ -1081,13 +1086,13 @@ function toDateStr(d) {
 function openReportModal() {
     const { mon, sun } = getWeekRange();
 
-    // Debug — remove after confirming it works
-    console.log('mon:', mon.toString());
-    console.log('sun:', sun.toString());
+    const shortLabel = `${formatDisplay(mon)} – ${formatDisplay(sun)}`;
+    
+    // More specific detail line, e.g. "Monday, May 4 – Sunday, May 10, 2026"
+    const detailLabel = `${mon.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })} – ${sun.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}`;
 
-    const label = `${formatDisplay(mon)} – ${formatDisplay(sun)}`;
-    document.getElementById('reportWeekLabel').textContent = label;
-    document.getElementById('reportWeekDetail').textContent = label;
+    document.getElementById('reportWeekLabel').textContent = shortLabel;   // shown in header subtitle
+    document.getElementById('reportWeekDetail').textContent = detailLabel; // shown in the info box
     document.getElementById('reportModal').style.display = 'flex';
 }
 
@@ -1102,19 +1107,21 @@ function submitReport() {
     const satisfaction = @json($this->satisfactionRate);
     const collegeData  = @json($this->collegeActivity);
     const monthlyData  = @json($this->monthlyTrends);
-
-    const filtered = allSessions.filter(row => {
-        const d = new Date(row.date + 'T00:00:00');
-        return d >= mon && d <= sun;
-    });
-
+console.log('Sample date values:', allSessions.slice(0, 3).map(r => r.date));
+console.log('Week range:', toDateStr(mon), '→', toDateStr(sun));
+const filtered = allSessions.filter(row => {
+    // Strip time portion if present (handles "2025-05-04", "2025-05-04 00:00:00", etc.)
+    const datePart = String(row.date).substring(0, 10);
+    const d = new Date(datePart + 'T00:00:00');
+    return d >= mon && d <= sun;
+});
     const wb = XLSX.utils.book_new();
 
     const sessionHeader = ['Student', 'Mentor', 'Subject', 'Topic', 'Date & Time', 'Mode'];
     const sessionRows = filtered.length
         ? filtered.map(r => {
-            const start = new Date(`1970-01-01T${r.start}`);
-            const end   = new Date(`1970-01-01T${r.end}`);
+const start = new Date(r.start.includes('T') ? r.start : r.start.replace(' ', 'T'));
+const end   = new Date(r.end.includes('T')   ? r.end   : r.end.replace(' ', 'T'));
             const fmt   = t => t.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
             const dateFormatted = new Date(r.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
             const mins  = Math.max(0, (end - start) / 60000);
@@ -1145,12 +1152,12 @@ function submitReport() {
         if (statusSummary[s] !== undefined) statusSummary[s]++;
     });
 
-    let totalMins = 0;
-    filtered.forEach(r => {
-        const s = new Date(`1970-01-01T${r.start}`);
-        const e = new Date(`1970-01-01T${r.end}`);
-        totalMins += Math.max(0, (e - s) / 60000);
-    });
+let totalMins = 0;
+filtered.forEach(r => {
+    const s = new Date(r.start.includes('T') ? r.start : r.start.replace(' ', 'T'));
+    const e = new Date(r.end.includes('T')   ? r.end   : r.end.replace(' ', 'T'));
+    totalMins += Math.max(0, (e - s) / 60000);
+});
     const totalH = Math.floor(totalMins / 60);
     const totalM = Math.round(totalMins % 60);
 
@@ -1623,19 +1630,6 @@ function initCharts() {
         }
     }));
 
-    charts.push(new Chart(document.getElementById('doughnutChart'), {
-        type: 'doughnut',
-        data: {
-            labels: ['Excl', 'Good', 'Avg'],
-            datasets: [{ data: satisfaction, backgroundColor: ['#1a3c2f', '#7b1d1d', '#cbd5e1'], borderWidth: 0 }]
-        },
-        options: {
-            maintainAspectRatio: false,
-            cutout: '70%',
-            plugins: { legend: { display: true, position: 'bottom', labels: { boxWidth: 10, font: { size: 9 } } } }
-        }
-    }));
-
     charts.push(new Chart(document.getElementById('topSubjectsChart'), {
     type: 'bar',
     data: {
@@ -1799,13 +1793,6 @@ document.getElementById('sidebarToggle').addEventListener('click', () => {
     nextBtn.disabled = (currentPage === totalPages);
 }
     </script>
-
-<script>
-    const mainSearch = document.getElementById('mainDashboardSearch');
-
-    mainSearch.addEventListener('input', function () {
-    });
-</script>
 
 <script>
 (function () {
