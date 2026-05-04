@@ -13,6 +13,7 @@ new class extends Component {
             $user->isAdmin() => [
                 ['route' => 'admin.dashboard', 'icon' => 'fa-solid fa-gauge',           'label' => 'Dashboard'],
                 ['route' => 'admin.mentors',   'icon' => 'fa-solid fa-chalkboard-user', 'label' => 'Mentor Management'],
+                ['route' => 'admin.courses',   'icon' => 'fa-solid fa-book-open',       'label' => 'Course Management'],
                 ['route' => 'admin.sessions',  'icon' => 'fa-solid fa-calendar-check',  'label' => 'Session Management'],
                 ['route' => 'admin.feedbacks', 'icon' => 'fa-solid fa-comments',        'label' => 'Student Feedback'],
             ],

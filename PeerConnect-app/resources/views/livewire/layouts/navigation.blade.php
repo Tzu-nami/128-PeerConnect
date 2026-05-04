@@ -27,6 +27,8 @@ new class extends Component {
             <x-student-notifications />
         @elseif (auth()->user()->isMentor())
             <x-mentor-notifications />
+        @elseif (auth()->user()->isAdmin())
+            <x-admin-notifications />
         @endif
 
         {{-- Profile Dropdown --}}
