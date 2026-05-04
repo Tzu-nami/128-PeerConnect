@@ -93,7 +93,16 @@ $summaryCounts = computed(function () {
 ?>
 
 {{-- TEMPLATE --}}
-<div x-data="sessionManagement(@js($this->sessions), @js($this->summaryCounts))">
+<div x-data="sessionManagement(@js($this->sessions), @js($this->summaryCounts))"
+    x-init="
+            @if(session('success'))
+                setTimeout(() => triggerBanner('{{ session('success') }}', 'success'), 100);
+            @endif
+            @if(session('error'))
+                setTimeout(() => triggerBanner('{{ session('error') }}', 'error'), 100);
+            @endif
+        ">
+
     <div class="mb-6 pb-4 border-b border-gray-200 flex flex-wrap items-center justify-between gap-4">
         <div>
             <h1 class="text-3xl font-extrabold tracking-tight text-transparent bg-clip-text bg-up-maroon flex items-center gap-3">
@@ -178,6 +187,26 @@ $summaryCounts = computed(function () {
                             </label>
                         </template>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        {{-- Banner Notifications --}}
+        <div x-show="banner.show" 
+             x-cloak
+             x-transition:enter="transition ease-out duration-300"
+             x-transition:enter-start="opacity-0 -translate-y-4"
+             x-transition:enter-end="opacity-100 translate-y-0"
+             x-transition:leave="transition ease-in duration-200"
+             x-transition:leave-start="opacity-100"
+             x-transition:leave-end="opacity-0"
+             class="mx-5 mt-4 mb-2">
+            
+            <div class="flex items-center justify-between px-4 py-3 rounded-lg border"
+                 :class="banner.type === 'success' ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-red-50 border-red-200 text-red-800'">
+                <div class="flex items-center gap-3">
+                    <i class="fa-solid" :class="banner.type === 'success' ? 'fa-circle-check text-emerald-600' : 'fa-circle-exclamation text-red-600'"></i>
+                    <span class="text-sm font-semibold" x-text="banner.message"></span>
                 </div>
             </div>
         </div>

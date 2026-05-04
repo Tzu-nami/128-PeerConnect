@@ -443,6 +443,23 @@ Alpine.data('sessionManagement', (initialSessions = [], initialCounts = {}) => (
     sessionToUpdate: null,
     newStatusToApply: '',
 
+    // Session status notification
+    banner: { show: false, message: '', type: 'success', timer: null },
+
+    triggerBanner(message, type = 'success') {
+        this.banner.message = message;
+        this.banner.type = type;
+        this.banner.show = true;
+        
+        // Clear any existing timer so it doesn't close prematurely if spammed
+        clearTimeout(this.banner.timer);
+        
+        // Auto-hide after 5 seconds
+        this.banner.timer = setTimeout(() => {
+            this.banner.show = false;
+        }, 5000);
+    },
+
     // Sort feature
     toggleSort(col) {
         if (this.sortCol === col) {
@@ -565,17 +582,21 @@ Alpine.data('sessionManagement', (initialSessions = [], initialCounts = {}) => (
     },
 
     promptUpdateStatus(session, newStatus) {
-        // Prevent accepting if it conflicts with an already accepted session
+        // Cannot accept or reject ANY choice
+        if (session.is_open && (newStatus === 'accepted' || newStatus === 'rejected')) {
+            this.triggerBanner("This session is open to any peer mentor (first-come, first-serve). Admins cannot manually accept or reject it.", 'error');
+            return;
+        }
+
         if (newStatus === 'accepted' && this.hasConflict(session)) {
-            alert("Cannot approve: This session overlaps with an already-accepted booking on this date.");
+            this.triggerBanner("Cannot approve: This session overlaps with an already-accepted booking on this date.", 'error');
             return;
         }
 
         this.sessionToUpdate = session;
         this.newStatusToApply = newStatus;
 
-        const isUncomplete = newStatus === 'accepted' && session.status === 'completed';
-        const isClaiming = newStatus === 'accepted' && session.status === 'pending' && session.is_open;
+        const isReverting = newStatus === 'accepted' && ['completed', 'no-show', 'rejected'].includes(session.status);
 
         // Base Configuration
         let cfg = { 
@@ -586,10 +607,8 @@ Alpine.data('sessionManagement', (initialSessions = [], initialCounts = {}) => (
 
         // Custom config based on the action
         if (newStatus === 'accepted') {
-            if (isUncomplete) {
-                cfg = { title: 'Revert to accepted?', body: 'This reverses the completed status.', iconHtml: '<i class="fa-solid fa-rotate-left text-gray-600"></i>', iconBgClass: 'bg-gray-100', btnClass: 'bg-gray-700 hover:bg-gray-800', confirmText: 'Revert', loadingText: 'Reverting...' };
-            } else if (isClaiming) {
-                cfg = { title: 'Claim open session?', body: 'You are about to claim this session. It will be permanently assigned.', iconHtml: '<i class="fa-solid fa-check text-emerald-600"></i>', iconBgClass: 'bg-emerald-100', btnClass: 'bg-emerald-600 hover:bg-emerald-700', confirmText: 'Claim Session', loadingText: 'Claiming...' };
+            if (isReverting) {
+                cfg = { title: 'Revert to accepted?', body: 'This will restore the session back to an accepted state.', iconHtml: '<i class="fa-solid fa-rotate-left text-gray-600"></i>', iconBgClass: 'bg-gray-100', btnClass: 'bg-gray-700 hover:bg-gray-800', confirmText: 'Revert', loadingText: 'Reverting...' };
             } else {
                 cfg = { title: 'Accept booking?', body: 'The student will be notified that their session has been approved.', iconHtml: '<i class="fa-solid fa-check text-emerald-600"></i>', iconBgClass: 'bg-emerald-100', btnClass: 'bg-emerald-600 hover:bg-emerald-700', confirmText: 'Accept', loadingText: 'Accepting...' };
             }
@@ -647,10 +666,13 @@ Alpine.data('sessionManagement', (initialSessions = [], initialCounts = {}) => (
             this.recalculateCounts();
             
         } catch (err) {
-            alert('Update failed. Please check your connection and try again.');
+            this.triggerBanner('Update failed. Please check your connection.', 'error');
         } finally {
             this.isConfirming = false;
             this.closeConfirmModal();
+            if (!this.banner.show || this.banner.type !== 'error') {
+                 this.triggerBanner('Session status updated successfully.', 'success');
+            }
         }
     },
 
