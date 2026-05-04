@@ -548,12 +548,12 @@ Alpine.data('sessionManagement', (initialSessions = [], initialCounts = {}) => (
 
     getStatusColor(status) {
         const colors = {
-            pending: 'text-yellow-600 border-yellow-200 bg-yellow-50',
-            accepted: 'text-green-600 border-green-200 bg-green-50',
-            completed: 'text-gray-500 border-gray-200 bg-gray-50',
-            rejected: 'text-red-800 border-red-200 bg-red-50',
-            cancelled: 'text-red-600 border-red-200 bg-red-50',
-            no_show: 'text-orange-600 border-orange-200 bg-orange-50'
+            pending: 'text-yellow-600 border-yellow-200',
+            accepted: 'text-green-600 border-green-200',
+            completed: 'text-gray-500 border-gray-200',
+            rejected: 'text-red-800 border-red-200',
+            cancelled: 'text-red-600 border-red-200',
+            no_show: 'text-orange-600 border-orange-200'
         };
         return colors[status] || 'text-gray-500 border-gray-200 bg-gray-50';
     },
