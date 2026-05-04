@@ -71,7 +71,7 @@ mount(function () {
         ->toArray();
 });
 
-// ── SEARCH INDEX (computed + cached per user, 5 min) ───────────────────────
+// ── SEARCH INDEX  ───────────────────────
 $searchIndex = computed(function () {
     $userId = auth()->id();
 
@@ -81,7 +81,7 @@ $searchIndex = computed(function () {
 
         $index = [];
 
-        // Booking history (as student)
+        // Booking history
         $bookings = Bookings::with(['mentor.user', 'subject'])
             ->where('student_id', $studentProfileId)
             ->latest()
@@ -114,7 +114,7 @@ $searchIndex = computed(function () {
             ];
         }
 
-        // Teaching sessions (as mentor)
+        // Teaching sessions
         if ($mentorProfileId) {
             $teaching = Bookings::with(['student.user', 'subject'])
                 ->where('mentor_id', $mentorProfileId)
@@ -149,7 +149,7 @@ $searchIndex = computed(function () {
             }
         }
 
-        // Feedbacks — reuse $mentorProfileId (already resolved above, no extra query needed)
+        // Feedbacks
         if ($mentorProfileId) {
             $feedbacks = \App\Models\Feedback::with(['booking.subject'])
                 ->whereHas('booking', fn ($q) => $q->where('mentor_id', $mentorProfileId))
@@ -275,7 +275,7 @@ $searchIndex = computed(function () {
     {{-- ── MAIN GRID ──────────────────────────────────────────────────────── --}}
     <div class="grid grid-cols-3 gap-8">
 
-        {{-- ── LEFT COLUMN (2/3) ──────────────────────────────────────────── --}}
+        {{-- ── LEFT COLUMN ──────────────────────────────────────────── --}}
         <div class="col-span-2 space-y-8">
 
             {{-- Today's Schedule --}}
@@ -390,13 +390,12 @@ $searchIndex = computed(function () {
                     </span>
                 </div>
 
-                {{-- Anchor element for the weekly grid JS to mount into --}}
                 <div class="overflow-x-auto" id="weeklyGridContainer"></div>
             </div>
 
         </div>
 
-        {{-- ── RIGHT COLUMN (1/3) ─────────────────────────────────────────── --}}
+        {{-- ── RIGHT COLUMN ─────────────────────────────────────────── --}}
         <div class="flex flex-col gap-6">
 
             {{-- Calendar + Clock --}}
@@ -492,17 +491,12 @@ $searchIndex = computed(function () {
 
 </div>
 
-{{-- ══════════════════════════════════════════════════════════════════════════
-     JAVASCRIPT
-══════════════════════════════════════════════════════════════════════════ --}}
 <script>
-    // ─────────────────────────────────────────────────────────────────────────
-    // 1. DATA & CONSTANTS
-    // ─────────────────────────────────────────────────────────────────────────
+    // DATA & CONSTANTS
     const allSessions = @json($this->sessions);
     const csrfToken   = '{{ csrf_token() }}';
 
-    // Date helpers (Manila timezone)
+    // Date helpers
     const _nowManila = () => new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
     const today      = _nowManila();
     const todayStr   = _dateStr(today);
@@ -520,11 +514,8 @@ $searchIndex = computed(function () {
     let sortColumn    = 'start';
     let sortDirection = 'asc';
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // 2. UTILITY HELPERS
-    // ─────────────────────────────────────────────────────────────────────────
 
-    /** "2025-05-01" from a Date object */
+   // HELPERS
     function _dateStr(d) {
         return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     }
@@ -568,10 +559,7 @@ $searchIndex = computed(function () {
         return map[status] ?? (status ? status.charAt(0).toUpperCase() + status.slice(1) : '—');
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // 3. CLOCK & DATE BAR
-    // ─────────────────────────────────────────────────────────────────────────
-
+    // CLOCK & DATE BAR
     function updateClock() {
         const now = _nowManila();
         document.getElementById('liveClock').innerText = now.toLocaleTimeString('en-US', { hour12: false });
@@ -581,10 +569,7 @@ $searchIndex = computed(function () {
     }
     setInterval(updateClock, 1000);
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // 4. TODAY'S SCHEDULE TABLE
-    // ─────────────────────────────────────────────────────────────────────────
-
+    // SCHEDULE TABLE
     function applyFilters() {
         const tbody          = document.getElementById('tableBody');
         const searchTerm     = document.getElementById('liveSearchInput').value.toLowerCase();
@@ -699,10 +684,7 @@ $searchIndex = computed(function () {
         });
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // 5. WEEKLY SCHEDULE GRID
-    // ─────────────────────────────────────────────────────────────────────────
-
+    // WEEKLY SCHEDULE
     function getCurrentWeekRange() {
         const selected = new Date(selectedDateStr);
         const day  = selected.getDay();
@@ -846,10 +828,7 @@ $searchIndex = computed(function () {
         return el;
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // 6. MINI CALENDAR
-    // ─────────────────────────────────────────────────────────────────────────
-
+    // MINI CALENDAR
     function hasAcceptedOnDate(dateStr) {
         return allSessions.some(s => s.date === dateStr && s.status === 'accepted');
     }
@@ -897,10 +876,7 @@ $searchIndex = computed(function () {
         renderCalendar();
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // 7. QUICK ACTIONS
-    // ─────────────────────────────────────────────────────────────────────────
-
+    // QUICK ACTIONS
     function renderQuickActions() {
         const container     = document.getElementById('quickActionsList');
         const todaySessions = allSessions.filter(s => s.date === selectedDateStr && s.status === 'accepted');
@@ -987,10 +963,7 @@ $searchIndex = computed(function () {
         _toggleName('qaname-' + id, 'qatoggle-' + id);
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // 8. PENDING REQUESTS
-    // ─────────────────────────────────────────────────────────────────────────
-
+    // PENDING REQUESTS
     function renderPendingRequests() {
         const container = document.getElementById('pendingRequestsList');
         const badge     = document.getElementById('pendingBadge');
@@ -1111,10 +1084,7 @@ $searchIndex = computed(function () {
         btn.innerText = collapsed ? 'Show less' : 'Show more';
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // 9. STATUS UPDATE (AJAX)
-    // ─────────────────────────────────────────────────────────────────────────
-
+    // STATUS UPDATE
     function updateStatus(id, status, source = 'qa') {
         const fromPending = source === 'pending';
 
@@ -1209,10 +1179,7 @@ $searchIndex = computed(function () {
         ).map(s => s.id);
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // 10. APPROVE / REJECT FLOWS
-    // ─────────────────────────────────────────────────────────────────────────
-
+    // APPROVE & REQUEST BOOKINGS
     function approveRequest(id) {
         const req = allSessions.find(s => s.id == id);
         if (!req) return;
@@ -1248,10 +1215,7 @@ $searchIndex = computed(function () {
         });
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // 11. CONFIRMATION MODAL
-    // ─────────────────────────────────────────────────────────────────────────
-
+    // CONFIRMATION MODAL
     const confirmModal    = document.getElementById('confirmModal');
     const confirmModalBox = document.getElementById('confirmModalBox');
     const confirmOkBtn    = document.getElementById('confirmOkBtn');
@@ -1306,10 +1270,7 @@ $searchIndex = computed(function () {
     function _iconX(c)     { return `<svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M5 5l10 10M15 5L5 15" stroke="${c}" stroke-width="2" stroke-linecap="round"/></svg>`; }
     function _iconInfo(c)  { return `<svg width="18" height="18" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="8.5" stroke="${c}" stroke-width="1.5"/><path d="M10 9v5" stroke="${c}" stroke-width="1.5" stroke-linecap="round"/><circle cx="10" cy="6.5" r="0.8" fill="${c}"/></svg>`; }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // 12. BANNER SYSTEM
-    // ─────────────────────────────────────────────────────────────────────────
-
+    // BANNERS
     function showBanner(areaId, bannerId, html, duration = 6000) {
         const area = document.getElementById(areaId);
         if (!area) return;
@@ -1414,10 +1375,7 @@ $searchIndex = computed(function () {
         banner._timer = setTimeout(() => banner.remove(), 6000);
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // 13. ORCHESTRATION
-    // ─────────────────────────────────────────────────────────────────────────
-
+    // ORCHESTRATION
     function refreshSchedules() {
         applyFilters();
         generateWeeklySchedule();
@@ -1432,10 +1390,7 @@ $searchIndex = computed(function () {
         updateClock();
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // 14. EVENT LISTENERS
-    // ─────────────────────────────────────────────────────────────────────────
-
+    // EVENT LISTENERS
     document.getElementById('prevBtn').addEventListener('click', () => { tablePage--; applyFilters(); });
     document.getElementById('nextBtn').addEventListener('click', () => { tablePage++; applyFilters(); });
     document.getElementById('liveSearchInput').addEventListener('input', () => { tablePage = 0; refreshSchedules(); });
