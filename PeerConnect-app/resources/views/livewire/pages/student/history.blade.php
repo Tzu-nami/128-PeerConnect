@@ -96,7 +96,7 @@ $studentHistory = computed(function () {
     <div class="mb-6 pb-4 border-b border-gray-200 flex flex-wrap items-center justify-between gap-4 animate-fade-up">
         <div>
             <h1 class="text-3xl font-extrabold tracking-tight text-transparent bg-clip-text bg-up-maroon flex items-center gap-3">
-                Session History
+                Booking History
             </h1>
             <p class="text-sm font-medium text-slate-500 mt-1">View your past and current bookings.</p>
         </div>
@@ -213,127 +213,139 @@ $studentHistory = computed(function () {
             <table class="w-full text-sm text-left table-fixed">
                 <thead class="bg-slate-50 border-b border-gray-100">
                 <tr>
-                    <th class="px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider w-[5%]">#</th>
+                    <th class="px-5 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider w-[5%]">#</th>
 
                     {{-- Subject --}}
-                    <th class="px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider w-[15%]">
-                        <button @click="toggleSort('subject')" class="flex items-center gap-1 hover:text-slate-600 w-full transition">
+                    <th class="px-5 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider w-[15%]">
+                        <button @click="toggleSort('subject')"
+                                :class="sortCol === 'subject' ? 'text-up-maroon' : 'text-gray-400 hover:text-up-maroon'"
+                                class="flex items-center gap-1 w-full transition">
                             Subject
                             <i class="fa-solid text-[8px]"
                                :class="sortCol === 'subject'
-                                       ? (sortDir === 'asc' ? 'fa-arrow-up text-slate-600' : 'fa-arrow-down text-slate-600')
-                                       : 'fa-arrow-up-arrow-down opacity-30'"></i>
+                                   ? (sortDir === 'asc' ? 'fa-arrow-up text-up-maroon' : 'fa-arrow-down text-up-maroon')
+                                   : 'fa-arrow-up-arrow-down opacity-30'"></i>
                         </button>
                     </th>
 
                     {{-- Topic --}}
-                    <th class="px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider w-[18%]">
-                        <button @click="toggleSort('topic')" class="flex items-center gap-1 hover:text-slate-600 transition">
+                    <th class="px-5 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider w-[18%]">
+                        <button @click="toggleSort('topic')"
+                                :class="sortCol === 'topic' ? 'text-up-maroon' : 'text-gray-400 hover:text-up-maroon'"
+                                class="flex items-center gap-1 transition">
                             Topic
                             <i class="fa-solid text-[8px]"
                                :class="sortCol === 'topic'
-                                       ? (sortDir === 'asc' ? 'fa-arrow-up text-slate-600' : 'fa-arrow-down text-slate-600')
-                                       : 'fa-arrow-up-arrow-down opacity-30'"></i>
+                                   ? (sortDir === 'asc' ? 'fa-arrow-up text-up-maroon' : 'fa-arrow-down text-up-maroon')
+                                   : 'fa-arrow-up-arrow-down opacity-30'"></i>
                         </button>
                     </th>
 
                     {{-- Mentor --}}
-                    <th class="px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider w-[18%]">
-                        <button @click="toggleSort('mentor')" class="flex items-center gap-1 hover:text-slate-600 transition">
+                    <th class="px-5 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider w-[18%]">
+                        <button @click="toggleSort('mentor')"
+                                :class="sortCol === 'mentor' ? 'text-up-maroon' : 'text-gray-400 hover:text-up-maroon'"
+                                class="flex items-center gap-1 transition">
                             Mentor
                             <i class="fa-solid text-[8px]"
                                :class="sortCol === 'mentor'
-                                       ? (sortDir === 'asc' ? 'fa-arrow-up text-slate-600' : 'fa-arrow-down text-slate-600')
-                                       : 'fa-arrow-up-arrow-down opacity-30'"></i>
+                                   ? (sortDir === 'asc' ? 'fa-arrow-up text-up-maroon' : 'fa-arrow-down text-up-maroon')
+                                   : 'fa-arrow-up-arrow-down opacity-30'"></i>
                         </button>
                     </th>
 
-                    {{-- Date & Time — default sort column --}}
-                    <th class="px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider w-[17%]">
-                        <button @click="toggleSort('date')" class="flex items-center gap-1 hover:text-slate-600 transition">
+                    {{-- Date & Time --}}
+                    <th class="px-5 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider w-[17%]">
+                        <button @click="toggleSort('date')"
+                                :class="sortCol === 'date' ? 'text-up-maroon' : 'text-gray-400 hover:text-up-maroon'"
+                                class="flex items-center gap-1 transition">
                             Date &amp; Time
                             <i class="fa-solid text-[8px]"
                                :class="sortCol === 'date'
-                                       ? (sortDir === 'asc' ? 'fa-arrow-up text-slate-600' : 'fa-arrow-down text-slate-600')
-                                       : 'fa-arrow-up-arrow-down opacity-30'"></i>
+                                   ? (sortDir === 'asc' ? 'fa-arrow-up text-up-maroon' : 'fa-arrow-down text-up-maroon')
+                                   : 'fa-arrow-up-arrow-down opacity-30'"></i>
                         </button>
                     </th>
 
                     {{-- Mode --}}
-                    <th class="px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider w-[15%]">
-                        <button @click="toggleSort('mode')" class="flex items-center gap-1 hover:text-slate-600 transition">
+                    <th class="px-5 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider w-[15%]">
+                        <button @click="toggleSort('mode')"
+                                :class="sortCol === 'mode' ? 'text-up-maroon' : 'text-gray-400 hover:text-up-maroon'"
+                                class="flex items-center gap-1 transition">
                             Mode
                             <i class="fa-solid text-[8px]"
                                :class="sortCol === 'mode'
-                                       ? (sortDir === 'asc' ? 'fa-arrow-up text-slate-600' : 'fa-arrow-down text-slate-600')
-                                       : 'fa-arrow-up-arrow-down opacity-30'"></i>
+                                   ? (sortDir === 'asc' ? 'fa-arrow-up text-up-maroon' : 'fa-arrow-down text-up-maroon')
+                                   : 'fa-arrow-up-arrow-down opacity-30'"></i>
                         </button>
                     </th>
 
                     {{-- Status --}}
-                    <th class="px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider w-[12%]">
-                        <button @click="toggleSort('raw_status')" class="flex items-center gap-1 hover:text-slate-600 transition">
+                    <th class="px-5 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider w-[12%]">
+                        <button @click="toggleSort('raw_status')"
+                                :class="sortCol === 'raw_status' ? 'text-up-maroon' : 'text-gray-400 hover:text-up-maroon'"
+                                class="flex items-center gap-1 transition">
                             Status
                             <i class="fa-solid text-[8px]"
                                :class="sortCol === 'raw_status'
-                                       ? (sortDir === 'asc' ? 'fa-arrow-up text-slate-600' : 'fa-arrow-down text-slate-600')
-                                       : 'fa-arrow-up-arrow-down opacity-30'"></i>
+                                   ? (sortDir === 'asc' ? 'fa-arrow-up text-up-maroon' : 'fa-arrow-down text-up-maroon')
+                                   : 'fa-arrow-up-arrow-down opacity-30'"></i>
                         </button>
                     </th>
                 </tr>
                 </thead>
 
                 <tbody>
-                    <template x-for="(booking, index) in paginatedItems" :key="booking.id">
-                        <tr class="border-b border-gray-50 hover:bg-slate-50 transition">
-                            <td class="px-5 py-4 text-gray-400 text-xs"
-                                x-text="(currentPage - 1) * perPage + index + 1"></td>
+                <template x-for="(booking, index) in paginatedItems" :key="booking.id">
+                    <tr class="border-b border-gray-50 hover:bg-slate-50 transition">
+                        <td class="px-5 py-3 text-gray-400 text-xs"
+                            x-text="(currentPage - 1) * perPage + index + 1"></td>
 
-                            <td class="px-5 py-4">
-                                <p class="font-bold text-slate-700 text-xs truncate"
-                                   x-init="$nextTick(() => { if ($el.scrollWidth > $el.clientWidth) $el.title = booking.subject + ' – ' + booking.subjectName })"
-                                   x-text="booking.subject"></p>
-                                <p class="text-gray-400 text-[10px] truncate"
-                                   x-init="$nextTick(() => { if ($el.scrollWidth > $el.clientWidth) $el.title = booking.subjectName })"
-                                   x-text="booking.subjectName"></p>
-                            </td>
+                        <td class="px-5 py-3">
+                            <p class="font-bold text-slate-700 text-sm truncate"
+                               x-init="$nextTick(() => { if ($el.scrollWidth > $el.clientWidth) $el.title = booking.subject + ' – ' + booking.subjectName })"
+                               x-text="booking.subject"></p>
+                            <p class="text-gray-400 text-xs truncate"
+                               x-init="$nextTick(() => { if ($el.scrollWidth > $el.clientWidth) $el.title = booking.subjectName })"
+                               x-text="booking.subjectName"></p>
+                        </td>
 
-                            <td class="px-5 py-4">
-                                <p class="text-slate-600 text-xs truncate"
-                                   x-init="$nextTick(() => { if ($el.scrollWidth > $el.clientWidth) $el.title = booking.topic })"
-                                   x-text="booking.topic"></p>
-                            </td>
+                        <td class="px-5 py-3">
+                            <p class="text-slate-600 text-sm truncate"
+                               x-init="$nextTick(() => { if ($el.scrollWidth > $el.clientWidth) $el.title = booking.topic })"
+                               x-text="booking.topic"></p>
+                        </td>
 
-                            <td class="px-5 py-4">
-                                <p class="text-xs font-medium text-slate-700 truncate"
-                                   x-init="$nextTick(() => { if ($el.scrollWidth > $el.clientWidth) $el.title = booking.mentor })"
-                                   x-text="booking.mentor"></p>
-                            </td>
+                        <td class="px-5 py-3">
+                            <p class="text-sm font-medium text-slate-700 truncate"
+                               x-init="$nextTick(() => { if ($el.scrollWidth > $el.clientWidth) $el.title = booking.mentor })"
+                               x-text="booking.mentor"></p>
+                        </td>
 
-                            <td class="px-5 py-4">
-                                <p class="text-xs font-medium text-slate-700" x-text="booking.date"></p>
-                                <p class="text-[10px] text-gray-400" x-text="booking.time"></p>
-                            </td>
+                        <td class="px-5 py-3">
+                            <p class="text-sm font-medium text-slate-700" x-text="booking.date"></p>
+                            <p class="text-xs text-gray-400" x-text="booking.time"></p>
+                        </td>
 
-                            <td class="px-5 py-4 text-xs text-slate-500" x-text="booking.mode"></td>
+                        <td class="px-5 py-3 text-sm text-slate-500" x-text="booking.mode"></td>
 
-                            <td class="px-5 py-4">
-                                    <span :class="'font-bold text-[10px] bg-gray-50 px-2 py-1 rounded border border-current opacity-80 ' + booking.statusClass"
-                                          x-text="booking.statusLabel"></span>
-                            </td>
-                        </tr>
-                    </template>
-
-                    {{-- Empty State --}}
-                    <tr x-show="filteredItems.length === 0" x-cloak>
-                        <td colspan="7" class="px-5 py-16 text-center">
-                            <div class="flex flex-col items-center justify-center text-gray-400">
-                                <i class="fa-solid fa-magnifying-glass text-2xl mb-3 opacity-20"></i>
-                                <p class="text-sm font-medium">No matching records found.</p>
-                                <p class="text-xs mt-1">Try adjusting your search or filters.</p>
-                            </div>
+                        <td class="px-5 py-3">
+                            <span :class="'font-bold text-xs bg-gray-50 px-2 py-1 rounded border border-current opacity-80 ' + booking.statusClass"
+                                  x-text="booking.statusLabel"></span>
                         </td>
                     </tr>
+                </template>
+
+                {{-- Empty State --}}
+                <tr x-show="filteredItems.length === 0" x-cloak>
+                    <td colspan="7" class="px-5 py-16 text-center">
+                        <div class="flex flex-col items-center justify-center text-gray-400">
+                            <i class="fa-solid fa-magnifying-glass text-2xl mb-3 opacity-20"></i>
+                            <p class="text-sm font-medium">No matching records found.</p>
+                            <p class="text-xs mt-1">Try adjusting your search or filters.</p>
+                        </div>
+                    </td>
+                </tr>
                 </tbody>
             </table>
         </div>
@@ -346,15 +358,15 @@ $studentHistory = computed(function () {
                         class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-slate-500 hover:bg-gray-50 transition disabled:opacity-40 disabled:cursor-not-allowed">
                     <i class="fa-solid fa-chevron-left text-[10px]"></i>
                 </button>
-                <template x-for="page in pages" :key="page">
+                <template x-for="(page, index) in pages" :key="index">
                     <button
                         @click="if (page !== '...') currentPage = page"
                         :disabled="page === '...'"
                         :class="currentPage === page
-                            ? 'bg-sidebar-green text-white shadow-sm border-sidebar-green'
-                            : page === '...'
-                                ? 'bg-white border border-gray-200 text-gray-400 cursor-default'
-                                : 'bg-white border border-gray-200 text-slate-500 hover:bg-gray-100'"
+                        ? 'bg-sidebar-green text-white shadow-sm border-sidebar-green'
+                        : page === '...'
+                            ? 'bg-white border border-gray-200 text-gray-400 cursor-default'
+                            : 'bg-white border border-gray-200 text-slate-500 hover:bg-gray-100'"
                         class="w-8 h-8 flex items-center justify-center text-xs font-bold rounded-lg transition"
                         x-text="page">
                     </button>
@@ -367,7 +379,7 @@ $studentHistory = computed(function () {
             </div>
             <span class="text-[11px] text-gray-400 font-medium"
                   x-text="filteredItems.length === 0 ? '' : pageStart + '–' + pageEnd + ' of ' + filteredItems.length">
-            </span>
+        </span>
         </div>
     </div>
 </div>
