@@ -34,7 +34,7 @@ $sessions = computed(function () {
 
         $durationText = $durationHours == 1
             ? '1 hr'
-            : rtrim(rtrim(number_format($durationHours, 2), '0'), '.');
+            : rtrim(rtrim(number_format($durationHours, 2), '0'), '.') . ' hrs';
 
         return [
             'id'            => $b->id,
