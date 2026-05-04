@@ -420,3 +420,249 @@ Alpine.data('feedbackManagement', (initialFeedbacks = []) => ({
         return '#ef4444';
     }
 }));
+
+// Admin Sessions Table
+Alpine.data('sessionManagement', (initialSessions = [], initialCounts = {}) => ({
+    sessions: initialSessions,
+    counts: initialCounts,
+    searchQuery: '',
+    statusFilter: [],
+    showStatusDropdown: false,
+    
+    currentPage: 1,
+    perPage: 5,
+
+    // Default: newest first
+    sortCol: 'date',
+    sortDir: 'desc',
+
+    // Confirmation Modal
+    showConfirmModal: false,
+    isConfirming: false,
+    confirmConfig: {},
+    sessionToUpdate: null,
+    newStatusToApply: '',
+
+    // Sort feature
+    toggleSort(col) {
+        if (this.sortCol === col) {
+            this.sortDir = (this.sortDir === 'asc') ? 'desc' : 'asc';
+        } else {
+            this.sortCol = col;
+            this.sortDir = col === 'date' ? 'desc' : 'asc';
+        }
+        this.currentPage = 1;
+    },
+
+    get filteredSessions() {
+        const term = this.searchQuery.toLowerCase();
+        let result = this.sessions.filter(s => {
+            const searchable = [s.student, s.mentor, s.subject, s.topic, s.date, s.time, s.mode, s.status, s.degreeProgram, s.yearLevel].join(' ').toLowerCase();
+            const matchesSearch = searchable.includes(term);
+            const matchesStatus = this.statusFilter.length === 0 || this.statusFilter.includes(s.status);
+            return matchesSearch && matchesStatus;
+        });
+        const statusOrder = { accepted: 1, pending: 2, completed: 3, cancelled: 4, no_show: 5, rejected: 6 };
+
+        result = result.sort((a, b) => {
+            let valA = a[this.sortCol];
+            let valB = b[this.sortCol];
+
+            if (this.sortCol === 'status') {
+                valA = statusOrder[valA] ?? 999;
+                valB = statusOrder[valB] ?? 999;
+            } else if (this.sortCol === 'date') {
+                valA = new Date(a.date + ' ' + a.start).getTime() || 0;
+                valB = new Date(b.date + ' ' + b.start).getTime() || 0;
+            } else {
+                valA = String(valA || '').toLowerCase();
+                valB = String(valB || '').toLowerCase();
+            }
+
+            if (valA < valB) return this.sortDir === 'asc' ? -1 : 1;
+            if (valA > valB) return this.sortDir === 'asc' ? 1 : -1;
+            return 0;
+        });
+
+        return result;
+    },
+
+    // Pagination
+    get paginatedSessions() {
+        const start = (this.currentPage - 1) * this.perPage;
+        return this.filteredSessions.slice(start, start + this.perPage);
+    },
+
+    get pageStart() {
+        return this.filteredSessions.length === 0 ? 0 : (this.currentPage - 1) * this.perPage + 1;
+    },
+
+    get pageEnd() {
+        return Math.min(this.currentPage * this.perPage, this.filteredSessions.length);
+    },
+
+    get totalPages() {
+        return Math.ceil(this.filteredSessions.length / this.perPage) || 1;
+    },
+
+    get pages() {
+        const total = this.totalPages;
+        const current = this.currentPage;
+
+        if(total <= 8) return Array.from({ length: total }, (_, i) => i + 1);
+        if(current <= 4) return [1, 2, 3, 4, 5, '...', total];
+        if(current >= total - 3) return [1, '...', total - 3, total - 2, total - 1, total];
+        
+        return [1, '...', current - 1, current, current + 1, '...', total];
+    },
+
+    // UI HELPERS (Colors, Labels, Icons)
+    getStatusLabel(status) {
+        if (!status) return '—';
+        if (status === 'no_show') return 'No Show';
+        return status.charAt(0).toUpperCase() + status.slice(1);
+    },
+
+    formatHours(s) {
+        if (!s || !s.duration) return '';
+        const match = String(s.duration).match(/\((.*?)\)/);
+        return match ? `(${match[1]})` : '';
+    },
+
+    getStatusColor(status) {
+        const colors = {
+            pending: 'text-yellow-600 border-yellow-200 bg-yellow-50',
+            accepted: 'text-green-600 border-green-200 bg-green-50',
+            completed: 'text-gray-500 border-gray-200 bg-gray-50',
+            rejected: 'text-red-800 border-red-200 bg-red-50',
+            cancelled: 'text-red-600 border-red-200 bg-red-50',
+            no_show: 'text-orange-600 border-orange-200 bg-orange-50'
+        };
+        return colors[status] || 'text-gray-500 border-gray-200 bg-gray-50';
+    },
+
+    getIdleIndicatorColor(s) {
+        if (s.status === 'pending') return s.is_open ? 'bg-purple-400' : 'bg-yellow-400';
+        if (s.status === 'accepted') return 'bg-green-400';
+        return 'bg-gray-300';
+    },
+
+    // Actions and check conflicts
+    hasConflict(newReq) {
+        const toMin = (t) => {
+            const [h, m] = t.split(':').map(Number);
+            return h * 60 + m;
+        };
+        return this.sessions.some(s => {
+            if (s.id === newReq.id) return false;
+            if (s.status !== 'accepted') return false;
+            if (s.date !== newReq.date) return false;
+            
+            const sStart = toMin(s.start), sEnd = toMin(s.end);
+            const rStart = toMin(newReq.start), rEnd = toMin(newReq.end);
+            return rStart < sEnd && rEnd > sStart;
+        });
+    },
+
+    promptUpdateStatus(session, newStatus) {
+        // Prevent accepting if it conflicts with an already accepted session
+        if (newStatus === 'accepted' && this.hasConflict(session)) {
+            alert("Cannot approve: This session overlaps with an already-accepted booking on this date.");
+            return;
+        }
+
+        this.sessionToUpdate = session;
+        this.newStatusToApply = newStatus;
+
+        const isUncomplete = newStatus === 'accepted' && session.status === 'completed';
+        const isClaiming = newStatus === 'accepted' && session.status === 'pending' && session.is_open;
+
+        // Base Configuration
+        let cfg = { 
+            title: 'Confirm action', body: 'Are you sure?', variant: 'neutral', 
+            iconHtml: '<i class="fa-solid fa-circle-info text-gray-600"></i>', 
+            iconBgClass: 'bg-gray-100', btnClass: 'bg-gray-600', confirmText: 'Confirm', loadingText: 'Processing...' 
+        };
+
+        // Custom config based on the action
+        if (newStatus === 'accepted') {
+            if (isUncomplete) {
+                cfg = { title: 'Revert to accepted?', body: 'This reverses the completed status.', iconHtml: '<i class="fa-solid fa-rotate-left text-gray-600"></i>', iconBgClass: 'bg-gray-100', btnClass: 'bg-gray-700 hover:bg-gray-800', confirmText: 'Revert', loadingText: 'Reverting...' };
+            } else if (isClaiming) {
+                cfg = { title: 'Claim open session?', body: 'You are about to claim this session. It will be permanently assigned.', iconHtml: '<i class="fa-solid fa-check text-emerald-600"></i>', iconBgClass: 'bg-emerald-100', btnClass: 'bg-emerald-600 hover:bg-emerald-700', confirmText: 'Claim Session', loadingText: 'Claiming...' };
+            } else {
+                cfg = { title: 'Accept booking?', body: 'The student will be notified that their session has been approved.', iconHtml: '<i class="fa-solid fa-check text-emerald-600"></i>', iconBgClass: 'bg-emerald-100', btnClass: 'bg-emerald-600 hover:bg-emerald-700', confirmText: 'Accept', loadingText: 'Accepting...' };
+            }
+        } else if (newStatus === 'rejected') {
+            cfg = { title: 'Reject booking?', body: 'The student will be notified that their session request was declined.', iconHtml: '<i class="fa-solid fa-xmark text-red-600"></i>', iconBgClass: 'bg-red-100', btnClass: 'bg-red-600 hover:bg-red-700', confirmText: 'Reject', loadingText: 'Rejecting...' };
+        } else if (newStatus === 'completed') {
+            cfg = { title: 'Mark as completed?', body: 'This will mark the session as done.', iconHtml: '<i class="fa-solid fa-flag-checkered text-gray-600"></i>', iconBgClass: 'bg-gray-100', btnClass: 'bg-gray-700 hover:bg-gray-800', confirmText: 'Mark Complete', loadingText: 'Saving...' };
+        } else if (newStatus === 'no_show') {
+            cfg = { title: 'Mark as no-show?', body: 'This will record that the student did not attend the session.', iconHtml: '<i class="fa-solid fa-user-slash text-red-600"></i>', iconBgClass: 'bg-red-100', btnClass: 'bg-red-600 hover:bg-red-700', confirmText: 'Mark No-show', loadingText: 'Saving...' };
+        } else if (newStatus === 'cancelled') {
+            cfg = { title: 'Cancel session?', body: 'This will cancel the accepted session.', iconHtml: '<i class="fa-solid fa-ban text-red-600"></i>', iconBgClass: 'bg-red-100', btnClass: 'bg-red-600 hover:bg-red-700', confirmText: 'Cancel Session', loadingText: 'Cancelling...' };
+        }
+
+        // Attach Session details to the modal HTML
+        cfg.metaHtml = `
+            <div class="flex justify-between items-start gap-2 mb-1">
+                <span class="text-gray-400">Student</span>
+                <span class="font-medium text-gray-700 text-right truncate">${session.student}</span>
+            </div>
+            <div class="flex justify-between items-start gap-2 mb-1">
+                <span class="text-gray-400">Subject</span>
+                <span class="font-medium text-gray-700 text-right truncate">${session.subject}</span>
+            </div>
+            <div class="flex justify-between items-start gap-2 mb-1">
+                <span class="text-gray-400">Date</span>
+                <span class="font-medium text-gray-700 text-right">${session.date}</span>
+            </div>
+            <div class="flex justify-between items-start gap-2">
+                <span class="text-gray-400">Time</span>
+                <span class="font-medium text-gray-700 text-right">${session.time}</span>
+            </div>
+        `;
+
+        this.confirmConfig = cfg;
+        this.showConfirmModal = true;
+    },
+
+    closeConfirmModal() {
+        this.showConfirmModal = false;
+    },
+
+    async executeConfirm() {
+        this.isConfirming = true;
+        
+        const formData = new FormData();
+        formData.append('_token', document.querySelector('meta[name="csrf-token"]').content);
+        formData.append('booking_id', this.sessionToUpdate.id);
+        formData.append('booking_status', this.newStatusToApply);
+
+        try {
+            const res = await fetch('/admin/sessions/update', { method: 'POST', body: formData });
+            if (!res.ok) throw new Error('Request failed');
+
+            this.sessionToUpdate.status = this.newStatusToApply;
+            this.recalculateCounts();
+            
+        } catch (err) {
+            alert('Update failed. Please check your connection and try again.');
+        } finally {
+            this.isConfirming = false;
+            this.closeConfirmModal();
+        }
+    },
+
+    // Stat cards info
+    recalculateCounts() {
+        this.counts.total = this.sessions.length;
+        this.counts.accepted = this.sessions.filter(s => s.status === 'accepted').length;
+        this.counts.pending = this.sessions.filter(s => s.status === 'pending').length;
+        this.counts.completed = this.sessions.filter(s => s.status === 'completed').length;
+        
+        const completedSessions = this.sessions.filter(s => s.status === 'completed');
+        const rawHours = completedSessions.reduce((sum, s) => sum + (s.durationHours || 0), 0);
+        this.counts.totalHours = rawHours.toFixed(2);
+    },
+}));

@@ -664,7 +664,7 @@ body.app-layout {
     white-space: normal;
     word-break: break-word;
     overflow-wrap: anywhere;
-    width: 320px;
+    width: max-content;
     max-width: 320px;
     opacity: 0;
     pointer-events: none;
@@ -677,6 +677,11 @@ body.app-layout {
     opacity: 1;
     transform: translateY(0);
 }
+
+tr:nth-last-child(-n+2) .hover-tooltip::after { top: auto; bottom: 110%; transform: translateY(-5px); }
+tr:nth-last-child(-n+2) .hover-tooltip:hover::after { opacity: 1; transform: translateY(0); }
+td:last-child .hover-tooltip::after { left: auto; right: 0%; transform: translate(-5px); }
+td:last-child .hover-tooltip:hover::after { opacity: 1; transform: translate(0); }
 
 /* ── STATUS TOAST ── */
 #statusToast {
@@ -933,23 +938,6 @@ body.app-layout {
 .feedback-btn-next:disabled,
 .feedback-btn-submit:disabled { opacity: 0.6; cursor: not-allowed; }
 
-/* Hover tooltip */
-.hover-tooltip { position: relative; cursor: pointer; }
-.hover-tooltip::after {
-    content: attr(data-full);
-    position: absolute; left: 0; top: 110%;
-    background: rgba(0,0,0,0.85); color: #fff;
-    padding: 8px 10px; border-radius: 6px; font-size: 11px; line-height: 1.4;
-    white-space: normal; word-break: break-word; overflow-wrap: anywhere;
-    width: 320px; max-width: 320px;
-    opacity: 0; pointer-events: none;
-    transform: translateY(5px); transition: 0.15s ease;
-    z-index: 9999;
-}
-.hover-tooltip:hover::after { opacity: 1; transform: translateY(0); }
-
-tr:nth-last-child(-n+2) .hover-tooltip::after { top: auto; bottom: 110%; transform: translateY(-5px); }
-tr:nth-last-child(-n+2) .hover-tooltip:hover::after { opacity: 1; transform: translateY(0); }
 
 /* ── Date picker ── */
 .custom-date-picker { position: relative; }
@@ -1095,3 +1083,9 @@ tr:nth-last-child(-n+2) .hover-tooltip:hover::after { opacity: 1; transform: tra
 
 .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 64px 32px; color: #9ca3af; text-align: center; }
 .empty-state i { font-size: 2.5rem; margin-bottom: 12px; color: #d1d5db; }
+
+.session-row .action-buttons { opacity: 0; transform: translateX(6px); transition: opacity 0.15s ease, 
+    transform 0.15s ease; pointer-events: none; }
+.session-row:hover .action-buttons { opacity: 1; transform: translateX(0); pointer-events: auto; }
+.session-row .action-idle { opacity: 1; transition: opacity 0.15s ease; }
+.session-row:hover .action-idle { opacity: 0; }
