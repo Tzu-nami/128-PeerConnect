@@ -49,9 +49,8 @@ new class extends Component {
                         </div>
                     @endif
                 </div>
-                <i class="fa-solid fa-chevron-down text-[10px] text-white/60 group-hover:text-white transition"
-                   :class="open ? 'rotate-180' : ''"
-                   style="transition: transform 0.2s;"></i>
+                <i class="fa-solid fa-chevron-down text-[10px] text-white/60 group-hover:text-white transition-transform duration-200"
+                   :class="open ? 'rotate-180' : ''"></i>
             </button>
 
             {{-- Dropdown Panel --}}
@@ -71,8 +70,7 @@ new class extends Component {
                 <form method="POST" action="{{ route('logout') }}" class="m-0">
                     @csrf
                     <button type="submit"
-                            class="dropdown-item w-full text-left"
-                            style="border-top: 1px solid #f1f5f9; color: #dc2626; font-weight: 600;">
+                            class="dropdown-item w-full text-left border-t border-slate-100 font-semibold text-slate-600 hover:text-red-600">
                         <i class="fa-solid fa-right-from-bracket"></i> Logout
                     </button>
                 </form>
