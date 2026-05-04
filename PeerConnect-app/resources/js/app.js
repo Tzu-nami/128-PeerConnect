@@ -677,7 +677,7 @@ Alpine.data('sessionManagement', (initialSessions = [], initialCounts = {}) => (
     },
 
     // Stat cards info
-    recalculateCounts() {
+recalculateCounts() {
         this.counts.total = this.sessions.length;
         this.counts.accepted = this.sessions.filter(s => s.status === 'accepted').length;
         this.counts.pending = this.sessions.filter(s => s.status === 'pending').length;
@@ -687,4 +687,81 @@ Alpine.data('sessionManagement', (initialSessions = [], initialCounts = {}) => (
         const rawHours = completedSessions.reduce((sum, s) => sum + (s.durationHours || 0), 0);
         this.counts.totalHours = rawHours.toFixed(2);
     },
+
+    // Edit Modal
+    showEditModal: false,
+    editSession: null,
+    editEndTime: '',
+    editEndTimeError: '',
+    isSavingEdit: false,
+
+    openEditModal(s) {
+        this.editSession = s;
+        this.editEndTime = s.end;
+        this.editEndTimeError = '';
+        this.showEditModal = true;
+    },
+
+    closeEditModal() {
+        this.showEditModal = false;
+        this.editSession = null;
+        this.editEndTime = '';
+        this.editEndTimeError = '';
+    },
+
+    formatTo12h(time24) {
+        if (!time24) return '—';
+        const [h, m] = time24.split(':').map(Number);
+        const ampm = h >= 12 ? 'PM' : 'AM';
+        const h12 = h % 12 || 12;
+        return `${h12}:${String(m).padStart(2, '0')} ${ampm}`;
+    },
+
+    computeNewDuration() {
+        if (!this.editSession || !this.editEndTime) return '—';
+        const [sh, sm] = this.editSession.start.split(':').map(Number);
+        const [eh, em] = this.editEndTime.split(':').map(Number);
+        const diff = (eh * 60 + em) - (sh * 60 + sm);
+        if (diff <= 0) return 'Invalid';
+        const hrs = Math.floor(diff / 60);
+        const mins = diff % 60;
+        if (hrs === 0) return `${mins} min`;
+        if (mins === 0) return `${hrs} hr`;
+        return `${hrs} hr ${mins} min`;
+    },
+
+async saveEndTime() {
+    this.editEndTimeError = '';
+    const [sh, sm] = this.editSession.start.split(':').map(Number);
+    const [eh, em] = this.editEndTime.split(':').map(Number);
+    if ((eh * 60 + em) <= (sh * 60 + sm)) {
+        this.editEndTimeError = 'End time must be after the start time.';
+        return;
+    }
+    this.isSavingEdit = true;
+    try {
+        const formData = new FormData();
+        formData.append('_token', document.querySelector('meta[name="csrf-token"]').content);
+        formData.append('booking_id', this.editSession.id);
+        formData.append('end_time', this.editEndTime);
+
+        const res = await fetch('/admin/sessions/update-end-time', { method: 'POST', body: formData });
+        if (!res.ok) throw new Error('Request failed');
+
+        this.editSession.end = this.editEndTime;
+        this.editSession.time = this.formatTo12h(this.editSession.start) + ' – ' + this.formatTo12h(this.editEndTime);
+
+        const diffMins = (eh * 60 + em) - (sh * 60 + sm);
+        const diffHours = diffMins / 60;
+        const durationText = diffHours === 1 ? '1 hr' : String(diffHours.toFixed(2)).replace(/\.?0+$/, '');
+        this.editSession.duration = this.formatTo12h(this.editSession.start) + ' - ' + this.formatTo12h(this.editEndTime) + ' (' + durationText + ')';
+        this.editSession.durationHours = diffHours;
+
+        this.closeEditModal();
+    } catch (err) {
+        this.editEndTimeError = 'Failed to save. Please try again.';
+    } finally {
+        this.isSavingEdit = false;
+    }
+},
 }));

@@ -66,6 +66,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->name('admin.feedbacks');
 
     Route::post('/sessions/update', [AdminSessionController::class, 'update'])->name('admin.sessions.update');
+    Route::post('/sessions/update-end-time', function (\Illuminate\Http\Request $request) {
+    $booking = \App\Models\Bookings::findOrFail($request->booking_id);
+    $date = \Carbon\Carbon::parse($booking->schedule_start)->toDateString();
+    $newEnd = \Carbon\Carbon::parse($date . ' ' . $request->end_time);
+    if ($newEnd->lte(\Carbon\Carbon::parse($booking->schedule_start))) {
+        return response()->json(['error' => 'Invalid time'], 422);
+    }
+    $booking->schedule_end = $newEnd;
+    $booking->save();
+    return response()->json(['success' => true]);
+})->name('admin.sessions.update-end-time');
 
     });
 

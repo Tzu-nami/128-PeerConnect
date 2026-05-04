@@ -90,6 +90,20 @@ $summaryCounts = computed(function () {
     ];
 });
 
+$updateEndTime = action(function (int $bookingId, string $newEndTime) {
+    $booking = Bookings::findOrFail($bookingId);
+
+    $date = \Carbon\Carbon::parse($booking->schedule_start)->toDateString();
+    $newEnd = \Carbon\Carbon::parse($date . ' ' . $newEndTime);
+
+    if ($newEnd->lte(\Carbon\Carbon::parse($booking->schedule_start))) {
+        return;
+    }
+
+    $booking->schedule_end = $newEnd;
+    $booking->save();
+});
+
 ?>
 
 {{-- TEMPLATE --}}
@@ -364,6 +378,14 @@ $summaryCounts = computed(function () {
                                             <template x-if="s.status === 'cancelled'">
                                                 <div class="flex justify-end"><span class="text-gray-200 text-[10px]">—</span></div>
                                             </template>
+                                            {{-- Edit button --}}
+                                                    <template x-if="s.status === 'completed'">
+                                                    <div class="hover-tooltip" data-full="Edit Session">
+                                                    <button @click.stop="openEditModal(s)" class="w-7 h-7 rounded-lg bg-blue-100 hover:bg-blue-200 text-blue-600 flex items-center justify-center transition-all hover:scale-110 hover:shadow-sm shrink-0">
+                                                        <i class="fa-solid fa-pen text-[11px]"></i>
+                                                    </button>
+                                                </div>
+                                            </template>
                                         </div>
                                     </div>
                                 </td>
@@ -421,4 +443,113 @@ $summaryCounts = computed(function () {
             </div>
         </div>
     </div>
+
+    {{-- EDIT SESSION MODAL --}}
+<div x-show="showEditModal" style="display:none;" class="fixed inset-0 z-[1500] flex items-center justify-center bg-black/50 backdrop-blur-sm" x-transition.opacity @click.self="closeEditModal()" @keydown.escape.window="closeEditModal()">
+    <div class="bg-white rounded-xl shadow-2xl max-w-md w-full mx-4" x-show="showEditModal" x-transition>
+
+        {{-- Header --}}
+        <div class="flex items-center justify-between px-6 pt-5 pb-4 border-b border-gray-100">
+            <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
+                    <i class="fa-solid fa-pen text-blue-600 text-xs"></i>
+                </div>
+                <div>
+                    <h3 class="text-sm font-bold text-gray-900 leading-none">Edit Session</h3>
+                    <p class="text-[11px] text-gray-400 mt-0.5">Only end time can be modified</p>
+                </div>
+            </div>
+            <button @click="closeEditModal()" class="w-7 h-7 rounded-lg hover:bg-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-600 transition">
+                <i class="fa-solid fa-xmark text-xs"></i>
+            </button>
+        </div>
+
+        {{-- Session Info (read-only) --}}
+        <div class="px-6 py-4 space-y-3">
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Student</p>
+                    <p class="text-xs font-semibold text-slate-700 truncate" x-text="editSession?.student ?? '—'"></p>
+                </div>
+                <div>
+                    <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Mentor</p>
+                    <p class="text-xs font-semibold text-slate-700 truncate" x-text="editSession?.mentor ?? '—'"></p>
+                </div>
+                <div>
+                    <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Subject</p>
+                    <p class="text-xs font-semibold text-slate-700" x-text="(editSession?.subject ?? '—') + (editSession?.subjectName ? ' – ' + editSession.subjectName : '')"></p>
+                </div>
+                <div>
+                    <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Topic</p>
+                    <p class="text-xs font-semibold text-slate-700 truncate" x-text="editSession?.topic ?? '—'"></p>
+                </div>
+                <div>
+                    <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Date</p>
+                    <p class="text-xs font-semibold text-slate-700" x-text="editSession?.date ?? '—'"></p>
+                </div>
+                <div>
+                    <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Mode</p>
+                    <p class="text-xs font-semibold text-slate-700" x-text="editSession?.mode ?? '—'"></p>
+                </div>
+                <div>
+                    <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Year Level</p>
+                    <p class="text-xs font-semibold text-slate-700 truncate" x-text="editSession?.yearLevel ?? '—'"></p>
+                </div>
+                <div>
+                    <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Status</p>
+                    <span class="font-bold text-[10px] px-2 py-0.5 rounded border border-current"
+                          :class="getStatusColor(editSession?.status)" x-text="getStatusLabel(editSession?.status)"></span>
+                </div>
+            </div>
+
+            {{-- Schedule Section --}}
+            <div class="border-t border-dashed border-gray-200 pt-3">
+                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3">Schedule</p>
+                <div class="grid grid-cols-2 gap-3">
+                    {{-- Start Time (locked) --}}
+                    <div>
+                        <label class="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-1.5">
+                            Start Time <span class="normal-case font-normal text-gray-300">(locked)</span>
+                        </label>
+                        <div class="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
+                            <i class="fa-regular fa-clock text-gray-300 text-xs"></i>
+                            <span class="text-xs font-semibold text-gray-400" x-text="editSession ? formatTo12h(editSession.start) : '—'"></span>
+                        </div>
+                    </div>
+                    {{-- End Time (editable) --}}
+                    <div>
+                        <label class="text-[10px] font-bold text-blue-600 uppercase tracking-wider block mb-1.5">
+                            End Time <span class="normal-case font-medium text-blue-400">(editable)</span>
+                        </label>
+                        <div class="relative flex items-center">
+                            <i class="fa-regular fa-clock absolute left-3 text-blue-400 text-xs pointer-events-none"></i>
+                            <input type="time" x-model="editEndTime"
+                                class="w-full pl-8 pr-3 py-2 text-xs font-semibold text-slate-700 border border-blue-300 rounded-lg bg-white outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-500 transition-shadow">
+                        </div>
+                        <p x-show="editEndTimeError" x-cloak class="text-[10px] text-red-500 mt-1 font-medium" x-text="editEndTimeError"></p>
+                    </div>
+                </div>
+
+                {{-- Duration Preview --}}
+                <div class="mt-3 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2 flex items-center justify-between" x-show="editEndTime && editSession">
+                    <span class="text-[10px] font-bold text-blue-400 uppercase tracking-wider">New Duration</span>
+                    <span class="text-xs font-bold text-blue-700" x-text="computeNewDuration()"></span>
+                </div>
+            </div>
+        </div>
+
+        {{-- Footer --}}
+        <div class="flex justify-end gap-2 px-6 pb-5 pt-2 border-t border-gray-100">
+            <button @click="closeEditModal()" :disabled="isSavingEdit"
+                class="px-4 py-2 text-xs font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition disabled:opacity-50">
+                Cancel
+            </button>
+            <button @click="saveEndTime()" :disabled="isSavingEdit"
+                class="px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition flex items-center gap-1.5 disabled:opacity-60 disabled:cursor-not-allowed">
+                <i x-show="isSavingEdit" class="fa-solid fa-spinner fa-spin text-xs"></i>
+                <span x-text="isSavingEdit ? 'Saving…' : 'Save Changes'"></span>
+            </button>
+        </div>
+    </div>
+</div>
 </div>
