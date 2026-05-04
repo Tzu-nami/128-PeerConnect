@@ -93,6 +93,23 @@ $this->todaySessions = Bookings::with(['mentor.user', 'student.user', 'subject']
     ])
     ->toArray();
 
+    $this->allSessions = Bookings::with(['mentor.user', 'student.user', 'subject'])
+    ->orderBy('date')
+    ->get()
+    ->map(fn($b) => [
+        'date'    => $b->date,
+        'mentor'  => $b->mentor->user->name  ?? 'Unknown',
+        'mentee'  => $b->student->user->name ?? 'Unknown',
+        'subject' => $b->subject->code       ?? 'N/A',
+        'topic'   => $b->topic               ?? '—',
+        'time'    => Carbon::parse($b->schedule_start)->format('h:i A'),
+        'status'  => ucfirst($b->booking_status),
+        'start'   => $b->schedule_start,
+        'end'     => $b->schedule_end,
+        'mode'    => $b->mode                ?? 'One-on-One Tutorial',
+    ])
+    ->toArray();
+
         
 }); 
 
@@ -446,21 +463,6 @@ $rejectBooking = action(function (string $id) {
         ->toArray();
     $this->pendingBookings = Bookings::where('booking_status', 'pending')->count();
 });
-
-$allSessions = Bookings::with(['mentor.user', 'student.user', 'subject'])
-    ->orderBy('date')
-    ->get()
-    ->map(fn($b) => [
-        'date'    => $b->date,
-        'mentor'  => $b->mentor->user->name  ?? 'Unknown',
-        'mentee'  => $b->student->user->name ?? 'Unknown',
-        'subject' => $b->subject->code       ?? 'N/A',
-        'time'    => Carbon::parse($b->schedule_start)->format('h:i A'),
-        'status'  => ucfirst($b->booking_status),
-        'start'   => $b->schedule_start,
-        'end'     => $b->schedule_end,
-    ])
-    ->toArray();
 
 
 ?>
@@ -1000,7 +1002,7 @@ updateDate();
                 <i class="fa-solid fa-book-open text-[10px]"></i> Add Subject
             </button>
         </div>
-        <button onclick="document.getElementById('reportModal').style.display='flex'"
+        <button onclick="openReportModal()"
             class="w-full border border-slate-300 p-2.5 rounded-lg text-[11px] font-bold hover:bg-gray-50 transition flex items-center justify-center gap-1.5">
             <i class="fa-solid fa-file-invoice text-[10px]"></i> Generate Report
         </button>
@@ -1011,32 +1013,31 @@ updateDate();
     style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); backdrop-filter:blur(4px); z-index:1000; align-items:center; justify-content:center; padding:24px;">
     <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden">
 
-<div class="flex items-center gap-4 px-6 py-5 border-b border-gray-100">
-    <div class="w-12 h-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xl flex-shrink-0">
-        <i class="fa-solid fa-file-arrow-down"></i>
-    </div>
-    <div class="flex-1 min-w-0">
-        <h2 class="text-xl font-extrabold text-slate-800 tracking-tight mb-0.5">Generate Weekly Report</h2>
-        <p class="text-xs text-slate-500 leading-snug">Exports full analytics — sessions, mentors, subjects, satisfaction & colleges. Max 7 days.</p>
-    </div>
-    <button onclick="document.getElementById('reportModal').style.display='none'"
-        class="text-gray-400 hover:text-red-600 transition">
-        <i class="fa-solid fa-xmark text-xl"></i>
-    </button>
-</div>
+        <div class="flex items-center gap-4 px-6 py-5 border-b border-gray-100">
+            <div class="w-12 h-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xl flex-shrink-0">
+                <i class="fa-solid fa-file-arrow-down"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+                <h2 class="text-xl font-extrabold text-slate-800 tracking-tight mb-0.5">Generate Weekly Report</h2>
+                <p class="text-xs text-slate-500 leading-snug" id="reportWeekLabel">Loading week range...</p>
+            </div>
+            <button onclick="document.getElementById('reportModal').style.display='none'"
+                class="text-gray-400 hover:text-red-600 transition">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
+        </div>
 
-        <div class="px-6 py-5 space-y-4">
-            <div class="grid grid-cols-2 gap-3">
+        <div class="px-6 py-5">
+            <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 flex items-start gap-3">
+                <i class="fa-solid fa-calendar-week text-slate-400 mt-0.5 text-sm flex-shrink-0"></i>
                 <div>
-                    <label class="block text-xs font-bold text-slate-600 mb-1.5">From</label>
-                    <input type="date" id="reportFrom" class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:border-red-900" />
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-slate-600 mb-1.5">To</label>
-                    <input type="date" id="reportTo" class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:border-red-900" />
+                    <p class="text-xs font-bold text-slate-700 mb-0.5">Current Week</p>
+                    <p class="text-xs text-slate-500" id="reportWeekDetail">—</p>
                 </div>
             </div>
-            <p id="reportError" class="text-xs text-red-600 hidden">Please fill in all fields before generating.</p>
+            <p class="text-xs text-slate-400 mt-3 leading-relaxed">
+                Exports all sessions for this week (Monday – Sunday) with student, mentor, subject, topic, date &amp; time, and session mode.
+            </p>
         </div>
 
         <div class="px-6 py-5 bg-gray-50 border-t border-gray-100">
@@ -1056,37 +1057,45 @@ updateDate();
 </div>
 
 <script>
+function getWeekRange() {
+    const now = new Date();
+    
+    const mon = new Date(now);
+    mon.setDate(now.getDate() - 6); 
+    mon.setHours(0, 0, 0, 0);
+
+    const end = new Date(now);
+    end.setHours(23, 59, 59, 999);
+
+    return { mon, sun: end };
+}
+
+function formatDisplay(d) {
+    return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+}
+
+function toDateStr(d) {
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function openReportModal() {
+    const { mon, sun } = getWeekRange();
+
+    // Debug — remove after confirming it works
+    console.log('mon:', mon.toString());
+    console.log('sun:', sun.toString());
+
+    const label = `${formatDisplay(mon)} – ${formatDisplay(sun)}`;
+    document.getElementById('reportWeekLabel').textContent = label;
+    document.getElementById('reportWeekDetail').textContent = label;
+    document.getElementById('reportModal').style.display = 'flex';
+}
+
 function submitReport() {
-    const from = document.getElementById('reportFrom').value;
-    const to   = document.getElementById('reportTo').value;
-    const err  = document.getElementById('reportError');
+    const { mon, sun } = getWeekRange();
+    const fromStr = toDateStr(mon);
+    const toStr   = toDateStr(sun);
 
-    err.classList.add('hidden');
-
-    if (!from || !to) {
-        err.textContent = 'Please fill in both date fields.';
-        err.classList.remove('hidden');
-        return;
-    }
-
-    const fromDate = new Date(from);
-    const toDate   = new Date(to);
-    toDate.setHours(23, 59, 59);
-
-    if (toDate < fromDate) {
-        err.textContent = '"To" date must be after "From" date.';
-        err.classList.remove('hidden');
-        return;
-    }
-
-    const diffDays = (toDate - fromDate) / (1000 * 60 * 60 * 24);
-    if (diffDays > 7) {
-        err.textContent = 'Date range cannot exceed 7 days. Please narrow your selection.';
-        err.classList.remove('hidden');
-        return;
-    }
-
-    // ── Raw data from Blade ──────────────────────────────────────────
     const allSessions  = @json($allSessions);
     const topMentors   = @json($this->topMentors);
     const topSubjects  = @json($this->topSubjects);
@@ -1094,138 +1103,86 @@ function submitReport() {
     const collegeData  = @json($this->collegeActivity);
     const monthlyData  = @json($this->monthlyTrends);
 
-    // ── Filter sessions within the 7-day range ───────────────────────
     const filtered = allSessions.filter(row => {
-        const d = new Date(row.date);
-        return d >= fromDate && d <= toDate;
-    });
-
-    // ── Per-mentor breakdown from filtered sessions ───────────────────
-    const mentorMap = {};
-    filtered.forEach(row => {
-        if (!mentorMap[row.mentor]) {
-            mentorMap[row.mentor] = { total: 0, completed: 0, accepted: 0, pending: 0, rejected: 0 };
-        }
-        mentorMap[row.mentor].total++;
-        const s = row.status.toLowerCase();
-        if (s === 'completed')     mentorMap[row.mentor].completed++;
-        else if (s === 'accepted') mentorMap[row.mentor].accepted++;
-        else if (s === 'pending')  mentorMap[row.mentor].pending++;
-        else if (s === 'rejected') mentorMap[row.mentor].rejected++;
-    });
-
-    // ── Status summary ───────────────────────────────────────────────
-    const statusSummary = { completed: 0, accepted: 0, pending: 0, rejected: 0 };
-    filtered.forEach(row => {
-        const s = row.status.toLowerCase();
-        if (statusSummary[s] !== undefined) statusSummary[s]++;
+        const d = new Date(row.date + 'T00:00:00');
+        return d >= mon && d <= sun;
     });
 
     const wb = XLSX.utils.book_new();
 
-    // ── Sheet 1: Overview ────────────────────────────────────────────
-    const overviewRows = [
-        ['LRC PEERCONNECT — WEEKLY ANALYTICS REPORT'],
-        [],
-        ['Generated on', new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })],
-        ['Report Period', `${from}  to  ${to}`],
-        ['Total Days Covered', Math.round(diffDays) + ' day(s)'],
-        [],
-        ['SESSION SUMMARY'],
-        ['Total Sessions in Range',  filtered.length],
-        ['Completed',                statusSummary.completed],
-        ['Accepted',                 statusSummary.accepted],
-        ['Pending',                  statusSummary.pending],
-        ['Rejected',                 statusSummary.rejected],
-        [],
-        ['Total Hours Rendered', (() => {
-    let mins = 0;
+    const sessionHeader = ['Student', 'Mentor', 'Subject', 'Topic', 'Date & Time', 'Mode'];
+    const sessionRows = filtered.length
+        ? filtered.map(r => {
+            const start = new Date(`1970-01-01T${r.start}`);
+            const end   = new Date(`1970-01-01T${r.end}`);
+            const fmt   = t => t.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+            const dateFormatted = new Date(r.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+            const mins  = Math.max(0, (end - start) / 60000);
+            const hrs   = Math.floor(mins / 60);
+            const rem   = Math.round(mins % 60);
+            const dur   = hrs > 0 ? `${hrs} hr${hrs > 1 ? 's' : ''}` : `${rem} min`;
+            const dateTime = `${dateFormatted}  ${fmt(start)} – ${fmt(end)}  (${dur})`;
+            return [
+                r.mentee  ?? 'Unknown',
+                r.mentor  ?? 'Unknown',
+                r.subject ?? 'N/A',
+                r.topic   ?? '—',
+                dateTime,
+                r.mode    ?? 'One-on-One Tutorial',
+            ];
+        })
+        : [['No sessions found for this week.', '', '', '', '', '']];
+
+    const sessionSheet = XLSX.utils.aoa_to_sheet([sessionHeader, ...sessionRows]);
+    sessionSheet['!cols'] = [
+        { wch: 24 }, { wch: 24 }, { wch: 14 }, { wch: 24 }, { wch: 36 }, { wch: 28 },
+    ];
+    XLSX.utils.book_append_sheet(wb, sessionSheet, 'Weekly Sessions');
+
+    const statusSummary = { completed: 0, accepted: 0, pending: 0, rejected: 0 };
+    filtered.forEach(r => {
+        const s = (r.status ?? '').toLowerCase();
+        if (statusSummary[s] !== undefined) statusSummary[s]++;
+    });
+
+    let totalMins = 0;
     filtered.forEach(r => {
         const s = new Date(`1970-01-01T${r.start}`);
         const e = new Date(`1970-01-01T${r.end}`);
-        mins += Math.max(0, (e - s) / 60000);
+        totalMins += Math.max(0, (e - s) / 60000);
     });
-    const h = Math.floor(mins / 60);
-    const m = Math.round(mins % 60);
-    return `${h}h ${m}m`;
-})()],
+    const totalH = Math.floor(totalMins / 60);
+    const totalM = Math.round(totalMins % 60);
+
+    const overviewRows = [
+        ['LRC PEERCONNECT — WEEKLY SESSION REPORT'],
+        [],
+        ['Report Period', `${formatDisplay(mon)}  to  ${formatDisplay(sun)}`],
+        ['Generated on',  new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })],
+        [],
+        ['SUMMARY'],
+        ['Total Sessions',   filtered.length],
+        ['Completed',        statusSummary.completed],
+        ['Accepted',         statusSummary.accepted],
+        ['Pending',          statusSummary.pending],
+        ['Rejected',         statusSummary.rejected],
+        ['Total Hours',      `${totalH}h ${totalM}m`],
+        [],
+        ['TOP MENTORS (ALL-TIME)'],
+        ['Rank', 'Mentor', 'Sessions'],
+        ...topMentors.map((m, i) => [i + 1, m.name, m.count]),
+        [],
+        ['TOP SUBJECTS (ALL-TIME)'],
+        ['Rank', 'Subject', 'Bookings'],
+        ...topSubjects.map((s, i) => [i + 1, s.name, s.count]),
+        [],
+        ['COLLEGE ACTIVITY'],
+        ['College', 'Students'],
+        ...Object.entries(collegeData).map(([c, n]) => [c, n]),
     ];
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(overviewRows), 'Overview');
 
- // ── Sheet 2: All Sessions in Range ───────────────────────────────
-const sessionRows = [];
-let totalMinutes = 0;
-
-if (filtered.length) {
-    filtered.forEach((r, i) => {
-        const start    = new Date(`1970-01-01T${r.start}`);
-        const end      = new Date(`1970-01-01T${r.end}`);
-        const mins     = Math.max(0, (end - start) / 60000);
-        const hrs      = Math.floor(mins / 60);
-        const rem      = Math.round(mins % 60);
-        const duration = hrs > 0 ? `${hrs}h ${rem}m` : `${rem}m`;
-        totalMinutes  += mins;
-
-        sessionRows.push([`SESSION ${i + 1}`]);
-        sessionRows.push(['Date',     r.date]);
-        sessionRows.push(['Mentor',   r.mentor]);
-        sessionRows.push(['Mentee',   r.mentee]);
-        sessionRows.push(['Subject',  r.subject ?? 'N/A']);
-        sessionRows.push(['Time',     r.time]);
-        sessionRows.push(['Duration', duration]);
-        sessionRows.push(['Status',   r.status]);
-        sessionRows.push([]);
-    });
-
-    // ── Total hours summary at the bottom ────────────────────────
-    const totalHrs = Math.floor(totalMinutes / 60);
-    const totalRem = Math.round(totalMinutes % 60);
-    sessionRows.push(['TOTAL HOURS RENDERED', `${totalHrs}h ${totalRem}m`]);
-    sessionRows.push(['Total Sessions', filtered.length]);
-} else {
-    sessionRows.push(['No sessions found in this date range.']);
-}
-XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(sessionRows), 'Sessions');
-
-    // ── Sheet 3: Mentor Performance (range) ──────────────────────────
-    const mentorBreakdownRows = Object.keys(mentorMap).length
-        ? [
-            ['Mentor', 'Total Sessions', 'Completed', 'Accepted', 'Pending', 'Rejected'],
-            ...Object.entries(mentorMap).map(([name, d]) => [name, d.total, d.completed, d.accepted, d.pending, d.rejected])
-          ]
-        : [['No mentor sessions in this date range.']];
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(mentorBreakdownRows), 'Mentor Performance');
-
-    // ── Sheet 4: Top Mentors All-Time ────────────────────────────────
-    const topMentorRows = [
-        ['Rank', 'Mentor', 'Total Sessions (All-Time)'],
-        ...topMentors.map((m, i) => [i + 1, m.name, m.count])
-    ];
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(topMentorRows), 'Top Mentors (All-Time)');
-
-    // ── Sheet 5: Most Booked Subjects All-Time ───────────────────────
-    const subjectRows = [
-        ['Rank', 'Subject Code', 'Total Bookings (All-Time)'],
-        ...topSubjects.map((s, i) => [i + 1, s.name, s.count])
-    ];
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(subjectRows), 'Top Subjects (All-Time)');
-
-    // ── Sheet 6: College Activity All-Time ───────────────────────────
-    const collegeRows = [
-        ['College', 'Student Count (All-Time)'],
-        ...Object.entries(collegeData).map(([college, count]) => [college, count])
-    ];
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(collegeRows), 'College Activity');
-
-    // ── Sheet 7: Monthly Trends ──────────────────────────────────────
-    const trendRows = [
-        ['Week', 'Session Count (This Month)'],
-        ...monthlyData.map((count, i) => [`Week ${i + 1}`, count])
-    ];
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(trendRows), 'Monthly Trends');
-
-    // ── Export ───────────────────────────────────────────────────────
-    XLSX.writeFile(wb, `lrc-weekly-report-${from}-to-${to}.xlsx`);
+    XLSX.writeFile(wb, `lrc-weekly-report-${fromStr}-to-${toStr}.xlsx`);
     document.getElementById('reportModal').style.display = 'none';
 }
 </script>
