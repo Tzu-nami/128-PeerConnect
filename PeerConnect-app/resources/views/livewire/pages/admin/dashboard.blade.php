@@ -1842,16 +1842,21 @@ function renderCalendar() {
 
     for (let i = 0; i < startDay; i++) grid.innerHTML += '<div></div>';
 
-    for (let i = 1; i <= lastDay; i++) {
-        const dateStr = `${viewDate.getFullYear()}-${String(viewDate.getMonth() + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
-        const isToday = dateStr === todayStr;
-        const isSelected = dateStr === selectedDateStr;
-        const dayEl = document.createElement('div');
-        dayEl.className = `cal-day ${isToday ? 'cal-today' : ''} ${isSelected ? 'cal-selected' : ''}`;
-        dayEl.innerHTML = `<span>${i}</span>`;
-        dayEl.onclick = () => { selectedDateStr = dateStr; currentPage = 1; applyFilters(); renderCalendar(); };
-        grid.appendChild(dayEl);
-    }
+for (let i = 1; i <= lastDay; i++) {
+    const dateStr = `${viewDate.getFullYear()}-${String(viewDate.getMonth() + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+    const isToday = dateStr === todayStr;
+    const isSelected = dateStr === selectedDateStr;
+    const hasAccepted = allSessions.some(s => s.date === dateStr && s.status === 'Accepted');
+    const dayEl = document.createElement('div');
+    dayEl.className = `cal-day ${isToday ? 'cal-today' : ''} ${isSelected ? 'cal-selected' : ''}`;
+    dayEl.style.position = 'relative';
+    dayEl.innerHTML = `
+        <span>${i}</span>
+        ${hasAccepted ? `<span style="position:absolute;top:2px;right:2px;width:6px;height:6px;background:#22c55e;border-radius:50%;border:1px solid white;"></span>` : ''}
+    `;
+    dayEl.onclick = () => { selectedDateStr = dateStr; currentPage = 1; applyFilters(); renderCalendar(); };
+    grid.appendChild(dayEl);
+}
 }
 
         function changeMonth(dir) {
