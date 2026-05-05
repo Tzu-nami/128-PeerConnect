@@ -528,7 +528,6 @@ mount(function () {
             </div>
         </div>
 
-        <!-- ── INLINE TABLE BANNER (Success Flash) ── -->
         @if(session('successMessage'))
             <div x-data="{ show: true }" 
                  x-cloak
@@ -547,9 +546,6 @@ mount(function () {
                         <i class="fa-solid fa-circle-check text-emerald-600"></i>
                         <span class="text-sm font-semibold">{{ session('successMessage') }}</span>
                     </div>
-                    <button @click="show = false" class="opacity-60 hover:opacity-100 transition">
-                        <i class="fa-solid fa-xmark text-sm"></i>
-                    </button>
                 </div>
             </div>
         @endif
