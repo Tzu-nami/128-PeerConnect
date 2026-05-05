@@ -1609,16 +1609,32 @@ filtered.forEach(r => {
         setInterval(updateClock, 1000);
 
         // Local State
-const allSessions = @json($allSessions).map(s => ({
-    ...s,
-    color: {
-        'Accepted':  'text-blue-600',
+const allSessions = @json($allSessions).map(s => {
+    const now = new Date();
+    const sessionDate = new Date(s.date + 'T00:00:00');
+    const rawStatus = s.status;
+    let status = rawStatus;
+
+    if (rawStatus === 'Accepted') {
+        if (sessionDate.toDateString() === now.toDateString()) status = 'Active';
+        else if (sessionDate < now) status = 'Completed';
+        else status = 'Upcoming';
+    }
+
+    const colorMap = {
         'Completed': 'text-green-600',
         'Pending':   'text-yellow-500',
         'Upcoming':  'text-orange-500',
         'Rejected':  'text-red-500',
-    }[s.status] ?? 'text-slate-400'
-}));
+    };
+
+    return {
+        ...s,
+        status,
+        rawStatus,
+        color: colorMap[status] ?? 'text-slate-400'
+    };
+});
 
 const _now = new Date();
 let selectedDateStr = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, '0')}-${String(_now.getDate()).padStart(2, '0')}`;
@@ -1846,7 +1862,7 @@ for (let i = 1; i <= lastDay; i++) {
     const dateStr = `${viewDate.getFullYear()}-${String(viewDate.getMonth() + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
     const isToday = dateStr === todayStr;
     const isSelected = dateStr === selectedDateStr;
-    const hasAccepted = allSessions.some(s => s.date === dateStr && s.status === 'Accepted');
+    const hasAccepted = allSessions.some(s => s.date === dateStr && s.rawStatus === 'Accepted');
     const dayEl = document.createElement('div');
     dayEl.className = `cal-day ${isToday ? 'cal-today' : ''} ${isSelected ? 'cal-selected' : ''}`;
     dayEl.style.position = 'relative';
