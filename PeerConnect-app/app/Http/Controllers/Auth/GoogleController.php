@@ -26,7 +26,7 @@ class GoogleController extends Controller
 
         //Block not up emails
         if (!Str::endsWith($googleUser->getEmail(), '@up.edu.ph')) {
-            return redirect()->route('login')->with('error', 'Only UP Mail accounts are allowed.');
+            return redirect()->route('login')->withErrors(['google' => 'Only UP Mail accounts are allowed.']);
         }
 
         // Extract name
