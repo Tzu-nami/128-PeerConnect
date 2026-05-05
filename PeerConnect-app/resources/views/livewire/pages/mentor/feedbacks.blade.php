@@ -258,10 +258,10 @@ $subjects = computed(function () {
                         </td>
 
                         {{-- Feedback --}}
-                        <td class="px-5 py-3" @click.stop="openFeedbackPopup(fb)">
+                        <td class="px-5 py-3">
                             <p class="text-xs text-slate-600 truncate bg-slate-100 px-2 py-1.5 rounded hover:bg-slate-200 transition"
                                x-init="$nextTick(() => { if ($el.scrollWidth > $el.clientWidth) $el.title = fb.feedback })"
-                               x-text="fb.feedback ?? '—'"></p>
+                               x-text="fb.feedback ?? '—'" @click.stop="openFeedbackPopup(fb)"></p>
                         </td>
 
                         {{-- Rating --}}
@@ -351,7 +351,10 @@ $subjects = computed(function () {
     </div>
 
     {{-- FEEDBACK POPUP --}}
-    <div class="feedback-popup-overlay" id="feedbackPopup" onclick="if(event.target===this) closeFeedbackPopup()">
+    <div class="feedback-popup-overlay" id="feedbackPopup" 
+         :class="{ 'open': showFeedbackPopup }" 
+         @click.self="closeFeedbackPopup()" x-cloak>
+         
         <div class="feedback-popup-box">
             <div class="feedback-popup-header">
                 <span>
@@ -362,27 +365,31 @@ $subjects = computed(function () {
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
-            <div class="feedback-popup-body" id="feedbackPopupBody"></div>
+            <div class="feedback-popup-body" id="feedbackPopupBody">
+            </div>
         </div>
     </div>
 
     {{-- DETAIL MODAL --}}
-    <div class="modal-overlay" id="feedbackModal" onclick="if(event.target===this) closeDetailModal()">
+    <div class="modal-overlay" id="feedbackModal" 
+         x-show="showDetailModal" 
+         @click.self="closeDetailModal()" x-cloak>
+         
         <div class="modal-box">
             <div class="modal-header">
                 <div style="min-width:0;flex:1;">
                     <h3 class="text-base font-bold text-slate-800">Session Feedback Details</h3>
                     <div id="modalMeta" style="margin-top:4px;"></div>
                 </div>
-                <button class="modal-close-btn" onclick="closeDetailModal()">
+                <button class="modal-close-btn" @click="closeDetailModal()">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
-            <div class="modal-body" id="modalBody"></div>
+            <div class="modal-body" id="modalBody">
+            </div>
         </div>
     </div>
 </div>
-
 <script>
     function openFeedbackPopup(data) {
         const body = document.getElementById('feedbackPopupBody');
@@ -509,12 +516,12 @@ $subjects = computed(function () {
             : `<p style="font-size:12px;color:#d1d5db;font-style:italic;padding:6px 0;">No additional remarks provided.</p>`;
 
         document.getElementById('modalBody').innerHTML = html;
-        document.getElementById('feedbackModal').classList.add('open');
+        document.getElementById('feedbackModal').style.display = 'flex'; 
         document.body.style.overflow = 'hidden';
     }
 
     function closeDetailModal() {
-        document.getElementById('feedbackModal').classList.remove('open');
+        document.getElementById('feedbackModal').style.display = 'none';
         if (!document.getElementById('feedbackPopup').classList.contains('open')) {
             document.body.style.overflow = '';
         }
