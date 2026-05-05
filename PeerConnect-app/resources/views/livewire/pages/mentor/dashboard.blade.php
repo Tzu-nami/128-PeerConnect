@@ -634,10 +634,20 @@ function getStatusColor(status) {
             </div>
         </td>
         <td class="py-3 text-center" style="width:20%">
-            <span class="${getStatusColor(row.status)} font-bold text-[10px] bg-gray-50 px-2 py-1 rounded border border-current opacity-80 capitalize">
+    ${row.status === 'accepted' ? `
+        <div class="flex items-center justify-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-green-400 inline-block flex-shrink-0"></span>
+            <span class="text-green-600 font-bold text-[10px] bg-gray-50 px-2 py-1 rounded border border-current opacity-80 capitalize">
                 ${getStatusLabel(row.status)}
             </span>
-        </td>
+        </div>
+    ` : `
+        <span class="${getStatusColor(row.status)} font-bold text-[10px] bg-gray-50 px-2 py-1 rounded border border-current opacity-80 capitalize">
+            ${getStatusLabel(row.status)}
+        </span>
+    `}
+</td>
+
     </tr>
 `).join('');
         }
