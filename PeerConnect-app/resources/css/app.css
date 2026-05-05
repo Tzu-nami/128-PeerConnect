@@ -741,6 +741,7 @@ body.app-layout { overflow: hidden; }
     z-index: 9999;
     padding: 24px;
 }
+
 .modal-overlay.open { display: flex; }
 
 .modal-box {
@@ -766,6 +767,14 @@ body.app-layout { overflow: hidden; }
     flex-shrink: 0;
 }
 
+.modal-box-crud {
+    background-color: #ffffff;
+    width: 100%;
+    border-radius: 1rem; /* rounded-2xl */
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); /* shadow-2xl */
+    overflow: hidden;
+}
+
 .modal-close-btn {
     width: 30px; height: 30px; border-radius: 50%; border: none;
     background: #f1f5f9; cursor: pointer; font-size: 14px; color: #64748b;
@@ -789,6 +798,11 @@ body.app-layout { overflow: hidden; }
     max-width: 380px; margin-top: 1px;
 }
 .modal-meta-date { display: block; font-size: 11px; color: #94a3b8; margin-top: 2px; }
+
+/* Form inputs styles */
+.form-input { width: 100%; padding: 10px 14px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 13px; outline: none; }
+.form-input:focus { border-color: var(--header-maroon); }
+.form-label { display: block; font-size: 13px; font-weight: 600; color: #475569; margin-bottom: 6px; }
 
 /* Session complete modal */
 #sessionCompleteModal      { display: none; }
@@ -1096,7 +1110,7 @@ td:last-child .hover-tooltip:hover::after { opacity: 1; transform: translate(0);
     white-space: normal;
     word-break: break-word;
     overflow-wrap: anywhere;
-    width: 320px; max-width: 320px;
+    width: max-content; max-width: 250px;
     opacity: 0;
     pointer-events: none;
     transform: translateY(5px);
@@ -1153,8 +1167,142 @@ td:last-child .hover-tooltip:hover::after { opacity: 1; transform: translate(0);
 .feedback-row { transition: background 0.15s; }
 .feedback-row:hover { background: #f1f5f9; cursor: pointer; }
 
-.session-row .action-buttons { opacity: 0; transform: translateX(6px); transition: opacity 0.15s ease,
+/* Table Actions buttons */
+.session-row .action-buttons,
+.mentor-row .action-buttons { opacity: 0; transform: translateX(6px); transition: opacity 0.15s ease, 
     transform 0.15s ease; pointer-events: none; }
-.session-row:hover .action-buttons { opacity: 1; transform: translateX(0); pointer-events: auto; }
-.session-row .action-idle { opacity: 1; transition: opacity 0.15s ease; }
-.session-row:hover .action-idle { opacity: 0; }
+.session-row:hover .action-buttons,
+.mentor-row:hover .action-buttons { opacity: 1; transform: translateX(0); pointer-events: auto; }
+.session-row .action-idle,
+.mentor-row .action-idle { opacity: 1; transition: opacity 0.15s ease; }
+.session-row:hover .action-idle,
+.mentor-row:hover .action-idle { opacity: 0; }
+
+/* Dialog buttons */
+.btn-modal {
+    flex: 1 1 0%;
+    padding: 0.75rem 0;
+    border-radius: 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-align: center;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+}
+
+.btn-modal:disabled {
+    cursor: not-allowed;
+}
+
+/* Cancel */
+.btn-modal-cancel {
+    background-color: #e5e7eb;
+    color: #1f2937;
+}
+.btn-modal-cancel:hover:not(:disabled) {
+    background-color: #d1d5db;
+}
+
+/* CONFIRM BUTTONS */
+.btn-modal-red {
+    background-color: #991b1b;
+    color: #ffffff;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+.btn-modal-red:hover:not(:disabled) {
+    background-color: #7f1d1d;
+}
+.btn-modal-blue {
+    background-color: #2563eb;
+    color: #ffffff;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+.btn-modal-blue:hover:not(:disabled) {
+    background-color: #1e40af;
+}
+.btn-modal-green {
+    background-color: #15803D;
+    color: #ffffff;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+.btn-modal-green:hover:not(:disabled) {
+    background-color: #166534;
+}
+
+/* Action buttons */
+.icon-btn {
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    cursor: pointer;
+    transition: all 0.15s ease-in-out;
+}
+
+.icon-btn:hover {
+    transform: scale(1.1);
+}
+
+/* View (Gray) */
+.icon-btn-view {
+    background-color: #f3f4f6;
+    color: #475569;
+}
+.icon-btn-view:hover {
+    background-color: #e5e7eb;
+    color: #1e293b;
+}
+
+/* Edit (Blue) */
+.icon-btn-edit {
+    background-color: #eff6ff;
+    color: #2563eb;
+}
+.icon-btn-edit:hover {
+    background-color: #dbeafe;
+    color: #1d4ed8;
+}
+
+/* Delete (Red) */
+.icon-btn-delete {
+    background-color: #fef2f2;
+    color: #ef4444;
+}
+.icon-btn-delete:hover {
+    background-color: #fee2e2;
+    color: #dc2626;
+}
+
+/* Availability schedule display */
+.avail-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; }
+.avail-day-header { font-size: 9px; font-weight: 800; text-align: center; color: #94a3b8; text-transform: uppercase; padding-bottom: 4px; }
+.avail-day-col { display: flex; flex-direction: column; gap: 3px; }
+.avail-slot { background: #d1fae5; color: #065f46; font-size: 9px; font-weight: 700; padding: 3px 4px; border-radius: 4px; text-align: center; line-height: 1.3; }
+.avail-empty { background: #f8fafc; border: 1px dashed #e2e8f0; border-radius: 4px; height: 28px; }
+
+/* Number badges */
+.step-badge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.25rem;
+    height: 1.25rem;
+    background-color: #1e293b;
+    color: #ffffff;
+    border-radius: 9999px;
+    font-size: 10px;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+.step-title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #9ca3af;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin: 0;
+}

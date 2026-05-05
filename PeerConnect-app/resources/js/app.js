@@ -907,7 +907,7 @@ Alpine.data('sessionManagement', (initialSessions = [], initialCounts = {}) => (
     },
 
     // Stat cards info
-recalculateCounts() {
+    recalculateCounts() {
         this.counts.total = this.sessions.length;
         this.counts.accepted = this.sessions.filter(s => s.status === 'accepted').length;
         this.counts.pending = this.sessions.filter(s => s.status === 'pending').length;
@@ -960,38 +960,205 @@ recalculateCounts() {
         return `${hrs} hr ${mins} min`;
     },
 
-async saveEndTime() {
-    this.editEndTimeError = '';
-    const [sh, sm] = this.editSession.start.split(':').map(Number);
-    const [eh, em] = this.editEndTime.split(':').map(Number);
-    if ((eh * 60 + em) <= (sh * 60 + sm)) {
-        this.editEndTimeError = 'End time must be after the start time.';
-        return;
-    }
-    this.isSavingEdit = true;
-    try {
-        const formData = new FormData();
-        formData.append('_token', document.querySelector('meta[name="csrf-token"]').content);
-        formData.append('booking_id', this.editSession.id);
-        formData.append('end_time', this.editEndTime);
+    async saveEndTime() {
+        this.editEndTimeError = '';
+        const [sh, sm] = this.editSession.start.split(':').map(Number);
+        const [eh, em] = this.editEndTime.split(':').map(Number);
+        if ((eh * 60 + em) <= (sh * 60 + sm)) {
+            this.editEndTimeError = 'End time must be after the start time.';
+            return;
+        }
+        this.isSavingEdit = true;
+        try {
+            const formData = new FormData();
+            formData.append('_token', document.querySelector('meta[name="csrf-token"]').content);
+            formData.append('booking_id', this.editSession.id);
+            formData.append('end_time', this.editEndTime);
 
-        const res = await fetch('/admin/sessions/update-end-time', { method: 'POST', body: formData });
-        if (!res.ok) throw new Error('Request failed');
+            const res = await fetch('/admin/sessions/update-end-time', { method: 'POST', body: formData });
+            if (!res.ok) throw new Error('Request failed');
 
-        this.editSession.end = this.editEndTime;
-        this.editSession.time = this.formatTo12h(this.editSession.start) + ' – ' + this.formatTo12h(this.editEndTime);
+            this.editSession.end = this.editEndTime;
+            this.editSession.time = this.formatTo12h(this.editSession.start) + ' – ' + this.formatTo12h(this.editEndTime);
 
-        const diffMins = (eh * 60 + em) - (sh * 60 + sm);
-        const diffHours = diffMins / 60;
-        const durationText = diffHours === 1 ? '1 hr' : String(diffHours.toFixed(2)).replace(/\.?0+$/, '');
-        this.editSession.duration = this.formatTo12h(this.editSession.start) + ' - ' + this.formatTo12h(this.editEndTime) + ' (' + durationText + ')';
-        this.editSession.durationHours = diffHours;
+            const diffMins = (eh * 60 + em) - (sh * 60 + sm);
+            const diffHours = diffMins / 60;
+            const durationText = diffHours === 1 ? '1 hr' : String(diffHours.toFixed(2)).replace(/\.?0+$/, '');
+            this.editSession.duration = this.formatTo12h(this.editSession.start) + ' - ' + this.formatTo12h(this.editEndTime) + ' (' + durationText + ')';
+            this.editSession.durationHours = diffHours;
 
-        this.closeEditModal();
-    } catch (err) {
-        this.editEndTimeError = 'Failed to save. Please try again.';
-    } finally {
-        this.isSavingEdit = false;
-    }
-},
+            this.closeEditModal();
+        } catch (err) {
+            this.editEndTimeError = 'Failed to save. Please try again.';
+        } finally {
+            this.isSavingEdit = false;
+        }
+    },
 }));
+
+// Mentor CRUD applications
+document.addEventListener('alpine:init', () => {
+    Alpine.data('mentorManagement', (initialMentors, wire)  => ({
+        mentors: initialMentors,
+        searchQuery: '',
+        currentPage: 1,
+        perPage: 5,
+        sortColumn: 'name',
+        sortDirection: 'asc',
+        showViewModal: false,
+        selectedMentor: null,
+        showEditModal: false,
+        editingMentor: null,
+        editForm: { subjects: [], availabilities: [] },
+        originalForm:  { subjects: [], availabilities: [] },
+        showDeleteConfirm: false,
+        mentorToDelete: null,
+        weekDays: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'],
+
+        banner: { show: false, message: '', type: 'success', timer: null },
+
+        init() {
+
+            window.addEventListener('click', () => {
+                document.getElementById('mentorDropdown')?.classList.add('hidden');
+            });
+        },
+
+        triggerBanner(message, type = 'success') {
+            this.banner.message = message;
+            this.banner.type = type;
+            this.banner.show = true;
+            
+            clearTimeout(this.banner.timer);
+            this.banner.timer = setTimeout(() => { this.banner.show = false; }, 5000);
+        },
+
+        setSort(col) {
+            if (this.sortColumn === col) {
+                this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
+            } else {
+                this.sortColumn = col;
+                this.sortDirection = 'asc';
+            }
+            this.currentPage = 1;
+        },
+
+        sortIndicator(col) {
+            if (this.sortColumn !== col) return '';
+            return this.sortDirection === 'asc' ? ' ↑' : ' ↓';
+        },
+
+        get filteredMentors() {
+            const q = this.searchQuery.toLowerCase();
+            let list = this.mentors.filter(m => {
+                const str = [m.firstName, m.lastName, m.email, m.student_num || '', m.subjectsTable, m.degreeProgram, m.yearLevel].join(' ').toLowerCase();
+                return str.includes(q);
+            });
+
+            const col = this.sortColumn;
+            const dir = this.sortDirection === 'asc' ? 1 : -1;
+
+            return list.sort((a, b) => {
+                let valA, valB;
+                if (col === 'name') {
+                    valA = (a.lastName + ' ' + a.firstName).toLowerCase();
+                    valB = (b.lastName + ' ' + b.firstName).toLowerCase();
+                } else if (col === 'student_num') {
+                    valA = (a.student_num || '').toLowerCase();
+                    valB = (b.student_num || '').toLowerCase();
+                } else if (col === 'email') {
+                    valA = (a.email || '').toLowerCase();
+                    valB = (b.email || '').toLowerCase();
+                } else {
+                    valA = ''; valB = '';
+                }
+                if (valA < valB) return -1 * dir;
+                if (valA > valB) return 1 * dir;
+                return 0;
+            });
+        },
+
+        get paginatedMentors() {
+            const start = (this.currentPage - 1) * this.perPage;
+            return this.filteredMentors.slice(start, start + this.perPage);
+        },
+
+        get pageStart() {
+            return this.filteredMentors.length === 0 ? 0 : (this.currentPage - 1) * this.perPage + 1;
+        },
+
+        get pageEnd() {
+            return Math.min(this.currentPage * this.perPage, this.filteredMentors.length);
+        },
+
+        get totalPages() {
+            return Math.ceil(this.filteredMentors.length / this.perPage) || 1;
+        },
+
+        get pages() {
+            const total = this.totalPages;
+            const current = this.currentPage;
+
+            if(total <= 8) return Array.from({ length: total }, (_, i) => i + 1);
+            if(current <= 4) return [1, 2, 3, 4, 5, '...', total];
+            if(current >= total - 3) return [1, '...', total - 3, total - 2, total - 1, total];
+
+            return [1, '...', current - 1, current, current + 1, '...', total];
+        },
+
+        convertTime(timeStr) {
+            if (!timeStr) return '';
+            const [time, modifier] = timeStr.split(' ');
+            let [hours, minutes] = time.split(':');
+            if (hours === '12') hours = '00';
+            if (modifier === 'PM') hours = (parseInt(hours, 10) + 12).toString();
+            return `${hours.padStart(2, '0')}:${minutes}`;
+        },
+
+        openViewModal(mentor) {
+            this.selectedMentor = mentor;
+            this.showViewModal = true;
+        },
+
+        openEditModal(mentor) {
+            this.editingMentor = mentor;
+            this.editForm.subjects = mentor.subjects.map(s => s.id.toString());
+            let avails = [];
+            for (const day in mentor.schedule) {
+                mentor.schedule[day].slots.forEach(slot => {
+                    avails.push({
+                        id: Date.now() + Math.random(),
+                        day_of_week: day.toLowerCase(),
+                        start_time: this.convertTime(slot.start),
+                        end_time: this.convertTime(slot.end)
+                    });
+                });
+            }
+            if (avails.length === 0) {
+                avails.push({ id: Date.now() + Math.random(), day_of_week: '', start_time: '', end_time: '' });
+            }
+            this.editForm.availabilities = avails;
+            
+            // Check if there are any new inputs
+            this.originalForm = {
+                subjects: [...this.editForm.subjects],
+                availabilities: this.editForm.availabilities.map(a => ({
+                    day_of_week: a.day_of_week,
+                    start_time: a.start_time,
+                    end_time: a.end_time,
+                }))
+            };
+
+            this.showEditModal = true;
+            this.$nextTick(() => {
+                const scrollBox = document.getElementById('editModalScroll');
+                if (scrollBox) scrollBox.scrollTop = 0;
+            });
+        },
+
+        openDeleteModal(mentor) {
+            this.mentorToDelete = mentor;
+            this.showDeleteConfirm = true;
+        }
+    }));
+});
