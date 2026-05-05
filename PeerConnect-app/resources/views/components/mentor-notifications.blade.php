@@ -215,12 +215,6 @@
         {{-- Header --}}
         <div class="px-4 py-3 border-b border-gray-100 bg-slate-50 flex items-center justify-between">
             <p class="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Notifications</p>
-            @if($notifications->count() > 3)
-                <button @click="showAll = !showAll"
-                        class="text-[10px] font-bold text-red-800 hover:text-red-600 transition">
-                    <span x-text="showAll ? 'Show Less' : 'Show All ({{ $notifications->count() }})'"></span>
-                </button>
-            @endif
         </div>
 
         {{-- Notification List --}}
