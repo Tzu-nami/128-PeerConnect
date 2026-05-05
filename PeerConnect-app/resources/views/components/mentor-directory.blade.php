@@ -147,7 +147,7 @@
 
     {{-- Modal --}}
     <template x-teleport="body">
-        <div class="modal-overlay" x-show="showModal" @click.self="showModal = false" x-cloak>
+        <div class="modal-overlay" x-show="showModal" @click.self="showModal = false">
             <div class="bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col" style="max-height: 90vh;">
                 <template x-if="selectedMentor">
                     <div class="contents">
@@ -218,7 +218,7 @@
 
                         {{-- Modal Footer --}}
                         <div class="flex-shrink-0 px-6 py-4 bg-[#fffffa] border-t border-gray-100">
-                            @if($isAuthenticated)
+                            @auth
                                 <a :href="selectedMentor.bookingUrl"
                                    class="block w-full text-center bg-[#1a3c2f] hover:bg-[#2d5c47] text-white text-sm font-bold py-3 rounded-xl transition shadow-sm">
                                     <i class="fa-solid fa-calendar-check mr-2"></i> Book a Session
@@ -228,7 +228,7 @@
                                    class="block w-full text-center bg-[#1a3c2f] hover:bg-[#2d5c47] text-white text-sm font-bold py-3 rounded-xl transition shadow-sm">
                                     <i class="fa-solid fa-right-to-bracket mr-2"></i> Log in to Book a Session
                                 </a>
-                            @endif
+                            @endauth
                         </div>
 
                     </div>
