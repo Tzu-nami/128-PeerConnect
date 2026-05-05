@@ -34,16 +34,18 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Sidebar toggle
-    const sidebar       = document.getElementById('sidebar');
-    const sidebarToggle = document.getElementById('sidebarToggle');
-    if (sidebar && sidebarToggle) {
-        sidebarToggle.addEventListener('click', () => {
-            sidebar.classList.toggle('collapsed');
-            setTimeout(() => {
-                window.__dashboardCharts?.forEach(c => c.resize());
-            }, 310);
-        });
-    }
+    document.addEventListener('click', (e) => {
+        const toggleBtn = e.target.closest('#sidebarToggle');
+        if (!toggleBtn) return;
+
+        const sidebar = document.getElementById('sidebar');
+        if (!sidebar) return;
+
+        sidebar.classList.toggle('collapsed');
+        setTimeout(() => {
+            window.__dashboardCharts?.forEach(c => c.resize());
+        }, 310);
+    });
 });
 
 // Close modal on esc keypress
@@ -444,8 +446,6 @@ Alpine.data('tutorialSessions', (initialData = [], perPage = 5) => ({
         updateStatus(id, status, this.items);
     },
 }));
-
-
 
 // Feedback Table
 Alpine.data('feedbackManagement', (initialFeedbacks = []) => ({
