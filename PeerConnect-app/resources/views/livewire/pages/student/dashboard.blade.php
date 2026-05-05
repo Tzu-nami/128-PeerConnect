@@ -319,7 +319,7 @@ $saveProfile = action(function () {
                 <div class="flex justify-between items-center mb-6">
                     <div>
                         <h2 class="text-lg font-bold text-slate-800" id="tableTitle">
-                            Today's Schedule
+                            <i class="fa-solid fa-calendar-check"></i> Today's Schedule
                         </h2>
                         <p class="text-s text-gray-500" id="tableSubtitle"></p>
                     </div>
@@ -341,7 +341,6 @@ $saveProfile = action(function () {
                         <select id="statusFilter" class="table-filter-select">
                             <option value="">All</option>
                             <option value="pending">Pending</option>
-                            <option value="accepted">Accepted</option>
                             <option value="completed">Completed</option>
                             <option value="cancelled">Cancelled</option>
                             <option value="rejected">Rejected</option>
@@ -589,19 +588,19 @@ $saveProfile = action(function () {
             </div>
 
             {{-- Upcoming Sessions --}}
-            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 animate-fade-up [animation-delay:200ms]">
+<div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 animate-fade-up [animation-delay:200ms]">
 
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="font-bold text-slate-800 text-sm tracking-tight">
-                        My Upcoming Sessions
-                    </h3>
-                    <span id="upcomingBadge"
-                          class="bg-blue-100 text-blue-700 text-[10px] font-bold
-                                 px-2 py-0.5 rounded-full">
-                    </span>
-                </div>
+    <div class="flex justify-between items-center mb-3">
+        <h3 class="font-bold text-slate-800 text-sm tracking-tight">
+            My Upcoming Sessions
+        </h3>
+        <span id="upcomingBadge"
+              class="bg-blue-100 text-blue-700 text-[10px] font-bold
+                     px-2 py-0.5 rounded-full">
+        </span>
+    </div>
 
-                <div id="upcomingSessionsList" class="flex flex-col gap-4"></div>
+    <div id="upcomingSessionsList" class="flex flex-col gap-2"></div>
 
                 <div id="upcomingPagination"
                      class="hidden mt-3 flex items-center justify-between px-1
@@ -669,17 +668,17 @@ $saveProfile = action(function () {
         return `${h}:${minute} ${ampm}`;
     }
 
-    function getStatusColor(status) {
-        switch (status) {
-            case 'pending':   return 'bg-yellow-100 text-yellow-800';
-            case 'accepted':  return 'bg-green-100 text-green-800';
-            case 'completed': return 'text-gray-900 bg-gray-100';
-            case 'rejected':  return 'bg-red-100 text-red-800';
-            case 'cancelled': return 'bg-red-100 text-red-800';
-            case 'no_show':   return 'bg-red-100 text-red-800';
-            default:          return 'bg-gray-100 text-gray-800';
-        }
-    }
+ function getStatusColor(status) {
+    const map = {
+        pending:   'text-yellow-500',
+        accepted:  'text-green-600',
+        completed: 'text-green-600',
+        rejected:  'text-red-500',
+        cancelled: 'text-red-600',
+        no_show:   'text-orange-600',
+    };
+    return map[status] ?? 'text-slate-400';
+}
 
     function getStatusLabel(status) {
         switch (status) {
@@ -724,7 +723,7 @@ function renderStatCards() {
 
     const totalHours   = Math.floor(totalMinutes / 60);
     const totalMins    = totalMinutes % 60;
-    const hoursDisplay = `${(totalMinutes / 60).toFixed(2)}h`;
+    const hoursDisplay = `${(totalMinutes / 60).toFixed(2)}`;
 
     document.getElementById('statTotalHours').innerText      = hoursDisplay;
 
@@ -784,23 +783,32 @@ function renderStatCards() {
             tbody.innerHTML = `<tr><td colspan="4" class="py-12 text-center text-gray-400 italic">No sessions for this date.</td></tr>`;
         } else {
             tbody.innerHTML = visible.map(row => `
-                <tr class="border-b last:border-0 hover:bg-slate-50 transition">
-                    <td class="py-4 text-slate-700" style="width:35%">
-                        <div class="hover-tooltip" data-full="${row.mentor}" style="max-width:260px;">
-                            <div id="name-${row.id}" style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis;max-width:90%;">${row.mentor}</div>
-                        </div>
-                    </td>
-                    <td class="text-slate-500" style="width:30%;white-space:nowrap;">${formatTimeTo12Hour(row.start)} - ${formatTimeTo12Hour(row.end)}</td>
-                    <td class="text-slate-600 truncate" style="width:20%">${row.subject}</td>
-                    <td style="width:20%">
-                        <div class="flex items-center justify-center">
-                            <span class="${getStatusColor(row.status)} font-bold text-xs px-2.5 py-1 rounded-full capitalize">
-                                ${getStatusLabel(row.status)}
-                            </span>
-                        </div>
-                    </td>
-                </tr>
-            `).join('');
+    <tr class="border-b last:border-0 hover:bg-slate-50 transition">
+        <td class="py-3 max-w-0" style="width:22%;">
+            <div class="hover-tooltip" data-full="${row.mentor}" style="max-width:260px;">
+                <div id="name-${row.id}" class="truncate text-xs font-bold text-slate-700">${row.mentor}</div>
+            </div>
+        </td>
+        <td class="py-3 text-xs text-slate-500" style="width:30%;white-space:nowrap;">${formatTimeTo12Hour(row.start)} – ${formatTimeTo12Hour(row.end)}</td>
+        <td class="py-3 max-w-0" style="width:28%;">
+            <div class="truncate text-xs text-slate-600">${row.subject}</div>
+        </td>
+        <td class="py-3 text-center" style="width:20%">
+            ${row.status === 'accepted' ? `
+                <div class="flex items-center justify-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-green-400 inline-block flex-shrink-0"></span>
+                    <span class="text-green-600 font-bold text-[10px] bg-gray-50 px-2 py-1 rounded border border-current opacity-80 capitalize">
+                        ${getStatusLabel(row.status)}
+                    </span>
+                </div>
+            ` : `
+                <span class="${getStatusColor(row.status)} font-bold text-[10px] bg-gray-50 px-2 py-1 rounded border border-current opacity-80 capitalize">
+                    ${getStatusLabel(row.status)}
+                </span>
+            `}
+        </td>
+    </tr>
+`).join('');
         }
 
         // Sort header indicators
@@ -1087,8 +1095,10 @@ function renderStatCards() {
             if (dateStr === selectedDateStr)   dayEl.classList.add('cal-selected');
 
             const hasSession = hasSessionOnDate(dateStr);
-            dayEl.innerHTML = `<span style="position:relative;z-index:1;">${i}</span>${hasSession ? `<div class="notif-dot"></div>` : ''}`;
-
+dayEl.innerHTML = `
+    ${hasSession ? `<span style="position:absolute;top:2px;right:2px;width:6px;height:6px;background:#22c55e;border-radius:50%;border:1px solid white;"></span>` : ''}
+    <span style="position:relative;z-index:1;">${i}</span>`;
+    
             dayEl.onclick = () => {
                 selectedDateStr = dateStr;
                 tablePage = 0;
@@ -1147,25 +1157,30 @@ function renderStatCards() {
         const hasNext = upcomingPage < maxPage;
 
         container.innerHTML = visible.map(s => `
-            <div class="flex items-center justify-between group">
-                <div class="flex items-center gap-3">
-                    <div class="w-8 h-8 rounded-full bg-green-100 text-green-700 flex items-center justify-center text-[10px] font-bold flex-shrink-0">
-                        ${s.mentor.slice(0, 2).toUpperCase()}
-                    </div>
-                    <div>
-                        <div style="max-width:180px;">
-                            <div id="uname-${s.id}" style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-size:11px;font-weight:700;color:#1e293b;" title="${s.mentor}">${s.mentor}</div>
-                            <button onclick="toggleUpcomingName('${s.id}')" id="utoggle-${s.id}" style="font-size:9px;color:#7b1d1d;font-weight:600;margin-top:1px;background:none;border:none;cursor:pointer;padding:0;display:none;">Show more</button>
-                        </div>
-                        <p class="text-[9px] text-gray-400 font-medium">${s.subject} • ${formatTimeTo12Hour(s.start)} – ${formatTimeTo12Hour(s.end)}</p>
-                        <p class="text-[9px] text-gray-400">${new Date(s.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
-                    </div>
-                </div>
-                <span class="${getStatusColor(s.status)} font-bold text-xs px-2.5 py-1 rounded-full capitalize flex-shrink-0">
-                    ${getStatusLabel(s.status)}
-                </span>
+        <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-full bg-green-100 text-green-700 flex items-center justify-center text-[10px] font-bold flex-shrink-0">
+            ${s.mentor.slice(0, 2).toUpperCase()}
+        </div>
+        <div class="min-w-0 flex-1">
+            <div style="max-width:160px;">
+                <div id="uname-${s.id}"
+                     style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis;
+                            font-size:11px;font-weight:700;color:#1e293b;"
+                     title="${s.mentor}">${s.mentor}</div>
+                <button onclick="toggleUpcomingName('${s.id}')" id="utoggle-${s.id}"
+                        style="font-size:9px;color:#7b1d1d;font-weight:600;margin-top:1px;
+                               background:none;border:none;cursor:pointer;padding:0;display:none;">
+                    Show more
+                </button>
             </div>
-        `).join('');
+            <p class="text-[9px] text-gray-400 font-medium">
+                ${s.subject} • ${formatTimeTo12Hour(s.start)} – ${formatTimeTo12Hour(s.end)}
+            </p>
+            <p class="text-[9px] text-gray-400">
+                ${new Date(s.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+            </p>
+        </div>
+`).join('');
 
         visible.forEach(s => {
             const nameEl   = document.getElementById('uname-' + s.id);

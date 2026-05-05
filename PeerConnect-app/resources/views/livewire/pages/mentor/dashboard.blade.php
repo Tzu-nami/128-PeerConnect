@@ -867,7 +867,7 @@ function hasUpcomingOnDate(dateStr) {
             if (dateStr === selectedDateStr) dayEl.classList.add('cal-selected');
 
 dayEl.innerHTML = `
-    ${hasUpcomingOnDate(dateStr) ? '<div style="position:absolute;top:2px;left:2px;width:6px;height:6px;background:#22c55e;border-radius:50%;z-index:2;"></div>' : ''}
+    ${hasUpcomingOnDate(dateStr) ? '<span style="position:absolute;top:2px;right:2px;width:6px;height:6px;background:#22c55e;border-radius:50%;border:1px solid white;"></span>' : ''}
     <span style="position:relative;z-index:1;">${i}</span>`;
 
             dayEl.onclick = () => {

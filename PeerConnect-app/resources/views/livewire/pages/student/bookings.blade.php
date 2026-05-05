@@ -972,12 +972,12 @@ $skipFeedback = action(function () {
                 {{-- Booking Form --}}
             @elseif (!$this->completedBooking)
                 <div class="flex-1 min-w-0 items-center gap-4 rounded-lg pb-6 pt-0">
-                    <h1 class="text-3xl font-extrabold tracking-tight text-transparent bg-clip-text bg-up-maroon flex items-center gap-3">
-                        Request An Enrichment Session
-                    </h1>
-                    <p class="text-sm font-medium text-slate-500 leading-snug mt-1">
-                        Please fill out the details below. Your request will be reviewed by the peer mentor.
-                    </p>
+                  <h1 class="text-3xl font-extrabold tracking-tight text-transparent bg-clip-text bg-up-maroon flex items-center gap-3">
+    Request An Enrichment Session
+</h1>
+<p class="text-sm font-medium text-slate-500 leading-snug mt-1">
+    Please fill out the details below. Your request will be reviewed by the peer mentor.
+</p>
                 </div>
 
                 <div class="bg-white pl-6 pr-6 pb-6 pt-4 rounded-lg shadow-sm border-gray-200 overflow-visible"
@@ -1122,11 +1122,10 @@ $skipFeedback = action(function () {
 
                         {{-- Subject --}}
                         <div>
-                            <label class="block text-base font-medium text-gray-700 mb-1">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
                                 Subject<span class="text-red-500">*</span>
                             </label>
-                            <select wire:model="subject_id" class="w-full rounded-lg border-gray-300 shadow-sm text-base px-2 py-1 transition-colors">
-                                <option value="" disabled>--- Select a Subject ---</option>
+<select wire:model="subject_id" class="w-full rounded-lg border-gray-300 shadow-sm text-sm px-3 py-2 h-[38px] transition-colors">                                <option value="" disabled>--- Select a Subject ---</option>
                                 @foreach ($this->subjects as $subject)
                                     <option value="{{ $subject->id }}">
                                         {{ strtoupper($subject->code) }} - {{ $subject->name }}
@@ -1144,12 +1143,11 @@ $skipFeedback = action(function () {
 
                         {{-- Topic --}}
                         <div>
-                            <label class="block text-base font-medium text-gray-700 mb-1">
-                                Topic<span class="text-red-500">*</span>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                    Topic<span class="text-red-500">*</span>
                             </label>
                             <input type="text" wire:model="topic"
-                                   class="w-full rounded-lg border-gray-300 shadow-sm text-base px-2 py-1 transition-colors"
-                                   placeholder="e.g. Integration by Parts."
+                                class="w-full rounded-lg border-gray-300 shadow-sm text-sm px-3 py-2 h-[38px] transition-colors"                                   placeholder="e.g. Integration by Parts."
                                    maxlength="255">
                             @error('topic')
                             <span x-show="showError('topic')" x-cloak
@@ -1162,10 +1160,10 @@ $skipFeedback = action(function () {
 
                         {{-- Tutorial Mode --}}
                         <div>
-                            <label class="block text-base font-medium text-gray-700 mb-1">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
                                 Tutorial Mode<span class="text-red-500">*</span>
                             </label>
-                            <select wire:model="tutorialMode_id" class="w-full rounded-lg border-gray-300 shadow-sm text-base px-2 py-1 transition-colors">
+                            <select wire:model="tutorialMode_id" class="w-full rounded-lg border-gray-300 shadow-sm text-sm px-3 py-2 h-[38px] transition-colors">
                                 <option value="" disabled>--- Select Mode of Tutoring ---</option>
                                 @foreach ($this->tutorialModes as $mode)
                                     <option value="{{ $mode->id }}">{{ $mode->mode }}</option>
@@ -1185,7 +1183,7 @@ $skipFeedback = action(function () {
 
                             {{-- Preferred Day --}}
                             <div x-data="bookingDatePicker()" x-init="init()" @click.outside="close()">
-                                <label class="block text-base font-medium text-gray-700 mb-1">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">
                                     Preferred Day<span class="text-red-500">*</span>
                                 </label>
                                 <div class="custom-date-picker">
@@ -1247,7 +1245,7 @@ $skipFeedback = action(function () {
 
                             {{-- Start Time --}}
                             <div x-data="bookingTimePicker('schedule_start')" x-init="init()" @click.outside="close()">
-                                <label class="block text-base font-medium text-gray-700 mb-1">Start Time<span class="text-red-500">*</span></label>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Start Time<span class="text-red-500">*</span></label>
                                 <div class="custom-time-picker">
                                     <div class="custom-time-display" :class="{ active: open }" @click="toggle()">
                                         <div class="time-icon"><i class="fa-regular fa-clock"></i></div>
@@ -1293,7 +1291,7 @@ $skipFeedback = action(function () {
 
                             {{-- End Time --}}
                             <div x-data="bookingTimePicker('schedule_end')" x-init="init()" @click.outside="close()">
-                                <label class="block text-base font-medium text-gray-700 mb-1">End Time<span class="text-red-500">*</span></label>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">End Time<span class="text-red-500">*</span></label>
                                 <div class="custom-time-picker">
                                     <div class="custom-time-display" :class="{ active: open }" @click="toggle()">
                                         <div class="time-icon"><i class="fa-regular fa-clock"></i></div>
@@ -1342,11 +1340,11 @@ $skipFeedback = action(function () {
 
                         {{-- Preferred Mentor --}}
                         <div>
-                            <label class="block text-base font-medium text-gray-700 mb-1">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
                                 Preferred Mentor<span class="text-red-500">*</span>
                             </label>
                             <select wire:model="mentor_id" :disabled="isMentorLocked"
-                                    class="w-full rounded-lg border-gray-300 shadow-sm text-base px-2 py-1 disabled:bg-gray-100 disabled:text-gray-900 disabled:cursor-not-allowed transition-colors">
+                                    class="w-full rounded-lg border-gray-300 shadow-sm text-sm px-3 py-2 h-[38px] disabled:bg-gray-100 disabled:text-gray-900 disabled:cursor-not-allowed transition-colors">
                                 <option value=""
                                         x-text="filteredMentors.length === 0
                                             ? '--- No mentors available. Please select a different date or time slot. ---'

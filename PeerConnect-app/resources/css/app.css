@@ -529,12 +529,10 @@ body.app-layout { overflow: hidden; }
 }
 
 .cal-day {
-    aspect-ratio: 1 / 1;
+    aspect-ratio: 1/1;
     display: flex;
-    flex-direction: column;
     align-items: center;
     justify-content: center;
-    position: relative;
     border-radius: 6px;
     transition: all 0.15s;
     cursor: pointer;
@@ -542,6 +540,7 @@ body.app-layout { overflow: hidden; }
     font-weight: 500;
     color: #475569;
     width: 100%;
+    position: relative;
 }
 
 .cal-day:hover   { background: #f1f5f9; color: #1e293b; }
