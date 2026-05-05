@@ -430,65 +430,53 @@ $saveProfile = action(function () {
             {{-- end Today's Schedule Table --}}
 
 
-            {{-- ── Stats Row ── --}}
-            <div class="grid grid-cols-3 gap-4 animate-fade-up [animation-delay:200ms]">
+ {{-- ── Stats Row ── --}}
+<div class="grid grid-cols-3 gap-4 animate-fade-up [animation-delay:200ms]">
 
-                <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100
-                            flex items-center gap-4">
-                    <div class="w-10 h-10 rounded-full bg-blue-50 flex items-center
-                                justify-center flex-shrink-0">
-                        <i class="fa-solid fa-clock text-blue-600 text-sm"></i>
-                    </div>
-                    <div>
-                        <p class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
-                            Total Session Hours
-                        </p>
-                        <p class="text-2xl font-bold text-slate-800 leading-tight" id="statTotalHours">
-                            0h
-                        </p>
-                        <p class="text-[10px] text-gray-400 mt-0.5" id="statTotalHoursLabel">
-                            all time
-                        </p>
-                    </div>
-                </div>
+    <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-blue-600
+                flex items-center gap-4 hover:shadow-md hover:-translate-y-0.5
+                transition-all duration-200">
+        <div class="text-2xl flex-shrink-0">
+            <i class="fa-solid fa-clock text-blue-600"></i>
+        </div>
+        <div class="min-w-0 flex-1">
+            <h3 class="text-xs font-bold text-gray-400 uppercase leading-none truncate">
+                Total Session Hours
+            </h3>
+            <p class="text-2xl font-black truncate" id="statTotalHours">0h</p>
+        </div>
+    </div>
 
-                <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100
-                            flex items-center gap-4">
-                    <div class="w-10 h-10 rounded-full bg-green-50 flex items-center
-                                justify-center flex-shrink-0">
-                        <i class="fa-solid fa-circle-check text-green-600 text-sm"></i>
-                    </div>
-                    <div>
-                        <p class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
-                            Completed
-                        </p>
-                        <p class="text-2xl font-bold text-slate-800 leading-tight" id="statCompleted">
-                            0
-                        </p>
-                        <p class="text-[10px] text-gray-400 mt-0.5">sessions</p>
-                    </div>
-                </div>
+    <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-green-600
+                flex items-center gap-4 hover:shadow-md hover:-translate-y-0.5
+                transition-all duration-200">
+        <div class="text-2xl flex-shrink-0">
+            <i class="fa-solid fa-circle-check text-green-600"></i>
+        </div>
+        <div class="min-w-0 flex-1">
+            <h3 class="text-xs font-bold text-gray-400 uppercase leading-none truncate">
+                Completed
+            </h3>
+            <p class="text-2xl font-black truncate" id="statCompleted">0</p>
+        </div>
+    </div>
 
-                <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100
-                            flex items-center gap-4">
-                    <div class="w-10 h-10 rounded-full bg-yellow-50 flex items-center
-                                justify-center flex-shrink-0">
-                        <i class="fa-solid fa-calendar-days text-yellow-500 text-sm"></i>
-                    </div>
-                    <div>
-                        <p class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
-                            Upcoming
-                        </p>
-                        <p class="text-2xl font-bold text-slate-800 leading-tight" id="statUpcoming">
-                            0
-                        </p>
-                        <p class="text-[10px] text-gray-400 mt-0.5">accepted sessions</p>
-                    </div>
-                </div>
+    <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-yellow-500
+                flex items-center gap-4 hover:shadow-md hover:-translate-y-0.5
+                transition-all duration-200">
+        <div class="text-2xl flex-shrink-0">
+            <i class="fa-solid fa-calendar-days text-yellow-500"></i>
+        </div>
+        <div class="min-w-0 flex-1">
+            <h3 class="text-xs font-bold text-gray-400 uppercase leading-none truncate">
+                Upcoming
+            </h3>
+            <p class="text-2xl font-black truncate" id="statUpcoming">0</p>
+        </div>
+    </div>
 
-            </div>
-            {{-- end Stats Row --}}
-
+</div>
+{{-- end Stats Row ── --}}
 
             {{-- ── Weekly Schedule ── --}}
             <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 animate-fade-up [animation-delay:250ms]">
@@ -720,6 +708,34 @@ $saveProfile = action(function () {
             btn.innerText = 'Show more';
         }
     }
+
+    // STAT CARDS
+function renderStatCards() {
+    const now = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Manila" }));
+
+    // Total session hours — completed sessions only
+    const totalMinutes = allSessions
+        .filter(s => s.status === 'completed')
+        .reduce((acc, s) => {
+            const [sh, sm] = s.start.split(':').map(Number);
+            const [eh, em] = s.end.split(':').map(Number);
+            return acc + ((eh * 60 + em) - (sh * 60 + sm));
+        }, 0);
+
+    const totalHours   = Math.floor(totalMinutes / 60);
+    const totalMins    = totalMinutes % 60;
+    const hoursDisplay = `${(totalMinutes / 60).toFixed(2)}h`;
+
+    document.getElementById('statTotalHours').innerText      = hoursDisplay;
+
+    // Completed sessions
+    const completed = allSessions.filter(s => s.status === 'completed').length;
+    document.getElementById('statCompleted').innerText = completed;
+
+    // Upcoming — accepted sessions from today onwards
+    const upcoming = allSessions.filter(s => s.status === 'accepted' && s.date >= todayStr).length;
+    document.getElementById('statUpcoming').innerText = upcoming;
+}
 
     // SORT
     function toggleSort(col) {

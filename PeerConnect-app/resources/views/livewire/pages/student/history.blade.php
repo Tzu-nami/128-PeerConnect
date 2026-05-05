@@ -13,7 +13,7 @@ $studentProfile = computed(function () {
 
 $summaryCount = computed(function () {
     $profile = $this->studentProfile;
-    if (!$profile) return ['total' => 0, 'completed' => 0, 'totalHours' => '0.00 hrs', 'cancelled' => 0, 'pending' => 0];
+    if (!$profile) return ['total' => 0, 'completed' => 0, 'totalHours' => '0.00', 'cancelled' => 0, 'pending' => 0];
 
     $bookings = Bookings::where('student_id', $profile->id)
         ->select('booking_status', 'schedule_start', 'schedule_end')
@@ -28,7 +28,7 @@ $summaryCount = computed(function () {
         'total'      => $bookings->count(),
         'completed'  => $completedSessions->count(),
         'pending'    => $bookings->where('booking_status', 'pending')->count(),
-        'totalHours' => number_format($totalMinutes / 60, 2) . ' hrs',
+        'totalHours' => number_format($totalMinutes / 60, 2),
         'cancelled'  => $bookings->where('booking_status', 'cancelled')->count(),
     ];
 });
