@@ -182,13 +182,14 @@ $searchIndex = computed(function () {
 });
 
 $monthlyTrends = computed(function () {
-    return Bookings::selectRaw("EXTRACT(WEEK FROM date) as week, COUNT(*) as count")
-        ->whereMonth('date', Carbon::now()->month)
-        ->groupBy('week')
-        ->orderBy('week')
-        ->pluck('count', 'week')
-        ->values()
-        ->toArray();
+    $weeks = [];
+    for ($i = 3; $i >= 0; $i--) {
+        $start = Carbon::now()->startOfWeek()->subWeeks($i);
+        $end   = Carbon::now()->startOfWeek()->subWeeks($i)->endOfWeek();
+        $count = Bookings::whereBetween('date', [$start, $end])->count();
+        $weeks[] = $count;
+    }
+    return $weeks;
 });
 
 $topMentors = computed(function () {
@@ -902,25 +903,6 @@ $rejectBooking = action(function (string $id) {
 </div>    <p class="text-xs text-gray-400" id="tableSubtitle"></p>
 </div>
 
-
-<script>
-function updateDate() {
-    const today = new Date();
-
-    const options = {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-    };
-
-    const formattedDate = today.toLocaleDateString('en-US', options);
-
-    document.getElementById("tableSubtitle").textContent = formattedDate;
-}
-
-// run when page loads
-updateDate();
-</script>
                                 <div class="flex gap-2">
                                     <div class="relative w-48">
                                         <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-300 text-xs"></i>
@@ -1505,9 +1487,9 @@ filtered.forEach(r => {
                                     doneIds: {},
                                 }">    
     <div class="flex justify-between items-center mb-4">
-        <h3 class="font-bold text-slate-800 text-sm tracking-tight">Pending Bookings</h3>
-        <span class="bg-red-100 text-red-700 text-[10px] font-bold px-2 py-0.5 rounded-full">     
-            {{ count($pendingApprovalsList) }} Pending
+    <h3 class="font-bold text-slate-800 text-sm tracking-tight">Pending Requests</h3>
+        <span class="bg-red-100 text-red-700 text-[10px] font-bold px-3 py-1 rounded-full">     
+            {{ count($pendingApprovalsList) }} Request{{ count($pendingApprovalsList) !== 1 ? 's' : '' }}
         </span>
     </div>
 
@@ -1586,9 +1568,8 @@ filtered.forEach(r => {
                 </div>
 </div>
         @empty
-            <div class="text-center py-6">
-                <i class="fa-solid fa-circle-check text-green-400 text-2xl mb-2"></i>
-                <p class="text-xs text-gray-400 font-medium-italic">No pending bookings right now.</p>
+            <div class="py-4">
+                <p class="text-xs text-gray-400 italic">No pending requests.</p>
             </div>
         @endforelse
     </div>
@@ -1628,14 +1609,15 @@ filtered.forEach(r => {
         setInterval(updateClock, 1000);
 
         // Local State
-        const allSessions = @json($todaySessions).map(s => ({
+const allSessions = @json($allSessions).map(s => ({
     ...s,
     color: {
-        'Accepted':    'text-green-600',
+        'Accepted':  'text-green-600',
         'Completed': 'text-green-600',
         'Pending':   'text-yellow-500',
         'Upcoming':  'text-orange-500',
-    }[s.status] ?? 'text-red-800'
+        'Rejected':  'text-red-500',
+    }[s.status] ?? 'text-slate-400'
 }));
 
 const _now = new Date();
@@ -1659,14 +1641,58 @@ const linearOptions = {
 };
 
 function initCharts() {
-    charts.push(new Chart(document.getElementById('lineChart'), {
-        type: 'line',
-        data: {
-            labels: monthlyData.map((_, i) => `W${i + 1}`),
-            datasets: [{ data: monthlyData, borderColor: '#7b1d1d', tension: 0.4 }]
+charts.push(new Chart(document.getElementById('lineChart'), {
+    type: 'line',
+    data: {
+        labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+        datasets: [{
+            label: 'Sessions',
+            data: monthlyData,
+            borderColor: '#7b1d1d',
+            backgroundColor: 'rgba(123,29,29,0.08)',
+            tension: 0.4,
+            fill: true,
+            pointBackgroundColor: '#7b1d1d',
+            pointRadius: 4,
+            pointHoverRadius: 6,
+        }]
+    },
+    options: {
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { display: false },
+            tooltip: {
+    callbacks: {
+        title: ctx => {
+            const weekIndex = ctx[0].dataIndex;
+            const start = new Date();
+            start.setDate(start.getDate() - start.getDay() + 1 - ((3 - weekIndex) * 7));
+            const end = new Date(start);
+            end.setDate(start.getDate() + 6);
+            const fmt = d => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            return `${ctx[0].label}  (${fmt(start)} – ${fmt(end)})`;
         },
-        options: linearOptions
-    }));
+        label: ctx => ` ${ctx.parsed.y} session${ctx.parsed.y !== 1 ? 's' : ''}`
+    }
+}
+        },
+        scales: {
+            x: {
+                grid: { display: false },
+                ticks: { font: { size: 9 } }
+            },
+            y: {
+                beginAtZero: true,
+                grid: { color: '#f1f5f9' },
+                ticks: {
+                    font: { size: 9 },
+                    stepSize: 1,
+                    precision: 0
+                }
+            }
+        }
+    }
+}));
 
     charts.push(new Chart(document.getElementById('pieChart'), {
         type: 'pie',
@@ -1735,53 +1761,71 @@ function applyFilters() {
     const searchTerm = searchInput.value.toLowerCase().trim();
     const selectedStatus = statusFilter.value;
 
+    // Update table title
+    const nowStr = `${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,'0')}-${String(new Date().getDate()).padStart(2,'0')}`;
+    const isToday = selectedDateStr === nowStr;
+    const selectedDateObj = new Date(selectedDateStr + 'T00:00:00');
+
+    document.getElementById('tableTitle').textContent = "Today's Schedule";
+    document.getElementById('tableSubtitle').textContent = selectedDateObj.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+
     const filtered = allSessions.filter(item => {
-const matchesSearch = searchTerm
-    ? item.mentor.toLowerCase().includes(searchTerm) ||
-      item.mentee.toLowerCase().includes(searchTerm) ||
-      item.subject.toLowerCase().includes(searchTerm)
-    : true;
+        const matchesDate   = item.date === selectedDateStr;
+        const matchesSearch = searchTerm
+            ? item.mentor.toLowerCase().includes(searchTerm) ||
+              item.mentee.toLowerCase().includes(searchTerm) ||
+              item.subject.toLowerCase().includes(searchTerm)
+            : true;
         const matchesStatus = selectedStatus === 'All' || item.status === selectedStatus;
-        return matchesSearch && matchesStatus;
+        return matchesDate && matchesSearch && matchesStatus;
     });
 
     const perPage = 4;
-    const totalPages = Math.ceil(filtered.length / perPage);
+    const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
     if (currentPage > totalPages) currentPage = 1;
 
     const start = (currentPage - 1) * perPage;
     const paginated = filtered.slice(start, start + perPage);
 
     if (paginated.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="4" class="py-12 text-center text-gray-400 italic">No matching sessions found.</td></tr>`;
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="5" class="py-12 text-center">
+                    <div class="flex flex-col items-center gap-2">
+                        <i class="fa-regular fa-calendar-xmark text-gray-300 text-2xl"></i>
+                        <p class="text-xs text-gray-400 italic">No sessions found for this date.</p>
+                    </div>
+                </td>
+            </tr>`;
     } else {
-tbody.innerHTML = paginated.map(row => `
-    <tr class="border-b last:border-0 hover:bg-slate-50 transition">
-        <td class="py-3 max-w-0" style="width:22%;">
-            <div class="tooltip-wrap">
-                <div class="truncate text-xs font-bold text-slate-700">${row.mentee}</div>
-                <span class="tooltip-text">${row.mentee}</span>
-            </div>
-        </td>
-        <td class="py-3 max-w-0" style="width:22%;">
-            <div class="tooltip-wrap">
-                <div class="truncate text-xs text-slate-600">${row.mentor}</div>
-                <span class="tooltip-text">${row.mentor}</span>
-            </div>
-        </td>
-        <td class="py-3 text-xs text-slate-500" style="width:16%;">${row.subject}</td>
-        <td class="py-3 text-xs text-slate-500" style="width:20%;">${row.time}</td>
-        <td class="py-3 text-center" style="width:20%;">
-            <span class="${row.color} font-bold text-[10px] bg-gray-50 px-2 py-1 rounded border border-current opacity-80">${row.status}</span>
-        </td>
-    </tr>
-`).join('');
+        tbody.innerHTML = paginated.map(row => `
+            <tr class="border-b last:border-0 hover:bg-slate-50 transition">
+                <td class="py-3 max-w-0" style="width:22%;">
+                    <div class="tooltip-wrap">
+                        <div class="truncate text-xs font-bold text-slate-700">${row.mentee}</div>
+                        <span class="tooltip-text">${row.mentee}</span>
+                    </div>
+                </td>
+                <td class="py-3 max-w-0" style="width:22%;">
+                    <div class="tooltip-wrap">
+                        <div class="truncate text-xs text-slate-600">${row.mentor}</div>
+                        <span class="tooltip-text">${row.mentor}</span>
+                    </div>
+                </td>
+                <td class="py-3 text-xs text-slate-500" style="width:16%;">${row.subject}</td>
+                <td class="py-3 text-xs text-slate-500" style="width:20%;">${row.time}</td>
+                <td class="py-3 text-center" style="width:20%;">
+                    <span class="${row.color} font-bold text-[10px] bg-gray-50 px-2 py-1 rounded border border-current opacity-80">${row.status}</span>
+                </td>
+            </tr>
+        `).join('');
     }
 
-    document.getElementById('pageIndicator').innerText = `Showing ${start + 1}–${Math.min(start + perPage, filtered.length)} of ${filtered.length} result${filtered.length !== 1 ? 's' : ''}`;
+    const showing = filtered.length === 0 ? '0' : `${start + 1}–${Math.min(start + perPage, filtered.length)}`;
+    document.getElementById('pageIndicator').innerText = `Showing ${showing} of ${filtered.length} result${filtered.length !== 1 ? 's' : ''}`;
 
-    document.getElementById('prevBtn').disabled = currentPage === 1;
-document.getElementById('nextBtn').disabled = currentPage >= totalPages;
+    document.getElementById('prevBtn').disabled = currentPage <= 1;
+    document.getElementById('nextBtn').disabled = currentPage >= totalPages;
 }
         // Calendar Logic
 function renderCalendar() {
@@ -1805,7 +1849,7 @@ function renderCalendar() {
         const dayEl = document.createElement('div');
         dayEl.className = `cal-day ${isToday ? 'cal-today' : ''} ${isSelected ? 'cal-selected' : ''}`;
         dayEl.innerHTML = `<span>${i}</span>`;
-        dayEl.onclick = () => { selectedDateStr = dateStr; applyFilters(); renderCalendar(); };
+        dayEl.onclick = () => { selectedDateStr = dateStr; currentPage = 1; applyFilters(); renderCalendar(); };
         grid.appendChild(dayEl);
     }
 }
