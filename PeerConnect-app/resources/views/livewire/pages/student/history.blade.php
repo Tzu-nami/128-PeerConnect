@@ -47,15 +47,15 @@ $studentHistory = computed(function () {
             $end   = $endCarbon->format('g:i A');
 
             $isOpen     = is_null($session->mentor_id);
-            $mentorName = $isOpen
-                ? 'ANY'
-                : strtoupper($session->mentor->user->lastName ?? 'TBD') . ', ' . ($session->mentor->user->firstName ?? '');
-
+           $mentorName = $isOpen
+    ? 'ANY'
+    : ($session->mentor->user->firstName ?? '') . ' ' . ($session->mentor->user->lastName ?? 'TBD');
+    
             $statusClass = match ($session->booking_status) {
                 'pending'   => 'text-yellow-500',
-                'accepted'  => 'text-green-600',
+                'upcoming'  => 'text-orange-600',
                 'rejected'  => 'text-red-900',
-                'completed' => 'text-gray-500',
+                'completed' => 'text-green-500',
                 'cancelled' => 'text-red-600',
                 'closed'    => 'text-purple-700',
                 'no_show'   => 'text-orange-600',
@@ -193,8 +193,8 @@ $studentHistory = computed(function () {
                         </label>
                         <div class="border-t border-gray-100 my-1"></div>
 
-                        <template x-for="status in ['pending', 'accepted', 'completed', 'cancelled', 'rejected', 'no_show']" :key="status">
-                            <label class="flex items-center gap-2 px-4 py-2.5 hover:bg-gray-50 cursor-pointer text-xs text-slate-700 font-medium capitalize transition">
+<template x-for="status in ['pending', 'upcoming', 'completed', 'cancelled', 'rejected', 'no_show']" :key="status">
+                                <label class="flex items-center gap-2 px-4 py-2.5 hover:bg-gray-50 cursor-pointer text-xs text-slate-700 font-medium capitalize transition">
                                 <input type="checkbox"
                                        :value="status"
                                        x-model="filterStatuses"
@@ -213,8 +213,6 @@ $studentHistory = computed(function () {
             <table class="w-full text-sm text-left table-fixed">
                 <thead class="bg-slate-50 border-b border-gray-100">
                 <tr>
-                    <th class="px-5 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider w-[5%]">#</th>
-
                     {{-- Subject --}}
                     <th class="px-5 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider w-[15%]">
                         <button @click="toggleSort('subject')"
@@ -298,11 +296,8 @@ $studentHistory = computed(function () {
                 <tbody>
                 <template x-for="(booking, index) in paginatedItems" :key="booking.id">
                     <tr class="border-b border-gray-50 hover:bg-slate-50 transition">
-                        <td class="px-5 py-3 text-gray-400 text-xs"
-                            x-text="(currentPage - 1) * perPage + index + 1"></td>
-
                         <td class="px-5 py-3">
-                            <p class="font-bold text-slate-700 text-sm truncate"
+                            <p class="font-bold text-slate-700 text-xs truncate"
                                x-init="$nextTick(() => { if ($el.scrollWidth > $el.clientWidth) $el.title = booking.subject + ' – ' + booking.subjectName })"
                                x-text="booking.subject"></p>
                             <p class="text-gray-400 text-xs truncate"
@@ -311,7 +306,7 @@ $studentHistory = computed(function () {
                         </td>
 
                         <td class="px-5 py-3">
-                            <p class="text-slate-600 text-sm truncate"
+                            <p class="text-slate-600 text-xs truncate"
                                x-init="$nextTick(() => { if ($el.scrollWidth > $el.clientWidth) $el.title = booking.topic })"
                                x-text="booking.topic"></p>
                         </td>
@@ -323,22 +318,22 @@ $studentHistory = computed(function () {
                         </td>
 
                         <td class="px-5 py-3">
-                            <p class="text-sm font-medium text-slate-700" x-text="booking.date"></p>
+                        <p class="text-xs font-medium text-slate-700" x-text="booking.date"></p>
                             <p class="text-xs text-gray-400" x-text="booking.time"></p>
                         </td>
 
-                        <td class="px-5 py-3 text-sm text-slate-500" x-text="booking.mode"></td>
+<td class="px-5 py-3 text-xs text-slate-500" x-text="booking.mode"></td>
 
                         <td class="px-5 py-3">
-                            <span :class="'font-bold text-xs bg-gray-50 px-2 py-1 rounded border border-current opacity-80 ' + booking.statusClass"
-                                  x-text="booking.statusLabel"></span>
+                            <span :class="'font-bold text-[10px] bg-gray-50 px-2 py-1 rounded border border-current opacity-80 capitalize ' + booking.statusClass"
+      x-text="booking.statusLabel"></span>
                         </td>
                     </tr>
                 </template>
 
                 {{-- Empty State --}}
                 <tr x-show="filteredItems.length === 0" x-cloak>
-                    <td colspan="7" class="px-5 py-16 text-center">
+                    <td colspan="6" class="px-5 py-16 text-center">
                         <div class="flex flex-col items-center justify-center text-gray-400">
                             <i class="fa-solid fa-magnifying-glass text-2xl mb-3 opacity-20"></i>
                             <p class="text-sm font-medium">No matching records found.</p>
