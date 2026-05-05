@@ -682,7 +682,7 @@ mount(function () {
 
     {{-- View Details Modal --}}
     <template x-teleport="body">
-        <div class="modal-overlay" :class="{ 'open': showViewModal }" @click.self="showViewModal = false" x-cloak>
+        <div class="modal-overlay" x-show="showViewModal" @click.self="showViewModal = false" x-cloak>
             <div class="modal-box-crud max-w-2xl flex flex-col" style="max-height: 90vh;">
                 <template x-if="selectedMentor">
                     <div class="contents">
@@ -748,7 +748,7 @@ mount(function () {
     </template>
 
     {{-- Add Mentor Modal --}}
-    <div x-cloak class="modal-overlay" :class="{ 'open': $wire.showModal }"
+    <div x-cloak class="modal-overlay" x-show="$wire.showModal" x-cloak
         x-data="{ fileName: '', isVerifying: false }" 
         x-init="$watch('$wire.showModal', val => { if (!val) { fileName = ''; document.getElementById('avatar-upload').value = ''; } })">
         <div class="modal-box-crud max-w-2xl flex flex-col" style="max-height: 90vh;">
@@ -929,7 +929,7 @@ mount(function () {
     </div>
 
     {{-- ── CONFIRM ADD MENTOR ── --}}
-    <div x-cloak class="modal-overlay" :class="{ 'open': $wire.showConfirm }" wire:click.self="$set('showConfirm', false)">
+    <div x-cloak class="modal-overlay" x-show="$wire.showConfirm" wire:click.self="$set('showConfirm', false)">
         <div class="modal-box-crud max-w-sm p-8 text-center m-4">
             <div class="w-16 h-16 bg-blue-100 text-blue-500 rounded-full flex items-center justify-center mx-auto mb-5">
                 <i class="fa-solid fa-user-plus text-3xl"></i>
@@ -949,7 +949,7 @@ mount(function () {
     </div>
 
     {{-- ── EDIT MENTOR MODAL ── --}}
-    <div x-cloak class="modal-overlay" :class="{ 'open': showEditModal }"
+    <div x-cloak class="modal-overlay" x-show="showEditModal"
         x-data="{ fileName: '', isVerifying: false,
         // Check if there are changes to any input
         get hasChanges() {
@@ -1118,7 +1118,7 @@ mount(function () {
     </div>
 
     {{-- ── CONFIRM EDIT ── --}}
-    <div x-cloak class="modal-overlay" :class="{ 'open': $wire.showEditConfirm }" wire:click.self="$set('showEditConfirm', false)">
+    <div x-cloak class="modal-overlay" x-show="$wire.showEditConfirm" wire:click.self="$set('showEditConfirm', false)">
         <div class="modal-box-crud max-w-sm p-8 text-center m-4">
             <div class="w-16 h-16 bg-blue-100 text-blue-500 rounded-full flex items-center justify-center mx-auto mb-5">
                 <i class="fa-solid fa-pen-to-square text-3xl"></i>
@@ -1138,7 +1138,7 @@ mount(function () {
     </div>
 
     {{-- ── SUBJECT MODAL ── --}}
-    <div x-cloak class="modal-overlay" :class="{ 'open': $wire.showSubjectModal }" x-data="{ isVerifying: false }">
+    <div x-cloak class="modal-overlay" x-show="$wire.showSubjectModal" x-data="{ isVerifying: false }">
         <div class="modal-box-crud max-w-md">
             <div class="px-8 py-5 bg-white border-b flex justify-between items-center">
                 <div>
@@ -1177,7 +1177,7 @@ mount(function () {
     </div>
 
     {{-- ── CONFIRM SUBJECT ── --}}
-    <div x-cloak class="modal-overlay" :class="{ 'open': $wire.showSubjectConfirm }" wire:click.self="$set('showSubjectConfirm', false)">
+    <div x-cloak class="modal-overlay" x-show="$wire.showSubjectConfirm" wire:click.self="$set('showSubjectConfirm', false)">
         <div class="modal-box-crud max-w-sm p-8 text-center m-4">
             <div class="w-16 h-16 bg-blue-100 text-blue-500 rounded-full flex items-center justify-center mx-auto mb-5">
                 <i class="fa-solid fa-book text-3xl"></i>
@@ -1197,7 +1197,7 @@ mount(function () {
 
     {{-- ── DELETE CONFIRM MODAL ── --}}
     <template x-teleport="body">
-        <div x-cloak class="modal-overlay" :class="{ 'open': showDeleteConfirm }" @click.self="if(!isSaving) showDeleteConfirm = false" x-data="{ isSaving: false }">
+        <div x-cloak class="modal-overlay" x-show="showDeleteConfirm" @click.self="if(!isSaving) showDeleteConfirm = false" x-data="{ isSaving: false }">
             <div class="modal-box-crud max-w-sm p-8 text-center m-4">
                 <div class="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center mx-auto mb-5">
                     <i class="fa-solid fa-triangle-exclamation text-3xl"></i>

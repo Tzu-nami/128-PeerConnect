@@ -424,7 +424,7 @@ $updateEndTime = action(function (int $bookingId, string $newEndTime) {
     </div>
 
     {{-- CONFIRMATION MODAL --}}
-    <div class="modal-overlay" :class="{ 'open' : showConfirmModal }" x-transition.opacity @click.self="closeConfirmModal()" @keydown.escape.window="closeConfirmModal()">
+    <div class="modal-overlay" x-show="showConfirmModal" style="display:none;"  x-transition.opacity @click.self="closeConfirmModal()" @keydown.escape.window="closeConfirmModal()">
         <div class="bg-white rounded-xl p-6 max-w-sm w-full mx-4 shadow-2xl" x-show="showConfirmModal" x-transition>
             <div class="flex items-center gap-3 mb-3">
                 <div class="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0" :class="confirmConfig.iconBgClass" x-html="confirmConfig.iconHtml"></div>
@@ -445,7 +445,7 @@ $updateEndTime = action(function (int $bookingId, string $newEndTime) {
     </div>
 
     {{-- EDIT SESSION MODAL --}}
-    <div class="modal-overlay" :class="{ 'open' : showEditModal }" x-transition.opacity @click.self="closeEditModal()" @keydown.escape.window="closeEditModal()">
+    <div class="modal-overlay" x-show="showEditModal" style="display:none;" x-transition.opacity @click.self="closeEditModal()" @keydown.escape.window="closeEditModal()">
         <div class="bg-white rounded-xl shadow-2xl max-w-md w-full mx-4" x-show="showEditModal" x-transition>
 
             {{-- Header --}}

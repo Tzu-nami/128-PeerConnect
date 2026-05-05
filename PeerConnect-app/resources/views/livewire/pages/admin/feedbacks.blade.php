@@ -388,7 +388,7 @@ $dashboardStats = computed(function () {
     </div>
 
     {{-- SCORE VIEW MODAL --}}
-    <div class="modal-overlay" :class="{ 'open': showDetailModal }" x-transition.opacity @click.self="closeDetailModal()" @keydown.escape.window="closeDetailModal()">
+    <div class="modal-overlay" x-show="showDetailModal" x-transition.opacity style="display: none;" @click.self="closeDetailModal()" @keydown.escape.window="closeDetailModal()">
         <div class="modal-box" x-show="showDetailModal" x-transition>
             <div class="modal-header">
                 <div style="min-width:0;flex:1;">
