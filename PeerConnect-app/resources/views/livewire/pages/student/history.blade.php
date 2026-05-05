@@ -50,7 +50,7 @@ $studentHistory = computed(function () {
            $mentorName = $isOpen
     ? 'ANY'
     : ($session->mentor->user->firstName ?? '') . ' ' . ($session->mentor->user->lastName ?? 'TBD');
-    
+
             $statusClass = match ($session->booking_status) {
                 'pending'   => 'text-yellow-500',
                 'upcoming'  => 'text-orange-600',
@@ -120,8 +120,8 @@ $studentHistory = computed(function () {
             </div>
         </div>
 
-        <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-blue-600 flex items-center gap-4">
-            <div class="text-2xl"><i class="fa-solid fa-flag-checkered text-blue-600"></i></div>
+        <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-green-600 flex items-center gap-4">
+<div class="text-2xl"><i class="fa-solid fa-circle-check text-green-600"></i></div>
             <div>
                 <h3 class="text-xs font-bold text-gray-400 uppercase leading-none">Completed Sessions</h3>
                 <p class="text-2xl font-black text-slate-800">{{ $this->summaryCount['completed'] }}</p>
@@ -306,9 +306,12 @@ $studentHistory = computed(function () {
                         </td>
 
                         <td class="px-5 py-3">
-                            <p class="text-slate-600 text-xs truncate"
-                               x-init="$nextTick(() => { if ($el.scrollWidth > $el.clientWidth) $el.title = booking.topic })"
-                               x-text="booking.topic"></p>
+<div class="relative group">
+    <p class="text-slate-600 text-xs truncate" x-text="booking.topic"></p>
+    <div x-show="booking.topic"
+         class="absolute left-0 top-full mt-1 z-50 hidden group-hover:block bg-slate-800 text-white text-xs rounded px-2 py-1 whitespace-nowrap shadow-lg"
+         x-text="booking.topic"></div>
+</div>
                         </td>
 
                         <td class="px-5 py-3">
