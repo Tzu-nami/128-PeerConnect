@@ -15,7 +15,7 @@ body { margin: 0; font-family: 'Roboto Flex', sans-serif; display: flex; height:
 .brand-name img { width: 30px; height: 30px; border-radius: 4px; }
 
 .sidebar-nav { flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
-.nav-item { display: flex; align-items: center; gap: 15px; padding: 18px 25px; color: #a5b5ad; text-decoration: none; transition: 0.2s; white-space: nowrap; }
+.nav-item { display: flex; align-items: center; gap: 15px; padding: 18px 25px; color: #a5b5ad; text-decoration: none; transition: 0.2s; white-space: nowrap; position: relative; overflow: visible; }
 .nav-item.active, .nav-item:hover { background: #265543; color: white; }
 .nav-item i { width: 20px; font-size: 1.1rem; text-align: center; }
 
@@ -63,7 +63,7 @@ body { margin: 0; font-family: 'Roboto Flex', sans-serif; display: flex; height:
 .btn-action:hover { filter: brightness(1.2); }
 
 /* Sidebar Toggle Logic */
-.sidebar-closed .sidebar { width: 75px; }
+.sidebar-closed .sidebar { width: 75px; position: relative; z-index: 50; }
 .sidebar-closed .brand-name, .sidebar-closed .nav-item span { display: none; }
 
 /* Maintain the tall Maroon Header */
@@ -97,4 +97,20 @@ body { margin: 0; font-family: 'Roboto Flex', sans-serif; display: flex; height:
     display: flex;
     flex-direction: column;
     gap: 25px; /* Space between Calendar and Quick Actions */
+}
+
+.sidebar-closed .nav-item:hover::after {
+    content: attr(data-tooltip);
+    position: fixed;
+    left: 75px;
+    background: #1e293b;
+    color: white;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+    z-index: 9999;
+    pointer-events: none;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
