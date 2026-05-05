@@ -332,7 +332,7 @@ $dashboardStats = computed(function () {
                 </div>
 
                 {{-- PAGINATION --}}
-                <div class="p-6 border-t border-gray-100 flex flex-col justify-center items-center gap-2 bg-white" x-show="totalPages > 1" x-cloak>
+                <div class="p-6 border-t border-gray-100 flex flex-col items-center justify-center gap-3 bg-white" x-cloak>
                     <div class="flex items-center gap-2" x-show="totalPages > 1">
                         <button @click="currentPage--" :disabled="currentPage === 1" class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-slate-500 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition">
                             <i class="fa-solid fa-chevron-left text-[10px]"></i>
@@ -343,13 +343,12 @@ $dashboardStats = computed(function () {
                                 <span x-show="page === '...'" class="w-7 h-7 flex items-center justify-center text-[11px] font-bold text-gray-400 tracking-widest shrink-0">...</span>
                             </div>
                         </template>
-
                         <button @click="currentPage++" :disabled="currentPage === totalPages" class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-slate-500 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition">
                             <i class="fa-solid fa-chevron-right text-[10px]"></i>
                         </button>
                     </div>
                     <span class="text-[11px] text-gray-400 font-medium"
-                        x-text="filteredFeedbacks.length === 0 ? '' : pageStart + '–' + pageEnd + ' of ' + filteredFeedbacks.length">
+                        x-text="filteredFeedbacks.length === 0 ? 'No results' : 'Showing ' + pageStart + ' to ' + pageEnd + ' of ' + filteredFeedbacks.length">
                     </span>
                 </div>
             </div>
@@ -366,7 +365,7 @@ $dashboardStats = computed(function () {
     </div>
 
     {{-- FEEDBACK VIEW MODAL --}}
-    <div class="feedback-popup-overlay" x-show="showFeedbackPopup" x-transition.opacity style="display: none;" @click.self="closeFeedbackPopup()" @keydown.escape.window="closeFeedbackPopup()">
+    <div class="feedback-popup-overlay" :class="{ 'open': showFeedbackPopup }" x-transition.opacity @click.self="closeFeedbackPopup()" @keydown.escape.window="closeFeedbackPopup()">
         <div class="feedback-popup-box">
             <div class="feedback-popup-header">
                 <span>
@@ -389,7 +388,7 @@ $dashboardStats = computed(function () {
     </div>
 
     {{-- SCORE VIEW MODAL --}}
-    <div class="modal-overlay" x-show="showDetailModal" x-transition.opacity style="display: none;" @click.self="closeDetailModal()" @keydown.escape.window="closeDetailModal()">
+    <div class="modal-overlay" :class="{ 'open': showDetailModal }" x-transition.opacity @click.self="closeDetailModal()" @keydown.escape.window="closeDetailModal()">
         <div class="modal-box" x-show="showDetailModal" x-transition>
             <div class="modal-header">
                 <div style="min-width:0;flex:1;">
