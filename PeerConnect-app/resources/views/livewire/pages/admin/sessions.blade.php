@@ -231,7 +231,6 @@ $updateEndTime = action(function (int $bookingId, string $newEndTime) {
                 <table class="w-full text-left text-sm table-fixed min-w-[900px]">
                     <thead class="bg-slate-50 border-b border-gray-100">
                         <tr>
-                            <th class="px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider w-[4%]">#</th>
                             <th class="px-5 py-3 text-[10px] font-bold text-gray-400 w-[13%]">
                                 <button @click="toggleSort('student')" class="flex items-center gap-1 hover:text-slate-600 transition uppercase tracking-wider">
                                     Student <i class="fa-solid text-[8px]" :class="sortCol === 'student' ? (sortDir === 'asc' ? 'fa-arrow-up text-slate-600' : 'fa-arrow-down text-slate-600') : 'fa-arrow-up-arrow-down opacity-30'"></i>
@@ -272,9 +271,7 @@ $updateEndTime = action(function (int $bookingId, string $newEndTime) {
                     </thead>
                     <tbody class="divide-y divide-gray-100">
                         <template x-for="(s, index) in paginatedSessions" :key="s.id">
-                            <tr class="session-row group hover:bg-slate-50 transition">
-                                <td class="px-5 py-4 align-middle text-gray-400 text-xs font-medium tabular-nums" x-text="pageStart + index"></td>
-                                
+                            <tr class="session-row group hover:bg-slate-50 transition">                                
                                 <td class="px-5 py-4 align-middle">
                                     <div class="hover-tooltip" :data-full="s.student + '\n' + s.yearLevel + ' - ' + s.degreeProgram">
                                         <p class="font-bold text-slate-700 text-xs truncate" x-text="s.student"></p>

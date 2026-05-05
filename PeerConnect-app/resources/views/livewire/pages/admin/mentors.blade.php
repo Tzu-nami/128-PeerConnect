@@ -178,6 +178,15 @@ $editMentor = action(function ($id) {
 });
 
 $confirmEdit = action(function ($id, $subjects, $availabilities) {
+    $availabilities = collect($availabilities)
+        ->map(fn($row) => [
+            'day_of_week' => strtolower(trim($row['day_of_week'] ?? '')),
+            'start_time'  => trim($row['start_time'] ?? ''),
+            'end_time'    => trim($row['end_time'] ?? ''),
+        ])
+        ->values()
+        ->toArray();
+
     $this->editMentorId = $id;
     $this->selectedSubjects = $subjects;
     $this->availabilities = $availabilities;
@@ -318,6 +327,15 @@ $confirmMentor = action(function () {
         return;
     }
 
+        $this->availabilities = collect($this->availabilities)
+        ->map(fn($row) => [
+            'day_of_week' => strtolower(trim($row['day_of_week'] ?? '')),
+            'start_time'  => trim($row['start_time'] ?? ''),
+            'end_time'    => trim($row['end_time'] ?? ''),
+        ])
+        ->values()
+        ->toArray();
+        
     $this->validate([
         'avatar' => ['required', 'image', 'max:2048'],
         'selectedSubjects' => ['required', 'array', 'min:1'],
@@ -413,9 +431,19 @@ $saveSubject = action(function () {
     session()->flash('successMessage', "{$this->newSubjectCode} has been added.");
 });
 
-// ── DELETE MENTOR ─────────────────────────────────────────────
 $deleteMentor = action(function ($id) {
     $mentorProf = MentorProfiles::with('user')->findOrFail($id);
+
+    $hasActiveBookings = \App\Models\Bookings::where('mentor_id', $mentorProf->id)
+        ->whereIn('booking_status', ['pending', 'accepted'])
+        ->exists();
+
+    if ($hasActiveBookings) {
+        session()->flash('errorMessage', "Cannot remove this mentor. They still have pending or accepted bookings.");
+        $this->redirect(route('admin.mentors'), navigate: true);
+        return;
+    }
+
     $user = $mentorProf->user;
     if ($user->avatar && \Illuminate\Support\Str::contains($user->avatar, config('filesystems.disks.s3.public_url'))) {
         $filename = basename($user->avatar);
@@ -433,9 +461,9 @@ $deleteMentor = action(function ($id) {
 });
 
 mount(function () {
+    abort_if(!auth()->check(), 401, 'Unauthenticated');
     abort_if(!auth()->user()->isAdmin(), 403, 'Unauthorized Access');
 });
-
 ?>
 
 <div x-data="mentorManagement(@js($this->allMentors), $wire)">
@@ -555,7 +583,6 @@ mount(function () {
             <table class="w-full text-left text-sm table-fixed" style="overflow:visible;">
                 <thead class="bg-slate-50 border-b border-gray-100">
                     <tr>
-                        <th class="px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider" style="width:5%;">#</th>
                         <th @click="setSort('name')" class="cursor-pointer px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider select-none" style="width:22%;">
                             <div class="flex items-center gap-1 hover:text-red-800 transition">Mentor Name<span x-text="sortIndicator('name')" class="text-[10px]"></span></div>
                         </th>
@@ -574,10 +601,6 @@ mount(function () {
                 <tbody>
                     <template x-for="(mentor, idx) in paginatedMentors" :key="mentor.id">
                         <tr class="mentor-row border-b border-gray-50 hover:bg-slate-50 transition">
-
-                            <td class="px-5 py-4 align-middle text-gray-400 text-xs font-medium" style="width:5%;">
-                                <span x-text="(currentPage - 1) * perPage + idx + 1"></span>
-                            </td>
 
                             <td class="px-5 py-4 align-middle" style="width:22%;">
                                 <div class="hover-tooltip" :data-full="mentor.lastName + ', ' + mentor.firstName + ' ' + mentor.middleInitial + '\n' + mentor.yearLevel + ' — ' + mentor.degreeProgram">
@@ -646,7 +669,7 @@ mount(function () {
                         </tr>
                     </template>
                     <tr x-show="filteredMentors.length === 0" x-cloak>
-                        <td colspan="6" class="text-center py-16 text-gray-400 text-xs italic">No mentors match your search.</td>
+                        <td colspan="5" class="text-center py-16 text-gray-400 text-xs italic">No mentors match your search.</td>
                     </tr>
                 </tbody>
             </table>

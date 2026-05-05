@@ -207,7 +207,6 @@ mount(function () {
             <table class="w-full text-left text-sm table-fixed" style="overflow:visible;">
                 <thead class="bg-slate-50 border-b border-gray-100">
                     <tr>
-                        <th class="px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider w-[5%]">#</th>
                         <th @click="setSort('code')" class="cursor-pointer px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider select-
                             none" style="width:18%;">
                             <div class="flex items-center gap-1 hover:text-red-800 transition">
@@ -234,11 +233,8 @@ mount(function () {
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-50">
-                    <template x-for="(sub, idx) in paginatedSubjects" :key="sub.id">
-                        <tr class="courses-row hover:bg-slate-50 transition">
-                            <td class="px-5 py-4 align-middle text-gray-400 text-xs font-medium" style="width:4%;">
-                                <span x-text="(currentPage - 1) * perPage + idx + 1"></span>
-                            </td>
+                        <template x-for="sub in paginatedSubjects" :key="sub.id">
+                            <tr class="courses-row hover:bg-slate-50 transition">
                             <td class="px-5 py-4 align-middle" style="width:18%;">
                                 <div class="hover-tooltip" :data-full="sub.code">
                                     <p class="font-bold text-slate-800 text-xs truncate" x-text="sub.code"></p>
@@ -290,7 +286,7 @@ mount(function () {
                     </template>
 
                     <tr x-show="filteredSubjects.length === 0" x-cloak>
-                        <td colspan="5" class="text-center py-16 text-gray-400 text-xs italic">No subjects found.</td>
+                        <td colspan="4" class="text-center py-16 text-gray-400 text-xs italic">No subjects found.</td>
                     </tr>
                 </tbody>
             </table>
