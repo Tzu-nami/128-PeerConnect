@@ -1365,7 +1365,7 @@ $skipFeedback = action(function () {
                                 <span class="text-[11px] text-blue-600 font-bold">
                                     <i class="fa-solid fa-lock mr-1"></i> Mentor Locked.
                                 </span>
-                                <a href="{{ route('student.bookings') }}" class="text-[10px] text-gray-400 hover:text-red-600 underline">
+                                <a href="{{ route('mentor.bookings') }}" class="text-[10px] text-gray-400 hover:text-red-600 underline">
                                     Unlock &amp; Clear
                                 </a>
                             </div>
