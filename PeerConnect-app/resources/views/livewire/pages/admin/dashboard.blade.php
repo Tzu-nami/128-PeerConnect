@@ -560,9 +560,6 @@ $rejectBooking = action(function (string $id) {
             box-shadow: 0 2px 8px rgba(0,0,0,0.25); transition: background 0.2s; flex-shrink: 0;
         }
         .sidebar-toggle-btn:hover { background: #dfcece; }
-        .sidebar-toggle-btn .toggle-icon { transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); display: flex; align-items: center; justify-content: center; }
-        .sidebar:not(.collapsed) .sidebar-toggle-btn .toggle-icon { transform: rotate(180deg); }
-
         .main-content { flex: 1; min-width: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
         .top-header { background: var(--header-maroon); height: var(--header-height); padding: 0 40px; display: flex; align-items: center; justify-content: space-between; color: white; flex-shrink: 0; }
         .scroll-container { flex-grow: 1; overflow-y: auto; padding: 16px 32px; width: 100%; }
@@ -703,11 +700,9 @@ $rejectBooking = action(function (string $id) {
                     </div>
                 </div>
 
-                <button class="sidebar-toggle-btn" id="sidebarToggle" aria-label="Toggle sidebar">
-                    <span class="toggle-icon">
-                        <i class="fa-solid fa-chevron-right" id="toggleIcon"></i>
-                    </span>
-                </button>
+<button class="sidebar-toggle-btn" id="sidebarToggle" aria-label="Toggle sidebar">
+    <i class="fa-solid fa-chevron-left" id="toggleIcon"></i>
+</button>
 
             <nav class="flex-grow">
                 <a href="{{ route('admin.dashboard') }}" class="nav-item active" data-tooltip="Dashboard">
@@ -1046,19 +1041,16 @@ $rejectBooking = action(function (string $id) {
 function getWeekRange() {
     const now = new Date();
 
-    // Find this week's Monday at 00:00:00
-    const day = now.getDay(); // 0=Sun, 1=Mon ... 6=Sat
-    const diffToMonday = (day === 0) ? -6 : 1 - day; // if Sunday, go back 6 days
-    const mon = new Date(now);
-    mon.setDate(now.getDate() + diffToMonday);
-    mon.setHours(0, 0, 0, 0); // ← midnight, not current time
+    // End = today at 23:59:59
+    const end = new Date(now);
+    end.setHours(23, 59, 59, 999);
 
-    // Sunday at 23:59:59
-    const sun = new Date(mon);
-    sun.setDate(mon.getDate() + 6);
-    sun.setHours(23, 59, 59, 999);
+    // Start = 6 days ago at 00:00:00
+    const start = new Date(now);
+    start.setDate(now.getDate() - 6);
+    start.setHours(0, 0, 0, 0);
 
-    return { mon, sun };
+    return { mon: start, sun: end };
 }
 
 function formatDisplay(d) {
@@ -1093,8 +1085,7 @@ function submitReport() {
     const satisfaction = @json($this->satisfactionRate);
     const collegeData  = @json($this->collegeActivity);
     const monthlyData  = @json($this->monthlyTrends);
-console.log('Sample date values:', allSessions.slice(0, 3).map(r => r.date));
-console.log('Week range:', toDateStr(mon), '→', toDateStr(sun));
+
 const filtered = allSessions.filter(row => {
     // Strip time portion if present (handles "2025-05-04", "2025-05-04 00:00:00", etc.)
     const datePart = String(row.date).substring(0, 10);
@@ -1584,7 +1575,6 @@ filtered.forEach(r => {
 
     <script>
         // DOM Elements
-        const sidebar = document.getElementById('sidebar');
         const profileTrigger = document.getElementById('profileTrigger');
         const profileDropdown = document.getElementById('profileDropdown');
         const searchInput = document.getElementById('liveSearchInput');
@@ -1886,74 +1876,17 @@ statusFilter.addEventListener('change', applyFilters);
 document.getElementById('prevBtn').addEventListener('click', () => { currentPage--; applyFilters(); });
 document.getElementById('nextBtn').addEventListener('click', () => { currentPage++; applyFilters(); });
 
-document.getElementById('sidebarToggle').addEventListener('click', () => {
-    sidebar.classList.toggle('collapsed');
-    const icon = document.getElementById('toggleIcon');
-    icon.classList.toggle('fa-chevron-left');
-    icon.classList.toggle('fa-chevron-right');
-    setTimeout(() => { charts.forEach(c => c.resize()); }, 310);
-});
-
         // Bootstrap
         initCharts();
         renderCalendar();
         applyFilters();
         updateClock();
 
-        function updatePaginationUI() {
-    const prevBtn = document.getElementById('prevBtn');
-    
-    if (currentPage === 1) {
-        prevBtn.disabled = true;
-    } else {
-        prevBtn.disabled = false;
-    }
-    nextBtn.disabled = (currentPage === totalPages);
-}
+
     </script>
 
 <script>
 (function () {
-    const INDEX = [
-
-        // ── STAT CARDS ──
-        { group: 'Stats',    label: 'Total Mentors',           detail: '{{ $totalMentors }} mentors registered',         target: 'section-stats',     keywords: ['total','mentors','mentor','count','registered'] },
-        { group: 'Stats',    label: 'Sessions Today',          detail: '{{ $sessionsToday }} sessions scheduled today',  target: 'section-stats',     keywords: ['sessions','today','scheduled','daily'] },
-        { group: 'Stats',    label: 'Pending Bookings',        detail: '{{ $pendingBookings }} awaiting approval',        target: 'section-approvals', keywords: ['pending','bookings','booking','approval','awaiting'] },
-        { group: 'Stats',    label: 'Average Rating',          detail: '4.9 overall satisfaction',                        target: 'section-analytics', keywords: ['rating','ratings','satisfaction','stars','average','4.9'] },
-        { group: 'Stats',    label: 'Total Mentees',           detail: '{{ $totalStudents }} students enrolled',          target: 'section-stats',     keywords: ['mentees','students','student','enrolled','total'] },
-
-        // ── TODAY'S SCHEDULE / SESSIONS ──
-        { group: 'Sessions', label: 'Daniel Dyoco',            detail: 'Mentoring Frian Nabo · 09:00 AM · Completed',    target: 'section-schedule',  keywords: ['daniel','dyoco','frian','nabo','completed','09:00','09','am'] },
-        { group: 'Sessions', label: 'Rhona Shayne Lopez',      detail: 'Mentoring Mark Tuan · 10:30 AM · Active',        target: 'section-schedule',  keywords: ['rhona','shayne','lopez','mark','tuan','active','10:30','10'] },
-        { group: 'Sessions', label: 'Chezka Sinco',            detail: 'Mentoring Uno Dos Thirdy · 11:00 AM · Active',   target: 'section-schedule',  keywords: ['chezka','sinco','uno','dos','thirdy','active','11:00','11'] },
-        { group: 'Sessions', label: 'Arielle Mae Solis',       detail: 'Mentoring Kevin Hart · 01:00 PM · Pending',      target: 'section-schedule',  keywords: ['arielle','mae','solis','kevin','hart','pending','1:00','01:00','pm'] },
-        { group: 'Sessions', label: "Ax'l Conchada",           detail: 'Mentoring Alice Blue · 02:30 PM · Upcoming',     target: 'section-schedule',  keywords: ["ax'l",'axl','conchada','alice','blue','upcoming','2:30','02:30'] },
-
-        // ── SESSION STATUSES (searchable words) ──
-        { group: 'Sessions', label: 'Active Sessions',         detail: 'View all currently active sessions',              target: 'section-schedule',  keywords: ['active','ongoing','live'] },
-        { group: 'Sessions', label: 'Completed Sessions',      detail: 'View all completed sessions',                    target: 'section-schedule',  keywords: ['completed','done','finished'] },
-        { group: 'Sessions', label: 'Upcoming Sessions',       detail: 'View all upcoming sessions',                     target: 'section-schedule',  keywords: ['upcoming','future','scheduled'] },
-        { group: 'Sessions', label: 'Pending Sessions',        detail: 'View sessions awaiting confirmation',             target: 'section-schedule',  keywords: ['pending','waiting','unconfirmed'] },
-
-
-        // ── NAVIGATION ──
-        { group: 'Navigation', label: 'Dashboard',             detail: 'Go to the main dashboard',                       target: 'section-stats',     keywords: ['dashboard','home','overview','main'] },
-        { group: 'Navigation', label: 'Mentor Management',     detail: 'Manage and register mentors',                    target: 'section-stats',     keywords: ['mentor management','manage mentors','mentors page'] },
-        { group: 'Navigation', label: 'Session Management',    detail: 'View and manage all sessions',                   target: 'section-schedule',  keywords: ['session management','sessions page','all sessions'] },
-        { group: 'Navigation', label: 'Student Feedback',      detail: 'View student ratings and feedback',              target: 'section-analytics', keywords: ['feedback','ratings','student feedback','reviews'] },
-    ];
-
-    // ── BADGE STYLES ────────────────────────────────────────────────────────
-    const BADGE = {
-        'Stats':         { bg: '#f1f5f9', color: '#475569', text: 'Stat' },
-        'Sessions':      { bg: '#dbeafe', color: '#1e40af', text: 'Session' },
-        'Approvals':     { bg: '#fef3c7', color: '#92400e', text: 'Approval' },
-        'Analytics':     { bg: '#d1fae5', color: '#065f46', text: 'Analytics' },
-        'Quick Actions': { bg: '#ede9fe', color: '#5b21b6', text: 'Action' },
-        'Navigation':    { bg: '#fee2e2', color: '#991b1b', text: 'Nav' },
-    };
-
     // ── HIGHLIGHT ───────────────────────────────────────────────────────────
     function hl(text, q) {
         if (!q) return text;
@@ -2056,7 +1989,22 @@ document.getElementById('sidebarToggle').addEventListener('click', () => {
 
 })();
 
-document.addEventListener('livewire:navigated', () => { 
+document.addEventListener('livewire:navigated', () => {
+    const sidebar = document.getElementById('sidebar');
+    const sidebarToggle = document.getElementById('sidebarToggle');
+    const toggleIcon = document.getElementById('toggleIcon');
+
+    if (sidebarToggle) {
+        sidebarToggle.addEventListener('click', () => {
+            sidebar.classList.toggle('collapsed');
+            const isCollapsed = sidebar.classList.contains('collapsed');
+            toggleIcon.className = isCollapsed
+                ? 'fa-solid fa-chevron-right'
+                : 'fa-solid fa-chevron-left';
+            setTimeout(() => { charts.forEach(c => c.resize()); }, 310);
+        });
+    }
+
     initCharts();
     renderCalendar();
     applyFilters();
