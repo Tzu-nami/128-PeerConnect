@@ -918,6 +918,8 @@ Alpine.data('sessionManagement', (initialSessions = [], initialCounts = {}) => (
         this.counts.totalHours = rawHours.toFixed(2);
     },
 
+    
+
     // Edit Modal
     showEditModal: false,
     editSession: null,
@@ -995,6 +997,13 @@ Alpine.data('sessionManagement', (initialSessions = [], initialCounts = {}) => (
         }
     },
 }));
+
+document.querySelectorAll('.nav-item[data-tooltip]').forEach(item => {
+    item.addEventListener('mouseenter', () => {
+        const rect = item.getBoundingClientRect();
+        item.style.setProperty('--tooltip-top', `${rect.top + rect.height / 2}px`);
+    });
+});
 
 // Mentor CRUD applications
 document.addEventListener('alpine:init', () => {
