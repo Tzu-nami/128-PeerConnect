@@ -303,7 +303,6 @@ $searchIndex = computed(function () {
                         <select id="statusFilter" class="table-filter-select">
                             <option value="">All</option>
                             <option value="pending">Pending</option>
-                            <option value="accepted">Accepted</option>
                             <option value="completed">Completed</option>
                             <option value="cancelled">Cancelled</option>
                             <option value="rejected">Rejected</option>
@@ -315,7 +314,7 @@ $searchIndex = computed(function () {
                 <table class="w-full text-left text-sm table-fixed">
                     <thead class="text-gray-400 border-b">
                     <tr>
-                        <th class="pb-3 text-[10px] tracking-wider" style="width:35%">
+                        <th class="pb-3 text-[10px] tracking-wider" style="width:22%">
                             <button id="sortHead-student" onclick="toggleSort('student')"
                                     class="flex items-center gap-1 font-semibold uppercase hover:text-red-800 transition-colors"
                                     style="color:#94a3b8;">
@@ -329,7 +328,7 @@ $searchIndex = computed(function () {
                                 Time <span class="sort-icon"><i class="fa-solid fa-arrow-up" style="font-size:8px;"></i></span>
                             </button>
                         </th>
-                        <th class="pb-3 text-[10px] tracking-wider" style="width:15%">
+                        <th class="pb-3 text-[10px] tracking-wider" style="width:28%">
                             <button id="sortHead-subject" onclick="toggleSort('subject')"
                                     class="flex items-center gap-1 font-semibold uppercase hover:text-red-800 transition-colors"
                                     style="color:#94a3b8;">
@@ -533,18 +532,20 @@ $searchIndex = computed(function () {
         return h * 60 + m;
     }
 
-    function getStatusColor(status) {
-        const map = {
-            pending:   'text-yellow-500',
-            accepted:  'text-green-600',
-            completed: 'text-gray-500',
-            rejected:  'text-red-900',
-            cancelled: 'text-red-600',
-            closed:    'text-purple-700',
-            no_show:   'text-orange-600',
-        };
-        return map[status] ?? 'text-gray-500';
-    }
+function getStatusColor(status) {
+    const map = {
+        pending:   'text-yellow-500',
+        accepted:  'text-green-600',
+        active:    'text-green-600',
+        upcoming:  'text-orange-500',
+        completed: 'text-green-600',
+        rejected:  'text-red-500',
+        cancelled: 'text-red-600',
+        closed:    'text-purple-700',
+        no_show:   'text-orange-600',
+    };
+    return map[status] ?? 'text-slate-400';
+}
 
     function getStatusLabel(status) {
         const map = {
@@ -610,35 +611,35 @@ $searchIndex = computed(function () {
         if (!total) {
             tbody.innerHTML = `<tr><td colspan="4" class="py-12 text-center text-gray-400 italic">No sessions for this date.</td></tr>`;
         } else {
-            tbody.innerHTML = visible.map(row => `
-                <tr class="border-b last:border-0 hover:bg-slate-50 transition">
-                    <td class="py-4 text-slate-700" style="width:35%">
-                        <div class="hover-tooltip" data-full="${row.student}" style="max-width:260px;">
-                            <div id="name-${row.id}"
-                                 style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis;max-width:90%;">
-                                ${row.student}
-                            </div>
-                        </div>
-                    </td>
-                    <td class="text-slate-500" style="width:25%;white-space:nowrap;">
-                        ${formatTimeTo12Hour(row.start)} – ${formatTimeTo12Hour(row.end)}
-                    </td>
-                    <td class="text-slate-600" style="width:20%">
-                        <div class="hover-tooltip"
-                             data-full="${row.subject}${row.subjectName ? ' – ' + row.subjectName : ''}"
-                             style="max-width:160px;">
-                            <div style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis;max-width:90%;">
-                                ${row.subject}
-                            </div>
-                        </div>
-                    </td>
-                    <td class="py-4 text-center" style="width:20%">
-                        <span class="${getStatusColor(row.status)} font-bold text-[10px] bg-gray-50 px-2 py-1 rounded border border-current opacity-80 capitalize">
-                            ${getStatusLabel(row.status)}
-                        </span>
-                    </td>
-                </tr>
-            `).join('');
+  tbody.innerHTML = visible.map(row => `
+    <tr class="border-b last:border-0 hover:bg-slate-50 transition">
+        <td class="py-3 max-w-0" style="width:22%;">
+            <div class="hover-tooltip" data-full="${row.student}" style="max-width:260px;">
+                <div id="name-${row.id}"
+                     class="truncate text-xs font-bold text-slate-700">
+                    ${row.student}
+                </div>
+            </div>
+        </td>
+        <td class="py-3 text-xs text-slate-500" style="width:30%;white-space:nowrap;">
+            ${formatTimeTo12Hour(row.start)} – ${formatTimeTo12Hour(row.end)}
+        </td>
+        <td class="py-3 max-w-0" style="width:28%;">
+            <div class="hover-tooltip"
+                 data-full="${row.subject}${row.subjectName ? ' – ' + row.subjectName : ''}"
+                 style="max-width:160px;">
+                <div class="truncate text-xs text-slate-600">
+                    ${row.subject}
+                </div>
+            </div>
+        </td>
+        <td class="py-3 text-center" style="width:20%">
+            <span class="${getStatusColor(row.status)} font-bold text-[10px] bg-gray-50 px-2 py-1 rounded border border-current opacity-80 capitalize">
+                ${getStatusLabel(row.status)}
+            </span>
+        </td>
+    </tr>
+`).join('');
         }
 
         // Sort header indicators
@@ -828,11 +829,10 @@ $searchIndex = computed(function () {
         return el;
     }
 
-    // MINI CALENDAR
-    function hasAcceptedOnDate(dateStr) {
-        return allSessions.some(s => s.date === dateStr && s.status === 'accepted');
-    }
-
+/**Calendar */
+function hasUpcomingOnDate(dateStr) {
+    return allSessions.some(s => s.date === dateStr && s.status === 'accepted' && s.date >= todayStr);
+}
     function renderCalendar() {
         const grid      = document.getElementById('calendarGrid');
         const monthDisp = document.getElementById('monthDisplay');
@@ -856,8 +856,9 @@ $searchIndex = computed(function () {
             if (dateStr === todayStr)        dayEl.classList.add('cal-today');
             if (dateStr === selectedDateStr) dayEl.classList.add('cal-selected');
 
-            dayEl.innerHTML = `<span style="position:relative;z-index:1;">${i}</span>
-                ${hasAcceptedOnDate(dateStr) ? '<div class="notif-dot"></div>' : ''}`;
+dayEl.innerHTML = `
+    ${hasUpcomingOnDate(dateStr) ? '<div style="position:absolute;top:2px;left:2px;width:6px;height:6px;background:#22c55e;border-radius:50%;z-index:2;"></div>' : ''}
+    <span style="position:relative;z-index:1;">${i}</span>`;
 
             dayEl.onclick = () => {
                 selectedDateStr = dateStr;
