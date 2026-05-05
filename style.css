@@ -8,8 +8,7 @@
 body { margin: 0; font-family: 'Roboto Flex', sans-serif; display: flex; height: 100vh; background: var(--light-bg); overflow: hidden; }
 
 /* Sidebar & Brand Area */
-.sidebar { width: var(--sidebar-w); background: var(--green); color: white; display: flex; flex-direction: column; transition: 0.3s; flex-shrink: 0; }
-.sidebar-brand-area { padding: 25px 20px; display: flex; align-items: center; gap: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+.sidebar { width: var(--sidebar-w); background: var(--green); color: white; display: flex; flex-direction: column; transition: 0.3s; flex-shrink: 0; overflow: visible; }.sidebar-brand-area { padding: 25px 20px; display: flex; align-items: center; gap: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); }
 .hamburger-btn { background: none; border: none; color: white; cursor: pointer; font-size: 1.3rem; padding: 0; }
 .brand-name { display: flex; align-items: center; gap: 10px; font-weight: 700; white-space: nowrap; }
 .brand-name img { width: 30px; height: 30px; border-radius: 4px; }
@@ -20,7 +19,8 @@ body { margin: 0; font-family: 'Roboto Flex', sans-serif; display: flex; height:
 .nav-item i { width: 20px; font-size: 1.1rem; text-align: center; }
 
 /* Larger Maroon Header */
-.main-layout { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.main-layout { flex: 1; display: flex; flex-direction: column; overflow: hidden; margin-left: 0; transition: margin-left 0.3s; }
+.sidebar-closed .main-layout { margin-left: 75px; }
 .top-header { background: var(--maroon); color: white; height: 95px; display: flex; align-items: center; justify-content: space-between; padding: 0 40px; flex-shrink: 0; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
 .user-circle { width: 45px; height: 45px; background: white; color: var(--maroon); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; }
 
@@ -63,7 +63,7 @@ body { margin: 0; font-family: 'Roboto Flex', sans-serif; display: flex; height:
 .btn-action:hover { filter: brightness(1.2); }
 
 /* Sidebar Toggle Logic */
-.sidebar-closed .sidebar { width: 75px; position: relative; z-index: 50; }
+.sidebar-closed .sidebar { width: 75px; position: fixed; z-index: 9999; height: 100vh; overflow: visible; }
 .sidebar-closed .brand-name, .sidebar-closed .nav-item span { display: none; }
 
 /* Maintain the tall Maroon Header */

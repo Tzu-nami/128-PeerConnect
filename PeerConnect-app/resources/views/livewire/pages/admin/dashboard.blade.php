@@ -70,6 +70,7 @@ $this->todaySessions = Bookings::with(['mentor.user', 'student.user', 'subject']
     ->orderBy('schedule_start')
     ->get()
     ->map(fn($b) => [
+        'id'       => $b->id, 
         'date'    => $b->date,
         'mentor'  => $b->mentor->user->name  ?? 'Unknown Mentor',
         'mentee'  => $b->student->user->name ?? 'Unknown Mentee',
@@ -84,6 +85,7 @@ $this->todaySessions = Bookings::with(['mentor.user', 'student.user', 'subject']
     ->latest('created_at')
     ->get()
     ->map(fn($b) => [
+        'id'       => $b->id,
         'initials' => strtoupper(substr($b->student->user->name ?? 'U', 0, 2)),
         'name'     => $b->student->user->name ?? 'Unknown Student',
         'type'     => 'Session Booking',
@@ -435,6 +437,7 @@ $acceptBooking = action(function (string $id) {
         ->latest('created_at')
         ->get()
         ->map(fn($b) => [
+            'id'       => $b->id,
             'initials' => strtoupper(substr($b->student->user->name ?? 'U', 0, 2)),
             'name'     => $b->student->user->name ?? 'Unknown Student',
             'type'     => 'Session Booking',
@@ -453,6 +456,7 @@ $rejectBooking = action(function (string $id) {
         ->latest('created_at')
         ->get()
         ->map(fn($b) => [
+            'id'       => $b->id,
             'initials' => strtoupper(substr($b->student->user->name ?? 'U', 0, 2)),
             'name'     => $b->student->user->name ?? 'Unknown Student',
             'type'     => 'Session Booking',
@@ -1495,7 +1499,11 @@ filtered.forEach(r => {
                                     <div id="calendarGrid" class="grid grid-cols-7 gap-1"></div>
                                 </div>
                             </div>
-                        <div wire:ignore class="bg-white p-6 rounded-xl shadow-sm border border-gray-100" id="section-approvals">
+                            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100" id="section-approvals"
+                                x-data="{
+                                    processingId: null,
+                                    doneIds: {},
+                                }">    
     <div class="flex justify-between items-center mb-4">
         <h3 class="font-bold text-slate-800 text-sm tracking-tight">Pending Bookings</h3>
         <span class="bg-red-100 text-red-700 text-[10px] font-bold px-2 py-0.5 rounded-full">     
@@ -1505,7 +1513,8 @@ filtered.forEach(r => {
 
     <div class="flex flex-col gap-4">
         @forelse($pendingApprovalsList as $item)
-            <div class="flex items-center gap-3">
+                <div class="flex items-center gap-3 transition-all duration-300"
+                wire:key="pending-{{ $item['id'] }}">                
                 {{-- Avatar initials --}}
                 <div class="w-8 h-8 rounded-full bg-amber-100 text-yellow-500 flex items-center justify-center text-[10px] font-bold flex-shrink-0">
                     {{ $item['initials'] }}
@@ -1520,11 +1529,62 @@ filtered.forEach(r => {
                     <p class="text-[9px] text-gray-400 truncate">Mentor: {{ $item['mentor'] }}</p>
                 </div>
 
-                {{-- Pending badge only, no actions --}}
-                <span class="text-yellow-600 text-[9px] font-bold bg-yellow-50 border border-yellow-200 px-2 py-0.5 rounded-full flex-shrink-0">
-                    Pending
-                </span>
-            </div>
+{{-- Action area --}}
+                <div class="flex-shrink-0">
+
+                    {{-- Loading spinner --}}
+                    <template x-if="processingId === '{{ $item['id'] }}' && !doneIds['{{ $item['id'] }}']">
+                        <div class="w-16 flex items-center justify-center">
+                            <i class="fa-solid fa-spinner fa-spin text-slate-400 text-xs"></i>
+                        </div>
+                    </template>
+
+                    {{-- Accepted badge --}}
+                    <template x-if="doneIds['{{ $item['id'] }}'] === 'accepted'">
+                        <span class="text-green-600 text-[9px] font-bold bg-green-50 border border-green-200 px-2 py-0.5 rounded-full">
+                            Accepted ✓
+                        </span>
+                    </template>
+
+                    {{-- Rejected badge --}}
+                    <template x-if="doneIds['{{ $item['id'] }}'] === 'rejected'">
+                        <span class="text-red-500 text-[9px] font-bold bg-red-50 border border-red-200 px-2 py-0.5 rounded-full">
+                            Rejected ✗
+                        </span>
+                    </template>
+
+                    {{-- Accept / Reject buttons --}}
+                    <template x-if="processingId !== '{{ $item['id'] }}' && !doneIds['{{ $item['id'] }}']">
+                        <div class="flex gap-1">
+                            <button
+                                title="Accept"
+                                @click="
+                                    processingId = '{{ $item['id'] }}';
+                                    $wire.acceptBooking('{{ $item['id'] }}').then(() => {
+                                        doneIds['{{ $item['id'] }}'] = 'accepted';
+                                        processingId = null;
+                                    })
+                                "
+                                class="w-7 h-7 flex items-center justify-center rounded-full bg-green-50 text-green-600 hover:bg-green-100 border border-green-200 transition">
+                                <i class="fa-solid fa-check text-[10px]"></i>
+                            </button>
+                            <button
+                                title="Reject"
+                                @click="
+                                    processingId = '{{ $item['id'] }}';
+                                    $wire.rejectBooking('{{ $item['id'] }}').then(() => {
+                                        doneIds['{{ $item['id'] }}'] = 'rejected';
+                                        processingId = null;
+                                    })
+                                "
+                                class="w-7 h-7 flex items-center justify-center rounded-full bg-red-50 text-red-500 hover:bg-red-100 border border-red-200 transition">
+                                <i class="fa-solid fa-xmark text-[10px]"></i>
+                            </button>
+                        </div>
+                    </template>
+
+                </div>
+</div>
         @empty
             <div class="text-center py-6">
                 <i class="fa-solid fa-circle-check text-green-400 text-2xl mb-2"></i>
@@ -1532,13 +1592,6 @@ filtered.forEach(r => {
             </div>
         @endforelse
     </div>
-
-    @if(count($pendingApprovalsList) > 0)
-        <a href="{{ route('admin.sessions') }}"
-            class="block w-full mt-4 py-2 text-[10px] font-bold text-slate-400 hover:text-slate-600 border-t border-gray-50 transition text-center">
-            View All in Session Management →
-        </a>
-    @endif
 </div>
 </div>
  
