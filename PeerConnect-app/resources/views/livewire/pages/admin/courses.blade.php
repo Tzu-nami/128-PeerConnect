@@ -208,7 +208,7 @@ mount(function () {
                 <thead class="bg-slate-50 border-b border-gray-100">
                     <tr>
                         <th @click="setSort('code')" class="cursor-pointer px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider select-
-                            none" style="width:18%;">
+                            none" style="width:20;">
                             <div class="flex items-center gap-1 hover:text-red-800 transition">
                                 Subject Code
                                 <span x-text="sortColumn === 'code' ? (sortDirection === 'asc' ? '↑' : '↓') : ''" class="text-[10px]"></span>
@@ -222,7 +222,7 @@ mount(function () {
                             </div>
                         </th>
                         <th @click="setSort('mentorCount')" class="cursor-pointer px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider 
-                            select-none text-center" style="width:18%;">
+                            select-none text-center" style="width:28%;">
                             <div class="flex items-center justify-center gap-1 hover:text-red-800 transition">
                                 Registered Mentors
                                 <span x-text="sortColumn === 'mentorCount' ? (sortDirection === 'asc' ? '↑' : '↓') : ''" class="text-[10px]"></span>
