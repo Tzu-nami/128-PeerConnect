@@ -621,22 +621,6 @@ body.app-layout { overflow: hidden; }
 .booking-detail-item p             { font-size: 14px; font-weight: 600; color: #1f2937; margin: 0; }
 .booking-detail-item.full          { grid-column: 1 / -1; }
 
-/* Session row — reveal actions on hover */
-.session-row .action-buttons {
-    opacity: 0;
-    transform: translateX(6px);
-    transition: opacity 0.15s ease, transform 0.15s ease;
-    pointer-events: none;
-}
-.session-row:hover .action-buttons {
-    opacity: 1;
-    transform: translateX(0);
-    pointer-events: auto;
-}
-.session-row .action-idle         { opacity: 1; transition: opacity 0.15s ease; }
-.session-row:hover .action-idle   { opacity: 0; }
-
-
 /* ─────────────────────────────────────────────
    FEEDBACK FORM
    ───────────────────────────────────────────── */
@@ -1168,14 +1152,18 @@ td:last-child .hover-tooltip:hover::after { opacity: 1; transform: translate(0);
 
 /* Table Actions buttons */
 .session-row .action-buttons,
-.mentor-row .action-buttons { opacity: 0; transform: translateX(6px); transition: opacity 0.15s ease, 
+.mentor-row .action-buttons,
+.courses-row .action-buttons { opacity: 0; transform: translateX(6px); transition: opacity 0.15s ease, 
     transform 0.15s ease; pointer-events: none; }
 .session-row:hover .action-buttons,
-.mentor-row:hover .action-buttons { opacity: 1; transform: translateX(0); pointer-events: auto; }
+.mentor-row:hover .action-buttons,
+.courses-row:hover .action-buttons { opacity: 1; transform: translateX(0); pointer-events: auto; }
 .session-row .action-idle,
-.mentor-row .action-idle { opacity: 1; transition: opacity 0.15s ease; }
+.mentor-row .action-idle,
+.courses-row .action-idle { opacity: 1; transition: opacity 0.15s ease; }
 .session-row:hover .action-idle,
-.mentor-row:hover .action-idle { opacity: 0; }
+.mentor-row:hover .action-idle,
+.courses-row:hover .action-idle { opacity: 0; }
 
 /* Dialog buttons */
 .btn-modal {

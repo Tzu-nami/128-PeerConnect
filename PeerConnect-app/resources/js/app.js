@@ -681,10 +681,8 @@ Alpine.data('sessionManagement', (initialSessions = [], initialCounts = {}) => (
         this.banner.type = type;
         this.banner.show = true;
 
-        // Clear any existing timer so it doesn't close prematurely if spammed
         clearTimeout(this.banner.timer);
 
-        // Auto-hide after 5 seconds
         this.banner.timer = setTimeout(() => {
             this.banner.show = false;
         }, 5000);
@@ -1169,5 +1167,195 @@ document.addEventListener('alpine:init', () => {
             this.mentorToDelete = mentor;
             this.showDeleteConfirm = true;
         }
+    }));
+});
+
+// Courses table
+window.closeConfirmModal = function() {
+    document.getElementById('confirmModal').style.display = 'none';
+    document.getElementById('confirmOkBtn').onclick = null;
+}
+
+window.openConfirmModal = function({ title, body, meta, variant, confirmText, loadingText, onConfirm }) {
+    const confirmModal     = document.getElementById('confirmModal');
+    const confirmModalBox  = document.getElementById('confirmModalBox');
+    const confirmTitle     = document.getElementById('confirmTitle');
+    const confirmBody      = document.getElementById('confirmBody');
+    const confirmMeta      = document.getElementById('confirmMeta');
+    const confirmOkBtn     = document.getElementById('confirmOkBtn');
+    const confirmCancelBtn = document.getElementById('confirmCancelBtn');
+    const confirmIconWrap  = document.getElementById('confirmIconWrap');
+
+    confirmModal.onclick = (e) => { if (!confirmModalBox.contains(e.target)) closeConfirmModal(); };
+    confirmCancelBtn.onclick = closeConfirmModal;
+
+    const variants = {
+        accept:  { iconHtml: iconCheck('#059669'), iconBg: '#d1fae5', btnClass: 'bg-emerald-600 hover:bg-emerald-700' },
+        edit:    { iconHtml: iconCheck('#2563eb'), iconBg: '#d7e0ff', btnClass: 'bg-blue-600 hover:bg-blue-700'       },
+        reject:  { iconHtml: iconX('#dc2626'),     iconBg: '#fee2e2', btnClass: 'bg-red-600 hover:bg-red-700'         },
+        neutral: { iconHtml: iconInfo('#64748b'),  iconBg: '#f1f5f9', btnClass: 'bg-gray-700 hover:bg-gray-800'       },
+    };
+    const v = variants[variant] || variants.neutral;
+
+    confirmIconWrap.style.background = v.iconBg;
+    confirmIconWrap.innerHTML        = v.iconHtml;
+    confirmTitle.textContent         = title;
+    confirmBody.innerHTML            = body;
+    confirmMeta.innerHTML            = meta || '';
+    confirmMeta.style.display        = meta ? 'block' : 'none';
+
+    confirmOkBtn.className   = `px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors ${v.btnClass}`;
+    confirmOkBtn.textContent = confirmText || 'Confirm';
+
+    confirmOkBtn.onclick = async () => {
+        const originalText = confirmOkBtn.textContent;
+        // Turn button into a loading spinner
+        confirmOkBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i>${loadingText || 'Processing...'}`;
+        confirmOkBtn.classList.add('opacity-70', 'cursor-not-allowed');
+        confirmOkBtn.style.pointerEvents = 'none';
+        
+        confirmCancelBtn.disabled = true;
+        confirmCancelBtn.classList.add('opacity-50', 'cursor-not-allowed');
+
+        try {
+            const result = onConfirm();
+            if (result && typeof result.then === 'function') await result;
+        } catch (err) {
+            // Revert state if something fails
+            console.error("Action failed:", err);
+            alert("Something went wrong. Please try again.");
+        } finally {
+            // Restore button state
+            confirmOkBtn.textContent = originalText;
+            confirmOkBtn.classList.remove('opacity-70', 'cursor-not-allowed');
+            confirmOkBtn.style.pointerEvents = 'auto';
+            confirmCancelBtn.disabled = false;
+            confirmCancelBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            closeConfirmModal();
+        }
+    };
+    
+    // Make the modal visible
+    confirmModal.style.display = 'flex';
+}
+
+function iconCheck(color) { return `<svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M4 10l4.5 4.5L16 6" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`; }
+function iconX(color)     { return `<svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M5 5l10 10M15 5L5 15" stroke="${color}" stroke-width="2" stroke-linecap="round"/></svg>`; }
+function iconInfo(color)  { return `<svg width="18" height="18" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="8.5" stroke="${color}" stroke-width="1.5"/><path d="M10 9v5" stroke="${color}" stroke-width="1.5" stroke-linecap="round"/><circle cx="10" cy="6.5" r="0.8" fill="${color}"/></svg>`; }
+
+/* ── Alpine Component Registration ── */
+document.addEventListener('alpine:init', () => {
+    Alpine.data('courseManagement', (initialSubjects) => ({
+        subjects: initialSubjects,
+        searchQuery: '',
+        mentorFilter: [],
+        sortColumn: 'code',
+        sortDirection: 'asc',
+        currentPage: 1,
+        perPage: 5,
+        profileOpen: false,
+        sidebarCollapsed: false,
+        showViewModal: false,
+        showSubjectModal: false,
+        selectedSubject: null,
+        showEditModal: false,
+        editingSubject: null,
+        editForm: { code: '', name: '' },
+        originalForm: { code: '', name: '' },
+
+        init() {
+            window.addEventListener('mentor-filter-changed', (e) => {
+                this.mentorFilter = e.detail;
+                this.currentPage = 1;
+            });
+            window.addEventListener('click', () => {
+                this.profileOpen = false;
+                document.getElementById('mentorDropdown')?.classList.add('hidden');
+            });
+        },
+
+        setSort(column) {
+            if (this.sortColumn === column) {
+                this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
+            } else {
+                this.sortColumn = column;
+                this.sortDirection = 'asc';
+            }
+            this.currentPage = 1;
+        },
+
+        get filteredSubjects() {
+            const term = this.searchQuery.toLowerCase();
+            let result = this.subjects.filter(s => {
+                const matchSearch = (s.code + ' ' + s.name).toLowerCase().includes(term);
+                const matchFilter = this.mentorFilter.length === 0
+                    || (this.mentorFilter.includes('with_mentors') && s.mentorCount > 0)
+                    || (this.mentorFilter.includes('no_mentors')   && s.mentorCount === 0);
+                return matchSearch && matchFilter;
+            });
+
+            result = [...result].sort((a, b) => {
+                let valA = a[this.sortColumn];
+                let valB = b[this.sortColumn];
+                if (typeof valA === 'string') { valA = valA.toLowerCase(); valB = valB.toLowerCase(); }
+                if (valA < valB) return this.sortDirection === 'asc' ? -1 : 1;
+                if (valA > valB) return this.sortDirection === 'asc' ?  1 : -1;
+                return 0;
+            });
+            return result;
+        },
+
+        get paginatedSubjects() {
+            const start = (this.currentPage - 1) * this.perPage;
+            return this.filteredSubjects.slice(start, start + this.perPage);
+        },
+
+        get pageStart() {
+            return this.filteredSubjects.length === 0 ? 0 : (this.currentPage - 1) * this.perPage + 1;
+        },
+
+        get pageEnd() {
+            return Math.min(this.currentPage * this.perPage, this.filteredSubjects.length);
+        },
+
+        get totalPages() {
+            return Math.max(1, Math.ceil(this.filteredSubjects.length / this.perPage));
+        },
+
+        get pages() {
+            const total   = this.totalPages;
+            const current = this.currentPage;
+            if (total <= 8) return Array.from({ length: total }, (_, i) => i + 1);
+            if (current <= 4) return [1, 2, 3, 4, 5, '...', total];
+            if (current >= total - 3) return [1, '...', total - 3, total - 2, total - 1, total];
+            return [1, '...', current - 1, current, current + 1, '...', total];
+        },
+
+        openViewModal(sub) {
+            this.selectedSubject = sub;
+            this.showViewModal = true;
+        },
+
+        openEditModal(sub) {
+            this.editingSubject = sub;
+            this.editForm.code  = sub.code;
+            this.editForm.name  = sub.name;
+            this.originalForm = {
+                code: this.editForm.code,
+                name: this.editForm.name
+            };
+            this.showEditModal  = true;
+        },
+
+        openDeleteModal(sub) {
+            openConfirmModal({
+                title: 'Delete Subject?',
+                body:  `Are you sure you want to permanently delete <strong>${sub.code}</strong>? This will also remove the subject from all mentors currently assigned to teach it.`,
+                variant: 'reject',
+                confirmText: 'Delete',
+                loadingText: 'Deleting...',
+                onConfirm: async () => { await this.$wire.deleteSubject(sub.id); }
+            });
+        },
     }));
 });
