@@ -1404,7 +1404,7 @@ $skipFeedback = action(function () {
                                     wire:click="validateBooking"
                                     @click="clearedErrors = []"
                                     @if (!auth()->user()->studentProfile) disabled @endif
-                                    :disabled="dateError !== '' || timeError !== ''"
+                                    :disabled="dateError !== '' || timeError !== '' || !subject_id || !topic || !tutorialMode_id || !date || !start_time || !end_time || !mentor_id"
                                     class="w-full bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium py-2 px-4 rounded-lg text-sm transition-colors"
                                     wire:loading.attr="disabled"
                                     wire:loading.class="opacity-60 cursor-not-allowed"
