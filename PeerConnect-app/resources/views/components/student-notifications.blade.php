@@ -212,25 +212,28 @@
                 </div>
             @endforelse
 
-            @foreach($notifications->skip(3) as $notif)
-                <div class="px-4 py-3 border-b border-gray-50 hover:bg-gray-50 transition cursor-default"
-                     x-show="showAll" x-cloak x-transition>
-                    <div class="flex items-start gap-3">
-                        <div class="w-8 h-8 rounded-full {{ $notif['iconBg'] }} flex items-center justify-center flex-shrink-0 mt-0.5">
-                            <i class="fa-solid {{ $notif['icon'] }} {{ $notif['iconColor'] }} text-xs"></i>
-                        </div>
-                        <div class="flex-1 min-w-0">
-                            <p class="text-xs text-gray-700 leading-snug">{!! $notif['message'] !!}</p>
-                            <div class="flex items-center gap-2 mt-1.5">
-                                <span class="text-[10px] font-bold px-1.5 py-0.5 rounded {{ $notif['badge'] }}">
-                                    {{ $notif['badgeText'] }}
-                                </span>
-                                <span class="text-[10px] text-gray-400">{{ $notif['timeAgo'] }}</span>
+<template x-if="showAll">
+                <div>
+                    @foreach($notifications->skip(3) as $notif)
+                        <div class="px-4 py-3 border-b border-gray-50 hover:bg-gray-50 transition cursor-default">
+                            <div class="flex items-start gap-3">
+                                <div class="w-8 h-8 rounded-full {{ $notif['iconBg'] }} flex items-center justify-center flex-shrink-0 mt-0.5">
+                                    <i class="fa-solid {{ $notif['icon'] }} {{ $notif['iconColor'] }} text-xs"></i>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <p class="text-xs text-gray-700 leading-snug">{!! $notif['message'] !!}</p>
+                                    <div class="flex items-center gap-2 mt-1.5">
+                                        <span class="text-[10px] font-bold px-1.5 py-0.5 rounded {{ $notif['badge'] }}">
+                                            {{ $notif['badgeText'] }}
+                                        </span>
+                                        <span class="text-[10px] text-gray-400">{{ $notif['timeAgo'] }}</span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    @endforeach
                 </div>
-            @endforeach
+            </template>
 
         </div>
 
