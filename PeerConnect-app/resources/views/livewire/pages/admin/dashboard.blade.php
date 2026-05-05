@@ -1612,7 +1612,7 @@ filtered.forEach(r => {
 const allSessions = @json($allSessions).map(s => ({
     ...s,
     color: {
-        'Accepted':  'text-green-600',
+        'Accepted':  'text-blue-600',
         'Completed': 'text-green-600',
         'Pending':   'text-yellow-500',
         'Upcoming':  'text-orange-500',
