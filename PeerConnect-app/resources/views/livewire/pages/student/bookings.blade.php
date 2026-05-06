@@ -511,8 +511,9 @@ $skipFeedback = action(function () {
     ]);
 
     $this->showFeedbackModal = false;
-
     unset($this->completedBooking);
+
+    $this->dispatch('feedback-skipped');
 });
 
 ?>
@@ -605,15 +606,15 @@ $skipFeedback = action(function () {
                 <div class="scm-actions">
                     <button type="button" class="scm-btn-skip"
                             wire:click="skipFeedback"
-                            @click="show = false; window.location.reload()"
                             wire:loading.attr="disabled"
-                            wire:target="skipFeedback">
-                        <span wire:loading.remove wire:target="skipFeedback">
-                            <i class="fa-solid fa-forward-step mr-1 text-xs"></i> Skip for now
-                        </span>
-                        <span wire:loading wire:target="skipFeedback">
-                            <i class="fa-solid fa-spinner fa-spin mr-1 text-xs"></i> Skipping...
-                        </span>
+                            wire:target="skipFeedback"
+                            x-on:feedback-skipped.window="show = false; window.location.reload()">
+                            <span wire:loading.remove wire:target="skipFeedback">
+                                <i class="fa-solid fa-forward-step mr-1 text-xs"></i> Skip for now
+                            </span>
+                            <span wire:loading wire:target="skipFeedback">
+                                <i class="fa-solid fa-spinner fa-spin mr-1 text-xs"></i> Skipping...
+                            </span>
                     </button>
                     <button type="button" class="scm-btn-answer"
                             @click="
