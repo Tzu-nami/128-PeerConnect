@@ -68,14 +68,15 @@ mount(function () {
         ->orderBy('schedule_start')
         ->get()
         ->map(fn($b) => [
-            'id'       => $b->id, 
+            'id'      => $b->id,
             'date'    => $b->date,
             'mentor'  => $b->mentor->user->name  ?? 'Unknown Mentor',
             'mentee'  => $b->student->user->name ?? 'Unknown Mentee',
             'subject' => $b->subject->code       ?? 'N/A',
             'time'    => Carbon::parse($b->schedule_start)->format('h:i A'),
             'status'  => ucfirst($b->booking_status),
-        ])
+
+])
         ->toArray();
 
     $this->pendingApprovalsList = Bookings::with(['student.user', 'mentor.user', 'subject'])
@@ -83,14 +84,23 @@ mount(function () {
         ->latest('created_at')
         ->get()
         ->map(fn($b) => [
-            'id'       => $b->id,
-            'initials' => strtoupper(substr($b->student->user->name ?? 'U', 0, 2)),
-            'name'     => $b->student->user->name ?? 'Unknown Student',
-            'type'     => 'Session Booking',
-            'subject'  => $b->subject->code       ?? 'N/A',
-            'mentor'   => $b->mentor->user->name  ?? 'Unknown Mentor',
-            'date'     => \Carbon\Carbon::parse($b->date)->format('M j'),
-        ])
+    'id'           => $b->id,
+    'initials'     => strtoupper(substr($b->student->user->name ?? 'U', 0, 2)),
+    'name'         => $b->student->user->name ?? 'Unknown Student',
+    'email'        => $b->student->user->email ?? '',
+    'type'         => 'Session Booking',
+    'subject'      => $b->subject->code       ?? 'N/A',
+    'subject_name' => $b->subject->name       ?? '',
+    'mentor'       => $b->mentor->user->name  ?? 'Unknown Mentor',
+    'date'         => \Carbon\Carbon::parse($b->date)->format('M j'),
+    'date_full'    => \Carbon\Carbon::parse($b->date)->format('F j, Y'),
+    'time_start'   => \Carbon\Carbon::parse($b->schedule_start)->format('h:i A'),
+    'time_end'     => \Carbon\Carbon::parse($b->schedule_end)->format('h:i A'),
+    'topic'        => $b->topic ?? '—',
+    'mode'         => $b->mode ?? 'One-on-One Tutorial',
+    'notes'        => $b->notes ?? null,
+    'created_at'   => $b->created_at->format('M j, Y g:i A'),
+])
         ->toArray();
 
     $this->allSessions = Bookings::with(['mentor.user', 'student.user', 'subject'])
@@ -438,14 +448,23 @@ $acceptBooking = action(function (string $id) {
         ->latest('created_at')
         ->get()
         ->map(fn($b) => [
-            'id'       => $b->id,
-            'initials' => strtoupper(substr($b->student->user->name ?? 'U', 0, 2)),
-            'name'     => $b->student->user->name ?? 'Unknown Student',
-            'type'     => 'Session Booking',
-            'subject'  => $b->subject->code       ?? 'N/A',
-            'mentor'   => $b->mentor->user->name  ?? 'Unknown Mentor',
-            'date'     => \Carbon\Carbon::parse($b->date)->format('M j'),
-        ])
+    'id'           => $b->id,
+    'initials'     => strtoupper(substr($b->student->user->name ?? 'U', 0, 2)),
+    'name'         => $b->student->user->name ?? 'Unknown Student',
+    'email'        => $b->student->user->email ?? '',
+    'type'         => 'Session Booking',
+    'subject'      => $b->subject->code       ?? 'N/A',
+    'subject_name' => $b->subject->name       ?? '',
+    'mentor'       => $b->mentor->user->name  ?? 'Unknown Mentor',
+    'date'         => \Carbon\Carbon::parse($b->date)->format('M j'),
+    'date_full'    => \Carbon\Carbon::parse($b->date)->format('F j, Y'),
+    'time_start'   => \Carbon\Carbon::parse($b->schedule_start)->format('h:i A'),
+    'time_end'     => \Carbon\Carbon::parse($b->schedule_end)->format('h:i A'),
+    'topic'        => $b->topic ?? '—',
+    'mode'         => $b->mode ?? 'One-on-One Tutorial',
+    'notes'        => $b->notes ?? null,
+    'created_at'   => $b->created_at->format('M j, Y g:i A'),
+])
         ->toArray();
     $this->pendingBookings = Bookings::where('booking_status', 'pending')->count();
 });
@@ -457,14 +476,23 @@ $rejectBooking = action(function (string $id) {
         ->latest('created_at')
         ->get()
         ->map(fn($b) => [
-            'id'       => $b->id,
-            'initials' => strtoupper(substr($b->student->user->name ?? 'U', 0, 2)),
-            'name'     => $b->student->user->name ?? 'Unknown Student',
-            'type'     => 'Session Booking',
-            'subject'  => $b->subject->code       ?? 'N/A',
-            'mentor'   => $b->mentor->user->name  ?? 'Unknown Mentor',
-            'date'     => \Carbon\Carbon::parse($b->date)->format('M j'),
-        ])
+    'id'           => $b->id,
+    'initials'     => strtoupper(substr($b->student->user->name ?? 'U', 0, 2)),
+    'name'         => $b->student->user->name ?? 'Unknown Student',
+    'email'        => $b->student->user->email ?? '',
+    'type'         => 'Session Booking',
+    'subject'      => $b->subject->code       ?? 'N/A',
+    'subject_name' => $b->subject->name       ?? '',
+    'mentor'       => $b->mentor->user->name  ?? 'Unknown Mentor',
+    'date'         => \Carbon\Carbon::parse($b->date)->format('M j'),
+    'date_full'    => \Carbon\Carbon::parse($b->date)->format('F j, Y'),
+    'time_start'   => \Carbon\Carbon::parse($b->schedule_start)->format('h:i A'),
+    'time_end'     => \Carbon\Carbon::parse($b->schedule_end)->format('h:i A'),
+    'topic'        => $b->topic ?? '—',
+    'mode'         => $b->mode ?? 'One-on-One Tutorial',
+    'notes'        => $b->notes ?? null,
+    'created_at'   => $b->created_at->format('M j, Y g:i A'),
+])
         ->toArray();
     $this->pendingBookings = Bookings::where('booking_status', 'pending')->count();
 });
@@ -1039,97 +1067,207 @@ $rejectBooking = action(function (string $id) {
                 </div>
             </div>
 
-            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100" id="section-approvals"
-                x-data="{
-                    processingId: null,
-                    doneIds: {},
-                }">  
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="font-bold text-slate-800 text-sm tracking-tight">Pending Requests</h3>
-                    <span class="bg-red-100 text-red-700 text-[10px] font-bold px-3 py-1 rounded-full">     
-                        {{ count($pendingApprovalsList) }} Request{{ count($pendingApprovalsList) !== 1 ? 's' : '' }}
-                    </span>
+     <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100" id="section-approvals"
+    x-data="{
+        processingId: null,
+        doneIds: {},
+        modalOpen: false,
+        selected: null,
+        openDetail(item) {
+            this.selected = item;
+            this.modalOpen = true;
+        }
+    }">
+
+    {{-- ── DETAIL MODAL ── --}}
+<div x-show="modalOpen" x-cloak
+    x-transition
+    class="fixed inset-0 z-[1200] flex items-center justify-center p-6"
+    style="background:rgba(0,0,0,0.45);"
+    @click.self="modalOpen = false">
+        <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden" @click.stop>
+            {{-- Header --}}
+            <div class="flex items-center gap-4 px-6 py-5 border-b border-gray-100">
+                <div class="w-11 h-11 rounded-full bg-amber-100 text-yellow-600 flex items-center justify-center text-sm font-bold flex-shrink-0"
+                    x-text="selected?.initials"></div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-base font-black text-slate-800 truncate" x-text="selected?.name"></p>
+                    <p class="text-[11px] text-gray-400 truncate" x-text="selected?.email"></p>
+                </div>
+                <button @click="modalOpen = false" class="text-gray-400 hover:text-red-600 transition">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            {{-- Body --}}
+            <div class="px-6 py-5 space-y-4">
+                {{-- Session time block --}}
+                <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 flex items-start gap-3">
+                    <i class="fa-solid fa-calendar-days text-slate-400 mt-0.5 text-sm flex-shrink-0"></i>
+                    <div>
+                        <p class="text-xs font-bold text-slate-700 mb-0.5" x-text="selected?.date_full"></p>
+                        <p class="text-xs text-slate-500" x-text="(selected?.time_start ?? '') + ' – ' + (selected?.time_end ?? '')"></p>
+                    </div>
                 </div>
 
-                <div class="flex flex-col gap-4">
-                    @forelse($pendingApprovalsList as $item)
-                        <div class="flex items-center gap-3 transition-all duration-300"
-                        wire:key="pending-{{ $item['id'] }}">                
-                            {{-- Avatar initials --}}
-                            <div class="w-8 h-8 rounded-full bg-amber-100 text-yellow-500 flex items-center justify-center text-[10px] font-bold flex-shrink-0">
-                                {{ $item['initials'] }}
-                            </div>
-
-                            {{-- Info --}}
-                            <div class="min-w-0 flex-1">
-                                <p class="text-[11px] font-bold text-slate-700 truncate">{{ $item['name'] }}</p>
-                                <p class="text-[9px] text-gray-400 font-medium truncate">
-                                    {{ $item['type'] }} &mdash; {{ $item['subject'] }} &mdash; {{ $item['date'] }}
-                                </p>
-                                <p class="text-[9px] text-gray-400 truncate">Mentor: {{ $item['mentor'] }}</p>
-                            </div>
-
-                            {{-- Action area --}}
-                            <div class="flex-shrink-0">
-                                {{-- Loading spinner --}}
-                                <template x-if="processingId === '{{ $item['id'] }}' && !doneIds['{{ $item['id'] }}']">
-                                    <div class="w-16 flex items-center justify-center">
-                                        <i class="fa-solid fa-spinner fa-spin text-slate-400 text-xs"></i>
-                                    </div>
-                                </template>
-
-                                {{-- Accepted badge --}}
-                                <template x-if="doneIds['{{ $item['id'] }}'] === 'accepted'">
-                                    <span class="text-green-600 text-[9px] font-bold bg-green-50 border border-green-200 px-2 py-0.5 rounded-full">
-                                        Accepted ✓
-                                    </span>
-                                </template>
-
-                                {{-- Rejected badge --}}
-                                <template x-if="doneIds['{{ $item['id'] }}'] === 'rejected'">
-                                    <span class="text-red-500 text-[9px] font-bold bg-red-50 border border-red-200 px-2 py-0.5 rounded-full">
-                                        Rejected ✗
-                                    </span>
-                                </template>
-
-                                {{-- Accept / Reject buttons --}}
-                                <template x-if="processingId !== '{{ $item['id'] }}' && !doneIds['{{ $item['id'] }}']">
-                                    <div class="flex gap-1">
-                                        <button
-                                            title="Accept"
-                                            @click="
-                                                processingId = '{{ $item['id'] }}';
-                                                $wire.acceptBooking('{{ $item['id'] }}').then(() => {
-                                                    doneIds['{{ $item['id'] }}'] = 'accepted';
-                                                    processingId = null;
-                                                })
-                                            "
-                                            class="w-7 h-7 flex items-center justify-center rounded-full bg-green-50 text-green-600 hover:bg-green-100 border border-green-200 transition">
-                                            <i class="fa-solid fa-check text-[10px]"></i>
-                                        </button>
-                                        <button
-                                            title="Reject"
-                                            @click="
-                                                processingId = '{{ $item['id'] }}';
-                                                $wire.rejectBooking('{{ $item['id'] }}').then(() => {
-                                                    doneIds['{{ $item['id'] }}'] = 'rejected';
-                                                    processingId = null;
-                                                })
-                                            "
-                                            class="w-7 h-7 flex items-center justify-center rounded-full bg-red-50 text-red-500 hover:bg-red-100 border border-red-200 transition">
-                                            <i class="fa-solid fa-xmark text-[10px]"></i>
-                                        </button>
-                                    </div>
-                                </template>
-                            </div>
+                {{-- Detail rows --}}
+                <div class="divide-y divide-gray-100 text-xs">
+                    <div class="flex justify-between py-2.5">
+                        <span class="text-gray-400 font-medium">Subject</span>
+                        <span class="text-slate-700 font-bold text-right">
+                            <span x-text="selected?.subject"></span>
+                            <span class="text-gray-400 font-normal ml-1" x-text="selected?.subject_name ? '(' + selected.subject_name + ')' : ''"></span>
+                        </span>
+                    </div>
+                    <div class="flex justify-between py-2.5">
+                        <span class="text-gray-400 font-medium">Mentor</span>
+                        <span class="text-slate-700 font-bold" x-text="selected?.mentor"></span>
+                    </div>
+                    <div class="flex justify-between py-2.5">
+                        <span class="text-gray-400 font-medium">Mode</span>
+                        <span class="text-slate-700 font-bold" x-text="selected?.mode"></span>
+                    </div>
+                    <div class="flex justify-between py-2.5">
+                        <span class="text-gray-400 font-medium">Topic</span>
+                        <span class="text-slate-700 font-bold text-right max-w-[60%]" x-text="selected?.topic"></span>
+                    </div>
+                    <template x-if="selected?.notes">
+                        <div class="py-2.5">
+                            <p class="text-gray-400 font-medium mb-1.5">Notes</p>
+                            <p class="text-slate-600 leading-relaxed" x-text="selected?.notes"></p>
                         </div>
-                    @empty
-                        <div class="py-4">
-                            <p class="text-xs text-gray-400 italic">No pending requests.</p>
-                        </div>
-                    @endforelse
+                    </template>
                 </div>
             </div>
+
+            {{-- Footer actions --}}
+            <div class="px-6 py-5 bg-gray-50 border-t border-gray-100 flex gap-3"
+                x-show="selected && !doneIds[selected?.id]">
+                <button
+                    @click="
+                        if (!selected) return;
+                        const id = selected.id;
+                        processingId = id;
+                        modalOpen = false;
+                        $wire.rejectBooking(id).then(() => {
+                            doneIds[id] = 'rejected';
+                            processingId = null;
+                        })
+                    "
+                    class="flex-1 py-2.5 text-xs font-bold text-red-700 bg-red-50 border border-red-200 hover:bg-red-100 rounded-xl transition">
+                    <i class="fa-solid fa-xmark mr-1"></i> Reject
+                </button>
+                <button
+                    @click="
+                        if (!selected) return;
+                        const id = selected.id;
+                        processingId = id;
+                        modalOpen = false;
+                        $wire.acceptBooking(id).then(() => {
+                            doneIds[id] = 'accepted';
+                            processingId = null;
+                        })
+                    "
+                    class="flex-1 py-2.5 text-xs font-bold text-white bg-green-600 hover:bg-green-700 rounded-xl transition shadow-sm">
+                    <i class="fa-solid fa-check mr-1"></i> Accept
+                </button>
+            </div>
+            <div x-show="selected && doneIds[selected?.id]"
+                class="px-6 py-4 bg-gray-50 border-t border-gray-100 text-center text-xs font-bold"
+                :class="doneIds[selected?.id] === 'accepted' ? 'text-green-600' : 'text-red-500'"
+                x-text="doneIds[selected?.id] === 'accepted' ? 'Booking accepted ✓' : 'Booking rejected ✗'">
+            </div>
+        </div>
+    </div>
+
+    {{-- List header --}}
+    <div class="flex justify-between items-center mb-4">
+        <h3 class="font-bold text-slate-800 text-sm tracking-tight">Pending Requests</h3>
+        <span class="bg-red-100 text-red-700 text-[10px] font-bold px-3 py-1 rounded-full">
+            {{ count($pendingApprovalsList) }} Request{{ count($pendingApprovalsList) !== 1 ? 's' : '' }}
+        </span>
+    </div>
+
+    <div class="flex flex-col gap-1">
+        @forelse($pendingApprovalsList as $item)
+            <div class="flex items-center gap-3 rounded-xl px-2 py-2.5 transition-all duration-200 hover:bg-slate-50 cursor-pointer group"
+                wire:key="pending-{{ $item['id'] }}"
+                @click="openDetail({{ json_encode($item) }})">
+
+                {{-- Avatar --}}
+                <div class="w-8 h-8 rounded-full bg-amber-100 text-yellow-500 flex items-center justify-center text-[10px] font-bold flex-shrink-0">
+                    {{ $item['initials'] }}
+                </div>
+
+                {{-- Info --}}
+                <div class="min-w-0 flex-1">
+                    <p class="text-[11px] font-bold text-slate-700 truncate group-hover:text-slate-900 transition-colors">{{ $item['name'] }}</p>
+                    <p class="text-[9px] text-gray-400 font-medium truncate">
+                        {{ $item['subject'] }} &mdash; {{ $item['mentor'] }}
+                    </p>
+                    <p class="text-[9px] text-blue-500 font-semibold mt-0.5 truncate">
+                        <i class="fa-regular fa-clock text-[8px] mr-0.5"></i>
+                        {{ $item['date_full'] }}, {{ $item['time_start'] }} – {{ $item['time_end'] }}
+                    </p>
+                </div>
+
+                {{-- Action area --}}
+                <div class="flex-shrink-0" @click.stop>
+                    <template x-if="processingId === '{{ $item['id'] }}' && !doneIds['{{ $item['id'] }}']">
+                        <div class="w-16 flex items-center justify-center">
+                            <i class="fa-solid fa-spinner fa-spin text-slate-400 text-xs"></i>
+                        </div>
+                    </template>
+
+                    <template x-if="doneIds['{{ $item['id'] }}'] === 'accepted'">
+                        <span class="text-green-600 text-[9px] font-bold bg-green-50 border border-green-200 px-2 py-0.5 rounded-full">
+                            Accepted ✓
+                        </span>
+                    </template>
+
+                    <template x-if="doneIds['{{ $item['id'] }}'] === 'rejected'">
+                        <span class="text-red-500 text-[9px] font-bold bg-red-50 border border-red-200 px-2 py-0.5 rounded-full">
+                            Rejected ✗
+                        </span>
+                    </template>
+
+                    <template x-if="processingId !== '{{ $item['id'] }}' && !doneIds['{{ $item['id'] }}']">
+                        <div class="flex gap-1">
+                            <button
+                                title="Accept"
+                                @click="
+                                    processingId = '{{ $item['id'] }}';
+                                    $wire.acceptBooking('{{ $item['id'] }}').then(() => {
+                                        doneIds['{{ $item['id'] }}'] = 'accepted';
+                                        processingId = null;
+                                    })
+                                "
+                                class="w-7 h-7 flex items-center justify-center rounded-full bg-green-50 text-green-600 hover:bg-green-100 border border-green-200 transition">
+                                <i class="fa-solid fa-check text-[10px]"></i>
+                            </button>
+                            <button
+                                title="Reject"
+                                @click="
+                                    processingId = '{{ $item['id'] }}';
+                                    $wire.rejectBooking('{{ $item['id'] }}').then(() => {
+                                        doneIds['{{ $item['id'] }}'] = 'rejected';
+                                        processingId = null;
+                                    })
+                                "
+                                class="w-7 h-7 flex items-center justify-center rounded-full bg-red-50 text-red-500 hover:bg-red-100 border border-red-200 transition">
+                                <i class="fa-solid fa-xmark text-[10px]"></i>
+                            </button>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        @empty
+            <div class="py-4">
+                <p class="text-xs text-gray-400 italic">No pending requests.</p>
+            </div>
+        @endforelse
+    </div>
+</div>
         </div>
     </div>
 </div>
