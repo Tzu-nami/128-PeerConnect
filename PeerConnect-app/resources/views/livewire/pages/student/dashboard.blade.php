@@ -22,6 +22,7 @@ state([
     'college_id'        => '',
     'degreeProgram_id'  => '',
     'yearLevel_id'      => '',
+    'sessions'          => [],
 ]);
 
 // MOUNT
@@ -30,7 +31,7 @@ mount(function () {
 
     $profile = StudentProfiles::where('user_id', auth()->id())->first();
 
-    if (!$profile) return;
+    if ($profile) {
 
     // Pre-fill profile form fields
     $this->student_num      = $profile->student_num;
@@ -64,6 +65,7 @@ mount(function () {
         })
         ->values()
         ->toArray();
+    }
 });
 
 // SEARCH INDEX
@@ -208,7 +210,7 @@ $saveProfile = action(function () {
 
 <div>
     {{-- ── GLOBAL SEARCH ── --}}
-    <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-6 relative animate-fade-up z-50"
+    <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-6 relative animate-fade-up"
          x-data="{
              query: '',
              open: false,
@@ -248,7 +250,7 @@ $saveProfile = action(function () {
              x-transition
              class="absolute left-0 right-0 bg-white rounded-xl shadow-xl border
                     border-gray-100 overflow-y-auto"
-             style="top: calc(100% + 6px); max-height: 420px; z-index: 50;">
+             style="top: calc(100% + 6px); max-height: 420px; z-index: 20;">
 
             <template x-if="Object.keys(filteredResults).length === 0">
                 <div style="padding:20px; text-align:center; font-size:13px;
