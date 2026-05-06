@@ -31,7 +31,7 @@ $feedbacks = computed(function () {
         ], fn($v) => !is_null($v));
 
         $avg = count($scores) > 0 ? round(array_sum($scores) / count($scores), 1) : null;
-        
+
         $avgClass = match(true) {
             $avg === null => '',
             $avg >= 4.5   => 'rating-excellent',
@@ -72,7 +72,7 @@ $mentorsList = computed(function () {
     return \DB::table('mentor_profiles')
         ->join('user_profiles', \DB::raw('mentor_profiles.user_id::text'), '=', \DB::raw('user_profiles.id::text'))
         ->select(
-            'mentor_profiles.id', 
+            'mentor_profiles.id',
             \DB::raw("CONCAT(user_profiles.\"lastName\", ', ', user_profiles.\"firstName\") as mentor_name")
         )
         ->orderBy('user_profiles.lastName')
@@ -83,7 +83,7 @@ $mentorsList = computed(function () {
 $dashboardStats = computed(function () {
     $all = \DB::table('feedback')->get();
     $totalSessions = \DB::table('bookings')->where('booking_status', 'completed')->count();
-    
+
     if ($all->isEmpty()) {
         return ['avg' => '0.0', 'total' => 0, 'sessions' => number_format($totalSessions)];
     }
@@ -112,7 +112,7 @@ $dashboardStats = computed(function () {
             <p class="text-sm font-medium text-slate-500 mt-1">All student feedbacks collected</p>
         </div>
     </div>
-    
+
     {{-- STATS CARDS --}}
     <div class="space-y-6">
         <div class="grid grid-cols-[repeat(autofit,_minmax(250px,_1fr))] sm:grid-cols-3 gap-4 mb-6">
@@ -150,12 +150,12 @@ $dashboardStats = computed(function () {
             <div class="p-6 border-b border-gray-100 flex flex-wrap gap-4 justify-between items-center bg-white">
                 <div>
                     <h2 class="font-bold text-slate-800 text-m">
-                        <i class="fa-solid fa-user-secret text-gray-400"></i> 
+                        <i class="fa-solid fa-user-secret text-gray-400"></i>
                         Anonymous Student Feedbacks
                     </h2>
                     <p class="text-xs text-gray-500">Student identities are hidden to encourage honest reporting.</p>
                 </div>
-                
+
                 <div class="flex gap-3 flex-wrap items-center">
                     <div class="relative">
                         <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
@@ -163,7 +163,7 @@ $dashboardStats = computed(function () {
                             placeholder="Search..."
                             class="pl-8 pr-3 py-2 h-8 text-xs font-medium text-slate-700 border border-gray-200 rounded-lg bg-white outline-none focus:ring-1 focus:border-up-maroon focus:ring-up-maroon w-64 transition">
                     </div>
-                                        
+
                     {{-- Filter mentors --}}
                     <div class="relative" @click.outside="showMentorDropdown = false">
                         <button @click="showMentorDropdown = !showMentorDropdown"

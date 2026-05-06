@@ -169,62 +169,60 @@ $subjects = computed(function () {
             <table class="w-full text-sm text-left table-fixed">
                 <thead class="bg-slate-50 border-b border-gray-100">
                 <tr>
-                    <th class="px-5 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider w-[4%]">#</th>
-
                     {{-- Date --}}
-                    <th class="px-5 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider w-[11%]">
+                    <th class="px-5 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider w-[14%]">
                         <button @click="toggleSort('rawDate')"
-                                :class="sortCol === 'rawDate' ? 'text-up-maroon' : 'text-gray-400 hover:text-slate-600'"
-                                class="flex items-center gap-1 transition">
+                                :class="sortCol === 'rawDate' ? 'text-up-maroon' : 'text-gray-400 hover:text-up-maroon'"
+                                class="flex items-center gap-1 transition uppercase">
                             Date
                             <i class="fa-solid text-[8px]"
                                :class="sortCol === 'rawDate'
-                                       ? (sortDir === 'asc' ? 'fa-arrow-up text-up-maroon' : 'fa-arrow-down text-up-maroon')
-                                       : 'fa-arrow-up-arrow-down opacity-30'"></i>
+                               ? (sortDir === 'asc' ? 'fa-arrow-up text-up-maroon' : 'fa-arrow-down text-up-maroon')
+                               : 'fa-arrow-up-arrow-down opacity-30'"></i>
                         </button>
                     </th>
 
                     {{-- Subject --}}
                     <th class="px-5 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider w-[12%]">
                         <button @click="toggleSort('subject')"
-                                :class="sortCol === 'subject' ? 'text-up-maroon' : 'text-gray-400 hover:text-slate-600'"
-                                class="flex items-center gap-1 transition">
+                                :class="sortCol === 'subject' ? 'text-up-maroon' : 'text-gray-400 hover:text-up-maroon'"
+                                class="flex items-center gap-1 transition uppercase">
                             Subject
                             <i class="fa-solid text-[8px]"
                                :class="sortCol === 'subject'
-                                       ? (sortDir === 'asc' ? 'fa-arrow-up text-up-maroon' : 'fa-arrow-down text-up-maroon')
-                                       : 'fa-arrow-up-arrow-down opacity-30'"></i>
+                               ? (sortDir === 'asc' ? 'fa-arrow-up text-up-maroon' : 'fa-arrow-down text-up-maroon')
+                               : 'fa-arrow-up-arrow-down opacity-30'"></i>
                         </button>
                     </th>
 
                     {{-- Topic --}}
                     <th class="px-5 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider w-[22%]">
                         <button @click="toggleSort('topic')"
-                                :class="sortCol === 'topic' ? 'text-up-maroon' : 'text-gray-400 hover:text-slate-600'"
-                                class="flex items-center gap-1 transition">
+                                :class="sortCol === 'topic' ? 'text-up-maroon' : 'text-gray-400 hover:text-up-maroon'"
+                                class="flex items-center gap-1 transition uppercase">
                             Topic
                             <i class="fa-solid text-[8px]"
                                :class="sortCol === 'topic'
-                                       ? (sortDir === 'asc' ? 'fa-arrow-up text-up-maroon' : 'fa-arrow-down text-up-maroon')
-                                       : 'fa-arrow-up-arrow-down opacity-30'"></i>
+                               ? (sortDir === 'asc' ? 'fa-arrow-up text-up-maroon' : 'fa-arrow-down text-up-maroon')
+                               : 'fa-arrow-up-arrow-down opacity-30'"></i>
                         </button>
                     </th>
 
                     {{-- Feedback --}}
-                    <th class="px-5 py-3 text-xs font-bold text-gray-400 tracking-wider w-[33%]">
+                    <th class="px-5 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider w-[33%]">
                         Feedback
                     </th>
 
                     {{-- Rating --}}
-                    <th class="px-5 py-3 text-xs font-bold text-gray-400 tracking-wider w-[15%]">
+                    <th class="px-5 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider w-[15%]">
                         <button @click="toggleSort('avg')"
                                 :class="sortCol === 'avg' ? 'text-up-maroon' : 'text-gray-400 hover:text-slate-600'"
-                                class="flex items-center gap-1 transition ml-auto">
+                                class="flex items-center gap-1 transition ml-auto uppercase">
                             Rating
                             <i class="fa-solid text-[8px]"
                                :class="sortCol === 'avg'
-                                   ? (sortDir === 'asc' ? 'fa-arrow-up text-up-maroon' : 'fa-arrow-down text-up-maroon')
-                                   : 'fa-arrow-up-arrow-down opacity-30'"></i>
+                           ? (sortDir === 'asc' ? 'fa-arrow-up text-up-maroon' : 'fa-arrow-down text-up-maroon')
+                           : 'fa-arrow-up-arrow-down opacity-30'"></i>
                         </button>
                     </th>
                 </tr>
@@ -235,10 +233,6 @@ $subjects = computed(function () {
                     <tr class="border-b border-gray-50 hover:bg-slate-50 transition cursor-pointer"
                         @click="openDetailModal(fb)">
 
-                        {{-- # --}}
-                        <td class="px-5 py-3 text-gray-400 text-xs"
-                            x-text="(currentPage - 1) * perPage + index + 1"></td>
-
                         {{-- Date --}}
                         <td class="px-5 py-3">
                             <p class="text-sm font-medium text-slate-700" x-text="fb.date"></p>
@@ -246,8 +240,8 @@ $subjects = computed(function () {
 
                         {{-- Subject --}}
                         <td class="px-5 py-3">
-                            <span class="font-bold text-xs bg-red-50 text-red-700 px-2 py-1 rounded border border-red-100 whitespace-nowrap"
-                                  x-text="fb.subject"></span>
+                    <span class="font-bold text-xs bg-red-50 text-red-700 px-2 py-1 rounded border border-red-100 whitespace-nowrap"
+                          x-text="fb.subject"></span>
                         </td>
 
                         {{-- Topic --}}
@@ -272,24 +266,24 @@ $subjects = computed(function () {
                                     {{-- Rating pill --}}
                                     <span class="rating-pill w-fit"
                                           :class="{
-                                              'rating-excellent': fb.avgLabel === 'Excellent',
-                                              'rating-good':      fb.avgLabel === 'Good',
-                                              'rating-average':   fb.avgLabel === 'Average',
-                                              'rating-poor':      fb.avgLabel === 'Poor',
-                                          }">
-                                        <i class="fa-solid fa-star" style="font-size:9px;"></i>
-                                        <span x-text="fb.avg + ' / 5 - ' + fb.avgLabel"></span>
-                                    </span>
+                                      'rating-excellent': fb.avgLabel === 'Excellent',
+                                      'rating-good':      fb.avgLabel === 'Good',
+                                      'rating-average':   fb.avgLabel === 'Average',
+                                      'rating-poor':      fb.avgLabel === 'Poor',
+                                  }">
+                                <i class="fa-solid fa-star" style="font-size:9px;"></i>
+                                <span x-text="fb.avg + ' / 5 - ' + fb.avgLabel"></span>
+                            </span>
 
                                     {{-- On time / Late badge --}}
                                     <template x-if="fb.q10 !== null && fb.q10 !== undefined">
-                                        <span class="ontime-badge"
-                                              :class="fb.q10 ? 'ontime-yes' : 'ontime-no'">
-                                            <i class="fa-solid"
-                                               :class="fb.q10 ? 'fa-circle-check' : 'fa-rotate-left'"
-                                               style="font-size:8px;"></i>
-                                            <span x-text="fb.q10 ? 'On time' : 'Late'"></span>
-                                        </span>
+                                <span class="ontime-badge"
+                                      :class="fb.q10 ? 'ontime-yes' : 'ontime-no'">
+                                    <i class="fa-solid"
+                                       :class="fb.q10 ? 'fa-circle-check' : 'fa-rotate-left'"
+                                       style="font-size:8px;"></i>
+                                    <span x-text="fb.q10 ? 'On time' : 'Late'"></span>
+                                </span>
                                     </template>
 
                                 </div>
@@ -351,10 +345,10 @@ $subjects = computed(function () {
     </div>
 
     {{-- FEEDBACK POPUP --}}
-    <div class="feedback-popup-overlay" id="feedbackPopup" 
-         :class="{ 'open': showFeedbackPopup }" 
+    <div class="feedback-popup-overlay" id="feedbackPopup"
+         :class="{ 'open': showFeedbackPopup }"
          @click.self="closeFeedbackPopup()" x-cloak>
-         
+
         <div class="feedback-popup-box">
             <div class="feedback-popup-header">
                 <span>
@@ -371,10 +365,10 @@ $subjects = computed(function () {
     </div>
 
     {{-- DETAIL MODAL --}}
-    <div class="modal-overlay" id="feedbackModal" 
-         x-show="showDetailModal" 
+    <div class="modal-overlay" id="feedbackModal"
+         x-show="showDetailModal"
          @click.self="closeDetailModal()" x-cloak>
-         
+
         <div class="modal-box">
             <div class="modal-header">
                 <div style="min-width:0;flex:1;">
@@ -516,7 +510,7 @@ $subjects = computed(function () {
             : `<p style="font-size:12px;color:#d1d5db;font-style:italic;padding:6px 0;">No additional remarks provided.</p>`;
 
         document.getElementById('modalBody').innerHTML = html;
-        document.getElementById('feedbackModal').style.display = 'flex'; 
+        document.getElementById('feedbackModal').style.display = 'flex';
         document.body.style.overflow = 'hidden';
     }
 
