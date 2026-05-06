@@ -301,7 +301,7 @@ $searchIndex = computed(function () {
                         </div>
 
                         <select id="statusFilter" class="table-filter-select">
-                            <option value="">All</option>
+                            <option value="">All Status</option>
                             <option value="pending">Pending</option>
                             <option value="completed">Completed</option>
                             <option value="cancelled">Cancelled</option>
@@ -538,7 +538,7 @@ function getStatusColor(status) {
         accepted:  'text-green-600',
         active:    'text-green-600',
         upcoming:  'text-orange-500',
-        completed: 'text-green-600',
+        completed: 'text-gray-500',
         rejected:  'text-red-500',
         cancelled: 'text-red-600',
         closed:    'text-purple-700',
@@ -1175,7 +1175,7 @@ dayEl.innerHTML = `
 
     function hasConflict(req) {
         return allSessions.some(s => {
-            if (s.id === req.id || s.status !== 'accepted' || s.date !== req.date) return false;
+            if (s.id === req.id || !['accepted', 'completed'].includes(s.status) || s.date !== req.date) return false;
             return timeToMinutes(req.start) < timeToMinutes(s.end)
                 && timeToMinutes(req.end)   > timeToMinutes(s.start);
         });
@@ -1200,7 +1200,7 @@ dayEl.innerHTML = `
                 s.id !== req.id && s.status === 'accepted' && s.date === req.date);
             showConflictBanner(conflict
                 ? `Conflicts with <strong>${conflict.student}</strong> (${formatTimeTo12Hour(conflict.start)} – ${formatTimeTo12Hour(conflict.end)}) on ${conflict.date}.`
-                : 'This session overlaps with an already-accepted booking.');
+                : 'This session overlaps with an existing booking.');
             return;
         }
 

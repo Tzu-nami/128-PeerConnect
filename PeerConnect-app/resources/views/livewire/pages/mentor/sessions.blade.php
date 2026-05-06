@@ -512,7 +512,7 @@ $summaryCounts = computed(function () {
     function hasConflict(req, items) {
         return items.some(s => {
             if (s.id === req.id) return false;
-            if (s.status !== 'accepted') return false;
+            if (!['accepted', 'completed'].includes(s.status)) return false;
             if (s.date !== req.date) return false;
             const sStart = toMin(s.start), sEnd = toMin(s.end);
             const rStart = toMin(req.start), rEnd = toMin(req.end);
@@ -686,7 +686,7 @@ $summaryCounts = computed(function () {
             );
             const conflictInfo = conflict
                 ? `Conflicts with <strong>${conflict.student}</strong> (${conflict.time}) on ${conflict.date}.`
-                : 'This session overlaps with an already-accepted booking.';
+                : 'This session overlaps with an existing booking.';
             showConflictBanner(conflictInfo);
             return;
         }
