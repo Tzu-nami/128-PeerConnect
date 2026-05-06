@@ -104,7 +104,7 @@ $studentHistory = computed(function () {
 
     {{-- Summary Stat Cards --}}
     <div class="grid grid-cols-[repeat(autofit,_minmax(250px,_1fr))] sm:grid-cols-5 gap-4 mb-6 animate-fade-up [animation-delay:150ms]">
-        <div class="bg-white p-4 lg:p-5 rounded-xl shadow-sm border-l-4 border-slate-400 flex items-center gap-3 lg:gap-4">
+        <div class="bg-white p-4 lg:p-5 rounded-xl shadow-sm border-l-4 border-slate-500 flex items-center gap-3 lg:gap-4">
             <div class="text-2xl"><i class="fa-solid fa-list-check text-slate-500"></i></div>
             <div class="min-w-0 flex-1">
                 <h3 class="text-xs font-bold text-gray-400 uppercase leading-none truncate">Total Requests</h3>
@@ -112,7 +112,7 @@ $studentHistory = computed(function () {
             </div>
         </div>
 
-        <div class="bg-white p-4 lg:p-5 rounded-xl shadow-sm border-l-4 border-slate-400 flex items-center gap-3 lg:gap-4">
+        <div class="bg-white p-4 lg:p-5 rounded-xl shadow-sm border-l-4 border-yellow-500 flex items-center gap-3 lg:gap-4">
             <div class="text-2xl"><i class="fa-solid fa-hourglass-half text-yellow-500"></i></div>
             <div class="min-w-0 flex-1">
                 <h3 class="text-xs font-bold text-gray-400 uppercase leading-none truncate">Pending Requests</h3>
@@ -120,7 +120,7 @@ $studentHistory = computed(function () {
             </div>
         </div>
 
-        <div class="bg-white p-4 lg:p-5 rounded-xl shadow-sm border-l-4 border-slate-400 flex items-center gap-3 lg:gap-4">
+        <div class="bg-white p-4 lg:p-5 rounded-xl shadow-sm border-l-4 border-blue-600 flex items-center gap-3 lg:gap-4">
             <div class="text-2xl"><i class="fa-solid fa-flag-checkered text-blue-600"></i></div>
             <div class="min-w-0 flex-1">
                 <h3 class="text-xs font-bold text-gray-400 uppercase leading-none truncate">Completed Sessions</h3>
@@ -128,7 +128,7 @@ $studentHistory = computed(function () {
             </div>
         </div>
 
-        <div class="bg-white p-4 lg:p-5 rounded-xl shadow-sm border-l-4 border-slate-400 flex items-center gap-3 lg:gap-4">
+        <div class="bg-white p-4 lg:p-5 rounded-xl shadow-sm border-l-4 border-purple-600 flex items-center gap-3 lg:gap-4">
             <div class="text-2xl"><i class="fa-solid fa-stopwatch text-purple-600"></i></div>
             <div class="min-w-0 flex-1">
                 <h3 class="text-xs font-bold text-gray-400 uppercase leading-none truncate">Total Hours</h3>
@@ -136,7 +136,7 @@ $studentHistory = computed(function () {
             </div>
         </div>
 
-        <div class="bg-white p-4 lg:p-5 rounded-xl shadow-sm border-l-4 border-slate-400 flex items-center gap-3 lg:gap-4">
+        <div class="bg-white p-4 lg:p-5 rounded-xl shadow-sm border-l-4 border-red-500 flex items-center gap-3 lg:gap-4">
             <div class="text-2xl"><i class="fa-solid fa-ban text-red-500"></i></div>
             <div class="min-w-0 flex-1">
                 <h3 class="text-xs font-bold text-gray-400 uppercase leading-none truncate">Cancelled Requests</h3>
