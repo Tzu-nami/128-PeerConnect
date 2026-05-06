@@ -75,8 +75,7 @@ mount(function () {
             'subject' => $b->subject->code       ?? 'N/A',
             'time'    => Carbon::parse($b->schedule_start)->format('h:i A'),
             'status'  => ucfirst($b->booking_status),
-
-])
+        ])
         ->toArray();
 
     $this->pendingApprovalsList = Bookings::with(['student.user', 'mentor.user', 'subject'])
@@ -84,39 +83,47 @@ mount(function () {
         ->latest('created_at')
         ->get()
         ->map(fn($b) => [
-    'id'           => $b->id,
-    'initials'     => strtoupper(substr($b->student->user->name ?? 'U', 0, 2)),
-    'name'         => $b->student->user->name ?? 'Unknown Student',
-    'email'        => $b->student->user->email ?? '',
-    'type'         => 'Session Booking',
-    'subject'      => $b->subject->code       ?? 'N/A',
-    'subject_name' => $b->subject->name       ?? '',
-    'mentor'       => $b->mentor->user->name  ?? 'Unknown Mentor',
-    'date'         => \Carbon\Carbon::parse($b->date)->format('M j'),
-    'date_full'    => \Carbon\Carbon::parse($b->date)->format('F j, Y'),
-    'time_start'   => \Carbon\Carbon::parse($b->schedule_start)->format('h:i A'),
-    'time_end'     => \Carbon\Carbon::parse($b->schedule_end)->format('h:i A'),
-    'topic'        => $b->topic ?? '—',
-    'mode'         => $b->mode ?? 'One-on-One Tutorial',
-    'notes'        => $b->notes ?? null,
-    'created_at'   => $b->created_at->format('M j, Y g:i A'),
-])
+            'id'           => $b->id,
+            'mentor_id'    => $b->mentor_id,
+            'initials'     => strtoupper(substr($b->student->user->name ?? 'U', 0, 2)),
+            'name'         => $b->student->user->name ?? 'Unknown Student',
+            'email'        => $b->student->user->email ?? '',
+            'type'         => 'Session Booking',
+            'subject'      => $b->subject->code       ?? 'N/A',
+            'subject_name' => $b->subject->name       ?? '',
+            'mentor'       => $b->mentor->user->name  ?? 'Unknown Mentor',
+            'date'         => \Carbon\Carbon::parse($b->date)->format('M j'),
+            'date_full'    => \Carbon\Carbon::parse($b->date)->format('F j, Y'),
+            'date_raw'     => \Carbon\Carbon::parse($b->date)->format('Y-m-d'),
+            'time_start'   => \Carbon\Carbon::parse($b->schedule_start)->format('h:i A'),
+            'time_end'     => \Carbon\Carbon::parse($b->schedule_end)->format('h:i A'),
+            'start_24'     => \Carbon\Carbon::parse($b->schedule_start)->format('H:i'),
+            'end_24'       => \Carbon\Carbon::parse($b->schedule_end)->format('H:i'),
+            'topic'        => $b->topic ?? '—',
+            'mode'         => $b->mode ?? 'One-on-One Tutorial',
+            'notes'        => $b->notes ?? null,
+            'created_at'   => $b->created_at->format('M j, Y g:i A'),
+        ])
         ->toArray();
 
     $this->allSessions = Bookings::with(['mentor.user', 'student.user', 'subject'])
         ->orderBy('date')
         ->get()
         ->map(fn($b) => [
-            'date'    => \Carbon\Carbon::parse($b->date)->format('Y-m-d'),
-            'mentor'  => $b->mentor->user->name  ?? 'Unknown',
-            'mentee'  => $b->student->user->name ?? 'Unknown',
-            'subject' => $b->subject->code       ?? 'N/A',
-            'topic'   => $b->topic               ?? '—',
-            'time'    => Carbon::parse($b->schedule_start)->format('h:i A'),
-            'status'  => ucfirst($b->booking_status),
-            'start'   => \Carbon\Carbon::parse($b->schedule_start)->format('Y-m-d\TH:i:s'),
-            'end'     => \Carbon\Carbon::parse($b->schedule_end)->format('Y-m-d\TH:i:s'),
-            'mode'    => $b->mode                ?? 'One-on-One Tutorial',
+            'id'        => $b->id,
+            'mentor_id' => $b->mentor_id,
+            'date'      => \Carbon\Carbon::parse($b->date)->format('Y-m-d'),
+            'mentor'    => $b->mentor->user->name  ?? 'Unknown',
+            'mentee'    => $b->student->user->name ?? 'Unknown',
+            'subject'   => $b->subject->code       ?? 'N/A',
+            'topic'     => $b->topic               ?? '—',
+            'time'      => Carbon::parse($b->schedule_start)->format('h:i A'),
+            'status'    => $b->booking_status,
+            'start'     => \Carbon\Carbon::parse($b->schedule_start)->format('Y-m-d\TH:i:s'),
+            'end'       => \Carbon\Carbon::parse($b->schedule_end)->format('Y-m-d\TH:i:s'),
+            'start_24'  => \Carbon\Carbon::parse($b->schedule_start)->format('H:i'),
+            'end_24'    => \Carbon\Carbon::parse($b->schedule_end)->format('H:i'),
+            'mode'      => $b->mode                ?? 'One-on-One Tutorial',
         ])
         ->toArray();
 }); 
@@ -441,60 +448,124 @@ $saveSubject = action(function () {
     $this->redirect(route('admin.courses'), navigate: true);
 });
 
-$acceptBooking = action(function (string $id) {
-    Bookings::where('id', $id)->update(['booking_status' => 'accepted']);
+/**
+ * Reload the pending approvals list from DB and sync allSessions.
+ * Extracted helper used by acceptBooking and rejectBooking.
+ */
+$reloadPendingList = action(function () {
     $this->pendingApprovalsList = Bookings::with(['student.user', 'mentor.user', 'subject'])
         ->where('booking_status', 'pending')
         ->latest('created_at')
         ->get()
         ->map(fn($b) => [
-    'id'           => $b->id,
-    'initials'     => strtoupper(substr($b->student->user->name ?? 'U', 0, 2)),
-    'name'         => $b->student->user->name ?? 'Unknown Student',
-    'email'        => $b->student->user->email ?? '',
-    'type'         => 'Session Booking',
-    'subject'      => $b->subject->code       ?? 'N/A',
-    'subject_name' => $b->subject->name       ?? '',
-    'mentor'       => $b->mentor->user->name  ?? 'Unknown Mentor',
-    'date'         => \Carbon\Carbon::parse($b->date)->format('M j'),
-    'date_full'    => \Carbon\Carbon::parse($b->date)->format('F j, Y'),
-    'time_start'   => \Carbon\Carbon::parse($b->schedule_start)->format('h:i A'),
-    'time_end'     => \Carbon\Carbon::parse($b->schedule_end)->format('h:i A'),
-    'topic'        => $b->topic ?? '—',
-    'mode'         => $b->mode ?? 'One-on-One Tutorial',
-    'notes'        => $b->notes ?? null,
-    'created_at'   => $b->created_at->format('M j, Y g:i A'),
-])
+            'id'           => $b->id,
+            'mentor_id'    => $b->mentor_id,
+            'initials'     => strtoupper(substr($b->student->user->name ?? 'U', 0, 2)),
+            'name'         => $b->student->user->name ?? 'Unknown Student',
+            'email'        => $b->student->user->email ?? '',
+            'type'         => 'Session Booking',
+            'subject'      => $b->subject->code       ?? 'N/A',
+            'subject_name' => $b->subject->name       ?? '',
+            'mentor'       => $b->mentor->user->name  ?? 'Unknown Mentor',
+            'date'         => \Carbon\Carbon::parse($b->date)->format('M j'),
+            'date_full'    => \Carbon\Carbon::parse($b->date)->format('F j, Y'),
+            'date_raw'     => \Carbon\Carbon::parse($b->date)->format('Y-m-d'),
+            'time_start'   => \Carbon\Carbon::parse($b->schedule_start)->format('h:i A'),
+            'time_end'     => \Carbon\Carbon::parse($b->schedule_end)->format('h:i A'),
+            'start_24'     => \Carbon\Carbon::parse($b->schedule_start)->format('H:i'),
+            'end_24'       => \Carbon\Carbon::parse($b->schedule_end)->format('H:i'),
+            'topic'        => $b->topic ?? '—',
+            'mode'         => $b->mode ?? 'One-on-One Tutorial',
+            'notes'        => $b->notes ?? null,
+            'created_at'   => $b->created_at->format('M j, Y g:i A'),
+        ])
         ->toArray();
+
+    $this->allSessions = Bookings::with(['mentor.user', 'student.user', 'subject'])
+        ->orderBy('date')
+        ->get()
+        ->map(fn($b) => [
+            'id'        => $b->id,
+            'mentor_id' => $b->mentor_id,
+            'date'      => \Carbon\Carbon::parse($b->date)->format('Y-m-d'),
+            'mentor'    => $b->mentor->user->name  ?? 'Unknown',
+            'mentee'    => $b->student->user->name ?? 'Unknown',
+            'subject'   => $b->subject->code       ?? 'N/A',
+            'topic'     => $b->topic               ?? '—',
+            'time'      => Carbon::parse($b->schedule_start)->format('h:i A'),
+            'status'    => $b->booking_status,
+            'start'     => \Carbon\Carbon::parse($b->schedule_start)->format('Y-m-d\TH:i:s'),
+            'end'       => \Carbon\Carbon::parse($b->schedule_end)->format('Y-m-d\TH:i:s'),
+            'start_24'  => \Carbon\Carbon::parse($b->schedule_start)->format('H:i'),
+            'end_24'    => \Carbon\Carbon::parse($b->schedule_end)->format('H:i'),
+            'mode'      => $b->mode                ?? 'One-on-One Tutorial',
+        ])
+        ->toArray();
+
     $this->pendingBookings = Bookings::where('booking_status', 'pending')->count();
+});
+
+$acceptBooking = action(function (string $id) {
+    $booking = Bookings::with(['mentor.user', 'subject', 'student.user'])->findOrFail($id);
+
+    // ── CONFLICT CHECK ─────────────────────────────────────────────────────
+    // Find any already-accepted session for the SAME mentor on the SAME date
+    // whose time window overlaps with the booking being accepted.
+    $conflict = Bookings::where('mentor_id', $booking->mentor_id)
+        ->where('id', '!=', $booking->id)
+        ->where('booking_status', 'accepted')
+        ->whereDate('date', $booking->date)
+        ->where(function ($q) use ($booking) {
+            $q->where('schedule_start', '<', $booking->schedule_end)
+              ->where('schedule_end',   '>', $booking->schedule_start);
+        })
+        ->with(['student.user', 'subject'])
+        ->first();
+
+    if ($conflict) {
+        // Emit an event so JS can display the conflict modal instead of accepting.
+        $this->dispatch('booking-conflict-detected', [
+            'pendingId'        => $id,
+            'conflictStudent'  => $conflict->student->user->name ?? 'Unknown Student',
+            'conflictSubject'  => $conflict->subject->code ?? 'N/A',
+            'conflictStart'    => \Carbon\Carbon::parse($conflict->schedule_start)->format('h:i A'),
+            'conflictEnd'      => \Carbon\Carbon::parse($conflict->schedule_end)->format('h:i A'),
+            'conflictDate'     => \Carbon\Carbon::parse($conflict->date)->format('F j, Y'),
+            'mentorName'       => $booking->mentor->user->name ?? 'Unknown Mentor',
+        ]);
+        return;
+    }
+
+    // ── ACCEPT ─────────────────────────────────────────────────────────────
+    Bookings::where('id', $id)->update(['booking_status' => 'accepted']);
+
+    // ── AUTO-REJECT conflicting pending sessions for the same mentor ───────
+    $autoRejected = Bookings::where('mentor_id', $booking->mentor_id)
+        ->where('id', '!=', $id)
+        ->where('booking_status', 'pending')
+        ->whereDate('date', $booking->date)
+        ->where(function ($q) use ($booking) {
+            $q->where('schedule_start', '<', $booking->schedule_end)
+              ->where('schedule_end',   '>', $booking->schedule_start);
+        })
+        ->get();
+
+    if ($autoRejected->isNotEmpty()) {
+        Bookings::whereIn('id', $autoRejected->pluck('id'))
+            ->update(['booking_status' => 'rejected']);
+
+        // Notify the frontend about how many were auto-rejected.
+        $this->dispatch('bookings-auto-rejected', [
+            'count' => $autoRejected->count(),
+        ]);
+    }
+
+    $this->reloadPendingList();
 });
 
 $rejectBooking = action(function (string $id) {
     Bookings::where('id', $id)->update(['booking_status' => 'rejected']);
-    $this->pendingApprovalsList = Bookings::with(['student.user', 'mentor.user', 'subject'])
-        ->where('booking_status', 'pending')
-        ->latest('created_at')
-        ->get()
-        ->map(fn($b) => [
-    'id'           => $b->id,
-    'initials'     => strtoupper(substr($b->student->user->name ?? 'U', 0, 2)),
-    'name'         => $b->student->user->name ?? 'Unknown Student',
-    'email'        => $b->student->user->email ?? '',
-    'type'         => 'Session Booking',
-    'subject'      => $b->subject->code       ?? 'N/A',
-    'subject_name' => $b->subject->name       ?? '',
-    'mentor'       => $b->mentor->user->name  ?? 'Unknown Mentor',
-    'date'         => \Carbon\Carbon::parse($b->date)->format('M j'),
-    'date_full'    => \Carbon\Carbon::parse($b->date)->format('F j, Y'),
-    'time_start'   => \Carbon\Carbon::parse($b->schedule_start)->format('h:i A'),
-    'time_end'     => \Carbon\Carbon::parse($b->schedule_end)->format('h:i A'),
-    'topic'        => $b->topic ?? '—',
-    'mode'         => $b->mode ?? 'One-on-One Tutorial',
-    'notes'        => $b->notes ?? null,
-    'created_at'   => $b->created_at->format('M j, Y g:i A'),
-])
-        ->toArray();
-    $this->pendingBookings = Bookings::where('booking_status', 'pending')->count();
+    $this->reloadPendingList();
 });
 ?>
 
@@ -561,7 +632,7 @@ $rejectBooking = action(function (string $id) {
                                 <div style="font-size:11px;font-weight:500;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;" x-text="item.detail"></div>
                             </div>
                             
-                            <i class="fa-solid fa-arrow-up-right-from-square opacity-0 group-hover:opacity-100 transition-opacity" style="font-size:10px;color:#cbd5e1;flex-shrink:0; transform: translateX(-5px); group-hover:transform: translateX(0);"></i>
+                            <i class="fa-solid fa-arrow-up-right-from-square opacity-0 group-hover:opacity-100 transition-opacity" style="font-size:10px;color:#cbd5e1;flex-shrink:0;"></i>
                         </a>
                     </template>
                 </div>
@@ -644,10 +715,13 @@ $rejectBooking = action(function (string $id) {
                             <input type="text" id="liveSearchInput" placeholder="Search names..." class="w-full pl-9 pr-3 py-2 text-xs border border-gray-200 rounded-lg outline-none focus:ring-1 focus:ring-red-800">
                         </div>
                         <select id="statusFilter" class="table-filter-select">
-                            <option value="All">All Status</option>
-                            <option value="Active">Active</option>
-                            <option value="Upcoming">Upcoming</option>
-                            <option value="Completed">Completed</option>
+                            <option value="">All Status</option>
+                            <option value="pending">Pending</option>
+                            <option value="accepted">Accepted</option>
+                            <option value="completed">Completed</option>
+                            <option value="cancelled">Cancelled</option>
+                            <option value="rejected">Rejected</option>
+                            <option value="no_show">No Show</option>
                         </select>
                     </div>
                 </div>
@@ -772,6 +846,104 @@ $rejectBooking = action(function (string $id) {
                                     <i class="fa-solid fa-download mr-1"></i> Export
                                 </button>
                             </div>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- ── CONFLICT WARNING MODAL ── --}}
+                {{--
+                    Shown when acceptBooking detects that the mentor already has an accepted
+                    session overlapping the one the admin is trying to approve.
+                    The admin sees the conflicting session's details and cannot override it
+                    (they must first resolve the conflict on the Sessions page).
+                --}}
+                <div id="conflictModal"
+                    style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5);
+                           backdrop-filter:blur(4px); z-index:1200; align-items:center;
+                           justify-content:center; padding:24px;">
+                    <div class="bg-white w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden">
+
+                        <div class="flex items-center gap-4 px-6 py-5 border-b border-gray-100">
+                            <div class="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center text-xl flex-shrink-0">
+                                <i class="fa-solid fa-triangle-exclamation"></i>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <h2 class="text-lg font-extrabold text-slate-800">Schedule Conflict</h2>
+                                <p class="text-xs text-slate-500 leading-snug mt-0.5">This booking cannot be accepted.</p>
+                            </div>
+                            <button onclick="closeConflictModal()" class="text-gray-400 hover:text-red-600 transition">
+                                <i class="fa-solid fa-xmark text-xl"></i>
+                            </button>
+                        </div>
+
+                        <div class="px-6 py-5 space-y-4">
+                            <p class="text-xs text-slate-600 leading-relaxed">
+                                <strong id="conflictMentorName" class="text-slate-800"></strong> already has an accepted session that overlaps with this booking:
+                            </p>
+
+                            <div class="bg-red-50 border border-red-200 rounded-xl p-4 space-y-2 text-xs">
+                                <div class="flex justify-between">
+                                    <span class="text-gray-500 font-medium">Student</span>
+                                    <span class="text-slate-700 font-bold" id="conflictStudentName"></span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-500 font-medium">Subject</span>
+                                    <span class="text-slate-700 font-bold" id="conflictSubject"></span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-500 font-medium">Date</span>
+                                    <span class="text-slate-700 font-bold" id="conflictDate"></span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-500 font-medium">Time</span>
+                                    <span class="text-slate-700 font-bold" id="conflictTime"></span>
+                                </div>
+                            </div>
+
+                            <p class="text-[11px] text-slate-400 leading-relaxed">
+                                To resolve this conflict, cancel or reject the existing accepted session first, then try accepting this booking again.
+                            </p>
+                        </div>
+
+                        <div class="px-6 py-4 bg-gray-50 border-t border-gray-100">
+                            <button onclick="closeConflictModal()"
+                                class="w-full py-2.5 text-sm font-bold text-white bg-red-900 hover:bg-red-800 rounded-xl transition">
+                                Got it
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- ── AUTO-REJECT NOTIFICATION MODAL ── --}}
+                {{--
+                    Shown briefly after acceptBooking auto-rejects overlapping pending
+                    sessions for the same mentor on the same day.
+                --}}
+                <div id="autoRejectModal"
+                    style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4);
+                           backdrop-filter:blur(4px); z-index:1200; align-items:center;
+                           justify-content:center; padding:24px;">
+                    <div class="bg-white w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden">
+
+                        <div class="flex items-center gap-4 px-6 py-5 border-b border-gray-100">
+                            <div class="w-12 h-12 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center text-xl flex-shrink-0">
+                                <i class="fa-solid fa-circle-info"></i>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <h2 class="text-lg font-extrabold text-slate-800">Booking Accepted</h2>
+                                <p class="text-xs text-slate-500 leading-snug mt-0.5">Overlapping requests were handled.</p>
+                            </div>
+                        </div>
+
+                        <div class="px-6 py-5">
+                            <p class="text-xs text-slate-600 leading-relaxed" id="autoRejectBody"></p>
+                        </div>
+
+                        <div class="px-6 py-4 bg-gray-50 border-t border-gray-100">
+                            <button onclick="closeAutoRejectModal()"
+                                class="w-full py-2.5 text-sm font-bold text-slate-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition">
+                                Dismiss
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -965,8 +1137,7 @@ $rejectBooking = action(function (string $id) {
                         <div class="flex gap-3" x-data="{ isSaving: false }">
                             <button type="button" @click="$wire.showConfirm = false" class="flex-1 py-3 text-xs font-bold text-gray-800 bg-gray-200 hover:bg-gray-300 rounded-xl transition disabled:cursor-not-allowed" x-bind:disabled="isSaving">Cancel</button>
                             <button type="button" @click="isSaving = true; $wire.saveMentor().finally(() => isSaving = false)"
-                                class="flex-1 bg-red-900 text-white py-3 rounded-xl text-xs font-bold shadow-lg hover:bg-red-800 transition disabled:cursor-not-allowed" x-bind:disabled="isSaving"
-                                >
+                                class="flex-1 bg-red-900 text-white py-3 rounded-xl text-xs font-bold shadow-lg hover:bg-red-800 transition disabled:cursor-not-allowed" x-bind:disabled="isSaving">
                                 <span x-show="!isSaving">Save</span>
                                 <span x-show="isSaving" style="display: none;"><i class="fa-solid fa-spinner fa-spin mr-1"></i>Saving...</span>
                             </button>
@@ -982,7 +1153,7 @@ $rejectBooking = action(function (string $id) {
                                 <h2 class="text-lg font-black text-slate-800">Add New Subject</h2>
                                 <p class="text-xs text-gray-400 mt-0.5">This subject will become available for mentor assignments.</p>
                             </div>
-                            <button wire:click="closeSubjectModal" @click="$wire.showSubjectModal = false"  x-bind:disabled="isVerifying" class="text-gray-400 hover:text-red-600 transition disabled:cursor-not-allowed">
+                            <button wire:click="closeSubjectModal" @click="$wire.showSubjectModal = false" x-bind:disabled="isVerifying" class="text-gray-400 hover:text-red-600 transition disabled:cursor-not-allowed">
                                 <i class="fa-solid fa-xmark text-xl"></i>
                             </button>
                         </div>
@@ -1003,8 +1174,7 @@ $rejectBooking = action(function (string $id) {
                                 <button type="button" wire:click="closeSubjectModal" @click="$wire.showSubjectModal = false" x-bind:disabled="isVerifying"
                                     class="flex-1 py-3 text-xs font-bold text-gray-800 bg-gray-200 hover:bg-gray-300 rounded-xl transition disabled:cursor-not-allowed">Cancel</button>
                                 <button type="button" @click="isVerifying = true; $wire.confirmSubject().finally(() => isVerifying = false)" x-bind:disabled="isVerifying"
-                                    class="flex-1 bg-red-900 text-white py-3 rounded-xl text-xs font-bold shadow-lg hover:bg-red-800 transition disabled:cursor-not-allowed"
-                                    >
+                                    class="flex-1 bg-red-900 text-white py-3 rounded-xl text-xs font-bold shadow-lg hover:bg-red-800 transition disabled:cursor-not-allowed">
                                     <span x-show="!isVerifying">Add Subject</span>
                                     <span x-show="isVerifying" style="display: none;"><i class="fa-solid fa-spinner fa-spin mr-1"></i>Validating...</span>
                                 </button>
@@ -1033,6 +1203,7 @@ $rejectBooking = action(function (string $id) {
                 </div>
             </div>
 
+            {{-- ── CALENDAR + CLOCK ── --}}
             <div wire:ignore class="bg-white rounded-xl shadow-sm border border-gray-100">
                 {{-- Clock --}}
                 <div class="bg-slate-900 rounded-t-xl px-4 py-3 flex items-center justify-between">
@@ -1067,207 +1238,231 @@ $rejectBooking = action(function (string $id) {
                 </div>
             </div>
 
-     <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100" id="section-approvals"
-    x-data="{
-        processingId: null,
-        doneIds: {},
-        modalOpen: false,
-        selected: null,
-        openDetail(item) {
-            this.selected = item;
-            this.modalOpen = true;
-        }
-    }">
+            {{-- ── PENDING REQUESTS ── --}}
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100" id="section-approvals"
+                x-data="{
+                    processingId: null,
+                    doneIds: {},
+                    modalOpen: false,
+                    selected: null,
+                    openDetail(item) {
+                        this.selected = item;
+                        this.modalOpen = true;
+                    }
+                }">
 
-    {{-- ── DETAIL MODAL ── --}}
-<div x-show="modalOpen" x-cloak
-    x-transition
-    class="fixed inset-0 z-[1200] flex items-center justify-center p-6"
-    style="background:rgba(0,0,0,0.45);"
-    @click.self="modalOpen = false">
-        <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden" @click.stop>
-            {{-- Header --}}
-            <div class="flex items-center gap-4 px-6 py-5 border-b border-gray-100">
-                <div class="w-11 h-11 rounded-full bg-amber-100 text-yellow-600 flex items-center justify-center text-sm font-bold flex-shrink-0"
-                    x-text="selected?.initials"></div>
-                <div class="flex-1 min-w-0">
-                    <p class="text-base font-black text-slate-800 truncate" x-text="selected?.name"></p>
-                    <p class="text-[11px] text-gray-400 truncate" x-text="selected?.email"></p>
-                </div>
-                <button @click="modalOpen = false" class="text-gray-400 hover:text-red-600 transition">
-                    <i class="fa-solid fa-xmark text-lg"></i>
-                </button>
-            </div>
-
-            {{-- Body --}}
-            <div class="px-6 py-5 space-y-4">
-                {{-- Session time block --}}
-                <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 flex items-start gap-3">
-                    <i class="fa-solid fa-calendar-days text-slate-400 mt-0.5 text-sm flex-shrink-0"></i>
-                    <div>
-                        <p class="text-xs font-bold text-slate-700 mb-0.5" x-text="selected?.date_full"></p>
-                        <p class="text-xs text-slate-500" x-text="(selected?.time_start ?? '') + ' – ' + (selected?.time_end ?? '')"></p>
-                    </div>
-                </div>
-
-                {{-- Detail rows --}}
-                <div class="divide-y divide-gray-100 text-xs">
-                    <div class="flex justify-between py-2.5">
-                        <span class="text-gray-400 font-medium">Subject</span>
-                        <span class="text-slate-700 font-bold text-right">
-                            <span x-text="selected?.subject"></span>
-                            <span class="text-gray-400 font-normal ml-1" x-text="selected?.subject_name ? '(' + selected.subject_name + ')' : ''"></span>
-                        </span>
-                    </div>
-                    <div class="flex justify-between py-2.5">
-                        <span class="text-gray-400 font-medium">Mentor</span>
-                        <span class="text-slate-700 font-bold" x-text="selected?.mentor"></span>
-                    </div>
-                    <div class="flex justify-between py-2.5">
-                        <span class="text-gray-400 font-medium">Mode</span>
-                        <span class="text-slate-700 font-bold" x-text="selected?.mode"></span>
-                    </div>
-                    <div class="flex justify-between py-2.5">
-                        <span class="text-gray-400 font-medium">Topic</span>
-                        <span class="text-slate-700 font-bold text-right max-w-[60%]" x-text="selected?.topic"></span>
-                    </div>
-                    <template x-if="selected?.notes">
-                        <div class="py-2.5">
-                            <p class="text-gray-400 font-medium mb-1.5">Notes</p>
-                            <p class="text-slate-600 leading-relaxed" x-text="selected?.notes"></p>
+                {{-- ── DETAIL MODAL ── --}}
+                <div x-show="modalOpen" x-cloak
+                    x-transition
+                    class="fixed inset-0 z-[1200] flex items-center justify-center p-6"
+                    style="background:rgba(0,0,0,0.45);"
+                    @click.self="modalOpen = false">
+                    <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden" @click.stop>
+                        {{-- Header --}}
+                        <div class="flex items-center gap-4 px-6 py-5 border-b border-gray-100">
+                            <div class="w-11 h-11 rounded-full bg-amber-100 text-yellow-600 flex items-center justify-center text-sm font-bold flex-shrink-0"
+                                x-text="selected?.initials"></div>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-base font-black text-slate-800 truncate" x-text="selected?.name"></p>
+                                <p class="text-[11px] text-gray-400 truncate" x-text="selected?.email"></p>
+                            </div>
+                            <button @click="modalOpen = false" class="text-gray-400 hover:text-red-600 transition">
+                                <i class="fa-solid fa-xmark text-lg"></i>
+                            </button>
                         </div>
-                    </template>
-                </div>
-            </div>
 
-            {{-- Footer actions --}}
-            <div class="px-6 py-5 bg-gray-50 border-t border-gray-100 flex gap-3"
-                x-show="selected && !doneIds[selected?.id]">
-                <button
-                    @click="
-                        if (!selected) return;
-                        const id = selected.id;
-                        processingId = id;
-                        modalOpen = false;
-                        $wire.rejectBooking(id).then(() => {
-                            doneIds[id] = 'rejected';
-                            processingId = null;
-                        })
-                    "
-                    class="flex-1 py-2.5 text-xs font-bold text-red-700 bg-red-50 border border-red-200 hover:bg-red-100 rounded-xl transition">
-                    <i class="fa-solid fa-xmark mr-1"></i> Reject
-                </button>
-                <button
-                    @click="
-                        if (!selected) return;
-                        const id = selected.id;
-                        processingId = id;
-                        modalOpen = false;
-                        $wire.acceptBooking(id).then(() => {
-                            doneIds[id] = 'accepted';
-                            processingId = null;
-                        })
-                    "
-                    class="flex-1 py-2.5 text-xs font-bold text-white bg-green-600 hover:bg-green-700 rounded-xl transition shadow-sm">
-                    <i class="fa-solid fa-check mr-1"></i> Accept
-                </button>
-            </div>
-            <div x-show="selected && doneIds[selected?.id]"
-                class="px-6 py-4 bg-gray-50 border-t border-gray-100 text-center text-xs font-bold"
-                :class="doneIds[selected?.id] === 'accepted' ? 'text-green-600' : 'text-red-500'"
-                x-text="doneIds[selected?.id] === 'accepted' ? 'Booking accepted ✓' : 'Booking rejected ✗'">
-            </div>
-        </div>
-    </div>
+                        {{-- Body --}}
+                        <div class="px-6 py-5 space-y-4">
+                            {{-- Session time block --}}
+                            <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 flex items-start gap-3">
+                                <i class="fa-solid fa-calendar-days text-slate-400 mt-0.5 text-sm flex-shrink-0"></i>
+                                <div>
+                                    <p class="text-xs font-bold text-slate-700 mb-0.5" x-text="selected?.date_full"></p>
+                                    <p class="text-xs text-slate-500" x-text="(selected?.time_start ?? '') + ' – ' + (selected?.time_end ?? '')"></p>
+                                </div>
+                            </div>
 
-    {{-- List header --}}
-    <div class="flex justify-between items-center mb-4">
-        <h3 class="font-bold text-slate-800 text-sm tracking-tight">Pending Requests</h3>
-        <span class="bg-red-100 text-red-700 text-[10px] font-bold px-3 py-1 rounded-full">
-            {{ count($pendingApprovalsList) }} Request{{ count($pendingApprovalsList) !== 1 ? 's' : '' }}
-        </span>
-    </div>
-
-    <div class="flex flex-col gap-1">
-        @forelse($pendingApprovalsList as $item)
-            <div class="flex items-center gap-3 rounded-xl px-2 py-2.5 transition-all duration-200 hover:bg-slate-50 cursor-pointer group"
-                wire:key="pending-{{ $item['id'] }}"
-                @click="openDetail({{ json_encode($item) }})">
-
-                {{-- Avatar --}}
-                <div class="w-8 h-8 rounded-full bg-amber-100 text-yellow-500 flex items-center justify-center text-[10px] font-bold flex-shrink-0">
-                    {{ $item['initials'] }}
-                </div>
-
-                {{-- Info --}}
-                <div class="min-w-0 flex-1">
-                    <p class="text-[11px] font-bold text-slate-700 truncate group-hover:text-slate-900 transition-colors">{{ $item['name'] }}</p>
-                    <p class="text-[9px] text-gray-400 font-medium truncate">
-                        {{ $item['subject'] }} &mdash; {{ $item['mentor'] }}
-                    </p>
-                    <p class="text-[9px] text-blue-500 font-semibold mt-0.5 truncate">
-                        <i class="fa-regular fa-clock text-[8px] mr-0.5"></i>
-                        {{ $item['date_full'] }}, {{ $item['time_start'] }} – {{ $item['time_end'] }}
-                    </p>
-                </div>
-
-                {{-- Action area --}}
-                <div class="flex-shrink-0" @click.stop>
-                    <template x-if="processingId === '{{ $item['id'] }}' && !doneIds['{{ $item['id'] }}']">
-                        <div class="w-16 flex items-center justify-center">
-                            <i class="fa-solid fa-spinner fa-spin text-slate-400 text-xs"></i>
+                            {{-- Detail rows --}}
+                            <div class="divide-y divide-gray-100 text-xs">
+                                <div class="flex justify-between py-2.5">
+                                    <span class="text-gray-400 font-medium">Subject</span>
+                                    <span class="text-slate-700 font-bold text-right">
+                                        <span x-text="selected?.subject"></span>
+                                        <span class="text-gray-400 font-normal ml-1" x-text="selected?.subject_name ? '(' + selected.subject_name + ')' : ''"></span>
+                                    </span>
+                                </div>
+                                <div class="flex justify-between py-2.5">
+                                    <span class="text-gray-400 font-medium">Mentor</span>
+                                    <span class="text-slate-700 font-bold" x-text="selected?.mentor"></span>
+                                </div>
+                                <div class="flex justify-between py-2.5">
+                                    <span class="text-gray-400 font-medium">Mode</span>
+                                    <span class="text-slate-700 font-bold" x-text="selected?.mode"></span>
+                                </div>
+                                <div class="flex justify-between py-2.5">
+                                    <span class="text-gray-400 font-medium">Topic</span>
+                                    <span class="text-slate-700 font-bold text-right max-w-[60%]" x-text="selected?.topic"></span>
+                                </div>
+                                <template x-if="selected?.notes">
+                                    <div class="py-2.5">
+                                        <p class="text-gray-400 font-medium mb-1.5">Notes</p>
+                                        <p class="text-slate-600 leading-relaxed" x-text="selected?.notes"></p>
+                                    </div>
+                                </template>
+                            </div>
                         </div>
-                    </template>
 
-                    <template x-if="doneIds['{{ $item['id'] }}'] === 'accepted'">
-                        <span class="text-green-600 text-[9px] font-bold bg-green-50 border border-green-200 px-2 py-0.5 rounded-full">
-                            Accepted ✓
-                        </span>
-                    </template>
-
-                    <template x-if="doneIds['{{ $item['id'] }}'] === 'rejected'">
-                        <span class="text-red-500 text-[9px] font-bold bg-red-50 border border-red-200 px-2 py-0.5 rounded-full">
-                            Rejected ✗
-                        </span>
-                    </template>
-
-                    <template x-if="processingId !== '{{ $item['id'] }}' && !doneIds['{{ $item['id'] }}']">
-                        <div class="flex gap-1">
+                        {{-- Footer actions --}}
+                        <div class="px-6 py-5 bg-gray-50 border-t border-gray-100 flex gap-3"
+                            x-show="selected && !doneIds[selected?.id]">
                             <button
-                                title="Accept"
                                 @click="
-                                    processingId = '{{ $item['id'] }}';
-                                    $wire.acceptBooking('{{ $item['id'] }}').then(() => {
-                                        doneIds['{{ $item['id'] }}'] = 'accepted';
+                                    if (!selected) return;
+                                    const id = selected.id;
+                                    processingId = id;
+                                    modalOpen = false;
+                                    $wire.rejectBooking(id).then(() => {
+                                        doneIds[id] = 'rejected';
                                         processingId = null;
                                     })
                                 "
-                                class="w-7 h-7 flex items-center justify-center rounded-full bg-green-50 text-green-600 hover:bg-green-100 border border-green-200 transition">
-                                <i class="fa-solid fa-check text-[10px]"></i>
+                                class="flex-1 py-2.5 text-xs font-bold text-red-700 bg-red-50 border border-red-200 hover:bg-red-100 rounded-xl transition">
+                                <i class="fa-solid fa-xmark mr-1"></i> Reject
                             </button>
                             <button
-                                title="Reject"
                                 @click="
-                                    processingId = '{{ $item['id'] }}';
-                                    $wire.rejectBooking('{{ $item['id'] }}').then(() => {
-                                        doneIds['{{ $item['id'] }}'] = 'rejected';
+                                    if (!selected) return;
+                                    const id = selected.id;
+                                    processingId = id;
+                                    modalOpen = false;
+                                    $wire.acceptBooking(id).then(() => {
                                         processingId = null;
                                     })
                                 "
-                                class="w-7 h-7 flex items-center justify-center rounded-full bg-red-50 text-red-500 hover:bg-red-100 border border-red-200 transition">
-                                <i class="fa-solid fa-xmark text-[10px]"></i>
+                                class="flex-1 py-2.5 text-xs font-bold text-white bg-green-600 hover:bg-green-700 rounded-xl transition shadow-sm">
+                                <i class="fa-solid fa-check mr-1"></i> Accept
                             </button>
                         </div>
-                    </template>
+                        <div x-show="selected && doneIds[selected?.id]"
+                            class="px-6 py-4 bg-gray-50 border-t border-gray-100 text-center text-xs font-bold"
+                            :class="doneIds[selected?.id] === 'accepted' ? 'text-green-600' : 'text-red-500'"
+                            x-text="doneIds[selected?.id] === 'accepted' ? 'Booking accepted ✓' : 'Booking rejected ✗'">
+                        </div>
+                    </div>
                 </div>
+
+                {{-- ── LIST HEADER ── --}}
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-bold text-slate-800 text-sm tracking-tight">Pending Requests</h3>
+                    <span id="pendingBadge" class="bg-red-100 text-red-700 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                        {{ count($pendingApprovalsList) }} {{ count($pendingApprovalsList) !== 1 ? 'Requests' : 'Request' }}
+                    </span>
+                </div>
+
+                {{-- ── AUTO-REJECT BANNER AREA ── --}}
+                <div id="adminPendingBannerArea" class="flex flex-col gap-2 mb-2"></div>
+
+                {{-- ── REQUEST LIST ── --}}
+                <div id="adminPendingList" class="flex flex-col gap-1">
+                    @forelse($pendingApprovalsList as $item)
+                        <div class="session-row flex items-center gap-3 rounded-xl px-2 py-2.5 transition-all duration-200 hover:bg-slate-50 cursor-pointer group"
+                            wire:key="pending-{{ $item['id'] }}"
+                            @click="openDetail({{ json_encode($item) }})">
+
+                            {{-- Avatar --}}
+                            <div class="w-8 h-8 rounded-full bg-amber-100 text-yellow-600 flex items-center justify-center text-[10px] font-bold flex-shrink-0">
+                                {{ $item['initials'] }}
+                            </div>
+
+                            {{-- Info --}}
+                            <div class="min-w-0 flex-1">
+                                <p class="text-[11px] font-bold text-slate-700 truncate group-hover:text-slate-900 transition-colors">{{ $item['name'] }}</p>
+                                <p class="text-[9px] text-gray-400 font-medium truncate">
+                                    {{ $item['subject'] }} &mdash; {{ $item['mentor'] }}
+                                </p>
+                                <p class="text-[9px] text-blue-500 font-semibold mt-0.5 truncate">
+                                    <i class="fa-regular fa-clock text-[8px] mr-0.5"></i>
+                                    {{ $item['date_full'] }}, {{ $item['time_start'] }} – {{ $item['time_end'] }}
+                                </p>
+                            </div>
+
+                            {{-- Action area --}}
+                            <div class="relative flex items-center justify-end" style="min-height:28px;" @click.stop>
+                                {{-- Idle dot (shown when not hovered) --}}
+                                <div class="action-idle absolute right-0 flex items-center gap-1 pointer-events-none">
+                                    <span class="w-2 h-2 rounded-full bg-yellow-400 inline-block"></span>
+                                </div>
+
+                                <template x-if="processingId === '{{ $item['id'] }}' && !doneIds['{{ $item['id'] }}']">
+                                    <div class="w-16 flex items-center justify-center">
+                                        <i class="fa-solid fa-spinner fa-spin text-slate-400 text-xs"></i>
+                                    </div>
+                                </template>
+
+                                <template x-if="doneIds['{{ $item['id'] }}'] === 'accepted'">
+                                    <span class="text-green-600 text-[9px] font-bold bg-green-50 border border-green-200 px-2 py-0.5 rounded-full">
+                                        Accepted ✓
+                                    </span>
+                                </template>
+
+                                <template x-if="doneIds['{{ $item['id'] }}'] === 'rejected'">
+                                    <span class="text-red-500 text-[9px] font-bold bg-red-50 border border-red-200 px-2 py-0.5 rounded-full">
+                                        Rejected ✗
+                                    </span>
+                                </template>
+
+                                <template x-if="processingId !== '{{ $item['id'] }}' && !doneIds['{{ $item['id'] }}']">
+                                    <div class="action-buttons flex items-center gap-1 justify-end">
+                                        <div class="hover-tooltip" data-full="Accept">
+                                            <button
+                                                title="Accept"
+                                                @click="
+                                                    processingId = '{{ $item['id'] }}';
+                                                    $wire.acceptBooking('{{ $item['id'] }}').then(() => {
+                                                        processingId = null;
+                                                    })
+                                                "
+                                                class="w-7 h-7 flex items-center justify-center rounded-lg bg-emerald-100 hover:bg-emerald-200 text-emerald-700 transition-all hover:scale-110 hover:shadow-sm"
+                                                style="flex-shrink:0;">
+                                                <i class="fa-solid fa-check" style="font-size:11px;"></i>
+                                            </button>
+                                        </div>
+                                        <div class="hover-tooltip" data-full="Reject">
+                                            <button
+                                                title="Reject"
+                                                @click="
+                                                    processingId = '{{ $item['id'] }}';
+                                                    $wire.rejectBooking('{{ $item['id'] }}').then(() => {
+                                                        doneIds['{{ $item['id'] }}'] = 'rejected';
+                                                        processingId = null;
+                                                    })
+                                                "
+                                                class="w-7 h-7 flex items-center justify-center rounded-lg bg-red-100 hover:bg-red-200 text-red-600 transition-all hover:scale-110 hover:shadow-sm"
+                                                style="flex-shrink:0;">
+                                                <i class="fa-solid fa-xmark" style="font-size:11px;"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    @empty
+                        <div class="py-4">
+                            <p class="text-xs text-gray-400 italic">No pending requests.</p>
+                        </div>
+                    @endforelse
+                </div>
+
+                {{-- ── TOGGLE / PAGINATION BUTTON ── --}}
+                @if(count($pendingApprovalsList) > 5)
+                    <button id="toggleRequestsBtn"
+                        class="w-full mt-4 py-2 text-[10px] font-bold text-slate-400 hover:text-slate-600
+                               border-t border-gray-50 transition text-center">
+                        View All Requests
+                    </button>
+                @endif
             </div>
-        @empty
-            <div class="py-4">
-                <p class="text-xs text-gray-400 italic">No pending requests.</p>
-            </div>
-        @endforelse
-    </div>
-</div>
+
         </div>
     </div>
 </div>
@@ -1275,7 +1470,89 @@ $rejectBooking = action(function (string $id) {
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
-    // Export Weekly Report specific functions
+    // ── STATUS HELPERS ──────────────────────────────────────────────────────
+    function getStatusColor(status) {
+        const map = {
+            pending:   'text-yellow-500',
+            accepted:  'text-green-600',
+            active:    'text-green-600',
+            upcoming:  'text-orange-500',
+            completed: 'text-gray-500',
+            rejected:  'text-red-500',
+            cancelled: 'text-red-600',
+            closed:    'text-purple-700',
+            no_show:   'text-orange-600',
+        };
+        return map[status] ?? 'text-slate-400';
+    }
+
+    function getStatusLabel(status) {
+        const map = {
+            no_show:   'No Show',
+            accepted:  'Accepted',
+            completed: 'Completed',
+            closed:    'Closed',
+            rejected:  'Rejected',
+            cancelled: 'Cancelled',
+            pending:   'Pending',
+        };
+        return map[status] ?? (status ? status.charAt(0).toUpperCase() + status.slice(1) : '—');
+    }
+
+    // ── TIME HELPERS ────────────────────────────────────────────────────────
+    function timeToMinutes(t) {
+        if (!t) return 0;
+        const [h, m] = t.split(':').map(Number);
+        return h * 60 + m;
+    }
+
+    // ── CONFLICT DETECTION (client-side mirror of server logic) ────────────
+    // Used to give immediate feedback before the Livewire round-trip returns.
+    function sessionsOverlap(a, b) {
+        return timeToMinutes(a.start_24) < timeToMinutes(b.end_24)
+            && timeToMinutes(a.end_24)   > timeToMinutes(b.start_24);
+    }
+
+    function findConflictForBooking(pendingItem) {
+        // Look for any accepted session with the same mentor_id on the same date
+        return allSessions.find(s =>
+            s.mentor_id  === pendingItem.mentor_id
+            && s.status  === 'accepted'
+            && s.date    === pendingItem.date_raw
+            && sessionsOverlap(
+                { start_24: pendingItem.start_24, end_24: pendingItem.end_24 },
+                { start_24: s.start_24,            end_24: s.end_24 }
+            )
+        ) ?? null;
+    }
+
+    // ── CONFLICT MODAL HELPERS ──────────────────────────────────────────────
+    function openConflictModal(data) {
+        document.getElementById('conflictMentorName').textContent   = data.mentorName;
+        document.getElementById('conflictStudentName').textContent  = data.conflictStudent;
+        document.getElementById('conflictSubject').textContent      = data.conflictSubject;
+        document.getElementById('conflictDate').textContent         = data.conflictDate;
+        document.getElementById('conflictTime').textContent         = data.conflictStart + ' – ' + data.conflictEnd;
+        document.getElementById('conflictModal').style.display      = 'flex';
+    }
+
+    function closeConflictModal() {
+        document.getElementById('conflictModal').style.display = 'none';
+    }
+
+    // ── AUTO-REJECT NOTIFICATION MODAL ─────────────────────────────────────
+    function openAutoRejectModal(count) {
+        document.getElementById('autoRejectBody').innerHTML =
+            `<strong>${count} overlapping pending ${count === 1 ? 'request was' : 'requests were'} automatically rejected</strong> `
+            + `because they conflicted with the session you just accepted. The affected students can submit a new booking request.`;
+        document.getElementById('autoRejectModal').style.display = 'flex';
+    }
+
+    function closeAutoRejectModal() {
+        document.getElementById('autoRejectModal').style.display = 'none';
+    }
+
+    // ── REPORT HELPERS ──────────────────────────────────────────────────────
     function getWeekRange() {
         const now = new Date();
         const end = new Date(now);
@@ -1296,17 +1573,17 @@ $rejectBooking = action(function (string $id) {
 
     function openReportModal() {
         const { mon, sun } = getWeekRange();
-        const shortLabel = `${formatDisplay(mon)} – ${formatDisplay(sun)}`;
+        const shortLabel  = `${formatDisplay(mon)} – ${formatDisplay(sun)}`;
         const detailLabel = `${mon.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })} – ${sun.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}`;
 
-        document.getElementById('reportWeekLabel').textContent = shortLabel;
+        document.getElementById('reportWeekLabel').textContent  = shortLabel;
         document.getElementById('reportWeekDetail').textContent = detailLabel;
-        document.getElementById('reportModal').style.display = 'flex';
+        document.getElementById('reportModal').style.display    = 'flex';
     }
 
     function submitReport() {
-        if(typeof XLSX === 'undefined') {
-            alert('Spreadsheet export library is loading or missing. Please ensure XLSX is loaded via app.js');
+        if (typeof XLSX === 'undefined') {
+            alert('Spreadsheet export library is loading or missing.');
             return;
         }
 
@@ -1314,7 +1591,6 @@ $rejectBooking = action(function (string $id) {
         const fromStr = toDateStr(mon);
         const toStr   = toDateStr(sun);
 
-        const allSessions  = @json($allSessions);
         const topMentors   = @json($this->topMentors);
         const topSubjects  = @json($this->topSubjects);
         const satisfaction = @json($this->satisfactionRate);
@@ -1340,28 +1616,16 @@ $rejectBooking = action(function (string $id) {
                 const rem   = Math.round(mins % 60);
                 const dur   = hrs > 0 ? `${hrs} hr${hrs > 1 ? 's' : ''}` : `${rem} min`;
                 const dateTime = `${dateFormatted}  ${fmt(start)} – ${fmt(end)}  (${dur})`;
-                return [
-                    r.mentee  ?? 'Unknown',
-                    r.mentor  ?? 'Unknown',
-                    r.subject ?? 'N/A',
-                    r.topic   ?? '—',
-                    dateTime,
-                    r.mode    ?? 'One-on-One Tutorial',
-                ];
+                return [r.mentee ?? 'Unknown', r.mentor ?? 'Unknown', r.subject ?? 'N/A', r.topic ?? '—', dateTime, r.mode ?? 'One-on-One Tutorial'];
             })
             : [['No sessions found for this week.', '', '', '', '', '']];
 
         const sessionSheet = XLSX.utils.aoa_to_sheet([sessionHeader, ...sessionRows]);
-        sessionSheet['!cols'] = [
-            { wch: 24 }, { wch: 24 }, { wch: 14 }, { wch: 24 }, { wch: 36 }, { wch: 28 },
-        ];
+        sessionSheet['!cols'] = [{ wch: 24 }, { wch: 24 }, { wch: 14 }, { wch: 24 }, { wch: 36 }, { wch: 28 }];
         XLSX.utils.book_append_sheet(wb, sessionSheet, 'Weekly Sessions');
 
         const statusSummary = { completed: 0, accepted: 0, pending: 0, rejected: 0 };
-        filtered.forEach(r => {
-            const s = (r.status ?? '').toLowerCase();
-            if (statusSummary[s] !== undefined) statusSummary[s]++;
-        });
+        filtered.forEach(r => { const s = (r.status ?? '').toLowerCase(); if (statusSummary[s] !== undefined) statusSummary[s]++; });
 
         let totalMins = 0;
         filtered.forEach(r => {
@@ -1373,77 +1637,37 @@ $rejectBooking = action(function (string $id) {
         const totalM = Math.round(totalMins % 60);
 
         const overviewRows = [
-            ['LRC PEERCONNECT — WEEKLY SESSION REPORT'],
-            [],
+            ['LRC PEERCONNECT — WEEKLY SESSION REPORT'], [],
             ['Report Period', `${formatDisplay(mon)}  to  ${formatDisplay(sun)}`],
-            ['Generated on',  new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })],
-            [],
+            ['Generated on',  new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })], [],
             ['SUMMARY'],
-            ['Total Sessions',   filtered.length],
-            ['Completed',        statusSummary.completed],
-            ['Accepted',         statusSummary.accepted],
-            ['Pending',          statusSummary.pending],
-            ['Rejected',         statusSummary.rejected],
-            ['Total Hours',      `${totalH}h ${totalM}m`],
-            [],
-            ['TOP MENTORS (ALL-TIME)'],
-            ['Rank', 'Mentor', 'Sessions'],
-            ...topMentors.map((m, i) => [i + 1, m.name, m.count]),
-            [],
-            ['TOP SUBJECTS (ALL-TIME)'],
-            ['Rank', 'Subject', 'Bookings'],
-            ...topSubjects.map((s, i) => [i + 1, s.name, s.count]),
-            [],
-            ['COLLEGE ACTIVITY'],
-            ['College', 'Students'],
+            ['Total Sessions', filtered.length], ['Completed', statusSummary.completed],
+            ['Accepted', statusSummary.accepted], ['Pending', statusSummary.pending],
+            ['Rejected', statusSummary.rejected], ['Total Hours', `${totalH}h ${totalM}m`], [],
+            ['TOP MENTORS (ALL-TIME)'], ['Rank', 'Mentor', 'Sessions'],
+            ...topMentors.map((m, i) => [i + 1, m.name, m.count]), [],
+            ['TOP SUBJECTS (ALL-TIME)'], ['Rank', 'Subject', 'Bookings'],
+            ...topSubjects.map((s, i) => [i + 1, s.name, s.count]), [],
+            ['COLLEGE ACTIVITY'], ['College', 'Students'],
             ...Object.entries(collegeData).map(([c, n]) => [c, n]),
         ];
         XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(overviewRows), 'Overview');
-
         XLSX.writeFile(wb, `lrc-weekly-report-${fromStr}-to-${toStr}.xlsx`);
         document.getElementById('reportModal').style.display = 'none';
     }
 
-    // Dashboard Base scripts
-    const searchInput = document.getElementById('liveSearchInput');
+    // ── CORE STATE ──────────────────────────────────────────────────────────
+    const searchInput  = document.getElementById('liveSearchInput');
     const statusFilter = document.getElementById('statusFilter');
     const charts = [];
     let currentPage = 1;
 
-    function updateClock() {
-        const now = new Date();
-        const clockEl = document.getElementById('liveClock');
-        const dateEl = document.getElementById('liveDate');
-        if(clockEl) clockEl.innerText = now.toLocaleTimeString('en-US', { hour12: false });
-        if(dateEl) dateEl.innerText = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
-    }
-    setInterval(updateClock, 1000);
-
-    const allSessions = @json($allSessions).map(s => {
-        const now = new Date();
-        const sessionDate = new Date(s.date + 'T00:00:00');
-        const rawStatus = s.status;
-        let status = rawStatus;
-
-        if (rawStatus === 'Accepted') {
-            if (sessionDate.toDateString() === now.toDateString()) status = 'Active';
-            else if (sessionDate < now) status = 'Completed';
-            else status = 'Upcoming';
-        }
-
-        const colorMap = {
-            'Completed': 'text-green-600',
-            'Pending':   'text-yellow-500',
-            'Upcoming':  'text-orange-500',
-            'Rejected':  'text-red-500',
-        };
-
-        return { ...s, status, rawStatus, color: colorMap[status] ?? 'text-slate-400' };
-    });
+    // allSessions includes start_24 / end_24 / mentor_id for conflict checks.
+    let allSessions = @json($allSessions);
 
     const _now = new Date();
     let selectedDateStr = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, '0')}-${String(_now.getDate()).padStart(2, '0')}`;
-    let viewDate = new Date(_now.getFullYear(), _now.getMonth(), 1);
+    let viewDate        = new Date(_now.getFullYear(), _now.getMonth(), 1);
 
     const monthlyData  = @json($this->monthlyTrends);
     const topMentors   = @json($this->topMentors);
@@ -1451,16 +1675,54 @@ $rejectBooking = action(function (string $id) {
     const collegeData  = @json($this->collegeActivity);
     const topSubjects  = @json($this->topSubjects);
 
+    // ── LIVEWIRE EVENT LISTENERS ────────────────────────────────────────────
+    // booking-conflict-detected: server found a conflict → show the conflict modal.
+    document.addEventListener('livewire:initialized', () => {
+        Livewire.on('booking-conflict-detected', ([data]) => {
+            openConflictModal(data);
+        });
+
+        // bookings-auto-rejected: N pending sessions were rejected automatically.
+        Livewire.on('bookings-auto-rejected', ([data]) => {
+            // Mark those sessions accepted/rejected in the local JS array so the
+            // table and calendar update without a full page reload.
+            allSessions.forEach(s => {
+                if (s.mentor_id === data.mentorId && s.status === 'pending') {
+                    // We don't know which IDs were rejected from here, but a
+                    // re-render via applyFilters picks up the Livewire state update.
+                }
+            });
+
+            openAutoRejectModal(data.count);
+            applyFilters();
+            renderCalendar();
+        });
+
+        Livewire.on('mentor-saved', () => { initCharts(); });
+    });
+
+    // ── CLOCK ──────────────────────────────────────────────────────────────
+    function updateClock() {
+        const now   = new Date();
+        const clockEl = document.getElementById('liveClock');
+        const dateEl  = document.getElementById('liveDate');
+        if (clockEl) clockEl.innerText = now.toLocaleTimeString('en-US', { hour12: false });
+        if (dateEl)  dateEl.innerText  = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+    }
+    setInterval(updateClock, 1000);
+
+    // ── CHARTS ─────────────────────────────────────────────────────────────
     function initCharts() {
-        if(typeof Chart === 'undefined') return;
+        if (typeof Chart === 'undefined') return;
 
         charts.push(new Chart(document.getElementById('lineChart'), {
             type: 'line',
             data: {
                 labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
                 datasets: [{
-                    label: 'Sessions', data: monthlyData, borderColor: '#7b1d1d', backgroundColor: 'rgba(123,29,29,0.08)',
-                    tension: 0.4, fill: true, pointBackgroundColor: '#7b1d1d', pointRadius: 4, pointHoverRadius: 6,
+                    label: 'Sessions', data: monthlyData, borderColor: '#7b1d1d',
+                    backgroundColor: 'rgba(123,29,29,0.08)', tension: 0.4, fill: true,
+                    pointBackgroundColor: '#7b1d1d', pointRadius: 4, pointHoverRadius: 6,
                 }]
             },
             options: {
@@ -1517,79 +1779,119 @@ $rejectBooking = action(function (string $id) {
         }));
     }
 
+    // ── TABLE / FILTERS ────────────────────────────────────────────────────
     function applyFilters() {
         const tbody = document.getElementById('tableBody');
-        if(!tbody) return;
+        if (!tbody) return;
 
-        const searchTerm = searchInput.value.toLowerCase().trim();
+        const searchTerm     = searchInput.value.toLowerCase().trim();
         const selectedStatus = statusFilter.value;
 
-        const nowStr = `${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,'0')}-${String(new Date().getDate()).padStart(2,'0')}`;
-        const selectedDateObj = new Date(selectedDateStr + 'T00:00:00');
-
-        document.getElementById('tableTitle').textContent = "Today's Schedule";
-        document.getElementById('tableSubtitle').textContent = selectedDateObj.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+        document.getElementById('tableTitle').textContent    = "Today's Schedule";
+        document.getElementById('tableSubtitle').textContent = new Date(selectedDateStr + 'T00:00:00').toLocaleDateString('en-US', {
+            month: 'long', day: 'numeric', year: 'numeric',
+        });
 
         const filtered = allSessions.filter(item => {
             const matchesDate   = item.date === selectedDateStr;
-            const matchesSearch = searchTerm ? item.mentor.toLowerCase().includes(searchTerm) || item.mentee.toLowerCase().includes(searchTerm) || item.subject.toLowerCase().includes(searchTerm) : true;
-            const matchesStatus = selectedStatus === 'All' || item.status === selectedStatus;
+            const matchesSearch = !searchTerm || [item.mentor, item.mentee, item.subject].some(v =>
+                (v ?? '').toLowerCase().includes(searchTerm));
+            const matchesStatus = !selectedStatus || item.status === selectedStatus;
             return matchesDate && matchesSearch && matchesStatus;
         });
 
-        const perPage = 4;
+        const perPage    = 4;
         const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
         if (currentPage > totalPages) currentPage = 1;
 
-        const start = (currentPage - 1) * perPage;
+        const start     = (currentPage - 1) * perPage;
         const paginated = filtered.slice(start, start + perPage);
 
-        if (paginated.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="5" class="py-12 text-center"><div class="flex flex-col items-center gap-2"><i class="fa-regular fa-calendar-xmark text-gray-300 text-2xl"></i><p class="text-xs text-gray-400 italic">No sessions found for this date.</p></div></td></tr>`;
+        if (!paginated.length) {
+            tbody.innerHTML = `<tr><td colspan="5" class="py-12 text-center">
+                <div class="flex flex-col items-center gap-2">
+                    <i class="fa-regular fa-calendar-xmark text-gray-300 text-2xl"></i>
+                    <p class="text-xs text-gray-400 italic">No sessions found for this date.</p>
+                </div></td></tr>`;
         } else {
-            tbody.innerHTML = paginated.map(row => `
-                <tr class="border-b last:border-0 hover:bg-slate-50 transition">
+            tbody.innerHTML = paginated.map(row => {
+                const rawStatus = row.status;
+                const colorCls  = getStatusColor(rawStatus);
+                const label     = getStatusLabel(rawStatus);
+
+                const statusCell = rawStatus === 'accepted'
+                    ? `<div class="flex items-center justify-center gap-1.5">
+                           <span class="w-2 h-2 rounded-full bg-green-400 inline-block flex-shrink-0"></span>
+                           <span class="${colorCls} font-bold text-[10px] bg-gray-50 px-2 py-1 rounded border border-current opacity-80 capitalize">${label}</span>
+                       </div>`
+                    : `<span class="${colorCls} font-bold text-[10px] bg-gray-50 px-2 py-1 rounded border border-current opacity-80 capitalize">${label}</span>`;
+
+                return `<tr class="border-b last:border-0 hover:bg-slate-50 transition">
                     <td class="py-3 max-w-0" style="width:22%;"><div class="truncate text-xs font-bold text-slate-700">${row.mentee}</div></td>
                     <td class="py-3 max-w-0" style="width:22%;"><div class="truncate text-xs text-slate-600">${row.mentor}</div></td>
                     <td class="py-3 text-xs text-slate-500" style="width:16%;">${row.subject}</td>
                     <td class="py-3 text-xs text-slate-500" style="width:20%;">${row.time}</td>
-                    <td class="py-3 text-center" style="width:20%;"><span class="${row.color} font-bold text-[10px] bg-gray-50 px-2 py-1 rounded border border-current opacity-80">${row.status}</span></td>
-                </tr>
-            `).join('');
+                    <td class="py-3 text-center" style="width:20%;">${statusCell}</td>
+                </tr>`;
+            }).join('');
         }
 
         const showing = filtered.length === 0 ? '0' : `${start + 1}–${Math.min(start + perPage, filtered.length)}`;
         document.getElementById('pageIndicator').innerText = `Showing ${showing} of ${filtered.length} result${filtered.length !== 1 ? 's' : ''}`;
         document.getElementById('prevBtn').disabled = currentPage <= 1;
         document.getElementById('nextBtn').disabled = currentPage >= totalPages;
+        document.getElementById('prevBtn').classList.toggle('opacity-30', currentPage <= 1);
+        document.getElementById('nextBtn').classList.toggle('opacity-30', currentPage >= totalPages);
+    }
+
+    // ── CALENDAR ───────────────────────────────────────────────────────────
+    function hasAcceptedOnDate(dateStr) {
+        return allSessions.some(s => s.date === dateStr && s.status === 'accepted');
     }
 
     function renderCalendar() {
-        const grid = document.getElementById('calendarGrid');
-        if(!grid) return;
+        const grid     = document.getElementById('calendarGrid');
+        if (!grid) return;
 
-        const now = new Date();
-        const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        const localToday = new Date();
+        localToday.setHours(0, 0, 0, 0);
+
+        const todayStr  = `${localToday.getFullYear()}-${String(localToday.getMonth() + 1).padStart(2, '0')}-${String(localToday.getDate()).padStart(2, '0')}`;
         const monthDisp = document.getElementById('monthDisplay');
 
         grid.innerHTML = '';
         monthDisp.innerText = viewDate.toLocaleString('default', { month: 'long', year: 'numeric' });
 
-        const lastDay = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 0).getDate();
+        const lastDay  = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 0).getDate();
         const startDay = new Date(viewDate.getFullYear(), viewDate.getMonth(), 1).getDay();
 
         for (let i = 0; i < startDay; i++) grid.innerHTML += '<div></div>';
 
         for (let i = 1; i <= lastDay; i++) {
             const dateStr = `${viewDate.getFullYear()}-${String(viewDate.getMonth() + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
-            const isToday = dateStr === todayStr;
+            const dateObj = new Date(viewDate.getFullYear(), viewDate.getMonth(), i);
+            dateObj.setHours(0, 0, 0, 0);
+
+            const isPast     = dateObj < localToday;
+            const isToday    = dateStr === todayStr;
             const isSelected = dateStr === selectedDateStr;
-            const hasAccepted = allSessions.some(s => s.date === dateStr && s.rawStatus === 'Accepted');
-            
+            const hasSession = hasAcceptedOnDate(dateStr);
+
             const dayEl = document.createElement('div');
-            dayEl.className = `cal-day ${isToday ? 'cal-today' : ''} ${isSelected ? 'cal-selected' : ''}`;
-            dayEl.innerHTML = `<span>${i}</span>${hasAccepted ? `<span style="position:absolute;top:2px;right:2px;width:6px;height:6px;background:#22c55e;border-radius:50%;border:1px solid white;"></span>` : ''}`;
-            dayEl.onclick = () => { selectedDateStr = dateStr; currentPage = 1; applyFilters(); renderCalendar(); };
+            dayEl.className = `cal-day${isToday ? ' cal-today' : ''}${isSelected ? ' cal-selected' : ''}`;
+
+            if (isPast && !isToday) dayEl.style.color = '#9ca3af';
+
+            dayEl.innerHTML = `
+                ${hasSession ? '<span style="position:absolute;top:2px;right:2px;width:6px;height:6px;background:#22c55e;border-radius:50%;border:1px solid white;"></span>' : ''}
+                <span style="position:relative;z-index:1;">${i}</span>`;
+
+            dayEl.onclick = () => {
+                selectedDateStr = dateStr;
+                currentPage     = 1;
+                applyFilters();
+                renderCalendar();
+            };
             grid.appendChild(dayEl);
         }
     }
@@ -1599,21 +1901,21 @@ $rejectBooking = action(function (string $id) {
         renderCalendar();
     }
 
-    document.addEventListener('livewire:navigated', () => {
+    // ── INIT ───────────────────────────────────────────────────────────────
+    function initDashboard() {
         initCharts();
         renderCalendar();
         applyFilters();
-        
-        if(searchInput) searchInput.addEventListener('input', applyFilters);
-        if(statusFilter) statusFilter.addEventListener('change', applyFilters);
-        
+        updateClock();
+
+        if (searchInput) searchInput.addEventListener('input', () => { currentPage = 1; applyFilters(); });
+        if (statusFilter) statusFilter.addEventListener('change', () => { currentPage = 1; applyFilters(); });
+
         const prevBtn = document.getElementById('prevBtn');
         const nextBtn = document.getElementById('nextBtn');
-        if(prevBtn) prevBtn.addEventListener('click', () => { currentPage--; applyFilters(); });
-        if(nextBtn) nextBtn.addEventListener('click', () => { currentPage++; applyFilters(); });
-    });
+        if (prevBtn) prevBtn.addEventListener('click', () => { currentPage--; applyFilters(); });
+        if (nextBtn) nextBtn.addEventListener('click', () => { currentPage++; applyFilters(); });
+    }
 
-    document.addEventListener('livewire:initialized', () => {
-        Livewire.on('mentor-saved', () => { initCharts(); });
-    });
+    document.addEventListener('livewire:navigated',   initDashboard);
 </script>
