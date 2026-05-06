@@ -1135,6 +1135,7 @@ $rejectBooking = action(function (string $id) {
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
     // Export Weekly Report specific functions
     function getWeekRange() {
