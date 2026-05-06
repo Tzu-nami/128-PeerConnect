@@ -107,7 +107,7 @@ body.app-layout { overflow: hidden; }
     color: white;
     height: 100vh;
     transition: width 0.25s ease;
-    z-index: 999;
+    z-index: 30;
     position: relative;
     overflow: visible;
 }
@@ -291,7 +291,7 @@ body.app-layout { overflow: hidden; }
     visibility: hidden;
     transition: opacity 0.2s;
     pointer-events: none;
-    z-index: 1000;
+    z-index: 100;
 }
 
 .sidebar.collapsed .nav-item:hover::after {
