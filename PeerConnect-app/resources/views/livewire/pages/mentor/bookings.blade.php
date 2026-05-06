@@ -194,13 +194,13 @@ $saveProfile = action(function () {
 
     $validated = $this->validate(
         [
-            'student_num'      => ['required', 'string', 'max:10', 'regex:/-/'],
+            'student_num'      => ['required', 'string', 'regex:/^\d{4}-\d{5}$/'],
             'college_id'       => ['required', 'exists:colleges,id'],
             'degreeProgram_id' => ['required', 'exists:degree_programs,id'],
             'yearLevel_id'     => ['required', 'exists:year_levels,id'],
         ],
         messages: [
-            'student_num.regex' => 'The student number must include a hyphen (-).',
+            'student_num.regex' => 'The student number must be numbers and follow the format XXXX-XXXXX',
         ],
         attributes: [
             'student_num'      => 'student number',
@@ -237,8 +237,25 @@ $bookingRules = [
             }
         },
     ],
-    'schedule_start' => ['required', 'date_format:H:i'],
-    'schedule_end'   => ['required', 'date_format:H:i', 'after:schedule_start'],
+    'schedule_start' => [
+        'required',
+        'date_format:H:i',
+        function ($attribute, $value, $fail) {
+            if ($value < '08:00' || $value >= '18:00') {
+                $fail('Sessions can only be booked between 8:00 AM to 6:00 PM');
+            }
+        },
+    ],
+    'schedule_end'   => [
+        'required',
+        'date_format:H:i', 
+        'after:schedule_start',
+        function ($attribute, $value, $fail) {
+            if ($value <= '08:00' || $value > '18:00') {
+                $fail('Sessions can only be booked between 8:00 AM to 6:00 PM');
+            }
+        },
+    ],
 ];
 
 $bookingAttributes = [
@@ -480,7 +497,6 @@ $submitFeedback = action(function () {
     $this->feedbackSubmitted = true;
 
     unset($this->completedBooking);
-
 });
 
 $skipFeedback = action(function () {
@@ -613,7 +629,7 @@ $skipFeedback = action(function () {
                             <span wire:loading.remove wire:target="skipFeedback">
                                 <i class="fa-solid fa-forward-step mr-1 text-xs"></i> Skip for now
                             </span>
-                        <span wire:loading wire:target="skipFeedback">
+                            <span wire:loading wire:target="skipFeedback">
                                 <i class="fa-solid fa-spinner fa-spin mr-1 text-xs"></i> Skipping...
                             </span>
                     </button>
@@ -974,12 +990,12 @@ $skipFeedback = action(function () {
                 {{-- Booking Form --}}
             @elseif (!$this->completedBooking)
                 <div class="flex-1 min-w-0 items-center gap-4 rounded-lg pb-6 pt-0">
-                    <h1 class="text-3xl font-extrabold tracking-tight text-transparent bg-clip-text bg-up-maroon flex items-center gap-3">
-                        Request An Enrichment Session
-                    </h1>
-                    <p class="text-sm font-medium text-slate-500 leading-snug mt-1">
-                        Please fill out the details below. Your request will be reviewed by the peer mentor.
-                    </p>
+                  <h1 class="text-3xl font-extrabold tracking-tight text-transparent bg-clip-text bg-up-maroon flex items-center gap-3">
+    Request An Enrichment Session
+</h1>
+<p class="text-sm font-medium text-slate-500 leading-snug mt-1">
+    Please fill out the details below. Your request will be reviewed by the peer mentor.
+</p>
                 </div>
 
                 <div class="bg-white pl-6 pr-6 pb-6 pt-4 rounded-lg shadow-sm border-gray-200 overflow-visible"
@@ -993,8 +1009,10 @@ $skipFeedback = action(function () {
                         mentor_id:        $wire.entangle('mentor_id'),
                         isMentorLocked:   $wire.entangle('isMentorLocked'),
                         dateError:        '',
-                        timeError:        '',
+                        startTimeError:   '',
+                        endTimeError:     '',
                         clearedErrors:    [],
+                        hasProfile:       @js((bool) auth()->user()->studentProfile),
 
                         init() {
                             this.$watch('subject_id', () => {
@@ -1003,10 +1021,16 @@ $skipFeedback = action(function () {
                             });
                             this.$watch('topic',          () => this.clearError('topic'));
                             this.$watch('tutorialMode_id',() => this.clearError('tutorialMode_id'));
-                            this.$watch('mentor_id',      () => this.clearError('mentor_id'));
+                            this.$watch('mentor_id',      () => {
+                                this.clearError('mentor_id');
+                                if (this.date) {
+                                    const temp = this.date;
+                                    this.date = '';
+                                    this.$nextTick(() => this.date = temp);
+                                }
+                            });
 
                             this.$watch('date', value => {
-                                if (!this.isMentorLocked) this.mentor_id = '';
                                 this.dateError = '';
                                 this.clearError('date');
                                 if (!value) { this.validateTime(); return; }
@@ -1027,18 +1051,38 @@ $skipFeedback = action(function () {
                                         return;
                                     }
                                 }
+                                
+                                if (this.mentor_id && this.mentor_id !== 'any') {
+                                    const dayChosen = this.getDayOfWeek(value);
+                                    const avails = this.allAvailabilities.filter(
+                                        a => a.mentorProfile_id == this.mentor_id && a.day_of_week === dayChosen
+                                    );
+                                    if (avails.length === 0) {
+                                        this.dateError = 'This mentor is not available on this day.';
+                                        return;
+                                    }
+                                }
                                 this.validateTime();
+                                this.checkAnyMentor();
                             });
 
                             this.$watch('start_time', () => {
-                                if (!this.isMentorLocked) this.mentor_id = '';
                                 this.clearError('schedule_start');
                                 this.validateTime();
+                                this.checkAnyMentor();
                             });
                             this.$watch('end_time', () => {
-                                if (!this.isMentorLocked) this.mentor_id = '';
                                 this.clearError('schedule_end');
                                 this.validateTime();
+                                this.checkAnyMentor();
+                            });
+                        },
+
+                        checkAnyMentor() {
+                            this.$nextTick(() => {
+                                if (this.mentor_id === 'any' && this.filteredMentors.length === 0) {
+                                    this.mentor_id = '';
+                                }
                             });
                         },
 
@@ -1053,26 +1097,63 @@ $skipFeedback = action(function () {
                         },
 
                         validateTime() {
-                            this.timeError = '';
-                            if (!this.start_time || !this.end_time) return;
-                            if (this.end_time <= this.start_time) {
-                                this.timeError = 'End time must be later than start time.';
+                            this.startTimeError = '';
+                            this.endTimeError = '';
+
+                            // Prevent 6pm-8am
+                            if (this.start_time && (this.start_time < '08:00' || this.start_time >= '18:00')) {
+                                this.startTimeError = 'Sessions must be scheduled between 8:00 AM and 6:00 PM.';
                                 return;
                             }
-                            if (this.isMentorLocked && this.date) {
-                                const dayChosen = this.getDayOfWeek(this.date);
-                                const avails = this.allAvailabilities.filter(
-                                    a => a.mentorProfile_id == this.mentor_id && a.day_of_week === dayChosen
-                                );
-                                if (avails.length > 0) {
-                                    const fits = avails.some(a => {
-                                        let start       = a.start_time.substring(0,5);
-                                        let end         = a.end_time.substring(0,5);
-                                        let startChosen = this.start_time.substring(0,5);
-                                        let endChosen   = this.end_time.substring(0,5);
-                                        return start <= startChosen && end >= endChosen;
-                                    });
-                                    if (!fits) this.timeError = 'Time does not fit their schedule.';
+                            if (this.end_time && (this.end_time <= '08:00' || this.end_time > '18:00')) {
+                                this.endTimeError = 'Sessions must be scheduled between 8:00 AM and 6:00 PM.';
+                                return;
+                            }
+
+                            // Prevent earlier end time than start time
+                            if (this.start_time && this.end_time) {
+                                if (this.end_time <= this.start_time) {
+                                    this.endTimeError = 'End time must be later than start time.';
+                                    return;
+                                }
+                            }
+                            
+                            // Check if chosen mentor is available on preferred sched
+                            if (this.mentor_id && this.mentor_id != 'any' && this.date) {
+                                if (this.start_time || this.end_time) {
+                                    const dayChosen = this.getDayOfWeek(this.date);
+                                    const avails = this.allAvailabilities.filter(
+                                        a => a.mentorProfile_id == this.mentor_id && a.day_of_week === dayChosen
+                                    );
+
+                                    if (avails.length > 0) {
+                                        let startChosen = this.start_time ? this.start_time.substring(0,5) : null;
+                                        let endChosen   = this.end_time ? this.end_time.substring(0,5) : null;
+
+                                        if (startChosen && !endChosen) {
+                                            const fits = avails.some(a => startChosen >= a.start_time.substring(0,5) && startChosen < a.end_time.substring(0,5));
+                                            if (!fits) this.startTimeError = 'Start time does not fit the mentor schedule.';
+                                        } 
+                                        else if (!startChosen && endChosen) {
+                                            const fits = avails.some(a => endChosen > a.start_time.substring(0,5) && endChosen <= a.end_time.substring(0,5));
+                                            if (!fits) this.endTimeError = 'End time does not fit the mentor schedule.';
+                                        } 
+                                        else if (startChosen && endChosen) {
+                                            const fitsBoth = avails.some(a => startChosen >= a.start_time.substring(0,5) && endChosen <= a.end_time.substring(0,5));
+                                            
+                                            if (!fitsBoth) {
+                                                const startFits = avails.some(a => startChosen >= a.start_time.substring(0,5) && startChosen < a.end_time.substring(0,5));
+                                                const endFits = avails.some(a => endChosen > a.start_time.substring(0,5) && endChosen <= a.end_time.substring(0,5));
+                                                
+                                                if (!startFits) this.startTimeError = 'Start time does not fit the mentor schedule.';
+                                                if (!endFits) this.endTimeError = 'End time does not fit the mentor schedule.';
+                                                if (startFits && endFits) this.endTimeError = 'Mentor is unavailable at this session time.';
+                                            }
+                                        }
+                                    } else {
+                                        if (this.start_time) this.startTimeError = 'This mentor is not available on this day.';
+                                        if (this.end_time)   this.endTimeError = 'This mentor is not available on this day.';
+                                    }
                                 }
                             }
                         },
@@ -1091,44 +1172,95 @@ $skipFeedback = action(function () {
                                 return this.allMentors.filter(m => m.profile_id == this.mentor_id);
                             }
                             let choices = this.allMentors;
-                            if ($wire.subject_id) {
+
+                            // Filter based on subject
+                            if (this.subject_id) {
                                 const validIds = this.allSubjects
-                                    .filter(s => s.subject_id == $wire.subject_id)
+                                    .filter(s => s.subject_id == this.subject_id)
                                     .map(s => s.mentorProfile_id);
                                 choices = choices.filter(m => validIds.includes(m.profile_id));
                             }
-                            if ($wire.date) {
-                                const dayChosen = this.getDayOfWeek($wire.date);
+                            
+                            // Filter based on either date or times
+                            if (this.date && (!this.mentor_id || this.mentor_id === 'any')) {
+                                const dayChosen = this.getDayOfWeek(this.date);
                                 choices = choices.filter(m => {
+                                    if (this.mentor_id && m.profile_id == this.mentor_id) {
+                                            return true;
+                                    }
+
                                     const avails = this.allAvailabilities.filter(
                                         a => a.mentorProfile_id == m.profile_id && a.day_of_week === dayChosen
                                     );
+                                    
                                     if (avails.length === 0) return false;
-                                    if ($wire.schedule_start && $wire.schedule_end) {
+                                    
+                                    if (this.start_time || this.end_time) {
                                         return avails.some(a => {
                                             let start       = a.start_time.substring(0,5);
                                             let end         = a.end_time.substring(0,5);
-                                            let startChosen = $wire.schedule_start.substring(0,5);
-                                            let endChosen   = $wire.schedule_end.substring(0,5);
-                                            return start <= startChosen && end >= endChosen;
+                                            let startChosen = this.start_time ? this.start_time.substring(0,5) : null;
+                                            let endChosen   = this.end_time ? this.end_time.substring(0,5) : null;
+
+                                            if (startChosen && endChosen) {
+                                                return start <= startChosen && end >= endChosen;
+                                            } else if (startChosen) {
+                                                return start <= startChosen && end > startChosen;
+                                            } else if (endChosen) {
+                                                return start < endChosen && end >= endChosen;
+                                            }
+                                            return false;
                                         });
                                     }
                                     return true;
                                 });
                             }
                             return choices;
+                        },
+
+                        weekDays: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'],
+
+                        formatTime12(timeStr) {
+                            if (!timeStr) return '';
+                            const [h, m] = timeStr.split(':').map(Number);
+                            const ampm = h >= 12 ? 'PM' : 'AM';
+                            const hr = h % 12 || 12;
+                            return `${hr}:${String(m).padStart(2, '0')} ${ampm}`;
+                        },
+
+                        // To display their availabilities
+                        get selectedMentorSchedule() {
+                            if (!this.mentor_id || this.mentor_id === 'any') return null;
+
+                            const avails = this.allAvailabilities
+                                .filter(a => a.mentorProfile_id == this.mentor_id)
+                                .sort((a, b) => a.start_time.localeCompare(b.start_time));
+                            
+                            if (avails.length === 0) return null;
+
+                            const schedule = {};
+                            avails.forEach(a => {
+                                const day = a.day_of_week.toLowerCase();
+                                if (!schedule[day]) schedule[day] = { slots: [] };
+                                schedule[day].slots.push({
+                                    start: this.formatTime12(a.start_time),
+                                    end: this.formatTime12(a.end_time)
+                                });
+                            });
+                            
+                            return schedule;
                         }
-                    }">
+                    }"
+                    @profile-updated.window="hasProfile = true">
 
                     <form id="bookingForm" class="space-y-3">
 
                         {{-- Subject --}}
                         <div>
-                            <label class="block text-base font-medium text-gray-700 mb-1">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
                                 Subject<span class="text-red-500">*</span>
                             </label>
-                            <select wire:model="subject_id" class="w-full rounded-lg border-gray-300 shadow-sm text-base px-2 py-1 transition-colors">
-                                <option value="" disabled>--- Select a Subject ---</option>
+<select wire:model="subject_id" class="w-full rounded-lg border-gray-300 shadow-sm text-sm px-3 py-2 h-[38px] transition-colors">                                <option value="" disabled>--- Select a Subject ---</option>
                                 @foreach ($this->subjects as $subject)
                                     <option value="{{ $subject->id }}">
                                         {{ strtoupper($subject->code) }} - {{ $subject->name }}
@@ -1146,12 +1278,11 @@ $skipFeedback = action(function () {
 
                         {{-- Topic --}}
                         <div>
-                            <label class="block text-base font-medium text-gray-700 mb-1">
-                                Topic<span class="text-red-500">*</span>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                    Topic<span class="text-red-500">*</span>
                             </label>
                             <input type="text" wire:model="topic"
-                                   class="w-full rounded-lg border-gray-300 shadow-sm text-base px-2 py-1 transition-colors"
-                                   placeholder="e.g. Integration by Parts."
+                                class="w-full rounded-lg border-gray-300 shadow-sm text-sm px-3 py-2 h-[38px] transition-colors"                                   placeholder="e.g. Integration by Parts."
                                    maxlength="255">
                             @error('topic')
                             <span x-show="showError('topic')" x-cloak
@@ -1164,10 +1295,10 @@ $skipFeedback = action(function () {
 
                         {{-- Tutorial Mode --}}
                         <div>
-                            <label class="block text-base font-medium text-gray-700 mb-1">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
                                 Tutorial Mode<span class="text-red-500">*</span>
                             </label>
-                            <select wire:model="tutorialMode_id" class="w-full rounded-lg border-gray-300 shadow-sm text-base px-2 py-1 transition-colors">
+                            <select wire:model="tutorialMode_id" class="w-full rounded-lg border-gray-300 shadow-sm text-sm px-3 py-2 h-[38px] transition-colors">
                                 <option value="" disabled>--- Select Mode of Tutoring ---</option>
                                 @foreach ($this->tutorialModes as $mode)
                                     <option value="{{ $mode->id }}">{{ $mode->mode }}</option>
@@ -1182,12 +1313,97 @@ $skipFeedback = action(function () {
                             @enderror
                         </div>
 
+                        {{-- Preferred Mentor --}}
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                Preferred Mentor<span class="text-red-500">*</span>
+                            </label>
+                            <select wire:model="mentor_id" :disabled="isMentorLocked"
+                                    class="w-full rounded-lg border-gray-300 shadow-sm text-sm px-3 py-2 h-[38px] disabled:bg-gray-100 disabled:text-gray-900 disabled:cursor-not-allowed transition-colors">
+                                <option value=""
+                                        x-text="filteredMentors.length === 0
+                                            ? '--- No mentors available. Please select a different date or time slot. ---'
+                                            : '--- Select a mentor ---'"
+                                        disabled>
+                                </option>
+                                <template x-if="filteredMentors.length > 0 && !isMentorLocked">
+                                    <option value="any" class="bg-blue-100">ANY (Alerts all available mentors)</option>
+                                </template>
+                                <template x-for="mentor in filteredMentors" :key="mentor.profile_id">
+                                    <option :value="mentor.profile_id" x-text="mentor.name"></option>
+                                </template>
+                            </select>
+
+                            <div x-show="isMentorLocked" x-cloak class="mt-1.5 flex justify-between items-center px-1">
+                                <span class="text-[11px] text-blue-600 font-bold">
+                                    <i class="fa-solid fa-lock mr-1"></i> Mentor Locked.
+                                </span>
+                                <a href="{{ route('student.bookings') }}" class="text-[10px] text-gray-400 hover:text-red-600 underline">
+                                    Unlock &amp; Clear
+                                </a>
+                            </div>
+
+                            @error('mentor_id')
+                            <span x-show="showError('mentor_id')" x-cloak
+                                  class="mt-1 text-xs text-red-600 block"
+                                  wire:loading.class="hidden" wire:target="validateBooking">
+                                {{ $message }}
+                            </span>
+                            @enderror
+                        </div>
+
+                        {{-- Any-mentor notice --}}
+                        <div x-show="mentor_id === 'any' && filteredMentors.length > 0" x-cloak
+                             class="mt-3 bg-blue-50 border border-blue-200 rounded-lg p-3 animate-[slideDown_0.2s_ease]">
+                            <p class="text-xs font-bold text-blue-800 mb-1">
+                                <i class="fa-solid fa-triangle-exclamation mr-1"></i> First Come First Serve
+                            </p>
+                            <p class="text-xs text-blue-800 mb-2 leading-tight">
+                                Your request will be sent to the following mentors. The first to accept will take your session.
+                            </p>
+                            <ul class="text-xs font-semibold text-blue-800 space-y-0.5 pl-1">
+                                <template x-for="mentor in filteredMentors" :key="mentor.profile_id">
+                                    <li class="flex items-center gap-1.5">
+                                        <span class="w-1 h-1 rounded-full bg-blue-400"></span>
+                                        <span x-text="mentor.name"></span>
+                                    </li>
+                                </template>
+                            </ul>
+                        </div>
+
+                        <div x-show="selectedMentorSchedule" x-cloak class="mt-4 p-4 bg-white border border-slate-200 rounded-lg animate-[slideDown_0.2s_ease]">
+                            <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3 text-center">Mentor's Weekly Schedule</p>
+                            
+                            <div class="avail-grid">
+                                <template x-for="day in weekDays" :key="day">
+                                    <div>
+                                        <div class="avail-day-header" x-text="day.charAt(0).toUpperCase() + day.slice(1, 3)"></div>
+                                        <div class="avail-day-col">
+                                            <template x-if="selectedMentorSchedule[day]">
+                                                <template x-for="(slot, index) in selectedMentorSchedule[day].slots" :key="index">
+                                                    <div class="avail-slot" x-html="slot.start + '<br>' + slot.end"></div>
+                                                </template>
+                                            </template>
+                                            <template x-if="!selectedMentorSchedule[day]">
+                                                <div class="avail-empty"></div>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                            
+                            <p class="text-[9px] font-medium mt-3 flex items-center justify-center gap-4 text-gray-500">
+                                <span><span class="inline-block w-2.5 h-2.5 rounded bg-[#d1fae5] mr-1 align-middle"></span> Available</span>
+                                <span><span class="inline-block w-2.5 h-2.5 rounded border border-dashed border-gray-300 bg-[#f8fafc] mr-1 align-middle"></span> Unavailable</span>
+                            </p>
+                        </div>
+
                         {{-- Date + Time row --}}
                         <div class="grid grid-cols-3 gap-4">
 
                             {{-- Preferred Day --}}
                             <div x-data="bookingDatePicker()" x-init="init()" @click.outside="close()">
-                                <label class="block text-base font-medium text-gray-700 mb-1">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">
                                     Preferred Day<span class="text-red-500">*</span>
                                 </label>
                                 <div class="custom-date-picker">
@@ -1249,7 +1465,7 @@ $skipFeedback = action(function () {
 
                             {{-- Start Time --}}
                             <div x-data="bookingTimePicker('schedule_start')" x-init="init()" @click.outside="close()">
-                                <label class="block text-base font-medium text-gray-700 mb-1">Start Time<span class="text-red-500">*</span></label>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Start Time<span class="text-red-500">*</span></label>
                                 <div class="custom-time-picker">
                                     <div class="custom-time-display" :class="{ active: open }" @click="toggle()">
                                         <div class="time-icon"><i class="fa-regular fa-clock"></i></div>
@@ -1291,11 +1507,12 @@ $skipFeedback = action(function () {
                                 @error('schedule_start')
                                 <span x-show="showError('schedule_start')" x-cloak class="mt-1 text-xs text-red-600 block" wire:loading.class="hidden" wire:target="validateBooking">{{ $message }}</span>
                                 @enderror
+                                <span x-show="startTimeError" x-cloak class="mt-1 text-xs text-red-600 block" x-text="startTimeError"></span>
                             </div>
 
                             {{-- End Time --}}
                             <div x-data="bookingTimePicker('schedule_end')" x-init="init()" @click.outside="close()">
-                                <label class="block text-base font-medium text-gray-700 mb-1">End Time<span class="text-red-500">*</span></label>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">End Time<span class="text-red-500">*</span></label>
                                 <div class="custom-time-picker">
                                     <div class="custom-time-display" :class="{ active: open }" @click="toggle()">
                                         <div class="time-icon"><i class="fa-regular fa-clock"></i></div>
@@ -1337,76 +1554,17 @@ $skipFeedback = action(function () {
                                 @error('schedule_end')
                                 <span x-show="showError('schedule_end')" x-cloak class="mt-1 text-xs text-red-600 block" wire:loading.class="hidden" wire:target="validateBooking">{{ $message }}</span>
                                 @enderror
-                                <span x-show="timeError" x-cloak class="mt-1 text-xs text-red-600 block" x-text="timeError"></span>
+                                <span x-show="endTimeError" x-cloak class="mt-1 text-xs text-red-600 block" x-text="endTimeError"></span>
                             </div>
                         </div>
                         {{-- ── End Date + Time row ── --}}
-
-                        {{-- Preferred Mentor --}}
-                        <div>
-                            <label class="block text-base font-medium text-gray-700 mb-1">
-                                Preferred Mentor<span class="text-red-500">*</span>
-                            </label>
-                            <select wire:model="mentor_id" :disabled="isMentorLocked"
-                                    class="w-full rounded-lg border-gray-300 shadow-sm text-base px-2 py-1 disabled:bg-gray-100 disabled:text-gray-900 disabled:cursor-not-allowed transition-colors">
-                                <option value=""
-                                        x-text="filteredMentors.length === 0
-                                            ? '--- No mentors available. Please select a different date or time slot. ---'
-                                            : '--- Select a mentor ---'"
-                                        disabled>
-                                </option>
-                                <template x-if="filteredMentors.length > 0 && !isMentorLocked">
-                                    <option value="any" class="bg-blue-100">ANY (Alerts all available mentors)</option>
-                                </template>
-                                <template x-for="mentor in filteredMentors" :key="mentor.profile_id">
-                                    <option :value="mentor.profile_id" x-text="mentor.name"></option>
-                                </template>
-                            </select>
-
-                            <div x-show="isMentorLocked" x-cloak class="mt-1.5 flex justify-between items-center px-1">
-                                <span class="text-[11px] text-blue-600 font-bold">
-                                    <i class="fa-solid fa-lock mr-1"></i> Mentor Locked.
-                                </span>
-                                <a href="{{ route('mentor.bookings') }}" class="text-[10px] text-gray-400 hover:text-red-600 underline">
-                                    Unlock &amp; Clear
-                                </a>
-                            </div>
-
-                            @error('mentor_id')
-                            <span x-show="showError('mentor_id')" x-cloak
-                                  class="mt-1 text-xs text-red-600 block"
-                                  wire:loading.class="hidden" wire:target="validateBooking">
-                                {{ $message }}
-                            </span>
-                            @enderror
-                        </div>
-
-                        {{-- Any-mentor notice --}}
-                        <div x-show="mentor_id === 'any' && filteredMentors.length > 0" x-cloak
-                             class="mt-3 bg-blue-50 border border-blue-200 rounded-lg p-3 animate-[slideDown_0.2s_ease]">
-                            <p class="text-xs font-bold text-blue-800 mb-1">
-                                <i class="fa-solid fa-triangle-exclamation mr-1"></i> First Come First Serve
-                            </p>
-                            <p class="text-xs text-blue-800 mb-2 leading-tight">
-                                Your request will be sent to the following mentors. The first to accept will take your session.
-                            </p>
-                            <ul class="text-xs font-semibold text-blue-800 space-y-0.5 pl-1">
-                                <template x-for="mentor in filteredMentors" :key="mentor.profile_id">
-                                    <li class="flex items-center gap-1.5">
-                                        <span class="w-1 h-1 rounded-full bg-blue-400"></span>
-                                        <span x-text="mentor.name"></span>
-                                    </li>
-                                </template>
-                            </ul>
-                        </div>
 
                         {{-- Submit button --}}
                         <div class="pt-4">
                             <button type="button" id="bookingSubmitBtn"
                                     wire:click="validateBooking"
                                     @click="clearedErrors = []"
-                                    @if (!auth()->user()->studentProfile) disabled @endif
-                                    :disabled="dateError !== '' || timeError !== '' || !subject_id || !topic || !tutorialMode_id || !date || !start_time || !end_time || !mentor_id"
+                                    :disabled="!hasProfile ||dateError !== '' || startTimeError !== '' || endTimeError !== '' ||  !subject_id || !topic || !tutorialMode_id || !date || !start_time || !end_time || !mentor_id"
                                     class="w-full bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium py-2 px-4 rounded-lg text-sm transition-colors"
                                     wire:loading.attr="disabled"
                                     wire:loading.class="opacity-60 cursor-not-allowed"
@@ -1439,6 +1597,8 @@ $skipFeedback = action(function () {
                     showSuccess: false,
                     allDegrees: @js($this->degreePrograms),
                     original: { student_num: '', college: '', degree: '', year_level: '' },
+                    
+                    clearedErrors: [],
 
                     init() {
                         this.original.student_num = this.student_num || '';
@@ -1446,11 +1606,22 @@ $skipFeedback = action(function () {
                         this.original.degree      = this.degree || '';
                         this.original.year_level  = this.year_level || '';
 
+                        this.$watch('student_num', () => this.clearError('student_num'));
+                        this.$watch('degree',      () => this.clearError('degreeProgram_id'));
+                        this.$watch('year_level',  () => this.clearError('yearLevel_id'));
+
                         this.$watch('college', (val, oldVal) => {
                             if (oldVal !== undefined && oldVal !== '') { this.degree = ''; }
+                            this.clearError('college_id');
                         });
 
                         this.$nextTick(() => { let s = this.degree; this.degree = ''; this.degree = s; });
+                    },
+
+                    clearError(field) {
+                        if (!this.clearedErrors.includes(field)) {
+                            this.clearedErrors.push(field);
+                        }
                     },
 
                     get filteredDeProgs() {
@@ -1463,6 +1634,10 @@ $skipFeedback = action(function () {
                                (this.college || '')     != this.original.college     ||
                                (this.degree || '')      != this.original.degree      ||
                                (this.year_level || '')  != this.original.year_level;
+                    },
+
+                    get isComplete() {
+                        return this.student_num && this.college && this.degree && this.year_level;
                     }
                 }"
                  @profile-updated.window="
@@ -1478,11 +1653,6 @@ $skipFeedback = action(function () {
                         class="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-gray-50 transition-colors">
                     <div class="flex items-center gap-2">
                         <span class="text-base font-semibold text-gray-900">Student Profile</span>
-                        @if (auth()->user()->studentProfile)
-                            <span class="text-xs bg-green-200 px-2 py-1 rounded-full text-green-800 font-bold">Saved</span>
-                        @else
-                            <span class="text-xs bg-yellow-100 px-2 py-1 rounded-full text-yellow-800 font-bold">Required</span>
-                        @endif
                     </div>
                     <svg class="w-4 h-4 text-gray-400 transition-transform duration-200" :class="{ 'rotate-180': open }"
                          fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1501,40 +1671,40 @@ $skipFeedback = action(function () {
                             <input type="text" x-model="student_num" :disabled="isLocked"
                                    class="w-full rounded-lg border-gray-200 shadow-sm text-sm px-3 py-2 disabled:bg-gray-100 disabled:text-gray-500"
                                    placeholder="e.g 2023-00000" maxlength="10">
-                            @error('student_num') <span class="mt-1 text-xs text-red-600">{{ $message }}</span> @enderror
+                            @error('student_num') <span class="mt-1 text-xs text-red-600 block">{{ $message }}</span> @enderror
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">College<span class="text-red-500">*</span></label>
                             <select x-model="college" :disabled="isLocked"
                                     class="w-full rounded-lg border-gray-200 shadow-sm text-sm px-3 py-2 disabled:bg-gray-100 disabled:text-gray-500">
-                                <option value="">--- College ---</option>
+                                <option value="" disabled>--- College ---</option>
                                 @foreach ($this->colleges as $c)
                                     <option value="{{ $c->id }}">{{ $c->name }}</option>
                                 @endforeach
                             </select>
-                            @error('college_id') <span class="mt-1 text-xs text-red-600">{{ $message }}</span> @enderror
+                            @error('college_id') <span class="mt-1 text-xs text-red-600 block">{{ $message }}</span> @enderror
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Degree Program<span class="text-red-500">*</span></label>
                             <select x-model="degree" :disabled="!college || isLocked"
                                     class="w-full rounded-lg border-gray-200 shadow-sm text-sm px-3 py-2 disabled:bg-gray-100 disabled:text-gray-500">
-                                <option value="">--- Degree Program ---</option>
+                                <option value="" disabled>--- Degree Program ---</option>
                                 <template x-for="deprog in filteredDeProgs" :key="deprog.id">
                                     <option :value="deprog.id" x-text="deprog.name"></option>
                                 </template>
                             </select>
-                            @error('degreeProgram_id') <span class="mt-1 text-xs text-red-600">{{ $message }}</span> @enderror
+                            @error('degreeProgram_id') <span x-show="showError('degreeProgram_id')" x-cloak class="mt-1 text-xs text-red-600 block">{{ $message }}</span> @enderror
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Year Level<span class="text-red-500">*</span></label>
                             <select x-model="year_level" :disabled="isLocked"
                                     class="w-full rounded-lg border-gray-200 shadow-sm text-sm px-3 py-2 disabled:bg-gray-100 disabled:text-gray-500">
-                                <option value="">--- Year Level ---</option>
+                                <option value="" disabled>--- Year Level ---</option>
                                 @foreach ($this->yearLevels as $level)
                                     <option value="{{ $level->id }}">{{ $level->name }}</option>
                                 @endforeach
                             </select>
-                            @error('yearLevel_id') <span class="mt-1 text-xs text-red-600">{{ $message }}</span> @enderror
+                            @error('yearLevel_id') <span x-cloak class="mt-1 text-xs text-red-600 block">{{ $message }}</span> @enderror
                         </div>
 
                         <div class="mt-2">
@@ -1546,7 +1716,8 @@ $skipFeedback = action(function () {
                             </template>
                             <template x-if="!isLocked">
                                 <button type="submit"
-                                        :disabled="!hasChanges"
+                                        @click="clearedErrors = []"
+                                        :disabled="!hasChanges || !isComplete"
                                         class="w-full bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-2.5 px-4 rounded-lg text-sm transition-colors"
                                         wire:loading.attr="disabled" wire:loading.class="opacity-60 cursor-not-allowed" wire:target="saveProfile">
                                     <span wire:loading.remove wire:target="saveProfile">{{ auth()->user()->studentProfile ? 'Update Profile' : 'Save Profile' }}</span>
@@ -1574,18 +1745,29 @@ $skipFeedback = action(function () {
                         <div class="mb-4 pb-4 border-b border-gray-100 last:border-0 last:mb-0 last:pb-0">
                             <div class="flex items-start justify-between gap-3">
 
-                                <div class="flex-1 min-w-0">
+                                <div class="flex-1 min-w-0"
+                                     x-data="{
+                                        mentor:          '{{ addslashes(strtoupper($booking->mentor->user->lastName ?? 'MENTOR') . ', ' . ($booking->mentor->user->firstName ?? 'TBD')) }}',
+                                        topic:           '{{ addslashes($booking->topic) }}',
+                                        mentorTruncated: false,
+                                    }"
+                                     x-init="$nextTick(() => {
+                                        const el = $el.querySelector('.mentor-name');
+                                        if (el) mentorTruncated = el.scrollWidth > el.clientWidth;
+                                    })">
                                     <p class="text-sm font-bold text-gray-800">{{ strtoupper($booking->subject->code) }}</p>
 
-                                    <p class="mentor-name text-xs font-medium text-gray-500 mt-0.5 truncate"
-                                       x-init="$nextTick(() => { if ($el.scrollWidth > $el.clientWidth) $el.title = '{{ addslashes(strtoupper($booking->mentor->user->lastName ?? 'MENTOR') . ', ' . ($booking->mentor->user->firstName ?? 'TBD')) }}' })">
-                                        Mentor: {{ strtoupper($booking->mentor->user->lastName ?? 'MENTOR') }}, {{ $booking->mentor->user->firstName ?? 'TBD' }}
-                                    </p>
+                                    <div :class="mentorTruncated ? 'hover-tooltip' : ''" :data-full="mentorTruncated ? mentor : ''">
+                                        <p class="mentor-name text-xs font-medium text-gray-500 mt-0.5 truncate">
+                                            Mentor: {{ strtoupper($booking->mentor->user->lastName ?? 'MENTOR') }}, {{ $booking->mentor->user->firstName ?? 'TBD' }}
+                                        </p>
+                                    </div>
 
-                                    <p class="text-xs font-medium text-gray-500 truncate mt-0.5"
-                                       x-init="$nextTick(() => { if ($el.scrollWidth > $el.clientWidth) $el.title = '{{ addslashes($booking->topic) }}' })">
-                                        Topic: {{ $booking->topic }}
-                                    </p>
+                                    <div class="hover-tooltip" :data-full="topic">
+                                        <p class="text-xs font-medium text-gray-500 truncate mt-0.5">
+                                            Topic: {{ $booking->topic }}
+                                        </p>
+                                    </div>
 
                                     <p class="text-xs font-medium text-gray-400 mt-0.5">
                                         <i class="fa-solid fa-location-dot mr-1 text-gray-300"></i>
@@ -1719,7 +1901,7 @@ $skipFeedback = action(function () {
                         label:      d,
                         date,
                         isSunday:   isSun,
-                        disabled:   isPast,
+                        disabled:   isPast || isSun,
                         isToday:    date.getTime() === this.today.getTime(),
                         isSelected: this.selectedDate && date.getTime() === this.selectedDate.getTime(),
                     });
@@ -1807,7 +1989,28 @@ $skipFeedback = action(function () {
             syncHourInput() { const el = this.$el.querySelector('.tp-hour-input'); if (el) el.value = String(this.hour).padStart(2, '0'); },
             syncMinInput()  { const el = this.$el.querySelector('.tp-min-input');  if (el) el.value = String(this.minute).padStart(2, '0'); },
 
+            clampTime() {
+                let h24 = (this.hour % 12) + (this.ampm === 'PM' ? 12 : 0);
+                let totalMins = h24 * 60 + this.minute;
+
+                const MIN_MINS = 8 * 60;
+                const MAX_MINS = 18 * 60;
+
+                if (totalMins < MIN_MINS) totalMins = MIN_MINS;
+                if (totalMins > MAX_MINS) totalMins = MAX_MINS;
+
+                let newH24 = Math.floor(totalMins / 60);
+                this.minute = totalMins % 60;
+                this.ampm = newH24 >= 12 ? 'PM' : 'AM';
+                this.hour = newH24 % 12 || 12;
+            },
+
             commit() {
+                this.clampTime();
+
+                this.syncHourInput();
+                this.syncMinInput();
+
                 let h24    = this.hour % 12;
                 if (this.ampm === 'PM') h24 += 12;
                 const val      = `${String(h24).padStart(2, '0')}:${String(this.minute).padStart(2, '0')}`;
