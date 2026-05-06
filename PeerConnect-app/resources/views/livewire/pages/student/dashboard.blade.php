@@ -483,11 +483,6 @@ $saveProfile = action(function () {
                 <div class="flex justify-between items-center mb-3">
                     <div class="flex items-center gap-2">
                         <h2 class="text-lg font-bold text-slate-800">Weekly Schedule</h2>
-                        <span class="text-[10px] text-gray-400 bg-gray-50 border border-gray-100
-                                     px-2 py-0.5 rounded-full"
-                              id="weeklyScheduleRange">
-                            8:00 AM – 6:00 PM
-                        </span>
                     </div>
                 </div>
 
