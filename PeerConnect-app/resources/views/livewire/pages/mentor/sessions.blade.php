@@ -62,7 +62,7 @@ $sessions = computed(function () {
         $durationHours   = $durationMinutes / 60;
         $durationText    = $durationHours == 1
             ? '1 hr'
-            : rtrim(rtrim(number_format($durationHours, 2), '0'), '.') . ' hrs';
+            : rtrim(rtrim(number_format($durationHours, 2), '0'), '.');
 
         return [
             'id'            => $b->id,
@@ -99,7 +99,7 @@ $summaryCounts = computed(function () {
         'accepted'  => count(array_filter($statuses, fn($s) => $s === 'accepted')),
         'pending'   => count(array_filter($statuses, fn($s) => $s === 'pending')),
         'completed' => count(array_filter($completed)),
-        'totalHours'=> number_format($totalHours, 2) . ' hrs',
+        'totalHours'=> number_format($totalHours, 2),
     ];
 });
 
@@ -336,9 +336,8 @@ $summaryCounts = computed(function () {
 
                         {{-- Status --}}
                         <td class="px-5 py-3">
-                        <span class="font-bold text-xs bg-gray-50 px-2 py-1 rounded border border-current opacity-80"
-                              :class="getStatusColor(s.status)"
-                              x-text="getStatusLabel(s.status)"></span>
+<span :class="getStatusColor(s.status) + ' font-bold text-[10px] bg-gray-50 px-2 py-1 rounded border border-current opacity-80'"
+      x-text="getStatusLabel(s.status)"></span>
                         </td>
 
                         {{-- Actions --}}
@@ -500,6 +499,100 @@ $summaryCounts = computed(function () {
 </div>
 
 <script>
+
+    function tutorialSessions(sessions) {
+    return {
+        items: sessions,
+        search: '',
+        filterStatuses: [],
+        sortCol: 'rawDate',
+        sortDir: 'asc',
+        currentPage: 1,
+        perPage: 10,
+
+        get filteredItems() {
+            let data = this.items;
+            if (this.search.trim()) {
+                const term = this.search.toLowerCase();
+                data = data.filter(s =>
+                    s.student.toLowerCase().includes(term) ||
+                    s.subject.toLowerCase().includes(term) ||
+                    s.topic.toLowerCase().includes(term) ||
+                    s.mode.toLowerCase().includes(term)
+                );
+            }
+            if (this.filterStatuses.length > 0) {
+                data = data.filter(s => this.filterStatuses.includes(s.status));
+            }
+            const col = this.sortCol;
+            const dir = this.sortDir === 'asc' ? 1 : -1;
+            data = [...data].sort((a, b) => {
+                const av = (a[col] ?? '').toString().toLowerCase();
+                const bv = (b[col] ?? '').toString().toLowerCase();
+                return av < bv ? -dir : av > bv ? dir : 0;
+            });
+            return data;
+        },
+
+        get paginatedItems() {
+            const start = (this.currentPage - 1) * this.perPage;
+            return this.filteredItems.slice(start, start + this.perPage);
+        },
+
+        get totalPages() {
+            return Math.max(1, Math.ceil(this.filteredItems.length / this.perPage));
+        },
+
+        get pageStart() {
+            return this.filteredItems.length === 0 ? 0 : (this.currentPage - 1) * this.perPage + 1;
+        },
+
+        get pageEnd() {
+            return Math.min(this.currentPage * this.perPage, this.filteredItems.length);
+        },
+
+        get pages() {
+            const total = this.totalPages;
+            const cur   = this.currentPage;
+            if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+            if (cur <= 4)   return [1, 2, 3, 4, 5, '...', total];
+            if (cur >= total - 3) return [1, '...', total-4, total-3, total-2, total-1, total];
+            return [1, '...', cur-1, cur, cur+1, '...', total];
+        },
+
+        toggleSort(col) {
+            if (this.sortCol === col) {
+                this.sortDir = this.sortDir === 'asc' ? 'desc' : 'asc';
+            } else {
+                this.sortCol = col;
+                this.sortDir = 'asc';
+            }
+            this.currentPage = 1;
+        },
+
+        getStatusColor(status) {
+            const map = {
+                'completed': 'text-green-600',
+                'accepted':  'text-blue-600',
+                'pending':   'text-yellow-500',
+                'rejected':  'text-red-500',
+                'cancelled': 'text-gray-400',
+                'no_show':   'text-orange-500',
+            };
+            return map[status] ?? 'text-slate-400';
+        },
+
+        getStatusLabel(status) {
+            return status === 'no_show'
+                ? 'No Show'
+                : status.charAt(0).toUpperCase() + status.slice(1);
+        },
+
+        updateStatus(id, status) {
+            updateStatus(id, status, this.items);
+        },
+    };
+}
     const csrfToken   = '{{ csrf_token() }}';
     const sessionsUrl = '{{ route('mentor.sessions.update') }}';
 
@@ -627,7 +720,7 @@ $summaryCounts = computed(function () {
         document.getElementById('statAccepted').textContent  = statuses.filter(s => s === 'accepted').length;
         document.getElementById('statPending').textContent   = statuses.filter(s => s === 'pending').length;
         document.getElementById('statCompleted').textContent = statuses.filter(s => s === 'completed').length;
-        document.getElementById('statHours').textContent     = parseFloat(completedHours.toFixed(2)) + ' hrs';
+        document.getElementById('statHours').textContent     = parseFloat(completedHours.toFixed(2));
     }
 
     /* ── Confirmation modal ── */
