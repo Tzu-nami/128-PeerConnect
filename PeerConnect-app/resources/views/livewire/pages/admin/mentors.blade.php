@@ -930,14 +930,27 @@ mount(function () {
                 </div>
             </div>
 
-            <div class="px-8 py-5 bg-white border-t flex-shrink-0">
+<div class="px-8 py-5 bg-white border-t flex-shrink-0"
+                x-data="{
+                    mentorReady: $wire.entangle('newMentor'),
+                    avatarReady: $wire.entangle('avatar'),
+                    subjectsReady: $wire.entangle('selectedSubjects'),
+                    availsReady: $wire.entangle('availabilities'),
+                    get canSubmit() {
+                        return this.mentorReady
+                            && this.avatarReady
+                            && this.subjectsReady && this.subjectsReady.length > 0
+                            && this.availsReady && this.availsReady.some(a => a.day_of_week && a.start_time && a.end_time);
+                    }
+                }">
                 <div class="flex gap-3">
                     <button type="button" wire:click="closeModal" @click="$wire.showModal = false" x-bind:disabled="isVerifying"
                         class="btn-modal btn-modal-cancel">
                         Cancel
                     </button>
                     <button type="button" @click="isVerifying = true; $wire.confirmMentor().finally(() => isVerifying = false)"
-                        x-bind:disabled="isVerifying"
+                        x-bind:disabled="isVerifying || !canSubmit"
+                        :class="(isVerifying || !canSubmit) ? 'opacity-50 cursor-not-allowed' : ''"
                         class="btn-modal btn-modal-green">
                         <span x-show="!isVerifying">Register Mentor</span>
                         <span x-show="isVerifying" style="display: none;"><i class="fa-solid fa-spinner fa-spin mr-1"></i>Validating...</span>
@@ -1157,8 +1170,20 @@ mount(function () {
     </div>
 
     {{-- ── SUBJECT MODAL ── --}}
-    <div x-cloak class="modal-overlay" x-show="$wire.showSubjectModal" x-data="{ isVerifying: false }">
-        <div class="modal-box-crud max-w-md">
+<div x-cloak class="modal-overlay" x-show="$wire.showSubjectModal"
+    x-data="{
+        isVerifying: false,
+        subjectCode: '',
+        subjectName: '',
+        get canSubmit() {
+            return this.subjectCode.trim() !== '' && this.subjectName.trim() !== '';
+        },
+        init() {
+            this.$watch('$wire.newSubjectCode', v => this.subjectCode = v ?? '');
+            this.$watch('$wire.newSubjectName', v => this.subjectName = v ?? '');
+        }
+    }">      
+    <div class="modal-box-crud max-w-md">
             <div class="px-8 py-5 bg-white border-b flex justify-between items-center">
                 <div>
                     <h2 class="text-lg font-black text-slate-800">Add New Subject</h2>
@@ -1180,13 +1205,15 @@ mount(function () {
                     @error('newSubjectName') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
                 </div>
             </div>
-            <div class="px-8 py-5 bg-white border-t">
-                <div class="flex gap-3">
-                    <button type="button" wire:click="closeSubjectModal" @click="$wire.showSubjectModal = false" x-bind:disabled="isVerifying"
-                        class="btn-modal btn-modal-cancel">Cancel</button>
-                    <button type="button" @click="isVerifying = true; $wire.confirmSubject().finally(() => isVerifying = false)" x-bind:disabled="isVerifying"
-                        class="btn-modal btn-modal-green"
-                        >
+<div class="px-8 py-5 bg-white border-t">
+    <div class="flex gap-3">
+        <button type="button" wire:click="closeSubjectModal" @click="$wire.showSubjectModal = false" x-bind:disabled="isVerifying"
+            class="btn-modal btn-modal-cancel">Cancel</button>
+        <button type="button" @click="isVerifying = true; $wire.confirmSubject().finally(() => isVerifying = false)"
+            x-bind:disabled="isVerifying || !canSubmit"
+            :class="(isVerifying || !canSubmit) ? 'opacity-50 cursor-not-allowed' : ''"
+            class="btn-modal btn-modal-green"
+            >
                         <span x-show="!isVerifying">Add Subject</span>
                         <span x-show="isVerifying" style="display: none;"><i class="fa-solid fa-spinner fa-spin mr-1"></i>Validating...</span>
                     </button>
