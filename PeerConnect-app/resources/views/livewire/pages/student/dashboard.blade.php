@@ -339,7 +339,7 @@ $saveProfile = action(function () {
                         </div>
 
                         <select id="statusFilter" class="table-filter-select">
-                            <option value="">All</option>
+                            <option value="">All Status</option>
                             <option value="pending">Pending</option>
                             <option value="completed">Completed</option>
                             <option value="cancelled">Cancelled</option>
@@ -672,7 +672,7 @@ $saveProfile = action(function () {
     const map = {
         pending:   'text-yellow-500',
         accepted:  'text-green-600',
-        completed: 'text-green-600',
+        completed: 'text-gray-500',
         rejected:  'text-red-500',
         cancelled: 'text-red-600',
         no_show:   'text-orange-600',
@@ -1098,7 +1098,7 @@ function renderStatCards() {
 dayEl.innerHTML = `
     ${hasSession ? `<span style="position:absolute;top:2px;right:2px;width:6px;height:6px;background:#22c55e;border-radius:50%;border:1px solid white;"></span>` : ''}
     <span style="position:relative;z-index:1;">${i}</span>`;
-    
+
             dayEl.onclick = () => {
                 selectedDateStr = dateStr;
                 tablePage = 0;
