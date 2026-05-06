@@ -208,7 +208,7 @@ $saveProfile = action(function () {
 
 <div>
     {{-- ── GLOBAL SEARCH ── --}}
-    <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-6 relative animate-fade-up"
+    <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-6 relative animate-fade-up z-50"
          x-data="{
              query: '',
              open: false,
@@ -248,7 +248,7 @@ $saveProfile = action(function () {
              x-transition
              class="absolute left-0 right-0 bg-white rounded-xl shadow-xl border
                     border-gray-100 overflow-y-auto"
-             style="top: calc(100% + 6px); max-height: 420px; z-index: 20;">
+             style="top: calc(100% + 6px); max-height: 420px; z-index: 50;">
 
             <template x-if="Object.keys(filteredResults).length === 0">
                 <div style="padding:20px; text-align:center; font-size:13px;

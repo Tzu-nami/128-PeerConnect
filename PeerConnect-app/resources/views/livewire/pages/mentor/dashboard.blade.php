@@ -370,7 +370,7 @@ $searchIndex = computed(function () {
 
                     <select id="weeklyStatusFilter" class="table-filter-select"
                             onchange="generateWeeklySchedule()">
-                        <option value="">All</option>
+                        <option value="">All Status</option>
                         <option value="pending">Pending</option>
                         <option value="accepted">Accepted</option>
                         <option value="completed">Completed</option>
