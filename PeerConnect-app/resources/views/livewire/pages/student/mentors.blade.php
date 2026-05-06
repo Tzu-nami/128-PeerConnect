@@ -185,26 +185,21 @@ mount(function () {
     </div>
 
     {{-- Pagination --}}
-    <div class="mt-4 flex justify-center items-center gap-2" x-show="totalPages >= 1" x-cloak>
-        <button @click="currentPage--" :disabled="currentPage === 1"
-                class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-slate-500 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition">
-            <i class="fa-solid fa-chevron-left text-[10px]"></i>
-        </button>
-        <template x-for="(page, index) in pages" :key="index">
-            <div class="contents">
-                <button @click="if (page !== '...') currentPage = page"
-                        :class="currentPage === page ? 'bg-[#1a3c2f] text-white shadow-sm' : 'bg-white border border-gray-200 text-slate-500 hover:bg-gray-100'"
-                        class="w-8 h-8 text-xs font-bold rounded-lg transition"
-                        x-text="page"
-                        x-show="page !== '...'"></button>
-                <span x-show="page === '...'"
-                      class="w-7 h-7 flex items-center justify-center text-[11px] font-bold text-gray-400 tracking-widest shrink-0">...</span>
-            </div>
-        </template>
-        <button @click="currentPage++" :disabled="currentPage === totalPages"
-                class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-slate-500 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition">
-            <i class="fa-solid fa-chevron-right text-[10px]"></i>
-        </button>
+    <div class="p-6 flex flex-col items-center justify-center gap-3" x-cloak>
+        <div class="flex items-center gap-2" x-show="totalPages > 1">
+            <button @click="currentPage--" :disabled="currentPage === 1" class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-slate-500 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition">
+                <i class="fa-solid fa-chevron-left text-[10px]"></i>
+            </button>
+            <template x-for="(page, index) in pages" :key="index">
+                <div>
+                    <button @click="currentPage = page" :class="currentPage === page ? 'bg-[#1a3c2f] text-white shadow-sm' : 'bg-white border border-gray-200 text-slate-500 hover:bg-gray-100'" class="w-8 h-8 text-xs font-bold rounded-lg transition" x-text="page" x-show="page !== '...'"></button>
+                    <span x-show="page === '...'" class="w-7 h-7 flex items-center justify-center text-[11px] font-bold text-gray-400 tracking-widest shrink-0">...</span>
+                </div>
+            </template>
+            <button @click="currentPage++" :disabled="currentPage === totalPages" class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-slate-500 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition">
+                <i class="fa-solid fa-chevron-right text-[10px]"></i>
+            </button>
+        </div>
     </div>
 
     {{-- Modal --}}
@@ -212,7 +207,7 @@ mount(function () {
         <div class="modal-overlay" x-show="showModal" @click.self="showModal = false" x-cloak>
             <div class="bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col" style="max-height: 90vh;">
                 <template x-if="selectedMentor">
-                    <div class="contents">
+                    <div>
                         {{-- Modal Header --}}
                         <div class="flex-shrink-0 flex items-start gap-5 p-6 bg-[#1a3c2f]">
                             <div class="w-36 h-36 rounded-2xl overflow-hidden flex-shrink-0 border-2 border-white/20 shadow-lg bg-gray-200">

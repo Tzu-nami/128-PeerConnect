@@ -312,34 +312,23 @@ $subjects = computed(function () {
         </div>
 
         {{-- Pagination --}}
-        <div class="mt-3 pb-4 flex flex-col items-center gap-2" x-show="totalPages >= 1" x-cloak>
-            <div class="flex items-center gap-2">
-                <button @click="currentPage--"
-                        :disabled="currentPage === 1"
-                        class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-slate-500 hover:bg-gray-50 transition disabled:opacity-40 disabled:cursor-not-allowed">
+        <div class="p-6 flex flex-col items-center justify-center gap-3" x-cloak>
+            <div class="flex items-center gap-2" x-show="totalPages > 1">
+                <button @click="currentPage--" :disabled="currentPage === 1" class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-slate-500 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition">
                     <i class="fa-solid fa-chevron-left text-[10px]"></i>
                 </button>
                 <template x-for="(page, index) in pages" :key="index">
-                    <button
-                        @click="if (page !== '...') currentPage = page"
-                        :disabled="page === '...'"
-                        :class="currentPage === page
-                            ? 'bg-sidebar-green text-white shadow-sm border-sidebar-green'
-                            : page === '...'
-                                ? 'bg-white border border-gray-200 text-gray-400 cursor-default'
-                                : 'bg-white border border-gray-200 text-slate-500 hover:bg-gray-100'"
-                        class="w-8 h-8 flex items-center justify-center text-xs font-bold rounded-lg transition"
-                        x-text="page">
-                    </button>
+                    <div>
+                        <button @click="currentPage = page" :class="currentPage === page ? 'bg-[#1a3c2f] text-white shadow-sm' : 'bg-white border border-gray-200 text-slate-500 hover:bg-gray-100'" class="w-8 h-8 text-xs font-bold rounded-lg transition" x-text="page" x-show="page !== '...'"></button>
+                        <span x-show="page === '...'" class="w-7 h-7 flex items-center justify-center text-[11px] font-bold text-gray-400 tracking-widest shrink-0">...</span>
+                    </div>
                 </template>
-                <button @click="currentPage++"
-                        :disabled="currentPage === totalPages"
-                        class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-slate-500 hover:bg-gray-50 transition disabled:opacity-40 disabled:cursor-not-allowed">
+                <button @click="currentPage++" :disabled="currentPage === totalPages" class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-slate-500 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition">
                     <i class="fa-solid fa-chevron-right text-[10px]"></i>
                 </button>
             </div>
             <span class="text-[11px] text-gray-400 font-medium"
-                  x-text="filteredItems.length === 0 ? '' : pageStart + '–' + pageEnd + ' of ' + filteredItems.length">
+                    x-text="filteredItems.length === 0 ? 'No results' : 'Showing ' + pageStart + ' to ' + pageEnd + ' of ' + filteredItems.length">
             </span>
         </div>
     </div>
