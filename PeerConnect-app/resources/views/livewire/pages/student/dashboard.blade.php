@@ -210,10 +210,11 @@ $saveProfile = action(function () {
 
 <div>
     {{-- ── GLOBAL SEARCH ── --}}
-    <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-6 relative animate-fade-up"
-         x-data="{
-             query: '',
-             open: false,
+<div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-6 animate-fade-up"
+     :style="open ? 'position: relative; z-index: 100;' : 'position: relative; z-index: 10;'"
+     x-data="{
+         query: '',
+         open: false,
              index: @js($this->searchIndex),
 
              get filteredResults() {
@@ -250,7 +251,7 @@ $saveProfile = action(function () {
              x-transition
              class="absolute left-0 right-0 bg-white rounded-xl shadow-xl border
                     border-gray-100 overflow-y-auto"
-             style="top: calc(100% + 6px); max-height: 420px; z-index: 20;">
+             style="top: calc(100% + 6px); max-height: 420px; z-index: 200;">
 
             <template x-if="Object.keys(filteredResults).length === 0">
                 <div style="padding:20px; text-align:center; font-size:13px;
@@ -777,7 +778,7 @@ function renderStatCards() {
         const visible = filtered.slice(start, start + TABLE_PER_PAGE);
 
         if (!total) {
-            tbody.innerHTML = `<tr><td colspan="4" class="py-12 text-center text-gray-400 italic">No sessions for this date.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="4" class="py-3 text-center text-gray-400 italic text-xs">No sessions for this date.</td></tr>`;
         } else {
             tbody.innerHTML = visible.map(row => `
     <tr class="border-b last:border-0 hover:bg-slate-50 transition">
@@ -1059,13 +1060,11 @@ function renderStatCards() {
     }
 
     // CALENDAR
-    function hasSessionOnDate(dateStr) {
-        return allSessions.some(s =>
-            s.date === dateStr &&
-            s.status === 'accepted' &&
-            s.date >= todayStr
-        );
-    }
+function getSessionDotsForDate(dateStr) {
+    const hasAccepted  = allSessions.some(s => s.date === dateStr && s.status === 'accepted' && s.date >= todayStr);
+    const hasCompleted = allSessions.some(s => s.date === dateStr && s.status === 'completed');
+    return { hasAccepted, hasCompleted };
+}
 
     function renderCalendar() {
         const grid      = document.getElementById('calendarGrid');
@@ -1091,9 +1090,14 @@ function renderStatCards() {
             if (dateStr === todayStr)          dayEl.classList.add('cal-today');
             if (dateStr === selectedDateStr)   dayEl.classList.add('cal-selected');
 
-            const hasSession = hasSessionOnDate(dateStr);
+const { hasAccepted, hasCompleted } = getSessionDotsForDate(dateStr);
+// Position dots: if both, stack them side by side
+const dots = [];
+if (hasAccepted)  dots.push(`<span style="width:6px;height:6px;background:#22c55e;border-radius:50%;border:1px solid white;display:inline-block;"></span>`);
+if (hasCompleted) dots.push(`<span style="width:6px;height:6px;background:#94a3b8;border-radius:50%;border:1px solid white;display:inline-block;"></span>`);
+
 dayEl.innerHTML = `
-    ${hasSession ? `<span style="position:absolute;top:2px;right:2px;width:6px;height:6px;background:#22c55e;border-radius:50%;border:1px solid white;"></span>` : ''}
+    ${dots.length ? `<span style="position:absolute;top:2px;right:2px;display:flex;gap:2px;align-items:center;">${dots.join('')}</span>` : ''}
     <span style="position:relative;z-index:1;">${i}</span>`;
 
             dayEl.onclick = () => {
