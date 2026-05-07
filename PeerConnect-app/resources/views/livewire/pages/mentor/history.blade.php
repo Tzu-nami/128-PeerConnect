@@ -213,8 +213,6 @@ $studentHistory = computed(function () {
             <table class="w-full text-sm text-left table-fixed">
                 <thead class="bg-slate-50 border-b border-gray-100">
                 <tr>
-                    <th class="px-5 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider w-[5%]">#</th>
-
                     {{-- Subject --}}
                     <th class="px-5 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider w-[15%]">
                         <button @click="toggleSort('subject')"
@@ -298,9 +296,6 @@ $studentHistory = computed(function () {
                 <tbody>
                 <template x-for="(booking, index) in paginatedItems" :key="booking.id">
                     <tr class="border-b border-gray-50 hover:bg-slate-50 transition">
-                        <td class="px-5 py-3 text-gray-400 text-xs"
-                            x-text="(currentPage - 1) * perPage + index + 1"></td>
-
                         <td class="px-5 py-3">
                             <p class="font-bold text-slate-700 text-sm truncate"
                                x-init="$nextTick(() => { if ($el.scrollWidth > $el.clientWidth) $el.title = booking.subject + ' – ' + booking.subjectName })"

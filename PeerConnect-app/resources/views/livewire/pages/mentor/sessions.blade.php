@@ -226,8 +226,6 @@ $summaryCounts = computed(function () {
             <table class="w-full text-sm text-left table-fixed">
                 <thead class="bg-slate-50 border-b border-gray-100">
                 <tr>
-                    <th class="px-5 py-3 text-xs font-bold text-gray-400 tracking-wider w-[4%]">#</th>
-
                     <th class="px-5 py-3 text-xs font-bold text-gray-400 tracking-wider w-[15%]">
                         <button @click="toggleSort('student')" class="flex items-center gap-1 transition"
                                 :class="sortCol === 'student' ? 'text-up-maroon' : 'text-gray-400 hover:text-up-maroon'">
@@ -291,10 +289,6 @@ $summaryCounts = computed(function () {
                 <tbody>
                 <template x-for="(s, index) in paginatedItems" :key="s.id">
                     <tr class="border-b border-gray-50 hover:bg-slate-50 transition group">
-
-                        {{-- # --}}
-                        <td class="px-5 py-3 text-gray-400 text-xs"
-                            x-text="(currentPage - 1) * perPage + index + 1"></td>
 
                         {{-- Student --}}
                         <td class="px-5 py-3">
