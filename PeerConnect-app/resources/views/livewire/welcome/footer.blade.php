@@ -15,6 +15,11 @@
                    class="flex items-center justify-center w-8 h-8 rounded-full border border-cream/20 hover:bg-cream/10 hover:text-cream transition-colors">
                     <i class="fa-brands fa-facebook text-sm"></i>
                 </a>
+                <a href="https://x.com/lrc_upbaguio"
+                   target="_blank" rel="noopener noreferrer"
+                   class="flex items-center justify-center w-8 h-8 rounded-full border border-cream/20 hover:bg-cream/10 hover:text-cream transition-colors">
+                    <i class="fa-brands fa-twitter text-sm"></i>
+                </a>
                 <a href="https://mainlib.upb.edu.ph/" target="_blank" class="flex items-center justify-center w-8 h-8 rounded-full border border-cream/20 hover:bg-cream/10 hover:text-cream transition-colors">
                     <span class="material-symbols-outlined text-sm">captive_portal</span>
                 </a>
@@ -28,7 +33,7 @@
                 <div class="font-bold text-up-yellow tracking-widest uppercase mb-1">Navigate</div>
                 <a href="{{ request()->is('/') ? '#' : url('/') }}" class="hover:text-cream transition-colors">Home</a>
                 <a href="{{ request()->is('mentors') ? '#' : route('public.mentors') }}" class="hover:text-cream transition-colors">Mentors</a>
-                <a href="#" class="hover:text-cream transition-colors">Staff</a>
+                <a href="{{ request()->is('staff') ? '#' : route('public.staff') }}" class="hover:text-cream transition-colors">Staff</a>
                 <a href="{{ request()->is('services') ? '#' : route('public.services') }}" class="hover:text-cream transition-colors">Services</a>
                 <a href="{{ request()->is('about') ? '#' : route('public.about') }}" class="hover:text-cream transition-colors">About Us</a>
             </div>
