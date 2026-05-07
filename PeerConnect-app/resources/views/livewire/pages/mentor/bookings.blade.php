@@ -115,6 +115,21 @@ $mentorAvailabilities = computed(function () {
         ->toArray();
 });
 
+$mentorBookedSlots = computed(function () {
+    return Bookings::whereRaw("booking_status::text IN ('accepted', 'completed')")
+        ->whereHas('mentor')
+        ->get()
+        ->map(fn($b) => [
+            'mentor_id'   => $b->mentor_id,
+            'date'        => \Carbon\Carbon::parse($b->date)->format('Y-m-d'),
+            'day_of_week' => strtolower(\Carbon\Carbon::parse($b->date)->format('l')),
+            'start'       => \Carbon\Carbon::parse($b->schedule_start)->format('H:i'),
+            'end'         => \Carbon\Carbon::parse($b->schedule_end)->format('H:i'),
+        ])
+        ->values()
+        ->toArray();
+});
+
 $mentorSubjects = computed(function () {
     return MentorSubjects::all()
         ->map(fn($s) => [
@@ -319,6 +334,26 @@ $validateBooking = action(function () use ($bookingRules, $bookingAttributes) {
         }
     }
 
+// Check for conflicting existing sessions on that mentor
+if ($this->mentor_id && $this->mentor_id !== 'any' && $this->date && $this->schedule_start && $this->schedule_end) {
+    $schedStart = $this->schedule_start;
+    $schedEnd   = $this->schedule_end;
+
+    $conflict = Bookings::where('mentor_id', $this->mentor_id)
+        ->whereDate('date', $this->date)
+        ->whereRaw("booking_status::text IN ('accepted', 'completed')")
+        ->where(function ($q) use ($schedStart, $schedEnd) {
+            $q->whereTime('schedule_start', '<', $schedEnd)
+              ->whereTime('schedule_end', '>', $schedStart);
+        })
+        ->exists();
+
+    if ($conflict) {
+        $this->addError('schedule_start', 'This mentor already has a session during the selected time. Please choose a different time slot.');
+        return;
+    }
+}
+
     $this->dispatch('show-booking-confirm');
 });
 
@@ -362,7 +397,26 @@ $submitBooking = action(function () use ($bookingRules, $bookingAttributes) {
         if (!empty($emails)) {
             Mail::to($emails)->send(new MentorBookingNotification($booking));
         }
+
     } else {
+        // ── Specific mentor: re-check conflict at submit time ──
+        $schedStart = $validated['schedule_start'];
+        $schedEnd   = $validated['schedule_end'];
+
+        $conflict = Bookings::where('mentor_id', $validated['mentor_id'])
+            ->whereDate('date', $validated['date'])
+            ->whereRaw("booking_status::text IN ('accepted', 'completed')")
+            ->where(function ($q) use ($schedStart, $schedEnd) {
+                $q->whereTime('schedule_start', '<', $schedEnd)
+                  ->whereTime('schedule_end', '>', $schedStart);
+            })
+            ->exists();
+
+        if ($conflict) {
+            $this->addError('schedule_start', 'This mentor already has a session during the selected time slot. Please choose a different time.');
+            return;
+        }
+
         $booking = Bookings::create([
             ...$validated,
             'student_id'     => $profile->id,
@@ -998,586 +1052,605 @@ $skipFeedback = action(function () {
 </p>
                 </div>
 
-                <div class="bg-white pl-6 pr-6 pb-6 pt-4 rounded-lg shadow-sm border-gray-200 overflow-visible"
-                     x-data="{
-                        subject_id:       $wire.entangle('subject_id'),
-                        topic:            $wire.entangle('topic'),
-                        tutorialMode_id:  $wire.entangle('tutorialMode_id'),
-                        date:             $wire.entangle('date'),
-                        start_time:       $wire.entangle('schedule_start'),
-                        end_time:         $wire.entangle('schedule_end'),
-                        mentor_id:        $wire.entangle('mentor_id'),
-                        isMentorLocked:   $wire.entangle('isMentorLocked'),
-                        dateError:        '',
-                        startTimeError:   '',
-                        endTimeError:     '',
-                        clearedErrors:    [],
-                        hasProfile:       @js((bool) auth()->user()->studentProfile),
-
-                        init() {
-                            this.$watch('subject_id', () => {
-                                if (!this.isMentorLocked) this.mentor_id = '';
-                                this.clearError('subject_id');
-                            });
-                            this.$watch('topic',          () => this.clearError('topic'));
-                            this.$watch('tutorialMode_id',() => this.clearError('tutorialMode_id'));
-                            this.$watch('mentor_id',      () => {
-                                this.clearError('mentor_id');
-                                if (this.date) {
-                                    const temp = this.date;
-                                    this.date = '';
-                                    this.$nextTick(() => this.date = temp);
-                                }
-                            });
-
-                            this.$watch('date', value => {
-                                this.dateError = '';
-                                this.clearError('date');
-                                if (!value) { this.validateTime(); return; }
-
-                                const d = new Date(value + 'T00:00:00');
-                                if (d.getDay() === 0) {
-                                    this.dateError = 'The session cannot be on a Sunday.';
-                                    return;
-                                }
-
-                                if (this.isMentorLocked) {
-                                    const dayChosen = this.getDayOfWeek(value);
-                                    const avails = this.allAvailabilities.filter(
-                                        a => a.mentorProfile_id == this.mentor_id && a.day_of_week === dayChosen
-                                    );
-                                    if (avails.length === 0) {
-                                        this.dateError = 'This mentor is not available on this day.';
-                                        return;
-                                    }
-                                }
-                                
-                                if (this.mentor_id && this.mentor_id !== 'any') {
-                                    const dayChosen = this.getDayOfWeek(value);
-                                    const avails = this.allAvailabilities.filter(
-                                        a => a.mentorProfile_id == this.mentor_id && a.day_of_week === dayChosen
-                                    );
-                                    if (avails.length === 0) {
-                                        this.dateError = 'This mentor is not available on this day.';
-                                        return;
-                                    }
-                                }
-                                this.validateTime();
-                                this.checkAnyMentor();
-                            });
-
-                            this.$watch('start_time', () => {
-                                this.clearError('schedule_start');
-                                this.validateTime();
-                                this.checkAnyMentor();
-                            });
-                            this.$watch('end_time', () => {
-                                this.clearError('schedule_end');
-                                this.validateTime();
-                                this.checkAnyMentor();
-                            });
-                        },
-
-                        checkAnyMentor() {
-                            this.$nextTick(() => {
-                                if (this.mentor_id === 'any' && this.filteredMentors.length === 0) {
-                                    this.mentor_id = '';
-                                }
-                            });
-                        },
-
-                        clearError(field) {
-                            if (!this.clearedErrors.includes(field)) {
-                                this.clearedErrors.push(field);
+<div class="bg-white pl-6 pr-6 pb-6 pt-4 rounded-lg shadow-sm border-gray-200 overflow-visible"
+     x-data="{
+        subject_id:       $wire.entangle('subject_id'),
+        topic:            $wire.entangle('topic'),
+        tutorialMode_id:  $wire.entangle('tutorialMode_id'),
+        date:             $wire.entangle('date'),
+        start_time:       $wire.entangle('schedule_start'),
+        end_time:         $wire.entangle('schedule_end'),
+        mentor_id:        $wire.entangle('mentor_id'),
+        isMentorLocked:   $wire.entangle('isMentorLocked'),
+        dateError:        '',
+        startTimeError:   '',
+        endTimeError:     '',
+        clearedErrors:    [],
+        hasProfile:       @js((bool) auth()->user()->studentProfile),
+ 
+        // ── Data from PHP ──────────────────────────────────────────
+        allMentors:        @js($this->mentors),
+        allSubjects:       @js($this->mentorSubjects),
+        allAvailabilities: @js($this->mentorAvailabilities),
+        allBookedSlots:    @js($this->mentorBookedSlots),
+ 
+        // ── Helpers ────────────────────────────────────────────────
+        getDayOfWeek(dateStr) {
+            const days = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
+            return days[new Date(dateStr + 'T00:00:00').getDay()];
+        },
+ 
+        // Format HH:MM (24-hr string) → h:MM AM/PM
+        fmt12(hhmm) {
+            if (!hhmm) return '';
+            const parts = hhmm.split(':');
+            const h = parseInt(parts[0]);
+            const m = parseInt(parts[1]) || 0;
+            const ampm = h >= 12 ? 'PM' : 'AM';
+            const hr   = h % 12 || 12;
+            return hr + ':' + String(m).padStart(2, '0') + ' ' + ampm;
+        },
+ 
+        // Legacy alias used elsewhere in the form (conflict error messages)
+        formatTime12(timeStr) {
+            if (!timeStr) return '';
+            const [h, m] = timeStr.split(':').map(Number);
+            const ampm = h >= 12 ? 'PM' : 'AM';
+            const hr = h % 12 || 12;
+            return hr + ':' + String(m).padStart(2, '0') + ' ' + ampm;
+        },
+ 
+        // ── Mentor availability schedule (grouped by day_of_week) ──
+        get selectedMentorSchedule() {
+            if (!this.mentor_id || this.mentor_id === 'any') return null;
+            const avails = this.allAvailabilities
+                .filter(a => a.mentorProfile_id == this.mentor_id)
+                .sort((a, b) => a.start_time.localeCompare(b.start_time));
+            if (avails.length === 0) return null;
+            const schedule = {};
+            avails.forEach(a => {
+                const day = a.day_of_week.toLowerCase();
+                if (!schedule[day]) schedule[day] = { slots: [] };
+                schedule[day].slots.push({
+                    start:    this.fmt12(a.start_time),
+                    end:      this.fmt12(a.end_time),
+                    startRaw: a.start_time.substring(0, 5),
+                    endRaw:   a.end_time.substring(0, 5),
+                });
+            });
+            return schedule;
+        },
+ 
+        // ── Week dates (Mon–Sat) for the selected date ─────────────
+        get selectedWeekDates() {
+            const days = ['monday','tuesday','wednesday','thursday','friday','saturday'];
+            if (!this.date) {
+                return days.map(d => ({
+                    key: d,
+                    label: d.charAt(0).toUpperCase() + d.slice(1, 3),
+                    dateStr: null, dayNum: null, isChosen: false,
+                }));
+            }
+            const chosen = new Date(this.date + 'T00:00:00');
+            const dow = chosen.getDay();
+            const mondayOffset = dow === 0 ? -6 : 1 - dow;
+            const monday = new Date(chosen);
+            monday.setDate(chosen.getDate() + mondayOffset);
+            return days.map((d, i) => {
+                const dt = new Date(monday);
+                dt.setDate(monday.getDate() + i);
+                const yyyy = dt.getFullYear();
+                const mm   = String(dt.getMonth() + 1).padStart(2, '0');
+                const dd   = String(dt.getDate()).padStart(2, '0');
+                const dateStr = yyyy + '-' + mm + '-' + dd;
+                return {
+                    key: d,
+                    label: d.charAt(0).toUpperCase() + d.slice(1, 3),
+                    dateStr,
+                    dayNum: dd,
+                    isChosen: dateStr === this.date,
+                };
+            });
+        },
+ 
+        // ── Booked slots for a given availability window ───────────
+        // When dateStr is provided → match by exact date (YYYY-MM-DD)
+        // When dateStr is null    → match by day_of_week (generic view)
+bookedSlotsInWindow(dayKey, slotStartRaw, slotEndRaw, dateStr) {
+    if (!this.mentor_id || this.mentor_id === 'any') return [];
+    if (!dateStr) return [];  // ← FIX: hide booked slots when no date selected
+    const mid = this.mentor_id;
+    return this.allBookedSlots.filter(function(b) {
+        if (b.mentor_id != mid) return false;
+        if (b.date !== dateStr) return false;
+        return b.start < slotEndRaw && b.end > slotStartRaw;
+    });
+},
+ 
+// Splits an availability window into segments: free/booked/free
+// Returns array of { type: 'free'|'booked', start, end } in time order.
+// When no date is selected, returns a single free segment (no booked shown).
+splitSlotSegments(dayKey, slotStartRaw, slotEndRaw, dateStr) {
+    const booked = this.bookedSlotsInWindow(dayKey, slotStartRaw, slotEndRaw, dateStr);
+    if (booked.length === 0) {
+        return [{ type: 'free', start: slotStartRaw, end: slotEndRaw }];
+    }
+    // Clip booked slots to within the availability window, then sort
+    const clipped = booked.map(b => ({
+        type:  'booked',
+        start: b.start < slotStartRaw ? slotStartRaw : b.start,
+        end:   b.end   > slotEndRaw   ? slotEndRaw   : b.end,
+    })).sort((a, b) => a.start.localeCompare(b.start));
+ 
+    const segments = [];
+    let cursor = slotStartRaw;
+    for (const b of clipped) {
+        if (cursor < b.start) {
+            segments.push({ type: 'free', start: cursor, end: b.start });
+        }
+        segments.push(b);
+        cursor = b.end;
+    }
+    if (cursor < slotEndRaw) {
+        segments.push({ type: 'free', start: cursor, end: slotEndRaw });
+    }
+    return segments;
+},
+ 
+        // ── Week banner label ──────────────────────────────────────
+        get weekBannerLabel() {
+            const w = this.selectedWeekDates;
+            if (!w.length || !w[0].dateStr) return '';
+            const d1 = new Date(w[0].dateStr + 'T00:00:00');
+            const d2 = new Date(w[w.length-1].dateStr + 'T00:00:00');
+            const fmt = d => d.toLocaleString('en-US', { month: 'short', day: 'numeric' });
+            return fmt(d1) + ' \u2013 ' + fmt(d2);
+        },
+ 
+        // ── Filtered mentors ───────────────────────────────────────
+        get filteredMentors() {
+            if (this.isMentorLocked && this.mentor_id) {
+                return this.allMentors.filter(m => m.profile_id == this.mentor_id);
+            }
+            let choices = this.allMentors;
+            if (this.subject_id) {
+                const validIds = this.allSubjects
+                    .filter(s => s.subject_id == this.subject_id)
+                    .map(s => s.mentorProfile_id);
+                choices = choices.filter(m => validIds.includes(m.profile_id));
+            }
+            if (this.date && (!this.mentor_id || this.mentor_id === 'any')) {
+                const dayChosen = this.getDayOfWeek(this.date);
+                choices = choices.filter(m => {
+                    if (this.mentor_id && m.profile_id == this.mentor_id) return true;
+                    const avails = this.allAvailabilities.filter(
+                        a => a.mentorProfile_id == m.profile_id && a.day_of_week === dayChosen
+                    );
+                    if (avails.length === 0) return false;
+                    if (this.start_time || this.end_time) {
+                        return avails.some(a => {
+                            let start      = a.start_time.substring(0,5);
+                            let end        = a.end_time.substring(0,5);
+                            let startChosen = this.start_time ? this.start_time.substring(0,5) : null;
+                            let endChosen   = this.end_time   ? this.end_time.substring(0,5)   : null;
+                            if (startChosen && endChosen) return start <= startChosen && end >= endChosen;
+                            else if (startChosen) return start <= startChosen && end > startChosen;
+                            else if (endChosen)   return start < endChosen && end >= endChosen;
+                            return false;
+                        });
+                    }
+                    return true;
+                });
+            }
+            return choices;
+        },
+ 
+        // ── Watchers / init ────────────────────────────────────────
+        init() {
+            this.$watch('subject_id', () => {
+                if (!this.isMentorLocked) this.mentor_id = '';
+                this.clearError('subject_id');
+            });
+            this.$watch('topic',           () => this.clearError('topic'));
+            this.$watch('tutorialMode_id', () => this.clearError('tutorialMode_id'));
+            this.$watch('mentor_id', () => {
+                this.clearError('mentor_id');
+                if (this.date) {
+                    const temp = this.date; this.date = '';
+                    this.$nextTick(() => this.date = temp);
+                }
+            });
+            this.$watch('date', value => {
+                this.dateError = '';
+                this.clearError('date');
+                if (!value) { this.validateTime(); return; }
+                const d = new Date(value + 'T00:00:00');
+                if (d.getDay() === 0) { this.dateError = 'The session cannot be on a Sunday.'; return; }
+                if (this.mentor_id && this.mentor_id !== 'any') {
+                    const dayChosen = this.getDayOfWeek(value);
+                    const avails = this.allAvailabilities.filter(
+                        a => a.mentorProfile_id == this.mentor_id && a.day_of_week === dayChosen
+                    );
+                    if (avails.length === 0) { this.dateError = 'This mentor is not available on this day.'; return; }
+                }
+                this.validateTime();
+                this.checkAnyMentor();
+            });
+            this.$watch('start_time', () => { this.clearError('schedule_start'); this.validateTime(); this.checkAnyMentor(); });
+            this.$watch('end_time',   () => { this.clearError('schedule_end');   this.validateTime(); this.checkAnyMentor(); });
+        },
+ 
+        checkAnyMentor() {
+            this.$nextTick(() => {
+                if (this.mentor_id === 'any' && this.filteredMentors.length === 0) this.mentor_id = '';
+            });
+        },
+ 
+        clearError(field) {
+            if (!this.clearedErrors.includes(field)) this.clearedErrors.push(field);
+        },
+ 
+        showError(field) { return !this.clearedErrors.includes(field); },
+ 
+        validateTime() {
+            this.startTimeError = '';
+            this.endTimeError   = '';
+            if (this.start_time && (this.start_time < '08:00' || this.start_time >= '18:00')) {
+                this.startTimeError = 'Sessions must be scheduled between 8:00 AM and 6:00 PM.'; return;
+            }
+            if (this.end_time && (this.end_time <= '08:00' || this.end_time > '18:00')) {
+                this.endTimeError = 'Sessions must be scheduled between 8:00 AM and 6:00 PM.'; return;
+            }
+            if (this.start_time && this.end_time && this.end_time <= this.start_time) {
+                this.endTimeError = 'End time must be later than start time.'; return;
+            }
+            if (this.mentor_id && this.mentor_id != 'any' && this.date) {
+                if (this.start_time || this.end_time) {
+                    const dayChosen = this.getDayOfWeek(this.date);
+                    const avails = this.allAvailabilities.filter(
+                        a => a.mentorProfile_id == this.mentor_id && a.day_of_week === dayChosen
+                    );
+                    if (avails.length > 0) {
+                        let startChosen = this.start_time ? this.start_time.substring(0,5) : null;
+                        let endChosen   = this.end_time   ? this.end_time.substring(0,5)   : null;
+                        if (startChosen && endChosen) {
+                            const fitsBoth = avails.some(a => startChosen >= a.start_time.substring(0,5) && endChosen <= a.end_time.substring(0,5));
+                            if (!fitsBoth) {
+                                const startFits = avails.some(a => startChosen >= a.start_time.substring(0,5) && startChosen < a.end_time.substring(0,5));
+                                const endFits   = avails.some(a => endChosen > a.start_time.substring(0,5) && endChosen <= a.end_time.substring(0,5));
+                                if (!startFits) this.startTimeError = 'Start time does not fit the mentor schedule.';
+                                if (!endFits)   this.endTimeError   = 'End time does not fit the mentor schedule.';
+                                if (startFits && endFits) this.endTimeError = 'Mentor is unavailable at this session time.';
                             }
-                        },
-
-                        showError(field) {
-                            return !this.clearedErrors.includes(field);
-                        },
-
-                        validateTime() {
-                            this.startTimeError = '';
-                            this.endTimeError = '';
-
-                            // Prevent 6pm-8am
-                            if (this.start_time && (this.start_time < '08:00' || this.start_time >= '18:00')) {
-                                this.startTimeError = 'Sessions must be scheduled between 8:00 AM and 6:00 PM.';
-                                return;
-                            }
-                            if (this.end_time && (this.end_time <= '08:00' || this.end_time > '18:00')) {
-                                this.endTimeError = 'Sessions must be scheduled between 8:00 AM and 6:00 PM.';
-                                return;
-                            }
-
-                            // Prevent earlier end time than start time
-                            if (this.start_time && this.end_time) {
-                                if (this.end_time <= this.start_time) {
-                                    this.endTimeError = 'End time must be later than start time.';
-                                    return;
-                                }
-                            }
-                            
-                            // Check if chosen mentor is available on preferred sched
-                            if (this.mentor_id && this.mentor_id != 'any' && this.date) {
-                                if (this.start_time || this.end_time) {
-                                    const dayChosen = this.getDayOfWeek(this.date);
-                                    const avails = this.allAvailabilities.filter(
-                                        a => a.mentorProfile_id == this.mentor_id && a.day_of_week === dayChosen
-                                    );
-
-                                    if (avails.length > 0) {
-                                        let startChosen = this.start_time ? this.start_time.substring(0,5) : null;
-                                        let endChosen   = this.end_time ? this.end_time.substring(0,5) : null;
-
-                                        if (startChosen && !endChosen) {
-                                            const fits = avails.some(a => startChosen >= a.start_time.substring(0,5) && startChosen < a.end_time.substring(0,5));
-                                            if (!fits) this.startTimeError = 'Start time does not fit the mentor schedule.';
-                                        } 
-                                        else if (!startChosen && endChosen) {
-                                            const fits = avails.some(a => endChosen > a.start_time.substring(0,5) && endChosen <= a.end_time.substring(0,5));
-                                            if (!fits) this.endTimeError = 'End time does not fit the mentor schedule.';
-                                        } 
-                                        else if (startChosen && endChosen) {
-                                            const fitsBoth = avails.some(a => startChosen >= a.start_time.substring(0,5) && endChosen <= a.end_time.substring(0,5));
-                                            
-                                            if (!fitsBoth) {
-                                                const startFits = avails.some(a => startChosen >= a.start_time.substring(0,5) && startChosen < a.end_time.substring(0,5));
-                                                const endFits = avails.some(a => endChosen > a.start_time.substring(0,5) && endChosen <= a.end_time.substring(0,5));
-                                                
-                                                if (!startFits) this.startTimeError = 'Start time does not fit the mentor schedule.';
-                                                if (!endFits) this.endTimeError = 'End time does not fit the mentor schedule.';
-                                                if (startFits && endFits) this.endTimeError = 'Mentor is unavailable at this session time.';
-                                            }
-                                        }
-                                    } else {
-                                        if (this.start_time) this.startTimeError = 'This mentor is not available on this day.';
-                                        if (this.end_time)   this.endTimeError = 'This mentor is not available on this day.';
-                                    }
-                                }
-                            }
-                        },
-
-                        allMentors:        @js($this->mentors),
-                        allSubjects:       @js($this->mentorSubjects),
-                        allAvailabilities: @js($this->mentorAvailabilities),
-
-                        getDayOfWeek(dateStr) {
-                            const days = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
-                            return days[new Date(dateStr + 'T00:00:00').getDay()];
-                        },
-
-                        get filteredMentors() {
-                            if (this.isMentorLocked && this.mentor_id) {
-                                return this.allMentors.filter(m => m.profile_id == this.mentor_id);
-                            }
-                            let choices = this.allMentors;
-
-                            // Filter based on subject
-                            if (this.subject_id) {
-                                const validIds = this.allSubjects
-                                    .filter(s => s.subject_id == this.subject_id)
-                                    .map(s => s.mentorProfile_id);
-                                choices = choices.filter(m => validIds.includes(m.profile_id));
-                            }
-                            
-                            // Filter based on either date or times
-                            if (this.date && (!this.mentor_id || this.mentor_id === 'any')) {
-                                const dayChosen = this.getDayOfWeek(this.date);
-                                choices = choices.filter(m => {
-                                    if (this.mentor_id && m.profile_id == this.mentor_id) {
-                                            return true;
-                                    }
-
-                                    const avails = this.allAvailabilities.filter(
-                                        a => a.mentorProfile_id == m.profile_id && a.day_of_week === dayChosen
-                                    );
-                                    
-                                    if (avails.length === 0) return false;
-                                    
-                                    if (this.start_time || this.end_time) {
-                                        return avails.some(a => {
-                                            let start       = a.start_time.substring(0,5);
-                                            let end         = a.end_time.substring(0,5);
-                                            let startChosen = this.start_time ? this.start_time.substring(0,5) : null;
-                                            let endChosen   = this.end_time ? this.end_time.substring(0,5) : null;
-
-                                            if (startChosen && endChosen) {
-                                                return start <= startChosen && end >= endChosen;
-                                            } else if (startChosen) {
-                                                return start <= startChosen && end > startChosen;
-                                            } else if (endChosen) {
-                                                return start < endChosen && end >= endChosen;
-                                            }
-                                            return false;
-                                        });
-                                    }
-                                    return true;
-                                });
-                            }
-                            return choices;
-                        },
-
-                        weekDays: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'],
-
-                        formatTime12(timeStr) {
-                            if (!timeStr) return '';
-                            const [h, m] = timeStr.split(':').map(Number);
-                            const ampm = h >= 12 ? 'PM' : 'AM';
-                            const hr = h % 12 || 12;
-                            return `${hr}:${String(m).padStart(2, '0')} ${ampm}`;
-                        },
-
-                        // To display their availabilities
-                        get selectedMentorSchedule() {
-                            if (!this.mentor_id || this.mentor_id === 'any') return null;
-
-                            const avails = this.allAvailabilities
-                                .filter(a => a.mentorProfile_id == this.mentor_id)
-                                .sort((a, b) => a.start_time.localeCompare(b.start_time));
-                            
-                            if (avails.length === 0) return null;
-
-                            const schedule = {};
-                            avails.forEach(a => {
-                                const day = a.day_of_week.toLowerCase();
-                                if (!schedule[day]) schedule[day] = { slots: [] };
-                                schedule[day].slots.push({
-                                    start: this.formatTime12(a.start_time),
-                                    end: this.formatTime12(a.end_time)
-                                });
-                            });
-                            
-                            return schedule;
+                        } else if (startChosen) {
+                            const fits = avails.some(a => startChosen >= a.start_time.substring(0,5) && startChosen < a.end_time.substring(0,5));
+                            if (!fits) this.startTimeError = 'Start time does not fit the mentor schedule.';
+                        } else if (endChosen) {
+                            const fits = avails.some(a => endChosen > a.start_time.substring(0,5) && endChosen <= a.end_time.substring(0,5));
+                            if (!fits) this.endTimeError = 'End time does not fit the mentor schedule.';
                         }
-                    }"
-                    @profile-updated.window="hasProfile = true">
-
-                    <form id="bookingForm" class="space-y-3">
-
-                        {{-- Subject --}}
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">
-                                Subject<span class="text-red-500">*</span>
-                            </label>
-<select wire:model="subject_id" class="w-full rounded-lg border-gray-300 shadow-sm text-sm px-3 py-2 h-[38px] transition-colors">                                <option value="" disabled>--- Select a Subject ---</option>
-                                @foreach ($this->subjects as $subject)
-                                    <option value="{{ $subject->id }}">
-                                        {{ strtoupper($subject->code) }} - {{ $subject->name }}
-                                    </option>
-                                @endforeach
-                            </select>
-                            @error('subject_id')
-                            <span x-show="showError('subject_id')" x-cloak
-                                  class="mt-1 text-xs text-red-600 block"
-                                  wire:loading.class="hidden" wire:target="validateBooking">
-                                {{ $message }}
-                            </span>
-                            @enderror
-                        </div>
-
-                        {{-- Topic --}}
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">
-                                    Topic<span class="text-red-500">*</span>
-                            </label>
-                            <input type="text" wire:model="topic"
-                                class="w-full rounded-lg border-gray-300 shadow-sm text-sm px-3 py-2 h-[38px] transition-colors"                                   placeholder="e.g. Integration by Parts."
-                                   maxlength="255">
-                            @error('topic')
-                            <span x-show="showError('topic')" x-cloak
-                                  class="mt-1 text-xs text-red-600 block"
-                                  wire:loading.class="hidden" wire:target="validateBooking">
-                                {{ $message }}
-                            </span>
-                            @enderror
-                        </div>
-
-                        {{-- Tutorial Mode --}}
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">
-                                Tutorial Mode<span class="text-red-500">*</span>
-                            </label>
-                            <select wire:model="tutorialMode_id" class="w-full rounded-lg border-gray-300 shadow-sm text-sm px-3 py-2 h-[38px] transition-colors">
-                                <option value="" disabled>--- Select Mode of Tutoring ---</option>
-                                @foreach ($this->tutorialModes as $mode)
-                                    <option value="{{ $mode->id }}">{{ $mode->mode }}</option>
-                                @endforeach
-                            </select>
-                            @error('tutorialMode_id')
-                            <span x-show="showError('tutorialMode_id')" x-cloak
-                                  class="mt-1 text-xs text-red-600 block"
-                                  wire:loading.class="hidden" wire:target="validateBooking">
-                                {{ $message }}
-                            </span>
-                            @enderror
-                        </div>
-
-                        {{-- Preferred Mentor --}}
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">
-                                Preferred Mentor<span class="text-red-500">*</span>
-                            </label>
-                            <select wire:model="mentor_id" :disabled="isMentorLocked"
-                                    class="w-full rounded-lg border-gray-300 shadow-sm text-sm px-3 py-2 h-[38px] disabled:bg-gray-100 disabled:text-gray-900 disabled:cursor-not-allowed transition-colors">
-                                <option value=""
-                                        x-text="filteredMentors.length === 0
-                                            ? '--- No mentors available. Please select a different date or time slot. ---'
-                                            : '--- Select a mentor ---'"
-                                        disabled>
-                                </option>
-                                <template x-if="filteredMentors.length > 0 && !isMentorLocked">
-                                    <option value="any" class="bg-blue-100">ANY (Alerts all available mentors)</option>
-                                </template>
-                                <template x-for="mentor in filteredMentors" :key="mentor.profile_id">
-                                    <option :value="mentor.profile_id" x-text="mentor.name"></option>
-                                </template>
-                            </select>
-
-                            <div x-show="isMentorLocked" x-cloak class="mt-1.5 flex justify-between items-center px-1">
-                                <span class="text-[11px] text-blue-600 font-bold">
-                                    <i class="fa-solid fa-lock mr-1"></i> Mentor Locked.
-                                </span>
-                                <a href="{{ route('student.bookings') }}" class="text-[10px] text-gray-400 hover:text-red-600 underline">
-                                    Unlock &amp; Clear
-                                </a>
-                            </div>
-
-                            @error('mentor_id')
-                            <span x-show="showError('mentor_id')" x-cloak
-                                  class="mt-1 text-xs text-red-600 block"
-                                  wire:loading.class="hidden" wire:target="validateBooking">
-                                {{ $message }}
-                            </span>
-                            @enderror
-                        </div>
-
-                        {{-- Any-mentor notice --}}
-                        <div x-show="mentor_id === 'any' && filteredMentors.length > 0" x-cloak
-                             class="mt-3 bg-blue-50 border border-blue-200 rounded-lg p-3 animate-[slideDown_0.2s_ease]">
-                            <p class="text-xs font-bold text-blue-800 mb-1">
-                                <i class="fa-solid fa-triangle-exclamation mr-1"></i> First Come First Serve
-                            </p>
-                            <p class="text-xs text-blue-800 mb-2 leading-tight">
-                                Your request will be sent to the following mentors. The first to accept will take your session.
-                            </p>
-                            <ul class="text-xs font-semibold text-blue-800 space-y-0.5 pl-1">
-                                <template x-for="mentor in filteredMentors" :key="mentor.profile_id">
-                                    <li class="flex items-center gap-1.5">
-                                        <span class="w-1 h-1 rounded-full bg-blue-400"></span>
-                                        <span x-text="mentor.name"></span>
-                                    </li>
-                                </template>
-                            </ul>
-                        </div>
-
-                        <div x-show="selectedMentorSchedule" x-cloak class="mt-4 p-4 bg-white border border-slate-200 rounded-lg animate-[slideDown_0.2s_ease]">
-                            <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3 text-center">Mentor's Weekly Schedule</p>
-                            
-                            <div class="avail-grid">
-                                <template x-for="day in weekDays" :key="day">
-                                    <div>
-                                        <div class="avail-day-header" x-text="day.charAt(0).toUpperCase() + day.slice(1, 3)"></div>
-                                        <div class="avail-day-col">
-                                            <template x-if="selectedMentorSchedule[day]">
-                                                <template x-for="(slot, index) in selectedMentorSchedule[day].slots" :key="index">
-                                                    <div class="avail-slot" x-html="slot.start + '<br>' + slot.end"></div>
-                                                </template>
-                                            </template>
-                                            <template x-if="!selectedMentorSchedule[day]">
-                                                <div class="avail-empty"></div>
-                                            </template>
-                                        </div>
-                                    </div>
-                                </template>
-                            </div>
-                            
-                            <p class="text-[9px] font-medium mt-3 flex items-center justify-center gap-4 text-gray-500">
-                                <span><span class="inline-block w-2.5 h-2.5 rounded bg-[#d1fae5] mr-1 align-middle"></span> Available</span>
-                                <span><span class="inline-block w-2.5 h-2.5 rounded border border-dashed border-gray-300 bg-[#f8fafc] mr-1 align-middle"></span> Unavailable</span>
-                            </p>
-                        </div>
-
-                        {{-- Date + Time row --}}
-                        <div class="grid grid-cols-3 gap-4">
-
-                            {{-- Preferred Day --}}
-                            <div x-data="bookingDatePicker()" x-init="init()" @click.outside="close()">
-                                <label class="block text-sm font-medium text-gray-700 mb-1">
-                                    Preferred Day<span class="text-red-500">*</span>
-                                </label>
-                                <div class="custom-date-picker">
-                                    <div class="custom-date-display" :class="{ active: open }" @click="toggle()">
-                                        <div class="date-icon"><i class="fa-solid fa-calendar-days"></i></div>
-                                        <span class="date-text text-sm">
-                                            <template x-if="selectedLabel"><span x-text="selectedLabel"></span></template>
-                                            <template x-if="!selectedLabel"><span class="date-placeholder">Pick a date</span></template>
-                                        </span>
-                                        <i class="fa-solid fa-chevron-down date-chevron"></i>
-                                    </div>
-                                    <div class="date-picker-dropdown" :class="{ show: open }">
-                                        <div class="dp-nav">
-                                            <button type="button" class="dp-nav-btn" @click.stop="prevMonth()">
-                                                <i class="fa-solid fa-chevron-left"></i>
-                                            </button>
-                                            <span class="dp-month-label" x-text="monthLabel"></span>
-                                            <button type="button" class="dp-nav-btn" @click.stop="nextMonth()">
-                                                <i class="fa-solid fa-chevron-right"></i>
-                                            </button>
-                                        </div>
-                                        <div class="dp-weekdays">
-                                            <div class="dp-weekday">Su</div>
-                                            <div class="dp-weekday">Mo</div>
-                                            <div class="dp-weekday">Tu</div>
-                                            <div class="dp-weekday">We</div>
-                                            <div class="dp-weekday">Th</div>
-                                            <div class="dp-weekday">Fr</div>
-                                            <div class="dp-weekday">Sa</div>
-                                        </div>
-                                        <div class="dp-days">
-                                            <template x-for="(day, idx) in calDays" :key="idx">
-                                                <div class="dp-day"
-                                                     :class="{
-                                                        'dp-day-empty':    !day.date,
-                                                        'dp-day-disabled': day.disabled,
-                                                        'dp-day-today':    day.isToday,
-                                                        'dp-day-selected': day.isSelected,
-                                                        'dp-day-sunday':   day.isSunday && !day.disabled && !day.isSelected,
-                                                    }"
-                                                     @click="day.date && !day.disabled && selectDay(day)"
-                                                     x-text="day.label">
-                                                </div>
-                                            </template>
-                                        </div>
-                                    </div>
-                                </div>
-                                <input type="date" wire:model="date" id="bookingDateHidden" class="hidden"
-                                       min="{{ \Carbon\Carbon::tomorrow()->format('Y-m-d') }}">
-                                @error('date')
-                                <span x-show="showError('date')" x-cloak
-                                      class="mt-1 text-xs text-red-600 block"
-                                      wire:loading.class="hidden" wire:target="validateBooking">
-                                    {{ $message }}
-                                </span>
-                                @enderror
-                                <span x-show="dateError" x-cloak class="mt-1 text-xs text-red-600 block" x-text="dateError"></span>
-                            </div>
-
-                            {{-- Start Time --}}
-                            <div x-data="bookingTimePicker('schedule_start')" x-init="init()" @click.outside="close()">
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Start Time<span class="text-red-500">*</span></label>
-                                <div class="custom-time-picker">
-                                    <div class="custom-time-display" :class="{ active: open }" @click="toggle()">
-                                        <div class="time-icon"><i class="fa-regular fa-clock"></i></div>
-                                        <span class="text-sm" :class="selectedTime ? 'font-semibold text-gray-800' : 'time-placeholder'" x-text="selectedTime || 'Start time'"></span>
-                                    </div>
-                                    <div class="time-picker-dropdown" :class="{ show: open }">
-                                        <div class="tp-ampm">
-                                            <button type="button" class="tp-ampm-btn" :class="{ active: ampm === 'AM' }" @click="setAmpm('AM')">AM</button>
-                                            <button type="button" class="tp-ampm-btn" :class="{ active: ampm === 'PM' }" @click="setAmpm('PM')">PM</button>
-                                        </div>
-                                        <div class="tp-scroll-row">
-                                            <div class="tp-col">
-                                                <div class="tp-col-label">Hour</div>
-                                                <button type="button" class="tp-btn" @click="changeHour(1)"><i class="fa-solid fa-chevron-up"></i></button>
-                                                <input class="tp-manual-input tp-hour-input" type="number" min="1" max="12"
-                                                       @input="$el.value = $el.value.slice(0,2)"
-                                                       :value="String(hour).padStart(2,'0')"
-                                                       @change="onHourInput($event)"
-                                                       @keydown.up.prevent="changeHour(1)"
-                                                       @keydown.down.prevent="changeHour(-1)">
-                                                <button type="button" class="tp-btn" @click="changeHour(-1)"><i class="fa-solid fa-chevron-down"></i></button>
-                                            </div>
-                                            <div class="tp-sep">:</div>
-                                            <div class="tp-col">
-                                                <div class="tp-col-label">Min</div>
-                                                <button type="button" class="tp-btn" @click="changeMin(1)"><i class="fa-solid fa-chevron-up"></i></button>
-                                                <input class="tp-manual-input tp-min-input" type="number" min="0" max="59"
-                                                       @input="$el.value = $el.value.slice(0,2)"
-                                                       :value="String(minute).padStart(2,'0')"
-                                                       @change="onMinInput($event)"
-                                                       @keydown.up.prevent="changeMin(1)"
-                                                       @keydown.down.prevent="changeMin(-1)">
-                                                <button type="button" class="tp-btn" @click="changeMin(-1)"><i class="fa-solid fa-chevron-down"></i></button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <input type="time" wire:model="schedule_start" id="startTimeHidden" class="hidden">
-                                @error('schedule_start')
-                                <span x-show="showError('schedule_start')" x-cloak class="mt-1 text-xs text-red-600 block" wire:loading.class="hidden" wire:target="validateBooking">{{ $message }}</span>
-                                @enderror
-                                <span x-show="startTimeError" x-cloak class="mt-1 text-xs text-red-600 block" x-text="startTimeError"></span>
-                            </div>
-
-                            {{-- End Time --}}
-                            <div x-data="bookingTimePicker('schedule_end')" x-init="init()" @click.outside="close()">
-                                <label class="block text-sm font-medium text-gray-700 mb-1">End Time<span class="text-red-500">*</span></label>
-                                <div class="custom-time-picker">
-                                    <div class="custom-time-display" :class="{ active: open }" @click="toggle()">
-                                        <div class="time-icon"><i class="fa-regular fa-clock"></i></div>
-                                        <span class="text-sm" :class="selectedTime ? 'font-semibold text-gray-800' : 'time-placeholder'" x-text="selectedTime || 'End time'"></span>
-                                    </div>
-                                    <div class="time-picker-dropdown" :class="{ show: open }">
-                                        <div class="tp-ampm">
-                                            <button type="button" class="tp-ampm-btn" :class="{ active: ampm === 'AM' }" @click="setAmpm('AM')">AM</button>
-                                            <button type="button" class="tp-ampm-btn" :class="{ active: ampm === 'PM' }" @click="setAmpm('PM')">PM</button>
-                                        </div>
-                                        <div class="tp-scroll-row">
-                                            <div class="tp-col">
-                                                <div class="tp-col-label">Hour</div>
-                                                <button type="button" class="tp-btn" @click="changeHour(1)"><i class="fa-solid fa-chevron-up"></i></button>
-                                                <input class="tp-manual-input tp-hour-input" type="number" min="1" max="12"
-                                                       @input="$el.value = $el.value.slice(0,2)"
-                                                       :value="String(hour).padStart(2,'0')"
-                                                       @change="onHourInput($event)"
-                                                       @keydown.up.prevent="changeHour(1)"
-                                                       @keydown.down.prevent="changeHour(-1)">
-                                                <button type="button" class="tp-btn" @click="changeHour(-1)"><i class="fa-solid fa-chevron-down"></i></button>
-                                            </div>
-                                            <div class="tp-sep">:</div>
-                                            <div class="tp-col">
-                                                <div class="tp-col-label">Min</div>
-                                                <button type="button" class="tp-btn" @click="changeMin(1)"><i class="fa-solid fa-chevron-up"></i></button>
-                                                <input class="tp-manual-input tp-min-input" type="number" min="0" max="59"
-                                                       @input="$el.value = $el.value.slice(0,2)"
-                                                       :value="String(minute).padStart(2,'0')"
-                                                       @change="onMinInput($event)"
-                                                       @keydown.up.prevent="changeMin(1)"
-                                                       @keydown.down.prevent="changeMin(-1)">
-                                                <button type="button" class="tp-btn" @click="changeMin(-1)"><i class="fa-solid fa-chevron-down"></i></button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <input type="time" wire:model="schedule_end" id="endTimeHidden" class="hidden">
-                                @error('schedule_end')
-                                <span x-show="showError('schedule_end')" x-cloak class="mt-1 text-xs text-red-600 block" wire:loading.class="hidden" wire:target="validateBooking">{{ $message }}</span>
-                                @enderror
-                                <span x-show="endTimeError" x-cloak class="mt-1 text-xs text-red-600 block" x-text="endTimeError"></span>
-                            </div>
-                        </div>
-                        {{-- ── End Date + Time row ── --}}
-
-                        {{-- Submit button --}}
-                        <div class="pt-4">
-                            <button type="button" id="bookingSubmitBtn"
-                                    wire:click="validateBooking"
-                                    @click="clearedErrors = []"
-                                    :disabled="!hasProfile ||dateError !== '' || startTimeError !== '' || endTimeError !== '' ||  !subject_id || !topic || !tutorialMode_id || !date || !start_time || !end_time || !mentor_id"
-                                    class="w-full bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium py-2 px-4 rounded-lg text-sm transition-colors"
-                                    wire:loading.attr="disabled"
-                                    wire:loading.class="opacity-60 cursor-not-allowed"
-                                    wire:target="validateBooking">
-                                <span wire:loading.remove wire:target="validateBooking">Submit Booking Request</span>
-                                <span wire:loading wire:target="validateBooking">
-                                    <i class="fa-solid fa-spinner fa-spin mr-2"></i>Validating...
-                                </span>
-                            </button>
-                        </div>
-
-                    </form>
+                    } else {
+                        if (this.start_time) this.startTimeError = 'This mentor is not available on this day.';
+                        if (this.end_time)   this.endTimeError   = 'This mentor is not available on this day.';
+                    }
+                }
+            }
+            // Conflict check against already-booked slots
+            if (this.mentor_id && this.mentor_id !== 'any' && this.date) {
+                const startChosen = this.start_time ? this.start_time.substring(0, 5) : null;
+                const endChosen   = this.end_time   ? this.end_time.substring(0, 5)   : null;
+                if (startChosen || endChosen) {
+                    const mid = this.mentor_id;
+                    const conflicts = this.allBookedSlots.filter(b => {
+                        if (b.mentor_id != mid) return false;
+                        if (b.date !== this.date) return false;
+                        if (startChosen && endChosen) return b.start < endChosen && b.end > startChosen;
+                        if (startChosen) return b.end > startChosen && b.start <= startChosen;
+                        if (endChosen)   return b.start < endChosen && b.end >= endChosen;
+                        return false;
+                    });
+                    if (conflicts.length > 0) {
+                        const c   = conflicts[0];
+                        const msg = 'This mentor already has a booked session from ' + this.fmt12(c.start) + ' \u2013 ' + this.fmt12(c.end) + ' on this date.';
+                        if (!this.startTimeError && startChosen) this.startTimeError = msg;
+                        if (!this.endTimeError   && endChosen)   this.endTimeError   = msg;
+                    }
+                }
+            }
+        },
+     }"
+     @profile-updated.window="hasProfile = true">
+ 
+    <form id="bookingForm" class="space-y-3">
+ 
+        {{-- Subject --}}
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Subject<span class="text-red-500">*</span></label>
+            <select wire:model="subject_id" class="w-full rounded-lg border-gray-300 shadow-sm text-sm px-3 py-2 h-[38px] transition-colors">
+                <option value="" disabled>--- Select a Subject ---</option>
+                @foreach ($this->subjects as $subject)
+                    <option value="{{ $subject->id }}">{{ strtoupper($subject->code) }} - {{ $subject->name }}</option>
+                @endforeach
+            </select>
+            @error('subject_id')
+            <span x-show="showError('subject_id')" x-cloak class="mt-1 text-xs text-red-600 block" wire:loading.class="hidden" wire:target="validateBooking">{{ $message }}</span>
+            @enderror
+        </div>
+ 
+        {{-- Topic --}}
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Topic<span class="text-red-500">*</span></label>
+            <input type="text" wire:model="topic"
+                   class="w-full rounded-lg border-gray-300 shadow-sm text-sm px-3 py-2 h-[38px] transition-colors"
+                   placeholder="e.g. Integration by Parts." maxlength="255">
+            @error('topic')
+            <span x-show="showError('topic')" x-cloak class="mt-1 text-xs text-red-600 block" wire:loading.class="hidden" wire:target="validateBooking">{{ $message }}</span>
+            @enderror
+        </div>
+ 
+        {{-- Tutorial Mode --}}
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Tutorial Mode<span class="text-red-500">*</span></label>
+            <select wire:model="tutorialMode_id" class="w-full rounded-lg border-gray-300 shadow-sm text-sm px-3 py-2 h-[38px] transition-colors">
+                <option value="" disabled>--- Select Mode of Tutoring ---</option>
+                @foreach ($this->tutorialModes as $mode)
+                    <option value="{{ $mode->id }}">{{ $mode->mode }}</option>
+                @endforeach
+            </select>
+            @error('tutorialMode_id')
+            <span x-show="showError('tutorialMode_id')" x-cloak class="mt-1 text-xs text-red-600 block" wire:loading.class="hidden" wire:target="validateBooking">{{ $message }}</span>
+            @enderror
+        </div>
+ 
+        {{-- Preferred Mentor --}}
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Preferred Mentor<span class="text-red-500">*</span></label>
+            <select wire:model="mentor_id" :disabled="isMentorLocked"
+                    class="w-full rounded-lg border-gray-300 shadow-sm text-sm px-3 py-2 h-[38px] disabled:bg-gray-100 disabled:text-gray-900 disabled:cursor-not-allowed transition-colors">
+                <option value=""
+                        x-text="filteredMentors.length === 0 ? '--- No mentors available. Please select a different date or time slot. ---' : '--- Select a mentor ---'"
+                        disabled></option>
+                <template x-if="filteredMentors.length > 0 && !isMentorLocked">
+                    <option value="any" class="bg-blue-100">ANY (Alerts all available mentors)</option>
+                </template>
+                <template x-for="mentor in filteredMentors" :key="mentor.profile_id">
+                    <option :value="mentor.profile_id" x-text="mentor.name"></option>
+                </template>
+            </select>
+            <div x-show="isMentorLocked" x-cloak class="mt-1.5 flex justify-between items-center px-1">
+                <span class="text-[11px] text-blue-600 font-bold"><i class="fa-solid fa-lock mr-1"></i> Mentor Locked.</span>
+                <a href="{{ route('student.bookings') }}" class="text-[10px] text-gray-400 hover:text-red-600 underline">Unlock &amp; Clear</a>
+            </div>
+            @error('mentor_id')
+            <span x-show="showError('mentor_id')" x-cloak class="mt-1 text-xs text-red-600 block" wire:loading.class="hidden" wire:target="validateBooking">{{ $message }}</span>
+            @enderror
+        </div>
+ 
+        {{-- Any-mentor notice --}}
+        <div x-show="mentor_id === 'any' && filteredMentors.length > 0" x-cloak
+             class="mt-3 bg-blue-50 border border-blue-200 rounded-lg p-3 animate-[slideDown_0.2s_ease]">
+            <p class="text-xs font-bold text-blue-800 mb-1"><i class="fa-solid fa-triangle-exclamation mr-1"></i> First Come First Serve</p>
+            <p class="text-xs text-blue-800 mb-2 leading-tight">Your request will be sent to the following mentors. The first to accept will take your session.</p>
+            <ul class="text-xs font-semibold text-blue-800 space-y-0.5 pl-1">
+                <template x-for="mentor in filteredMentors" :key="mentor.profile_id">
+                    <li class="flex items-center gap-1.5">
+                        <span class="w-1 h-1 rounded-full bg-blue-400"></span>
+                        <span x-text="mentor.name"></span>
+                    </li>
+                </template>
+            </ul>
+        </div>
+ 
+        {{-- ── Mentor Availability & Booked Slots widget ── --}}
+<div x-show="selectedMentorSchedule" x-cloak
+     class="mt-4 p-4 bg-white border border-slate-200 rounded-lg animate-[slideDown_0.2s_ease]">
+ 
+    <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1 text-center">
+        Mentor's Availability &amp; Booked Slots
+    </p>
+ 
+    {{-- Week banner --}}
+    <div class="avail-week-banner" :class="date ? '' : 'generic'">
+        <i :class="date ? 'fa-solid fa-calendar-week' : 'fa-regular fa-calendar-days'" class="mr-1"></i>
+        <template x-if="!date">
+            <span>Showing weekly pattern &mdash; pick a date to see booked slots</span>
+        </template>
+        <template x-if="date">
+            <span>Week of&nbsp;<strong x-text="weekBannerLabel"></strong></span>
+        </template>
+    </div>
+ 
+    {{-- Grid --}}
+    <div class="avail-grid">
+        <template x-for="col in selectedWeekDates" :key="col.key">
+            <div>
+                {{-- Day column header --}}
+                <div class="avail-day-header" :class="col.isChosen ? 'is-chosen-day' : ''">
+                    <span x-text="col.label"></span>
+                    <template x-if="col.dayNum">
+                        <span class="avail-day-num" x-text="col.dayNum"></span>
+                    </template>
                 </div>
+ 
+                {{-- Slots column --}}
+                <div class="avail-day-col" :class="col.isChosen ? 'is-chosen-col' : ''">
+                    <template x-if="selectedMentorSchedule && selectedMentorSchedule[col.key]">
+                        <template x-for="(slot, si) in selectedMentorSchedule[col.key].slots" :key="si">
+                            <div class="avail-slot-group">
+                                {{-- Split the window into free/booked segments --}}
+<template x-for="(seg, segi) in splitSlotSegments(col.key, slot.startRaw, slot.endRaw, col.dateStr)" :key="segi">
+    <div :class="seg.type === 'booked' ? 'avail-booked-slot' : 'avail-slot'"
+         :title="(seg.type === 'booked' ? 'Booked: ' : 'Available: ') + fmt12(seg.start) + ' \u2013 ' + fmt12(seg.end)"
+         x-html="fmt12(seg.start) + '<br>' + fmt12(seg.end)">
+    </div>
+</template>
+                            </div>
+                        </template>
+                    </template>
+ 
+                    <template x-if="!selectedMentorSchedule || !selectedMentorSchedule[col.key]">
+                        <div class="avail-empty" title="Not available this day"></div>
+                    </template>
+                </div>
+            </div>
+        </template>
+    </div>
+ 
+    {{-- Legend --}}
+    <p class="text-[9px] font-medium mt-3 flex items-center justify-center gap-4 text-gray-500 flex-wrap">
+        <span><span class="inline-block w-2.5 h-2.5 rounded bg-[#d1fae5] mr-1 align-middle border border-[#6ee7b7]"></span>Available</span>
+        <span><span class="inline-block w-2.5 h-2.5 rounded bg-[#fee2e2] mr-1 align-middle border border-[#fca5a5]"></span>Already Booked</span>
+        <span><span class="inline-block w-2.5 h-2.5 rounded border border-dashed border-gray-300 bg-[#f8fafc] mr-1 align-middle"></span>Unavailable</span>
+        <template x-if="date">
+            <span class="text-green-600 font-semibold">
+                <span class="inline-block w-2.5 h-2.5 rounded bg-[#f0fdf4] mr-1 align-middle border border-[#86efac]"></span>Selected Date
+            </span>
+        </template>
+    </p>
+</div>
+ 
+        {{-- Date + Time row --}}
+        <div class="grid grid-cols-3 gap-4">
+ 
+            {{-- Preferred Day --}}
+            <div x-data="bookingDatePicker()" x-init="init()" @click.outside="close()">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Preferred Day<span class="text-red-500">*</span></label>
+                <div class="custom-date-picker">
+                    <div class="custom-date-display" :class="{ active: open }" @click="toggle()">
+                        <div class="date-icon"><i class="fa-solid fa-calendar-days"></i></div>
+                        <span class="date-text text-sm">
+                            <template x-if="selectedLabel"><span x-text="selectedLabel"></span></template>
+                            <template x-if="!selectedLabel"><span class="date-placeholder">Pick a date</span></template>
+                        </span>
+                        <i class="fa-solid fa-chevron-down date-chevron"></i>
+                    </div>
+                    <div class="date-picker-dropdown" :class="{ show: open }">
+                        <div class="dp-nav">
+                            <button type="button" class="dp-nav-btn" @click.stop="prevMonth()"><i class="fa-solid fa-chevron-left"></i></button>
+                            <span class="dp-month-label" x-text="monthLabel"></span>
+                            <button type="button" class="dp-nav-btn" @click.stop="nextMonth()"><i class="fa-solid fa-chevron-right"></i></button>
+                        </div>
+                        <div class="dp-weekdays">
+                            <div class="dp-weekday">Su</div><div class="dp-weekday">Mo</div><div class="dp-weekday">Tu</div>
+                            <div class="dp-weekday">We</div><div class="dp-weekday">Th</div><div class="dp-weekday">Fr</div><div class="dp-weekday">Sa</div>
+                        </div>
+                        <div class="dp-days">
+                            <template x-for="(day, idx) in calDays" :key="idx">
+                                <div class="dp-day"
+                                     :class="{
+                                        'dp-day-empty':    !day.date,
+                                        'dp-day-disabled': day.disabled,
+                                        'dp-day-today':    day.isToday,
+                                        'dp-day-selected': day.isSelected,
+                                        'dp-day-sunday':   day.isSunday && !day.disabled && !day.isSelected,
+                                     }"
+                                     @click="day.date && !day.disabled && selectDay(day)"
+                                     x-text="day.label">
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+                <input type="date" wire:model="date" id="bookingDateHidden" class="hidden" min="{{ \Carbon\Carbon::tomorrow()->format('Y-m-d') }}">
+                @error('date')
+                <span x-show="showError('date')" x-cloak class="mt-1 text-xs text-red-600 block" wire:loading.class="hidden" wire:target="validateBooking">{{ $message }}</span>
+                @enderror
+                <span x-show="dateError" x-cloak class="mt-1 text-xs text-red-600 block" x-text="dateError"></span>
+            </div>
+ 
+            {{-- Start Time --}}
+            <div x-data="bookingTimePicker('schedule_start')" x-init="init()" @click.outside="close()">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Start Time<span class="text-red-500">*</span></label>
+                <div class="custom-time-picker">
+                    <div class="custom-time-display" :class="{ active: open }" @click="toggle()">
+                        <div class="time-icon"><i class="fa-regular fa-clock"></i></div>
+                        <span class="text-sm" :class="selectedTime ? 'font-semibold text-gray-800' : 'time-placeholder'" x-text="selectedTime || 'Start time'"></span>
+                    </div>
+                    <div class="time-picker-dropdown" :class="{ show: open }">
+                        <div class="tp-ampm">
+                            <button type="button" class="tp-ampm-btn" :class="{ active: ampm === 'AM' }" @click="setAmpm('AM')">AM</button>
+                            <button type="button" class="tp-ampm-btn" :class="{ active: ampm === 'PM' }" @click="setAmpm('PM')">PM</button>
+                        </div>
+                        <div class="tp-scroll-row">
+                            <div class="tp-col">
+                                <div class="tp-col-label">Hour</div>
+                                <button type="button" class="tp-btn" @click="changeHour(1)"><i class="fa-solid fa-chevron-up"></i></button>
+                                <input class="tp-manual-input tp-hour-input" type="number" min="1" max="12" @input="$el.value = $el.value.slice(0,2)" :value="String(hour).padStart(2,'0')" @change="onHourInput($event)" @keydown.up.prevent="changeHour(1)" @keydown.down.prevent="changeHour(-1)">
+                                <button type="button" class="tp-btn" @click="changeHour(-1)"><i class="fa-solid fa-chevron-down"></i></button>
+                            </div>
+                            <div class="tp-sep">:</div>
+                            <div class="tp-col">
+                                <div class="tp-col-label">Min</div>
+                                <button type="button" class="tp-btn" @click="changeMin(1)"><i class="fa-solid fa-chevron-up"></i></button>
+                                <input class="tp-manual-input tp-min-input" type="number" min="0" max="59" @input="$el.value = $el.value.slice(0,2)" :value="String(minute).padStart(2,'0')" @change="onMinInput($event)" @keydown.up.prevent="changeMin(1)" @keydown.down.prevent="changeMin(-1)">
+                                <button type="button" class="tp-btn" @click="changeMin(-1)"><i class="fa-solid fa-chevron-down"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <input type="time" wire:model="schedule_start" id="startTimeHidden" class="hidden">
+                @error('schedule_start')
+                <span x-show="showError('schedule_start')" x-cloak class="mt-1 text-xs text-red-600 block" wire:loading.class="hidden" wire:target="validateBooking">{{ $message }}</span>
+                @enderror
+                <span x-show="startTimeError" x-cloak class="mt-1 text-xs text-red-600 block" x-text="startTimeError"></span>
+            </div>
+ 
+            {{-- End Time --}}
+            <div x-data="bookingTimePicker('schedule_end')" x-init="init()" @click.outside="close()">
+                <label class="block text-sm font-medium text-gray-700 mb-1">End Time<span class="text-red-500">*</span></label>
+                <div class="custom-time-picker">
+                    <div class="custom-time-display" :class="{ active: open }" @click="toggle()">
+                        <div class="time-icon"><i class="fa-regular fa-clock"></i></div>
+                        <span class="text-sm" :class="selectedTime ? 'font-semibold text-gray-800' : 'time-placeholder'" x-text="selectedTime || 'End time'"></span>
+                    </div>
+                    <div class="time-picker-dropdown" :class="{ show: open }">
+                        <div class="tp-ampm">
+                            <button type="button" class="tp-ampm-btn" :class="{ active: ampm === 'AM' }" @click="setAmpm('AM')">AM</button>
+                            <button type="button" class="tp-ampm-btn" :class="{ active: ampm === 'PM' }" @click="setAmpm('PM')">PM</button>
+                        </div>
+                        <div class="tp-scroll-row">
+                            <div class="tp-col">
+                                <div class="tp-col-label">Hour</div>
+                                <button type="button" class="tp-btn" @click="changeHour(1)"><i class="fa-solid fa-chevron-up"></i></button>
+                                <input class="tp-manual-input tp-hour-input" type="number" min="1" max="12" @input="$el.value = $el.value.slice(0,2)" :value="String(hour).padStart(2,'0')" @change="onHourInput($event)" @keydown.up.prevent="changeHour(1)" @keydown.down.prevent="changeHour(-1)">
+                                <button type="button" class="tp-btn" @click="changeHour(-1)"><i class="fa-solid fa-chevron-down"></i></button>
+                            </div>
+                            <div class="tp-sep">:</div>
+                            <div class="tp-col">
+                                <div class="tp-col-label">Min</div>
+                                <button type="button" class="tp-btn" @click="changeMin(1)"><i class="fa-solid fa-chevron-up"></i></button>
+                                <input class="tp-manual-input tp-min-input" type="number" min="0" max="59" @input="$el.value = $el.value.slice(0,2)" :value="String(minute).padStart(2,'0')" @change="onMinInput($event)" @keydown.up.prevent="changeMin(1)" @keydown.down.prevent="changeMin(-1)">
+                                <button type="button" class="tp-btn" @click="changeMin(-1)"><i class="fa-solid fa-chevron-down"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <input type="time" wire:model="schedule_end" id="endTimeHidden" class="hidden">
+                @error('schedule_end')
+                <span x-show="showError('schedule_end')" x-cloak class="mt-1 text-xs text-red-600 block" wire:loading.class="hidden" wire:target="validateBooking">{{ $message }}</span>
+                @enderror
+                <span x-show="endTimeError" x-cloak class="mt-1 text-xs text-red-600 block" x-text="endTimeError"></span>
+            </div>
+        </div>
+        {{-- ── End Date + Time row ── --}}
+ 
+        {{-- Submit button --}}
+        <div class="pt-4">
+            <button type="button" id="bookingSubmitBtn"
+                    wire:click="validateBooking"
+                    @click="clearedErrors = []"
+                    :disabled="!hasProfile || dateError !== '' || startTimeError !== '' || endTimeError !== '' || !subject_id || !topic || !tutorialMode_id || !date || !start_time || !end_time || !mentor_id"
+                    class="w-full bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium py-2 px-4 rounded-lg text-sm transition-colors"
+                    wire:loading.attr="disabled"
+                    wire:loading.class="opacity-60 cursor-not-allowed"
+                    wire:target="validateBooking">
+                <span wire:loading.remove wire:target="validateBooking">Submit Booking Request</span>
+                <span wire:loading wire:target="validateBooking"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Validating...</span>
+            </button>
+        </div>
+ 
+    </form>
+</div>
             @endif
 
         </div>
@@ -1668,9 +1741,26 @@ $skipFeedback = action(function () {
                     <form wire:submit.prevent="saveProfile" class="space-y-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Student Number<span class="text-red-500">*</span></label>
-                            <input type="text" x-model="student_num" :disabled="isLocked"
-                                   class="w-full rounded-lg border-gray-200 shadow-sm text-sm px-3 py-2 disabled:bg-gray-100 disabled:text-gray-500"
-                                   placeholder="e.g 2023-00000" maxlength="10">
+<input type="text" x-model="student_num" :disabled="isLocked"
+       class="w-full rounded-lg border-gray-200 shadow-sm text-sm px-3 py-2 disabled:bg-gray-100 disabled:text-gray-500"
+       placeholder="e.g. 2023-00000" maxlength="10"
+       @keydown="
+           const allowed = ['Backspace','Delete','Tab','ArrowLeft','ArrowRight','Home','End'];
+           if (!allowed.includes($event.key) && !/^[0-9\-]$/.test($event.key)) {
+               $event.preventDefault();
+           }
+       "
+       @input="
+           let v = $el.value.replace(/[^0-9\-]/g, '');
+           if (v !== $el.value) { $el.value = v; student_num = v; }
+       "
+       @paste="
+           $event.preventDefault();
+           const pasted = ($event.clipboardData || window.clipboardData).getData('text');
+           const clean  = pasted.replace(/[^0-9\-]/g, '').slice(0, 10);
+           $el.value    = clean;
+           student_num  = clean;
+       ">
                             @error('student_num') <span class="mt-1 text-xs text-red-600 block">{{ $message }}</span> @enderror
                         </div>
                         <div>
@@ -1776,21 +1866,39 @@ $skipFeedback = action(function () {
                                 </div>
 
                                 <div class="flex-shrink-0 mt-1">
-                                    @php
-                                        $statusColors = match ($booking->booking_status) {
-                                            'pending'   => 'bg-yellow-100 text-yellow-800',
-                                            'accepted'  => 'bg-green-100 text-green-800',
-                                            'rejected'  => 'bg-red-100 text-red-800',
-                                            'completed' => 'bg-green-100 text-green-800',
-                                            'cancelled' => 'bg-red-100 text-red-800',
-                                            'closed'    => 'bg-purple-100 text-purple-800',
-                                            'no-show'   => 'bg-red-100 text-red-800',
-                                            default     => 'bg-gray-100 text-gray-800',
-                                        };
-                                    @endphp
-                                    <span class="text-xs font-bold px-2.5 py-1 rounded-full capitalize {{ $statusColors }}">
-                                        {{ str_replace('_', ' ', $booking->booking_status) }}
-                                    </span>
+@php
+    $statusKey = match ($booking->booking_status) {
+        'pending'   => 'pending',
+        'accepted'  => 'accepted',
+        'completed' => 'completed',
+        'cancelled' => 'cancelled',
+        'rejected'  => 'rejected',
+        'closed'    => 'closed',
+        'no_show', 'no-show' => 'no_show',
+        default     => 'completed',
+    };
+    $statusIcons = [
+        'pending'   => 'fa-hourglass-half',
+        'accepted'  => 'fa-circle-check',
+        'completed' => 'fa-circle-check',
+        'cancelled' => 'fa-ban',
+        'rejected'  => 'fa-circle-xmark',
+        'closed'    => 'fa-lock',
+        'no_show'   => 'fa-user-slash',
+    ];
+    $statusLabels = [
+        'pending'   => 'Pending',
+        'accepted'  => 'Accepted',
+        'completed' => 'Completed',
+        'cancelled' => 'Cancelled',
+        'rejected'  => 'Rejected',
+        'closed'    => 'Closed',
+        'no_show'   => 'No Show',
+    ];
+@endphp
+<span class="booking-status-pill status-{{ $statusKey }}">
+    {{ $statusLabels[$statusKey] ?? ucfirst($booking->booking_status) }}
+</span>
                                 </div>
                             </div>
 
