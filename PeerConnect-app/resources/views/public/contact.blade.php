@@ -106,8 +106,19 @@
                     <a href="https://www.facebook.com/lrc.upbaguio"
                        target="_blank" rel="noopener noreferrer"
                        class="flex gap-5 items-center py-4 px-4 hover:bg-cream-dark transition-colors">
-                        <span class="material-symbols-outlined text-up-maroon text-2xl w-8 h-8 flex justify-center items-center flex-shrink-0">public</span>
+                        <span class="text-up-maroon text-2xl w-8 h-8 flex justify-center items-center flex-shrink-0">
+                            <i class="fa-brands fa-facebook"></i>
+                        </span>
                         <div class="text-sm">facebook.com/UPBaguioLRC</div>
+                    </a>
+
+                    <a href="https://x.com/lrc_upbaguio"
+                       target="_blank" rel="noopener noreferrer"
+                       class="flex gap-5 items-center py-4 px-4 hover:bg-cream-dark transition-colors">
+                        <span class="text-up-maroon text-2xl w-8 h-8 flex justify-center items-center flex-shrink-0">
+                            <i class="fa-brands fa-twitter"></i>
+                        </span>
+                        <div class="text-sm">x.com/lrc_upbaguio</div>
                     </a>
                 </div>
             </div>
