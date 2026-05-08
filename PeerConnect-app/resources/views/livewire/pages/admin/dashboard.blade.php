@@ -1842,7 +1842,11 @@ return `<tr class="border-b last:border-0 hover:bg-slate-50 transition">
     // ── CALENDAR ───────────────────────────────────────────────────────────
     function hasAcceptedOnDate(dateStr) {
         return allSessions.some(s => s.date === dateStr && s.status === 'accepted');
-    }
+}  
+
+    function hasCompletedOnDate(dateStr) {
+        return allSessions.some(s => s.date === dateStr && s.status === 'completed');
+}
 
     function renderCalendar() {
         const grid     = document.getElementById('calendarGrid');
@@ -1870,16 +1874,18 @@ return `<tr class="border-b last:border-0 hover:bg-slate-50 transition">
             const isPast     = dateObj < localToday;
             const isToday    = dateStr === todayStr;
             const isSelected = dateStr === selectedDateStr;
-            const hasSession = hasAcceptedOnDate(dateStr);
+const hasAccepted  = hasAcceptedOnDate(dateStr);
+const hasCompleted = hasCompletedOnDate(dateStr);
 
-            const dayEl = document.createElement('div');
-            dayEl.className = `cal-day${isToday ? ' cal-today' : ''}${isSelected ? ' cal-selected' : ''}`;
+const dayEl = document.createElement('div');
+dayEl.className = `cal-day${isToday ? ' cal-today' : ''}${isSelected ? ' cal-selected' : ''}`;
 
-            if (isPast && !isToday) dayEl.style.color = '#9ca3af';
+if (isPast && !isToday) dayEl.style.color = '#9ca3af';
 
-            dayEl.innerHTML = `
-                ${hasSession ? '<span style="position:absolute;top:2px;right:2px;width:6px;height:6px;background:#22c55e;border-radius:50%;border:1px solid white;"></span>' : ''}
-                <span style="position:relative;z-index:1;">${i}</span>`;
+dayEl.innerHTML = `
+    ${hasAccepted  ? '<span style="position:absolute;top:2px;right:2px;width:6px;height:6px;background:#22c55e;border-radius:50%;border:1px solid white;"></span>' : ''}
+    ${hasCompleted && !hasAccepted ? '<span style="position:absolute;top:2px;right:2px;width:6px;height:6px;background:#9ca3af;border-radius:50%;border:1px solid white;"></span>' : ''}
+    <span style="position:relative;z-index:1;">${i}</span>`;
 
             dayEl.onclick = () => {
                 selectedDateStr = dateStr;
