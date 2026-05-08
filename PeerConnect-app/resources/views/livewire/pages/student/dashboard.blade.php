@@ -324,7 +324,7 @@ $saveProfile = action(function () {
                         <h2 class="text-lg font-bold text-slate-800" id="tableTitle">
                             <i class="fa-solid fa-calendar-check"></i> Today's Schedule
                         </h2>
-                        <p class="text-s text-gray-500" id="tableSubtitle"></p>
+                        <p class="text-xs text-gray-400" id="tableSubtitle"></p>
                     </div>
 
                     <div class="flex gap-2">
@@ -333,7 +333,7 @@ $saveProfile = action(function () {
                                       -translate-y-1/2 text-gray-300 text-xs"></i>
                             <input type="text"
                                    id="liveSearchInput"
-                                   placeholder="Search mentors..."
+                                   placeholder="Search..."
                                    class="w-full pl-8 pr-3 py-1.5 text-xs font-medium
                                           text-slate-700 placeholder-gray-400 border
                                           border-gray-200 rounded-lg bg-white outline-none
@@ -344,9 +344,11 @@ $saveProfile = action(function () {
                         <select id="statusFilter" class="table-filter-select">
                             <option value="">All Status</option>
                             <option value="pending">Pending</option>
+                            <option value="accepted">Accepted</option>
                             <option value="completed">Completed</option>
                             <option value="cancelled">Cancelled</option>
                             <option value="rejected">Rejected</option>
+                            <option value="no_show">No Show</option>
                         </select>
                     </div>
                 </div>
@@ -368,13 +370,13 @@ $saveProfile = action(function () {
                             </button>
                         </th>
 
-                        <th class="pb-3 text-[10px] tracking-wider" style="width:30%">
-                            <button id="sortHead-start"
-                                    onclick="toggleSort('start')"
-                                    class="flex items-center gap-1 font-semibold uppercase
-                                               hover:text-red-800 transition-colors"
-                                    style="color:#7b1d1d;">
-                                Time
+<th class="pb-3 text-[10px] tracking-wider pl-4" style="width:30%">
+    <button id="sortHead-start"
+            onclick="toggleSort('start')"
+            class="flex items-center gap-1 font-semibold uppercase
+                       hover:text-red-800 transition-colors"
+            style="color:#7b1d1d;">
+        Time
                                 <span class="sort-icon">
                                         <i class="fa-solid fa-arrow-up" style="font-size:8px;"></i>
                                     </span>
@@ -638,7 +640,7 @@ $saveProfile = action(function () {
     let viewDate = new Date(today.getFullYear(), today.getMonth(), 1);
 
     let tablePage = 0;
-    const TABLE_PER_PAGE = 5;
+    const TABLE_PER_PAGE = 4;
     let sortColumn = 'start';
     let sortDirection = 'asc';
     let upcomingPage = 0;
@@ -778,32 +780,27 @@ function renderStatCards() {
         const visible = filtered.slice(start, start + TABLE_PER_PAGE);
 
         if (!total) {
-            tbody.innerHTML = `<tr><td colspan="4" class="py-3 text-center text-gray-400 italic text-xs">No sessions for this date.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="4" class="py-4 text-center">
+    <div class="flex flex-col items-center gap-1.5">
+        <i class="fa-regular fa-calendar-xmark text-gray-300 text-lg"></i>
+        <p class="text-xs text-gray-400 italic">No sessions found for this date.</p>
+    </div></td></tr>`;
         } else {
-            tbody.innerHTML = visible.map(row => `
+tbody.innerHTML = visible.map(row => `
     <tr class="border-b last:border-0 hover:bg-slate-50 transition">
-        <td class="py-3 max-w-0" style="width:22%;">
-            <div class="hover-tooltip" data-full="${row.mentor}" style="max-width:260px;">
-                <div id="name-${row.id}" class="truncate text-xs font-bold text-slate-700">${row.mentor}</div>
-            </div>
+        <td class="py-3 max-w-0" style="width:35%;" title="${row.mentor}">
+            <div class="truncate text-xs font-bold text-slate-700">${row.mentor}</div>
         </td>
-        <td class="py-3 text-xs text-slate-500" style="width:30%;white-space:nowrap;">${formatTimeTo12Hour(row.start)} – ${formatTimeTo12Hour(row.end)}</td>
-        <td class="py-3 max-w-0" style="width:28%;">
-            <div class="truncate text-xs text-slate-600">${row.subject}</div>
+        <td class="py-3 pl-4 max-w-0 text-xs text-slate-500" style="width:30%;" title="${formatTimeTo12Hour(row.start)} – ${formatTimeTo12Hour(row.end)}">
+            <div class="truncate">${formatTimeTo12Hour(row.start)} – ${formatTimeTo12Hour(row.end)}</div>
         </td>
-        <td class="py-3 text-center" style="width:20%">
-            ${row.status === 'accepted' ? `
-                <div class="flex items-center justify-center gap-1.5">
-                    <span class="w-2 h-2 rounded-full bg-green-400 inline-block flex-shrink-0"></span>
-                    <span class="text-green-600 font-bold text-[10px] bg-gray-50 px-2 py-1 rounded border border-current opacity-80 capitalize">
-                        ${getStatusLabel(row.status)}
-                    </span>
-                </div>
-            ` : `
-                <span class="${getStatusColor(row.status)} font-bold text-[10px] bg-gray-50 px-2 py-1 rounded border border-current opacity-80 capitalize">
-                    ${getStatusLabel(row.status)}
-                </span>
-            `}
+        <td class="py-3 max-w-0 text-xs text-slate-500" style="width:20%;" title="${row.subject}">
+            <div class="truncate">${row.subject}</div>
+        </td>
+        <td class="py-3 text-center" style="width:20%;">
+            <span class="${getStatusColor(row.status)} font-bold text-[10px] bg-gray-50 px-2 py-1 rounded border border-current opacity-80 capitalize">
+                ${getStatusLabel(row.status)}
+            </span>
         </td>
     </tr>
 `).join('');
@@ -1061,7 +1058,7 @@ function renderStatCards() {
 
     // CALENDAR
 function getSessionDotsForDate(dateStr) {
-    const hasAccepted  = allSessions.some(s => s.date === dateStr && s.status === 'accepted' && s.date >= todayStr);
+    const hasAccepted  = allSessions.some(s => s.date === dateStr && s.status === 'accepted');
     const hasCompleted = allSessions.some(s => s.date === dateStr && s.status === 'completed');
     return { hasAccepted, hasCompleted };
 }
