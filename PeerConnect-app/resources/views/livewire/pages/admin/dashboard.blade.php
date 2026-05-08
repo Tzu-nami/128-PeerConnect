@@ -712,7 +712,7 @@ $rejectBooking = action(function (string $id) {
                     <div class="flex gap-2">
                         <div class="relative w-48">
                             <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-300 text-xs"></i>
-                            <input type="text" id="liveSearchInput" placeholder="Search names..." class="w-full pl-9 pr-3 py-2 text-xs border border-gray-200 rounded-lg outline-none focus:ring-1 focus:ring-red-800">
+                            <input type="text" id="liveSearchInput" placeholder="Search..." class="w-full pl-9 pr-3 py-2 text-xs border border-gray-200 rounded-lg outline-none focus:ring-1 focus:ring-red-800">
                         </div>
                         <select id="statusFilter" class="table-filter-select">
                             <option value="">All Status</option>
@@ -739,7 +739,7 @@ $rejectBooking = action(function (string $id) {
                                 <th class="pb-3 text-[10px] tracking-wider" style="width:16%">
                                     <span class="flex items-center gap-1 font-semibold uppercase" style="color:#94a3b8;">Subject</span>
                                 </th>
-                                <th class="pb-3 text-[10px] tracking-wider" style="width:20%">
+                                <th class="pb-3 text-[10px] tracking-wider pl-4" style="width:20%">
                                     <span class="flex items-center gap-1 font-semibold uppercase" style="color:#94a3b8;">Time</span>
                                 </th>
                                 <th class="pb-3 text-[10px] tracking-wider" style="width:20%">
@@ -1352,7 +1352,7 @@ $rejectBooking = action(function (string $id) {
                 </div>
 
                 {{-- ── LIST HEADER ── --}}
-                <div class="flex justify-between items-center mb-4">
+                <div class="flex justify-between items-center mb-2">
                     <h3 class="font-bold text-slate-800 text-sm tracking-tight">Pending Requests</h3>
                     <span id="pendingBadge" class="bg-red-100 text-red-700 text-[10px] font-bold px-2 py-0.5 rounded-full">
                         {{ count($pendingApprovalsList) }} {{ count($pendingApprovalsList) !== 1 ? 'Requests' : 'Request' }}
@@ -1360,17 +1360,17 @@ $rejectBooking = action(function (string $id) {
                 </div>
 
                 {{-- ── AUTO-REJECT BANNER AREA ── --}}
-                <div id="adminPendingBannerArea" class="flex flex-col gap-2 mb-2"></div>
+                <div id="adminPendingBannerArea" class="flex flex-col gap-2"></div>
 
                 {{-- ── REQUEST LIST ── --}}
-                <div id="adminPendingList" class="flex flex-col gap-1">
+                <div id="adminPendingList" class="flex flex-col gap-0">
                     @forelse($pendingApprovalsList as $item)
-                        <div class="session-row flex items-center gap-3 rounded-xl px-2 py-2.5 transition-all duration-200 hover:bg-slate-50 cursor-pointer group"
+                        <div class="session-row flex items-center gap-3 rounded-xl px-2 py-1.5 transition-all duration-200 hover:bg-slate-50 cursor-pointer group"
                             wire:key="pending-{{ $item['id'] }}"
                             @click="openDetail({{ json_encode($item) }})">
 
                             {{-- Avatar --}}
-                            <div class="w-8 h-8 rounded-full bg-amber-100 text-yellow-600 flex items-center justify-center text-[10px] font-bold flex-shrink-0">
+                            <div class="w-7 h-7 rounded-full bg-amber-100 text-yellow-600 flex items-center justify-center text-[10px] font-bold flex-shrink-0">
                                 {{ $item['initials'] }}
                             </div>
 
@@ -1808,7 +1808,7 @@ $rejectBooking = action(function (string $id) {
         const paginated = filtered.slice(start, start + perPage);
 
         if (!paginated.length) {
-            tbody.innerHTML = `<tr><td colspan="5" class="py-12 text-center">
+            tbody.innerHTML = `<tr><td colspan="5" class="py-4 text-center">
                 <div class="flex flex-col items-center gap-2">
                     <i class="fa-regular fa-calendar-xmark text-gray-300 text-2xl"></i>
                     <p class="text-xs text-gray-400 italic">No sessions found for this date.</p>
@@ -1819,20 +1819,15 @@ $rejectBooking = action(function (string $id) {
                 const colorCls  = getStatusColor(rawStatus);
                 const label     = getStatusLabel(rawStatus);
 
-                const statusCell = rawStatus === 'accepted'
-                    ? `<div class="flex items-center justify-center gap-1.5">
-                           <span class="w-2 h-2 rounded-full bg-green-400 inline-block flex-shrink-0"></span>
-                           <span class="${colorCls} font-bold text-[10px] bg-gray-50 px-2 py-1 rounded border border-current opacity-80 capitalize">${label}</span>
-                       </div>`
-                    : `<span class="${colorCls} font-bold text-[10px] bg-gray-50 px-2 py-1 rounded border border-current opacity-80 capitalize">${label}</span>`;
+const statusCell = `<span class="${colorCls} font-bold text-[10px] bg-gray-50 px-2 py-1 rounded border border-current opacity-80 capitalize">${label}</span>`;
 
-                return `<tr class="border-b last:border-0 hover:bg-slate-50 transition">
-                    <td class="py-3 max-w-0" style="width:22%;"><div class="truncate text-xs font-bold text-slate-700">${row.mentee}</div></td>
-                    <td class="py-3 max-w-0" style="width:22%;"><div class="truncate text-xs text-slate-600">${row.mentor}</div></td>
-                    <td class="py-3 text-xs text-slate-500" style="width:16%;">${row.subject}</td>
-                    <td class="py-3 text-xs text-slate-500" style="width:20%;">${row.time}</td>
-                    <td class="py-3 text-center" style="width:20%;">${statusCell}</td>
-                </tr>`;
+
+return `<tr class="border-b last:border-0 hover:bg-slate-50 transition">
+    <td class="py-3 max-w-0" style="width:22%;" title="${row.mentee}"><div class="truncate text-xs font-bold text-slate-700">${row.mentee}</div></td>
+    <td class="py-3 max-w-0" style="width:22%;" title="${row.mentor}"><div class="truncate text-xs text-slate-600">${row.mentor}</div></td>
+    <td class="py-3 max-w-0 text-xs text-slate-500" style="width:16%;" title="${row.subject}"><div class="truncate">${row.subject}</div></td>
+    <td class="py-3 pl-4 max-w-0 text-xs text-slate-500" style="width:20%;" title="${row.time}"><div class="truncate">${row.time}</div></td>    <td class="py-3 text-center" style="width:20%;">${statusCell}</td>
+</tr>`;
             }).join('');
         }
 
