@@ -981,7 +981,7 @@ mount(function () {
     </div>
 
     {{-- ── EDIT MENTOR MODAL ── --}}
-    <div x-cloak class="modal-overlay" x-show="showEditModal"
+    <div x-cloak class="modal-overlay" x-show="showEditModal" wire:ignore.self
         x-data="{ fileName: '', isVerifying: false,
         // Check if there are changes to any input
         get hasChanges() {
