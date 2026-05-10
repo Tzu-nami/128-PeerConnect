@@ -23,7 +23,12 @@ state([
     'showEditModal' => false,
     'showEditConfirm' => false,
     'editMentorId' => null,
-    'editMentorName' => '',
+    'editMentorFirstName' => '',
+    'editMentorLastName' => '',
+    'editMentorMiddleInitial' => '',
+    'editCollegeId' => '',
+    'editDegreeProgramId' => '',
+    'editYearLevelId' => '',
     'editMentorEmail' => '',
     'editAvatarPreview' => '',
     'editAvatar' => null,
@@ -124,6 +129,9 @@ $allMentors = computed(function () {
             'yearLevel' => $mp->user->studentProfile->yearLevel->name,
             'degreeProgram' => $mp->user->studentProfile->degreeProgram->name,
             'college' => $mp->user->studentProfile->college->name,
+            'yearLevel_id' => $mp->user->studentProfile->yearLevel_id,
+            'degreeProgram_id' => $mp->user->studentProfile->degreeProgram_id,
+            'college_id' => $mp->user->studentProfile->college_id,
         ];
     })->sortBy('lastName')->values()->toArray();
 });
@@ -155,10 +163,18 @@ $editMentor = action(function ($id) {
     $mentor = MentorProfiles::with(['user', 'subjects', 'availabilities'])->find($id);
 
     $this->editMentorId = $mentor->id;
-    $this->editMentorName = $mentor->user->lastName . ', ' . $mentor->user->firstName;
+    $this->editMentorFirstName = $mentor->user->firstName;
+    $this->editMentorLastName = $mentor->user->lastName;
+    $this->editMentorMiddleInitial = $mentor->user->middleInitial;
     $this->editMentorEmail = $mentor->user->email;
     $this->editAvatarPreview = $mentor->user->avatar ?? app(Avatar::class)->placeholder($mentor->user->firstName . ' ' . $mentor->user->lastName);
     $this->editAvatar = null;
+
+    if ($mentor->user->studentProfile) {
+        $this->editCollegeId = $mentor->user->studentProfile->college_id;
+        $this->editDegreeProgramId = $mentor->user->studentProfile->degreeProgram_id;
+        $this->editYearLevelId = $mentor->user->studentProfile->yearLevel_id;
+    }
 
     $this->selectedSubjects = $mentor->subjects->pluck('id')->map(fn($id) => (string) $id)->toArray();
 
@@ -192,6 +208,12 @@ $confirmEdit = action(function ($id, $subjects, $availabilities) {
     $this->availabilities = $availabilities;
 
     $this->validate([
+        'editMentorFirstName' => ['required', 'string', 'max:255'],
+        'editMentorLastName' => ['required', 'string', 'max:255'],
+        'editMentorMiddleInitial' => ['nullable', 'string', 'max:2'],
+        'editCollegeId' => ['required', 'exists:colleges,id'],
+        'editDegreeProgramId' => ['required', 'exists:degree_programs,id'],
+        'editYearLevelId' => ['required', 'exists:year_levels,id'],
         'editAvatar' => ['nullable', 'image', 'max:2048'],
         'selectedSubjects' => ['required', 'array', 'min:1'],
         'selectedSubjects.*' => ['exists:subjects,id'],
@@ -200,6 +222,11 @@ $confirmEdit = action(function ($id, $subjects, $availabilities) {
         'availabilities.*.start_time' => ['required', 'date_format:H:i'],
         'availabilities.*.end_time' => ['required', 'date_format:H:i'],
     ], [], [
+        'editMentorFirstName' => 'first name',
+        'editMentorLastName' => 'last name',
+        'editCollegeId' => 'college',
+        'editDegreeProgramId' => 'degree program',
+        'editYearLevelId' => 'year level',
         'editAvatar' => 'profile picture',
         'selectedSubjects' => 'subjects',
         'availabilities' => 'availabilities',
@@ -233,6 +260,20 @@ $confirmEdit = action(function ($id, $subjects, $availabilities) {
 
 $updateMentor = action(function () {
     $mentorNew = MentorProfiles::with('user')->find($this->editMentorId);
+
+    $mentorNew->user->update([
+        'firstName' => trim($this->editMentorFirstName),
+        'lastName' => trim($this->editMentorLastName),
+        'middleInitial' => trim($this->editMentorMiddleInitial) ?: null,
+    ]);
+
+    if ($mentorNew->user->studentProfile) {
+        $mentorNew->user->studentProfile->update([
+            'college_id' => $this->editCollegeId,
+            'degreeProgram_id' => $this->editDegreeProgramId,
+            'yearLevel_id' => $this->editYearLevelId,
+        ]);
+    }
 
     if ($this->editAvatar) {
         $baseUrl = rtrim(config('filesystems.disks.s3.public_url'), '/');
@@ -270,6 +311,9 @@ $closeEditModal = action(function () {
     $this->showEditModal = false;
     $this->showEditConfirm = false;
     $this->editAvatar = null;
+    $this->editCollegeId = '';
+    $this->editDegreeProgramId = '';
+    $this->editYearLevelId = '';
     $this->selectedSubjects = [];
     $this->availabilities = [];
 });
@@ -525,7 +569,7 @@ mount(function () {
             <div class="flex gap-2 items-center flex-wrap" x-data="{ opening: null }">
                 <div class="relative">
                     <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-300 text-xs"></i>
-                    <input type="text" x-model="searchQuery" @input="currentPage = 1" placeholder="Search mentors, email, subjects..."
+                    <input type="text" x-model="searchQuery" @input="currentPage = 1" placeholder="Search..."
                         class="pl-8 pr-3 py-1.5 text-xs font-medium text-slate-700 placeholder-gray-400 border border-gray-200 rounded-lg bg-white outline-none focus:ring-1 focus:border-up-maroon focus:ring-up-maroon w-60 h-[34px] transition-shadow">
                 </div>
 
@@ -901,8 +945,66 @@ mount(function () {
                                             <option value="friday">Friday</option>
                                             <option value="saturday">Saturday</option>
                                         </select>
-                                        <input type="time" x-model="row.start_time" class="form-input text-xs h-10 w-full" />
-                                        <input type="time" x-model="row.end_time" class="form-input text-xs h-10 w-full" />
+                                        <div x-data="mentorTimePicker()" x-modelable="timeValue" x-model="row.start_time" @click.outside="close()" class="w-full relative">
+                                            <div class="custom-time-picker">
+                                                <div class="custom-time-display form-input text-xs h-10 w-full flex items-center gap-2 cursor-pointer bg-white" :class="{ 'ring-1 ring-up-maroon border-up-maroon': open }" @click="toggle()">
+                                                    <div class="time-icon text-gray-400"><i class="fa-regular fa-clock"></i></div>
+                                                    <span :class="selectedTime ? 'font-semibold text-gray-800' : 'text-gray-400'" x-text="selectedTime || 'Start'"></span>
+                                                </div>
+                                                <div class="time-picker-dropdown" :class="{ show: open }" style="z-index: 50;">
+                                                    <div class="tp-ampm">
+                                                        <button type="button" class="tp-ampm-btn" :class="{ active: ampm === 'AM' }" @click="setAmpm('AM')">AM</button>
+                                                        <button type="button" class="tp-ampm-btn" :class="{ active: ampm === 'PM' }" @click="setAmpm('PM')">PM</button>
+                                                    </div>
+                                                    <div class="tp-scroll-row">
+                                                        <div class="tp-col">
+                                                            <div class="tp-col-label">Hour</div>
+                                                            <button type="button" class="tp-btn" @click="changeHour(1)"><i class="fa-solid fa-chevron-up"></i></button>
+                                                            <input class="tp-manual-input tp-hour-input" type="number" min="1" max="12" @input="$el.value = $el.value.slice(0,2)" :value="String(hour).padStart(2,'0')" @change="onHourInput($event)" @keydown.up.prevent="changeHour(1)" @keydown.down.prevent="changeHour(-1)">
+                                                            <button type="button" class="tp-btn" @click="changeHour(-1)"><i class="fa-solid fa-chevron-down"></i></button>
+                                                        </div>
+                                                        <div class="tp-sep">:</div>
+                                                        <div class="tp-col">
+                                                            <div class="tp-col-label">Min</div>
+                                                            <button type="button" class="tp-btn" @click="changeMin(1)"><i class="fa-solid fa-chevron-up"></i></button>
+                                                            <input class="tp-manual-input tp-min-input" type="number" min="0" max="59" @input="$el.value = $el.value.slice(0,2)" :value="String(minute).padStart(2,'0')" @change="onMinInput($event)" @keydown.up.prevent="changeMin(1)" @keydown.down.prevent="changeMin(-1)">
+                                                            <button type="button" class="tp-btn" @click="changeMin(-1)"><i class="fa-solid fa-chevron-down"></i></button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- End Time Picker -->
+                                        <div x-data="mentorTimePicker()" x-modelable="timeValue" x-model="row.end_time" @click.outside="close()" class="w-full relative">
+                                            <div class="custom-time-picker">
+                                                <div class="custom-time-display form-input text-xs h-10 w-full flex items-center gap-2 cursor-pointer bg-white" :class="{ 'ring-1 ring-up-maroon border-up-maroon': open }" @click="toggle()">
+                                                    <div class="time-icon text-gray-400"><i class="fa-regular fa-clock"></i></div>
+                                                    <span :class="selectedTime ? 'font-semibold text-gray-800' : 'text-gray-400'" x-text="selectedTime || 'End'"></span>
+                                                </div>
+                                                <div class="time-picker-dropdown" :class="{ show: open }" style="z-index: 50;">
+                                                    <div class="tp-ampm">
+                                                        <button type="button" class="tp-ampm-btn" :class="{ active: ampm === 'AM' }" @click="setAmpm('AM')">AM</button>
+                                                        <button type="button" class="tp-ampm-btn" :class="{ active: ampm === 'PM' }" @click="setAmpm('PM')">PM</button>
+                                                    </div>
+                                                    <div class="tp-scroll-row">
+                                                        <div class="tp-col">
+                                                            <div class="tp-col-label">Hour</div>
+                                                            <button type="button" class="tp-btn" @click="changeHour(1)"><i class="fa-solid fa-chevron-up"></i></button>
+                                                            <input class="tp-manual-input tp-hour-input" type="number" min="1" max="12" @input="$el.value = $el.value.slice(0,2)" :value="String(hour).padStart(2,'0')" @change="onHourInput($event)" @keydown.up.prevent="changeHour(1)" @keydown.down.prevent="changeHour(-1)">
+                                                            <button type="button" class="tp-btn" @click="changeHour(-1)"><i class="fa-solid fa-chevron-down"></i></button>
+                                                        </div>
+                                                        <div class="tp-sep">:</div>
+                                                        <div class="tp-col">
+                                                            <div class="tp-col-label">Min</div>
+                                                            <button type="button" class="tp-btn" @click="changeMin(1)"><i class="fa-solid fa-chevron-up"></i></button>
+                                                            <input class="tp-manual-input tp-min-input" type="number" min="0" max="59" @input="$el.value = $el.value.slice(0,2)" :value="String(minute).padStart(2,'0')" @change="onMinInput($event)" @keydown.up.prevent="changeMin(1)" @keydown.down.prevent="changeMin(-1)">
+                                                            <button type="button" class="tp-btn" @click="changeMin(-1)"><i class="fa-solid fa-chevron-down"></i></button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
                                         <div class="flex items-center justify-center">
                                             <template x-if="avails.length > 1">
                                                 <button type="button" @click="avails.splice(index, 1)" class="w-8 h-8 flex items-center justify-center rounded-lg bg-red-50 text-red-400 hover:bg-red-100 hover:text-red-600 transition">
@@ -921,11 +1023,11 @@ mount(function () {
                                 <i class="fa-solid fa-plus text-[10px]"></i> Add more days or time slots
                             </button>
                         </div>
-                            @if($errors->hasAny(['availabilities', 'availabilities.*']))
-                            <div class="mt-2 p-3 rounded-lg bg-red-50 border border-red-200">
-                                <p class="text-xs text-red-700 font-medium leading-relaxed">Please check if all slots are filled out or if there are overlapping times on the same day.</p>
-                            </div>
-                            @endif
+                        @if($errors->hasAny(['availabilities', 'availabilities.*']))
+                        <div class="mt-2 p-3 rounded-lg bg-red-50 border border-red-200">
+                            <p class="text-xs text-red-700 font-medium leading-relaxed">Please check if all slots are filled out properly or if there are overlapping times on the same day.</p>
+                        </div>
+                        @endif
                     </div>
                 </div>
             </div>
@@ -983,21 +1085,29 @@ mount(function () {
     {{-- ── EDIT MENTOR MODAL ── --}}
     <div x-cloak class="modal-overlay" x-show="showEditModal" wire:ignore.self
         x-data="{ fileName: '', isVerifying: false,
-        // Check if there are changes to any input
         get hasChanges() {
             if (this.fileName !== '') return true;
             
+            // Check Name changes
+            if ($wire.editMentorFirstName !== editingMentor.firstName) return true;
+            if ($wire.editMentorLastName !== editingMentor.lastName) return true;
+            let origMI = (editingMentor.middleInitial || '').replace('.', '').trim();
+            let newMI = ($wire.editMentorMiddleInitial || '').trim();
+            if (newMI !== origMI) return true;
+            
+            // Check Subject changes
             const origSubs = [...originalForm.subjects].sort().join(',');
             const newSubs = [...editForm.subjects].sort().join(',');
             if (origSubs !== newSubs) return true;
             
+            // Check Availability changes
             const clean = arr => arr.map(a => `${a.day_of_week}-${a.start_time}-${a.end_time}`).sort().join('|');
             if (clean(originalForm.availabilities) !== clean(editForm.availabilities)) return true;
             
             return false;
             }
         }" 
-        x-init="$watch('showEditModal', val => { if (!val) { fileName = ''; document.getElementById('edit-avatar-upload').value = ''; } })">
+        x-init="$watch('$wire.showEditModal', val => { if (!val) { fileName = ''; document.getElementById('edit-avatar-upload').value = ''; } })">
         <div class="modal-box-crud max-w-2xl overflow-hidden flex flex-col" style="max-height: 90vh;">
             <div class="px-8 py-6 bg-white border-b flex justify-between items-center flex-shrink-0">
                 <div>
@@ -1012,27 +1122,47 @@ mount(function () {
             <div id="editModalScroll" class="px-8 py-6 space-y-5 overflow-y-auto bg-white">
                 <template x-if="editingMentor">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        {{-- Locked student info --}}
-                        <div>
+                        
+                        {{-- Step 1: Basic Information --}}
+                        <div class="flex flex-col">
                             <div class="flex items-center gap-2 mb-3">
-                                <span class="step-badge"><i class="fa-solid fa-lock text-[8px]"></i></span>
+                                <span class="step-badge">1</span>
                                 <h3 class="step-title">Student Information</h3>
                             </div>
-                            <div class="bg-white border border-gray-200 rounded-lg px-4 py-4 flex items-center gap-4">
-                                <div class="min-w-0">
-                                    <p class="text-sm font-bold text-slate-800 truncate" x-text="editingMentor.lastName + ', ' + editingMentor.firstName"></p>
-                                    <p class="text-xs text-gray-500 truncate" x-text="editingMentor.email"></p>
+                            <div class="space-y-3">
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="block text-[10px] font-bold text-slate-500 uppercase">First Name</label>
+                                        <input type="text" wire:model="editMentorFirstName" class="form-input text-xs w-full mt-1" maxlength="255" />
+                                        @error('editMentorFirstName') <span class="text-[10px] text-red-500">{{ $message }}</span> @enderror
+                                    </div>
+                                    <div>
+                                        <label class="block text-[10px] font-bold text-slate-500 uppercase">Last Name</label>
+                                        <input type="text" wire:model="editMentorLastName" class="form-input text-xs w-full mt-1" maxlength="255" />
+                                        @error('editMentorLastName') <span class="text-[10px] text-red-500">{{ $message }}</span> @enderror
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-cols-[50px_1fr] gap-3">
+                                    <div>
+                                        <label class="block text-[10px] font-bold text-slate-500 uppercase truncate" title="Middle Initial">M.I</label>
+                                        <input type="text" wire:model="editMentorMiddleInitial" class="form-input text-xs w-full mt-1" maxlength="2" />
+                                    </div>
+                                    <div>
+                                        <label class="block text-[10px] font-bold text-slate-500 uppercase">UP Mail (Locked)</label>
+                                        <input type="text" disabled :value="editingMentor.email" class="form-input text-xs w-full mt-1 bg-gray-100 text-gray-500 cursor-not-allowed" />
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
-                        {{-- Step 1: Update picture --}}
-                        <div>
+                        {{-- Step 2: Update picture --}}
+                        <div class="flex flex-col h-full">
                             <div class="flex items-center gap-2 mb-3">
-                                <span class="step-badge">1</span>
+                                <span class="step-badge">2</span>
                                 <h3 class="step-title">Update Picture</h3>
                             </div>
-                            <div class="flex items-start gap-4">
+                            <div class="flex items-center gap-4 mt-auto">
                                 <div class="flex-shrink-0">
                                     @if($editAvatar)
                                         <img src="{{ $editAvatar->temporaryUrl() }}" class="w-32 h-32 rounded-xl object-cover border border-gray-200 shadow-sm">
@@ -1057,10 +1187,10 @@ mount(function () {
                     </div>
                 </template>
 
-                {{-- Step 2: Subjects --}}
+                {{-- Step 3: Subjects --}}
                 <div>
                     <div class="flex items-center gap-2 mb-3">
-                        <span class="step-badge">2</span>
+                        <span class="step-badge">3</span>
                         <h3 class="step-title">Teachable Subjects</h3>
                     </div>
                     <div class="border border-gray-200 rounded-xl overflow-hidden" wire:ignore>
@@ -1080,10 +1210,10 @@ mount(function () {
                     @error('selectedSubjects') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
                 </div>
 
-                {{-- Step 3: Availabilities --}}
+                {{-- Step 4: Availabilities --}}
                 <div>
                     <div class="flex items-center gap-2 mb-3">
-                        <span class="step-badge">3</span>
+                        <span class="step-badge">4</span>
                         <h3 class="step-title">Availability Schedule</h3>
                     </div>
                     <div wire:ignore>
@@ -1105,8 +1235,67 @@ mount(function () {
                                         <option value="friday">Friday</option>
                                         <option value="saturday">Saturday</option>
                                     </select>
-                                    <input type="time" x-model="row.start_time" class="form-input text-xs h-10 w-full" />
-                                    <input type="time" x-model="row.end_time" class="form-input text-xs h-10 w-full" />
+                                    <div x-data="mentorTimePicker()" x-modelable="timeValue" x-model="row.start_time" @click.outside="close()" class="w-full relative">
+                                        <div class="custom-time-picker">
+                                            <div class="custom-time-display form-input text-xs h-10 w-full flex items-center gap-2 cursor-pointer bg-white" :class="{ 'ring-1 ring-up-maroon border-up-maroon': open }" @click="toggle()">
+                                                <div class="time-icon text-gray-400"><i class="fa-regular fa-clock"></i></div>
+                                                <span :class="selectedTime ? 'font-semibold text-gray-800' : 'text-gray-400'" x-text="selectedTime || 'Start'"></span>
+                                            </div>
+                                            <div class="time-picker-dropdown" :class="{ show: open }" style="z-index: 50;">
+                                                <div class="tp-ampm">
+                                                    <button type="button" class="tp-ampm-btn" :class="{ active: ampm === 'AM' }" @click="setAmpm('AM')">AM</button>
+                                                    <button type="button" class="tp-ampm-btn" :class="{ active: ampm === 'PM' }" @click="setAmpm('PM')">PM</button>
+                                                </div>
+                                                <div class="tp-scroll-row">
+                                                    <div class="tp-col">
+                                                        <div class="tp-col-label">Hour</div>
+                                                        <button type="button" class="tp-btn" @click="changeHour(1)"><i class="fa-solid fa-chevron-up"></i></button>
+                                                        <input class="tp-manual-input tp-hour-input" type="number" min="1" max="12" @input="$el.value = $el.value.slice(0,2)" :value="String(hour).padStart(2,'0')" @change="onHourInput($event)" @keydown.up.prevent="changeHour(1)" @keydown.down.prevent="changeHour(-1)">
+                                                        <button type="button" class="tp-btn" @click="changeHour(-1)"><i class="fa-solid fa-chevron-down"></i></button>
+                                                    </div>
+                                                    <div class="tp-sep">:</div>
+                                                    <div class="tp-col">
+                                                        <div class="tp-col-label">Min</div>
+                                                        <button type="button" class="tp-btn" @click="changeMin(1)"><i class="fa-solid fa-chevron-up"></i></button>
+                                                        <input class="tp-manual-input tp-min-input" type="number" min="0" max="59" @input="$el.value = $el.value.slice(0,2)" :value="String(minute).padStart(2,'0')" @change="onMinInput($event)" @keydown.up.prevent="changeMin(1)" @keydown.down.prevent="changeMin(-1)">
+                                                        <button type="button" class="tp-btn" @click="changeMin(-1)"><i class="fa-solid fa-chevron-down"></i></button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- End Time Picker -->
+                                    <div x-data="mentorTimePicker()" x-modelable="timeValue" x-model="row.end_time" @click.outside="close()" class="w-full relative">
+                                        <div class="custom-time-picker">
+                                            <div class="custom-time-display form-input text-xs h-10 w-full flex items-center gap-2 cursor-pointer bg-white" :class="{ 'ring-1 ring-up-maroon border-up-maroon': open }" @click="toggle()">
+                                                <div class="time-icon text-gray-400"><i class="fa-regular fa-clock"></i></div>
+                                                <span :class="selectedTime ? 'font-semibold text-gray-800' : 'text-gray-400'" x-text="selectedTime || 'End'"></span>
+                                            </div>
+                                            <div class="time-picker-dropdown" :class="{ show: open }" style="z-index: 50;">
+                                                <div class="tp-ampm">
+                                                    <button type="button" class="tp-ampm-btn" :class="{ active: ampm === 'AM' }" @click="setAmpm('AM')">AM</button>
+                                                    <button type="button" class="tp-ampm-btn" :class="{ active: ampm === 'PM' }" @click="setAmpm('PM')">PM</button>
+                                                </div>
+                                                <div class="tp-scroll-row">
+                                                    <div class="tp-col">
+                                                        <div class="tp-col-label">Hour</div>
+                                                        <button type="button" class="tp-btn" @click="changeHour(1)"><i class="fa-solid fa-chevron-up"></i></button>
+                                                        <input class="tp-manual-input tp-hour-input" type="number" min="1" max="12" @input="$el.value = $el.value.slice(0,2)" :value="String(hour).padStart(2,'0')" @change="onHourInput($event)" @keydown.up.prevent="changeHour(1)" @keydown.down.prevent="changeHour(-1)">
+                                                        <button type="button" class="tp-btn" @click="changeHour(-1)"><i class="fa-solid fa-chevron-down"></i></button>
+                                                    </div>
+                                                    <div class="tp-sep">:</div>
+                                                    <div class="tp-col">
+                                                        <div class="tp-col-label">Min</div>
+                                                        <button type="button" class="tp-btn" @click="changeMin(1)"><i class="fa-solid fa-chevron-up"></i></button>
+                                                        <input class="tp-manual-input tp-min-input" type="number" min="0" max="59" @input="$el.value = $el.value.slice(0,2)" :value="String(minute).padStart(2,'0')" @change="onMinInput($event)" @keydown.up.prevent="changeMin(1)" @keydown.down.prevent="changeMin(-1)">
+                                                        <button type="button" class="tp-btn" @click="changeMin(-1)"><i class="fa-solid fa-chevron-down"></i></button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
                                     <div class="flex items-center justify-center">
                                         <template x-if="editForm.availabilities.length > 1">
                                             <button type="button" @click="editForm.availabilities.splice(index, 1)" class="w-8 h-8 flex items-center justify-center rounded-lg bg-red-50 text-red-400 hover:bg-red-100 hover:text-red-600 transition">
@@ -1127,7 +1316,7 @@ mount(function () {
                     </div>
                     @if($errors->hasAny(['availabilities', 'availabilities.*']))
                         <div class="mt-2 p-3 rounded-lg bg-red-50 border border-red-200">
-                            <p class="text-xs text-red-700 font-medium leading-relaxed">Please check if all slots are filled out or if there are overlapping times on the same day.</p>
+                            <p class="text-xs text-red-700 font-medium leading-relaxed">Please check if all slots are filled out properly or if there are overlapping times on the same day.</p>
                         </div>
                     @endif
                 </div>

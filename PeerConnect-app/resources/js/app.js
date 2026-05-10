@@ -1129,6 +1129,12 @@ document.addEventListener('alpine:init', () => {
 
         openEditModal(mentor) {
             this.editingMentor = mentor;
+            this.$wire.editMentorFirstName = mentor.firstName;
+            this.$wire.editMentorLastName = mentor.lastName;
+            this.$wire.editMentorMiddleInitial = mentor.middleInitial ? mentor.middleInitial.replace('.', '').trim() : '';
+            this.$wire.editCollegeId = mentor.college_id;
+            this.$wire.editDegreeProgramId = mentor.degreeProgram_id;
+            this.$wire.editYearLevelId = mentor.yearLevel_id;
             this.editForm.subjects = mentor.subjects.map(s => s.id.toString());
             let avails = [];
             for (const day in mentor.schedule) {
@@ -1148,6 +1154,12 @@ document.addEventListener('alpine:init', () => {
             
             // Check if there are any new inputs
             this.originalForm = {
+                firstName: mentor.firstName,
+                lastName: mentor.lastName,
+                middleInitial: mentor.middleInitial ? mentor.middleInitial.replace('.', '').trim() : '',
+                college: mentor.college_id,
+                degree: mentor.degreeProgram_id,
+                year_level: mentor.yearLevel_id,
                 subjects: [...this.editForm.subjects],
                 availabilities: this.editForm.availabilities.map(a => ({
                     day_of_week: a.day_of_week,
@@ -1157,6 +1169,7 @@ document.addEventListener('alpine:init', () => {
             };
 
             this.showEditModal = true;
+            this.showExtendedProfile = false;
             this.$nextTick(() => {
                 const scrollBox = document.getElementById('editModalScroll');
                 if (scrollBox) scrollBox.scrollTop = 0;
@@ -1167,6 +1180,124 @@ document.addEventListener('alpine:init', () => {
             this.mentorToDelete = mentor;
             this.showDeleteConfirm = true;
         }
+    }));
+
+    Alpine.data('mentorTimePicker', () => ({
+        timeValue: '',
+        open: false,
+        hour: 8,
+        minute: 0,
+        ampm: 'AM',
+        selectedTime: '',
+
+        init() {
+            // Watch for changes coming from the array (e.g., loading an Edit Modal)
+            this.$watch('timeValue', val => {
+                if (val && val !== this.getFormattedTime()) {
+                    const [h, m] = val.split(':').map(Number);
+                    this.ampm   = h >= 12 ? 'PM' : 'AM';
+                    this.hour   = h % 12 || 12;
+                    this.minute = m;
+                    this.updateDisplay();
+                }
+            });
+            
+            // Setup initial display if data is already present
+            if (this.timeValue) {
+                const [h, m] = this.timeValue.split(':').map(Number);
+                this.ampm   = h >= 12 ? 'PM' : 'AM';
+                this.hour   = h % 12 || 12;
+                this.minute = m;
+                this.updateDisplay();
+            }
+        },
+
+        toggle() {
+            if (this.open) { this.close(); return; }
+            this.open = true;
+            this.$nextTick(() => this.position());
+        },
+
+        position() {
+            const trigger = this.$el.querySelector('.custom-time-display');
+            const drop    = this.$el.querySelector('.time-picker-dropdown');
+            if (!trigger || !drop) return;
+            const rect  = trigger.getBoundingClientRect();
+            const dropH = drop.offsetHeight || 240;
+            const dropW = drop.offsetWidth  || 220;
+            
+            // Position directly below the input
+            drop.style.top  = (rect.bottom + 4) + 'px';
+            let left = rect.left;
+            if (left + dropW > window.innerWidth - 8) left = window.innerWidth - dropW - 8;
+            drop.style.left = Math.max(8, left) + 'px';
+            drop.style.position = 'fixed';
+        },
+
+        close() { this.open = false; },
+
+        changeHour(dir) { this.hour = ((this.hour - 1 + dir + 12) % 12) + 1; this.syncHourInput(); this.commit(); },
+        changeMin(dir)  { this.minute = (this.minute + dir * 15 + 60) % 60; this.syncMinInput(); this.commit(); },
+        setAmpm(val)    { this.ampm = val; this.commit(); },
+
+        onHourInput(e) {
+            let val = parseInt(e.target.value) || 1;
+            if (val < 1)  val = 1;
+            if (val > 12) val = 12;
+            this.hour = val;
+            e.target.value = String(val).padStart(2, '0');
+            this.commit();
+        },
+        
+        onMinInput(e) {
+            let val = parseInt(e.target.value);
+            if (isNaN(val) || val < 0) val = 0;
+            if (val > 59) val = 59;
+            this.minute = val;
+            e.target.value = String(val).padStart(2, '0');
+            this.commit();
+        },
+
+        syncHourInput() { const el = this.$el.querySelector('.tp-hour-input'); if (el) el.value = String(this.hour).padStart(2, '0'); },
+        syncMinInput()  { const el = this.$el.querySelector('.tp-min-input');  if (el) el.value = String(this.minute).padStart(2, '0'); },
+
+        getFormattedTime() {
+            let h24 = this.hour % 12;
+            if (this.ampm === 'PM') h24 += 12;
+            return `${String(h24).padStart(2, '0')}:${String(this.minute).padStart(2, '0')}`;
+        },
+
+        clampTime() {
+            // Optional clamp, limits bounds to 8 AM to 6 PM 
+            let h24 = (this.hour % 12) + (this.ampm === 'PM' ? 12 : 0);
+            let totalMins = h24 * 60 + this.minute;
+            const MIN_MINS = 8 * 60;
+            const MAX_MINS = 18 * 60;
+
+            if (totalMins < MIN_MINS) totalMins = MIN_MINS;
+            if (totalMins > MAX_MINS) totalMins = MAX_MINS;
+
+            let newH24 = Math.floor(totalMins / 60);
+            this.minute = totalMins % 60;
+            this.ampm = newH24 >= 12 ? 'PM' : 'AM';
+            this.hour = newH24 % 12 || 12;
+        },
+
+        commit() {
+            this.clampTime();
+            this.syncHourInput();
+            this.syncMinInput();
+            
+            // This automatically updates row.start_time / row.end_time via x-modelable!
+            this.timeValue = this.getFormattedTime(); 
+            this.updateDisplay();
+        },
+
+        updateDisplay() {
+            const h = String(this.hour).padStart(2, '0');
+            const m = String(this.minute).padStart(2, '0');
+            this.selectedTime = `${h}:${m} ${this.ampm}`;
+        },
     }));
 });
 

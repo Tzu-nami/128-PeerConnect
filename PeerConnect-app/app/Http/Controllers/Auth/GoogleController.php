@@ -40,8 +40,6 @@ class GoogleController extends Controller
             // Check if user already exists in database
             $user->update([
                 'google_id' => $googleUser->getId(),
-                'firstName' => $firstName,
-                'lastName' => $lastName,
                 'avatar' => (empty($user->avatar) || Str::contains($user->avatar, 'googleusercontent.com')) ? $googleUser->getAvatar() : $user->avatar,
                 'last_login_at' => now(),
                 'user_roles' => $user->user_roles ?? 'student',
