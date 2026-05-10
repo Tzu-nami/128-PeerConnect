@@ -1132,9 +1132,6 @@ document.addEventListener('alpine:init', () => {
             this.$wire.editMentorFirstName = mentor.firstName;
             this.$wire.editMentorLastName = mentor.lastName;
             this.$wire.editMentorMiddleInitial = mentor.middleInitial ? mentor.middleInitial.replace('.', '').trim() : '';
-            this.$wire.editCollegeId = mentor.college_id;
-            this.$wire.editDegreeProgramId = mentor.degreeProgram_id;
-            this.$wire.editYearLevelId = mentor.yearLevel_id;
             this.editForm.subjects = mentor.subjects.map(s => s.id.toString());
             let avails = [];
             for (const day in mentor.schedule) {
@@ -1157,9 +1154,6 @@ document.addEventListener('alpine:init', () => {
                 firstName: mentor.firstName,
                 lastName: mentor.lastName,
                 middleInitial: mentor.middleInitial ? mentor.middleInitial.replace('.', '').trim() : '',
-                college: mentor.college_id,
-                degree: mentor.degreeProgram_id,
-                year_level: mentor.yearLevel_id,
                 subjects: [...this.editForm.subjects],
                 availabilities: this.editForm.availabilities.map(a => ({
                     day_of_week: a.day_of_week,
@@ -1169,7 +1163,6 @@ document.addEventListener('alpine:init', () => {
             };
 
             this.showEditModal = true;
-            this.showExtendedProfile = false;
             this.$nextTick(() => {
                 const scrollBox = document.getElementById('editModalScroll');
                 if (scrollBox) scrollBox.scrollTop = 0;
