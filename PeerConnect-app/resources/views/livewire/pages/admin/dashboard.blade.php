@@ -950,8 +950,8 @@ $rejectBooking = action(function (string $id) {
 
                 {{-- ── ADD MENTOR MODAL ── --}}
                 <div x-show="$wire.showModal" x-cloak class="modal-overlay" 
-                    x-data="{ fileName: '', isVerifying: false }" 
-                    x-init="$watch('$wire.showModal', val => { if (!val) { fileName = ''; document.getElementById('avatar-upload').value = ''; } })">
+    x-data="{ fileName: '', isVerifying: false, get canSubmit() { return true; } }" 
+    x-init="$watch('$wire.showModal', val => { if (!val) { fileName = ''; document.getElementById('avatar-upload').value = ''; } })">
                     <div class="bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col" style="max-height: 90vh;">
                         <div class="px-8 py-6 border-b flex justify-between items-center flex-shrink-0 bg-white">
                             <div>
@@ -973,20 +973,19 @@ $rejectBooking = action(function (string $id) {
                                     </div>
                                     <div class="flex flex-col gap-2">
                                         <div>
-                                            <input type="email" wire:model="up_mail" placeholder="student@up.edu.ph" class="form-input" wire:keydown.enter.prevent="checkEmail" />
+                                            <input type="email" wire:model.lazy="up_mail" placeholder="student@up.edu.ph" class="form-input" wire:keydown.enter.prevent="checkEmail" />
                                             @error('up_mail') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
                                             @if($emailError) <p class="mt-1 text-xs text-red-600">{{ $emailError }}</p> @endif
                                         </div>
                                         <button type="button"
-                                            x-data="{ isVerifying: false }"
-                                            @click="isVerifying = true; $wire.checkEmail().finally(() => isVerifying = false)"
-                                            x-bind:disabled="isVerifying"
-                                            class="w-full px-4 py-2.5 bg-slate-800 text-white text-xs font-bold rounded-lg hover:bg-black transition disabled:cursor-not-allowed">
-                                            <span x-show="!isVerifying">Find Email</span>
-                                            <span x-show="isVerifying" style="display: none;">
-                                                <i class="fa-solid fa-spinner fa-spin mr-1"></i>Verifying...
-                                            </span>
-                                        </button>
+    @click="isVerifying = true; $wire.checkEmail().finally(() => isVerifying = false)"
+    x-bind:disabled="isVerifying"
+    class="w-full px-4 py-2.5 bg-slate-800 text-white text-xs font-bold rounded-lg hover:bg-black transition disabled:cursor-not-allowed">
+    <span x-show="!isVerifying">Find Email</span>
+    <span x-show="isVerifying" style="display: none;">
+        <i class="fa-solid fa-spinner fa-spin mr-1"></i>Verifying...
+    </span>
+</button>
                                     </div>
                                     @if($newMentor)
                                         <div class="mt-3 flex items-center gap-3 bg-green-50 border border-green-200 rounded-lg px-4 py-3">
@@ -1115,9 +1114,6 @@ $rejectBooking = action(function (string $id) {
                                     class="flex-1 py-3 text-xs font-bold text-gray-800 bg-gray-200 hover:bg-gray-300 rounded-xl transition disabled:cursor-not-allowed">
                                     Cancel
                                 </button>
-                                <button type="button" @click="isVerifying = true; $wire.confirmMentor().finally(() => isVerifying = false)"
-                                    x-bind:disabled="isVerifying"
-                                    class="flex-1 bg-red-900 text-white py-3 rounded-xl text-xs font-bold shadow-lg hover:bg-red-800 transition disabled:cursor-not-allowed">
                                     <span x-show="!isVerifying">Register Mentor</span>
                                     <span x-show="isVerifying" style="display: none;"><i class="fa-solid fa-spinner fa-spin mr-1"></i>Validating...</span>
                                 </button>
@@ -1160,12 +1156,12 @@ $rejectBooking = action(function (string $id) {
                         <div class="px-8 py-4 space-y-4">
                             <div>
                                 <label class="form-label">Subject Code <span class="text-red-500">*</span></label>
-                                <input type="text" wire:model="newSubjectCode" placeholder="e.g. Math 54" class="form-input" />
+                                <input type="text" wire:model.lazy="newSubjectCode" placeholder="e.g. Math 54" class="form-input" />
                                 @error('newSubjectCode') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
                             </div>
                             <div>
                                 <label class="form-label">Subject Name <span class="text-red-500">*</span></label>
-                                <input type="text" wire:model="newSubjectName" placeholder="e.g. Elementary Analysis II" class="form-input" />
+                                <input type="text" wire:model.lazy="newSubjectName" placeholder="e.g. Elementary Analysis II" class="form-input" />
                                 @error('newSubjectName') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
                             </div>
                         </div>
