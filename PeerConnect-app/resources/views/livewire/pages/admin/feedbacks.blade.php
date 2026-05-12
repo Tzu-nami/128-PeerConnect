@@ -116,28 +116,28 @@ $dashboardStats = computed(function () {
     {{-- STATS CARDS --}}
     <div class="space-y-6">
         <div class="grid grid-cols-[repeat(autofit,_minmax(250px,_1fr))] sm:grid-cols-3 gap-4 mb-6">
-            <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-blue-600 flex items-center gap-3 lg:gap-4">
-                <div class="text-2xl flex-shrink-0">
-                    <i class="fa-solid fa-chart-bar text-blue-600"></i>
-                </div>
+<div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-blue-600 flex items-center gap-3 lg:gap-4 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer">
+    <div class="text-2xl flex-shrink-0">
+        <i class="fa-solid fa-chart-bar text-blue-600"></i>
+    </div>
                 <div class="min-w-0 flex-1">
                     <h3 class="text-xs font-bold text-gray-400 uppercase leading-none truncate">Total Responses</h3>
                     <p class="text-xl font-black text-slate-800 truncate">{{ $this->dashboardStats['total'] }}</p>
                 </div>
             </div>
-            <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-yellow-500 flex items-center gap-3 lg:gap-4">
-                <div class="text-2xl flex-shrink-0">
-                    <i class="fa-solid fa-chalkboard-user text-yellow-500"></i>
-                </div>
+<div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-yellow-500 flex items-center gap-3 lg:gap-4 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer">
+    <div class="text-2xl flex-shrink-0">
+        <i class="fa-solid fa-chalkboard-user text-yellow-500"></i>
+    </div>
                 <div class="min-w-0 flex-1">
                     <h3 class="text-xs font-bold text-gray-400 uppercase leading-none truncate">Total Sessions</h3>
                     <p class="text-xl font-black text-slate-800 truncate">{{ $this->dashboardStats['sessions'] }}</p>
                 </div>
             </div>
-            <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-green-600 flex items-center gap-3 lg:gap-4">
-                <div class="text-2xl flex-shrink-0">
-                    <i class="fa-solid fa-star text-green-600"></i>
-                </div>
+<div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-green-600 flex items-center gap-3 lg:gap-4 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer">
+    <div class="text-2xl flex-shrink-0">
+        <i class="fa-solid fa-star text-green-600"></i>
+    </div>
                 <div class="min-w-0 flex-1">
                     <h3 class="text-xs font-bold text-gray-400 uppercase leading-none truncate">Average Rating</h3>
                     <p class="text-xl font-black text-slate-800 truncate">{{ $this->dashboardStats['avg'] }} <span class="text-lg text-gray-400">/ 5.0</span></p>
@@ -225,57 +225,57 @@ $dashboardStats = computed(function () {
             {{-- FEEDBACK TABLE CONTENT --}}
             <div x-show="filteredFeedbacks.length > 0" x-cloak>
                 <div class="w-full overflow-auto">
-                    <table class="w-full">
+                    <table class="w-full table-fixed">
                         <thead class="bg-slate-50 border-gray-100 border-b">
                             <tr>
-                                <th class="px-5 py-4 text-[10px] font-bold text-gray-400 text-left w-[16%]">
-                                    <button @click="toggleSort('date')" class="flex items-center gap-1 hover:text-slate-600 transition uppercase tracking-wider">
-                                        Date
+<th class="px-5 py-3 text-xs font-bold text-gray-400 text-left w-[16%]">
+    <button @click="toggleSort('date')" class="flex items-center gap-1 hover:text-slate-600 transition uppercase tracking-wider">
+        Date
                                         <i class="fa-solid text-[8px]"
                                             :class="sortCol === 'date'
                                                     ? (sortDir === 'asc' ? 'fa-arrow-up text-slate-600' : 'fa-arrow-down text-slate-600')
                                                     : 'fa-arrow-up-arrow-down opacity-30'"></i>
                                     </button>
                                 </th>
-                                <th class="px-5 py-4 text-[10px] font-bold text-gray-400 text-left w-[16%]">
-                                    <button @click="toggleSort('mentor_name')" class="flex items-center gap-1 hover:text-slate-600 transition uppercase tracking-wider">
-                                        Mentor
+<th class="px-5 py-3 text-xs font-bold text-gray-400 text-left w-[16%]">
+    <button @click="toggleSort('mentor_name')" class="flex items-center gap-1 hover:text-slate-600 transition uppercase tracking-wider">
+        Mentor
                                         <i class="fa-solid text-[8px]"
                                         :class="sortCol === 'mentor_name'
                                                 ? (sortDir === 'asc' ? 'fa-arrow-up text-slate-600' : 'fa-arrow-down text-slate-600')
                                                 : 'fa-arrow-up-arrow-down opacity-30'"></i>
                                     </button>
                                 </th>
-                                <th class="px-5 py-4 text-[10px] font-bold text-gray-400 text-left w-[10%]">
-                                    <button @click="toggleSort('subject')" class="flex items-center gap-1 hover:text-slate-600 w-full transition uppercase tracking-wider">
-                                        Subject
+<th class="px-5 py-3 text-xs font-bold text-gray-400 text-left w-[10%]">
+    <button @click="toggleSort('subject')" class="flex items-center gap-1 hover:text-slate-600 w-full transition uppercase tracking-wider">
+        Subject
                                         <i class="fa-solid text-[8px]"
                                         :class="sortCol === 'subject'
                                                 ? (sortDir === 'asc' ? 'fa-arrow-up text-slate-600' : 'fa-arrow-down text-slate-600')
                                                 : 'fa-arrow-up-arrow-down opacity-30'"></i>
                                     </button>
                                 </th>
-                                <th class="px-5 py-4 text-[10px] font-bold text-gray-400 text-left w-[16%]">
-                                    <button @click="toggleSort('topic')" class="flex items-center gap-1 hover:text-slate-600 transition uppercase tracking-wider">
-                                        Topic
+<th class="px-5 py-3 text-xs font-bold text-gray-400 text-left w-[16%]">
+    <button @click="toggleSort('topic')" class="flex items-center gap-1 hover:text-slate-600 transition uppercase tracking-wider">
+        Topic
                                         <i class="fa-solid text-[8px]"
                                         :class="sortCol === 'topic'
                                                 ? (sortDir === 'asc' ? 'fa-arrow-up text-slate-600' : 'fa-arrow-down text-slate-600')
                                                 : 'fa-arrow-up-arrow-down opacity-30'"></i>
                                     </button>
                                 </th>
-                                <th class="px-5 py-4 text-[10px] font-bold text-gray-400 text-left w-[26%]">
-                                    <button @click="toggleSort('feedback')" class="flex items-center gap-1 hover:text-slate-600 transition uppercase tracking-wider">
-                                        Feedback
+<th class="px-5 py-3 text-xs font-bold text-gray-400 text-left w-[26%]">
+    <button @click="toggleSort('feedback')" class="flex items-center gap-1 hover:text-slate-600 transition uppercase tracking-wider">
+        Feedback
                                         <i class="fa-solid text-[8px]"
                                         :class="sortCol === 'feedback'
                                                 ? (sortDir === 'asc' ? 'fa-arrow-up text-slate-600' : 'fa-arrow-down text-slate-600')
                                                 : 'fa-arrow-up-arrow-down opacity-30'"></i>
                                     </button>
                                 </th>
-                                <th class="px-5 py-4 text-[10px] font-bold text-gray-400 text-right w-[16%]">
-                                    <button @click="toggleSort('rating')" class="flex items-center justify-end w-full gap-1 hover:text-slate-600 transition uppercase tracking-wider">
-                                        Rating
+<th class="px-5 py-3 text-xs font-bold text-gray-400 text-right w-[16%]">
+    <button @click="toggleSort('rating')" class="flex items-center justify-end w-full gap-1 hover:text-slate-600 transition uppercase tracking-wider">
+        Rating
                                         <i class="fa-solid text-[8px]"
                                         :class="sortCol === 'rating'
                                                 ? (sortDir === 'asc' ? 'fa-arrow-up text-slate-600' : 'fa-arrow-down text-slate-600')
@@ -287,44 +287,46 @@ $dashboardStats = computed(function () {
                         <tbody class="divide-y divide-gray-100">
                             <template x-for="fb in paginatedFeedbacks" :key="fb.id">
                                 <tr class="feedback-row cursor-pointer" @click="openDetailModal(fb)">
-                                    <td class="px-5 py-5 align-middle col-date">
-                                        <span class="cell-text text-slate-700 text-[13px] font-semibold" x-text="fb.date_formatted"></span>
-                                    </td>
-                                    <td class="px-5 py-5 align-middle col-mentor">
-                                        <span class="cell-text text-slate-700 text-[12px] font-semibold" x-text="fb.mentor_name"></span>
-                                    </td>
-                                    <td class="px-5 py-5 align-middle col-subject">
-                                        <span class="bg-red-50 text-red-700 px-2 py-0.5 rounded text-[10px] font-bold border border-red-100 whitespace-nowrap" x-text="fb.subject"></span>
-                                    </td>
-                                    <td class="px-5 py-5 align-middle col-topic" style="overflow:visible; position:relative;">
-                                        <div class="hover-tooltip" :data-full="fb.topic">
-                                            <span class="cell-text-wrap text-xs text-slate-600" x-text="fb.topic"></span>
-                                        </div>
-                                    </td>
-                                    <td class="px-5 py-5 align-middle col-feedback">
-                                        <button type="button" @click.stop="openFeedbackPopup(fb.has_feedback ? fb.feedback : null)" class="text-left w-full group">
-                                            <span class="cell-text-wrap text-[11px] bg-slate-100 px-2 py-1 rounded text-slate-700 font-semibold block group-hover:bg-slate-200 transition-colors" x-text="fb.feedback"></span>
-                                        </button>
-                                    </td>
-                                    <td class="px-5 py-5 align-middle col-rating text-right">
-                                        <div class="flex flex-col items-end gap-1">
-                                            <template x-if="fb.avg !== null">
-                                                <span :class="'rating-pill ' + fb.avgClass">
-                                                    <i class="fa-solid fa-star text-[10px]"></i>
-                                                    <span x-text="Number(fb.avg).toFixed(1) + ' / 5 &dash; ' + fb.avgLabel"></span>
-                                                </span>
-                                            </template>
-                                            <template x-if="fb.avg === null">
-                                                <span class="text-xs text-gray-300 italic">No score</span>
-                                            </template>
-                                            <template x-if="fb.q10 !== null">
-                                                <span :class="'ontime-badge ' + (fb.q10 ? 'ontime-yes' : 'ontime-no')">
-                                                    <i :class="'fa-solid text-[9px] ' + (fb.q10 ? 'fa-clock' : 'fa-clock-rotate-left')"></i>
-                                                    <span x-text="fb.q10 ? 'On time' : 'Late'"></span>
-                                                </span>
-                                            </template>
-                                        </div>
-                                    </td>
+<td class="px-5 py-3 align-middle col-date">
+    <span class="cell-text text-slate-700 text-xs font-semibold" x-text="fb.date_formatted"></span>
+</td>
+<td class="px-5 py-3 align-middle col-mentor">
+    <span class="cell-text text-slate-700 text-xs font-semibold" x-text="fb.mentor_name"></span>
+</td>
+<td class="px-5 py-3 align-middle col-subject">
+    <span class="bg-red-50 text-red-700 px-2 py-0.5 rounded text-[10px] font-bold border border-red-100 whitespace-nowrap" x-text="fb.subject"></span>
+</td>
+<td class="px-5 py-3 align-middle col-topic" style="overflow:visible; position:relative;">
+    <div class="hover-tooltip" :data-full="fb.topic">
+        <span class="cell-text-wrap text-xs text-slate-600" x-text="fb.topic"></span>
+    </div>
+</td>
+<td class="px-5 py-3 align-middle col-feedback max-w-0">
+    <button type="button" @click.stop="openFeedbackPopup(fb.has_feedback ? fb.feedback : null)" class="text-left w-full group">
+        <span class="text-xs bg-slate-100 px-2 py-1 rounded text-slate-700 font-semibold block group-hover:bg-slate-200 transition-colors truncate" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" x-text="fb.feedback"></span>
+    </button>
+</td>
+<td class="px-5 py-3 align-middle col-rating">
+    <div class="flex items-center gap-1.5 justify-end flex-nowrap">
+        <template x-if="fb.avg !== null">
+            <span :class="'rating-pill ' + fb.avgClass"
+                  style="font-size:10px;padding:4px 8px;line-height:1;white-space:nowrap;">
+                <i class="fa-solid fa-star text-[9px]"></i>
+                <span x-text="Number(fb.avg).toFixed(1) + ' / 5 - ' + fb.avgLabel"></span>
+            </span>
+        </template>
+        <template x-if="fb.avg === null">
+            <span class="text-xs text-gray-300 italic">No score</span>
+        </template>
+        <template x-if="fb.q10 !== null">
+            <span :class="'ontime-badge ' + (fb.q10 ? 'ontime-yes' : 'ontime-no')"
+                  style="font-size:10px;padding:4px 8px;line-height:1;white-space:nowrap;">
+                <i :class="'fa-solid text-[9px] ' + (fb.q10 ? 'fa-clock' : 'fa-clock-rotate-left')"></i>
+                <span x-text="fb.q10 ? 'On time' : 'Late'"></span>
+            </span>
+        </template>
+    </div>
+</td>
                                 </tr>
                             </template>
                         </tbody>
@@ -334,7 +336,7 @@ $dashboardStats = computed(function () {
                 {{-- PAGINATION --}}
                 <div class="p-6 border-t border-gray-100 flex flex-col items-center justify-center gap-3 bg-white" x-cloak>
                     <div class="flex items-center gap-2" x-show="totalPages > 1">
-                        <button @click="currentPage--" :disabled="currentPage === 1" class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-slate-500 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition">
+                        <button @click="if(currentPage > 1) currentPage--" :disabled="currentPage === 1" class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-slate-500 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition">
                             <i class="fa-solid fa-chevron-left text-[10px]"></i>
                         </button>
                         <template x-for="(page, index) in pages" :key="index">
@@ -343,7 +345,7 @@ $dashboardStats = computed(function () {
                                 <span x-show="page === '...'" class="w-7 h-7 flex items-center justify-center text-[11px] font-bold text-gray-400 tracking-widest shrink-0">...</span>
                             </div>
                         </template>
-                        <button @click="currentPage++" :disabled="currentPage === totalPages" class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-slate-500 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition">
+                        <button @click="if(currentPage < totalPages) currentPage++" :disabled="currentPage === totalPages" class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-slate-500 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition">
                             <i class="fa-solid fa-chevron-right text-[10px]"></i>
                         </button>
                     </div>

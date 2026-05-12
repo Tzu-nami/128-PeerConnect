@@ -196,8 +196,8 @@ $subjects = computed(function () {
                     </th>
 
                     {{-- Topic --}}
-                    <th class="px-5 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider w-[22%]">
-                        <button @click="toggleSort('topic')"
+<th class="px-5 py-3 pl-8 text-xs font-bold text-gray-400 uppercase tracking-wider w-[22%]">
+    <button @click="toggleSort('topic')"
                                 :class="sortCol === 'topic' ? 'text-up-maroon' : 'text-gray-400 hover:text-up-maroon'"
                                 class="flex items-center gap-1 transition uppercase">
                             Topic
@@ -209,15 +209,15 @@ $subjects = computed(function () {
                     </th>
 
                     {{-- Feedback --}}
-                    <th class="px-5 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider w-[33%]">
-                        Feedback
-                    </th>
+<th class="px-5 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider w-[25%]">
+    Feedback
+</th>
 
-                    {{-- Rating --}}
-                    <th class="px-5 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider w-[15%]">
-                        <button @click="toggleSort('avg')"
-                                :class="sortCol === 'avg' ? 'text-up-maroon' : 'text-gray-400 hover:text-slate-600'"
-                                class="flex items-center gap-1 transition ml-auto uppercase">
+{{-- Rating --}}
+<th class="px-5 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider w-[23%]">
+    <button @click="toggleSort('avg')"
+            :class="sortCol === 'avg' ? 'text-up-maroon' : 'text-gray-400 hover:text-slate-600'"
+            class="flex items-center gap-1 transition uppercase ml-auto">
                             Rating
                             <i class="fa-solid text-[8px]"
                                :class="sortCol === 'avg'
@@ -233,66 +233,67 @@ $subjects = computed(function () {
                     <tr class="border-b border-gray-50 hover:bg-slate-50 transition cursor-pointer"
                         @click="openDetailModal(fb)">
 
-                        {{-- Date --}}
-                        <td class="px-5 py-3">
-                            <p class="text-sm font-medium text-slate-700" x-text="fb.date"></p>
-                        </td>
+{{-- Date --}}
+<td class="px-5 py-3">
+    <p class="text-xs font-medium text-slate-700" x-text="fb.date"></p>
+</td>
 
-                        {{-- Subject --}}
-                        <td class="px-5 py-3">
-                    <span class="font-bold text-xs bg-red-50 text-red-700 px-2 py-1 rounded border border-red-100 whitespace-nowrap"
-                          x-text="fb.subject"></span>
-                        </td>
+{{-- Subject --}}
+<td class="px-5 py-3">
+    <span class="font-bold text-[10px] bg-red-50 text-red-700 px-2 py-1 rounded border border-red-100 whitespace-nowrap"
+          x-text="fb.subject"></span>
+</td>
 
-                        {{-- Topic --}}
-                        <td class="px-5 py-3">
-                            <p class="text-sm text-slate-600 truncate"
-                               x-init="$nextTick(() => { if ($el.scrollWidth > $el.clientWidth) $el.title = fb.topic })"
-                               x-text="fb.topic"></p>
-                        </td>
+{{-- Topic --}}
+<td class="px-5 pl-8 py-3 max-w-0" style="width:22%;max-width:0;"
+    x-init="$nextTick(() => { const p = $el.querySelector('.topic-text'); if (p && p.scrollWidth > p.clientWidth) $el.title = fb.topic })">
+    <p class="topic-text text-xs text-slate-600 truncate w-full" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" x-text="fb.topic"></p>
+</td>
 
-                        {{-- Feedback --}}
-                        <td class="px-5 py-3">
-                            <p class="text-xs text-slate-600 truncate bg-slate-100 px-2 py-1.5 rounded hover:bg-slate-200 transition"
-                               x-init="$nextTick(() => { if ($el.scrollWidth > $el.clientWidth) $el.title = fb.feedback })"
-                               x-text="fb.feedback ?? '—'" @click.stop="openFeedbackPopup(fb)"></p>
-                        </td>
+{{-- Feedback --}}
+<td class="px-5 py-3 max-w-0">
+    <button type="button" @click.stop="openFeedbackPopup(fb)" class="text-left w-full group">
+        <span class="text-xs bg-slate-100 px-2 py-1 rounded text-slate-600 font-medium block group-hover:bg-slate-200 transition-colors truncate"
+              style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"
+              x-init="$nextTick(() => { if ($el.scrollWidth > $el.clientWidth) $el.title = fb.feedback ?? '—' })"
+              x-text="fb.feedback ?? '—'"></span>
+    </button>
+</td>
 
-                        {{-- Rating --}}
-                        <td class="px-5 py-3">
-                            <template x-if="fb.avg !== null">
-                                <div class="flex flex-col gap-1 items-end">
+{{-- Rating --}}
+<td class="px-5 py-3">
+    <template x-if="fb.avg !== null">
+        <div class="flex flex-col gap-1 items-end">
+<div class="flex items-center gap-1.5 justify-end flex-nowrap">
+            <span class="rating-pill"
+          style="font-size:10px;padding:4px 8px;line-height:1;white-space:nowrap;"
+          :class="{
+      'rating-excellent': fb.avgLabel === 'Excellent',
+      'rating-good':      fb.avgLabel === 'Good',
+      'rating-average':   fb.avgLabel === 'Average',
+      'rating-poor':      fb.avgLabel === 'Poor',
+  }">
+        <i class="fa-solid fa-star" style="font-size:9px;"></i>
+        <span x-text="fb.avg + ' / 5 - ' + fb.avgLabel"></span>
+    </span>
+    <template x-if="fb.q10 !== null && fb.q10 !== undefined">
+        <span class="ontime-badge"
+              style="font-size:10px;padding:4px 8px;line-height:1;white-space:nowrap;"
+              :class="fb.q10 ? 'ontime-yes' : 'ontime-no'">
+            <i class="fa-solid"
+               :class="fb.q10 ? 'fa-circle-check' : 'fa-rotate-left'"
+               style="font-size:9px;"></i>
+            <span x-text="fb.q10 ? 'On time' : 'Late'"></span>
+        </span>
+    </template>
+</div>
+        </div>
+    </template>
 
-                                    {{-- Rating pill --}}
-                                    <span class="rating-pill w-fit"
-                                          :class="{
-                                      'rating-excellent': fb.avgLabel === 'Excellent',
-                                      'rating-good':      fb.avgLabel === 'Good',
-                                      'rating-average':   fb.avgLabel === 'Average',
-                                      'rating-poor':      fb.avgLabel === 'Poor',
-                                  }">
-                                <i class="fa-solid fa-star" style="font-size:9px;"></i>
-                                <span x-text="fb.avg + ' / 5 - ' + fb.avgLabel"></span>
-                            </span>
-
-                                    {{-- On time / Late badge --}}
-                                    <template x-if="fb.q10 !== null && fb.q10 !== undefined">
-                                <span class="ontime-badge"
-                                      :class="fb.q10 ? 'ontime-yes' : 'ontime-no'">
-                                    <i class="fa-solid"
-                                       :class="fb.q10 ? 'fa-circle-check' : 'fa-rotate-left'"
-                                       style="font-size:8px;"></i>
-                                    <span x-text="fb.q10 ? 'On time' : 'Late'"></span>
-                                </span>
-                                    </template>
-
-                                </div>
-                            </template>
-
-                            <template x-if="fb.avg === null">
-                                <span class="text-xs text-gray-300 font-semibold block w-full text-right">No score</span>
-                            </template>
-                        </td>
+    <template x-if="fb.avg === null">
+<span class="text-xs text-gray-300 font-semibold block w-full text-right">No score</span>
+    </template>
+</td>
 
                     </tr>
                 </template>
@@ -314,18 +315,19 @@ $subjects = computed(function () {
         {{-- Pagination --}}
         <div class="p-6 flex flex-col items-center justify-center gap-3" x-cloak>
             <div class="flex items-center gap-2" x-show="totalPages > 1">
-                <button @click="currentPage--" :disabled="currentPage === 1" class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-slate-500 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition">
-                    <i class="fa-solid fa-chevron-left text-[10px]"></i>
-                </button>
+<button @click="if(currentPage > 1) currentPage--" :disabled="currentPage === 1"
+ class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-slate-500 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition">
+    <i class="fa-solid fa-chevron-left text-[10px]"></i>
+</button>
                 <template x-for="(page, index) in pages" :key="index">
                     <div>
                         <button @click="currentPage = page" :class="currentPage === page ? 'bg-[#1a3c2f] text-white shadow-sm' : 'bg-white border border-gray-200 text-slate-500 hover:bg-gray-100'" class="w-8 h-8 text-xs font-bold rounded-lg transition" x-text="page" x-show="page !== '...'"></button>
                         <span x-show="page === '...'" class="w-7 h-7 flex items-center justify-center text-[11px] font-bold text-gray-400 tracking-widest shrink-0">...</span>
                     </div>
                 </template>
-                <button @click="currentPage++" :disabled="currentPage === totalPages" class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-slate-500 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition">
-                    <i class="fa-solid fa-chevron-right text-[10px]"></i>
-                </button>
+<button @click="if(currentPage < totalPages) currentPage++" :disabled="currentPage === totalPages" class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-slate-500 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition">
+    <i class="fa-solid fa-chevron-right text-[10px]"></i>
+</button>
             </div>
             <span class="text-[11px] text-gray-400 font-medium"
                     x-text="filteredItems.length === 0 ? 'No results' : 'Showing ' + pageStart + ' to ' + pageEnd + ' of ' + filteredItems.length">

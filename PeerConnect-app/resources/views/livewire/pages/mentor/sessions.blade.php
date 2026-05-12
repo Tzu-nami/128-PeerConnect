@@ -99,7 +99,7 @@ $summaryCounts = computed(function () {
         'accepted'  => count(array_filter($statuses, fn($s) => $s === 'accepted')),
         'pending'   => count(array_filter($statuses, fn($s) => $s === 'pending')),
         'completed' => count(array_filter($completed)),
-        'totalHours'=> number_format($totalHours, 2) . ' hrs',
+        'totalHours'=> number_format($totalHours, 2),
     ];
 });
 
@@ -117,43 +117,43 @@ $summaryCounts = computed(function () {
     </div>
 
     {{-- Summary Stat Cards --}}
-    <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-6 animate-fade-up [animation-delay:150ms]">
-        <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-slate-400 flex items-center gap-4">
-            <div class="text-2xl"><i class="fa-solid fa-list-check text-slate-500"></i></div>
-            <div>
-                <h3 class="text-xs font-bold text-gray-400 uppercase leading-none">Total</h3>
-                <p class="text-2xl font-black text-slate-800" id="statTotal">{{ $this->summaryCounts['total'] }}</p>
-            </div>
-        </div>
-        <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-green-600 flex items-center gap-4">
-            <div class="text-2xl"><i class="fa-solid fa-circle-check text-green-600"></i></div>
-            <div>
-                <h3 class="text-xs font-bold text-gray-400 uppercase leading-none">Accepted</h3>
-                <p class="text-2xl font-black text-slate-800" id="statAccepted">{{ $this->summaryCounts['accepted'] }}</p>
-            </div>
-        </div>
-        <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-yellow-500 flex items-center gap-4">
-            <div class="text-2xl"><i class="fa-solid fa-hourglass-half text-yellow-500"></i></div>
-            <div>
-                <h3 class="text-xs font-bold text-gray-400 uppercase leading-none">Pending</h3>
-                <p class="text-2xl font-black text-slate-800" id="statPending">{{ $this->summaryCounts['pending'] }}</p>
-            </div>
-        </div>
-        <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-blue-600 flex items-center gap-4">
-            <div class="text-2xl"><i class="fa-solid fa-flag-checkered text-blue-600"></i></div>
-            <div>
-                <h3 class="text-xs font-bold text-gray-400 uppercase leading-none">Completed</h3>
-                <p class="text-2xl font-black text-slate-800" id="statCompleted">{{ $this->summaryCounts['completed'] }}</p>
-            </div>
-        </div>
-        <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-purple-600 flex items-center gap-4">
-            <div class="text-2xl"><i class="fa-solid fa-stopwatch text-purple-600"></i></div>
-            <div>
-                <h3 class="text-xs font-bold text-gray-400 uppercase leading-none">Total Hours</h3>
-                <p class="text-2xl font-black text-slate-800" id="statHours">{{ $this->summaryCounts['totalHours'] }}</p>
-            </div>
+<div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-6 animate-fade-up [animation-delay:150ms]">
+    <div onclick="openTotalModal()" class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-slate-400 flex items-center gap-4 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer">
+        <div class="text-2xl flex-shrink-0"><i class="fa-solid fa-list-check text-slate-500"></i></div>
+        <div class="min-w-0 flex-1">
+            <h3 class="text-xs font-bold text-gray-400 uppercase leading-none truncate">Total</h3>
+            <p class="text-2xl font-black text-slate-800 truncate" id="statTotal">{{ $this->summaryCounts['total'] }}</p>
         </div>
     </div>
+    <div onclick="openAcceptedModal()" class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-green-600 flex items-center gap-4 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer">
+        <div class="text-2xl flex-shrink-0"><i class="fa-solid fa-circle-check text-green-600"></i></div>
+        <div class="min-w-0 flex-1">
+            <h3 class="text-xs font-bold text-gray-400 uppercase leading-none truncate">Accepted</h3>
+            <p class="text-2xl font-black text-slate-800 truncate" id="statAccepted">{{ $this->summaryCounts['accepted'] }}</p>
+        </div>
+    </div>
+    <div onclick="openPendingModal()" class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-yellow-500 flex items-center gap-4 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer">
+        <div class="text-2xl flex-shrink-0"><i class="fa-solid fa-hourglass-half text-yellow-500"></i></div>
+        <div class="min-w-0 flex-1">
+            <h3 class="text-xs font-bold text-gray-400 uppercase leading-none truncate">Pending</h3>
+            <p class="text-2xl font-black text-slate-800 truncate" id="statPending">{{ $this->summaryCounts['pending'] }}</p>
+        </div>
+    </div>
+    <div onclick="openCompletedModal()" class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-blue-600 flex items-center gap-4 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer">
+        <div class="text-2xl flex-shrink-0"><i class="fa-solid fa-circle-check text-blue-600"></i></div>
+        <div class="min-w-0 flex-1">
+            <h3 class="text-xs font-bold text-gray-400 uppercase leading-none truncate">Completed</h3>
+            <p class="text-2xl font-black text-slate-800 truncate" id="statCompleted">{{ $this->summaryCounts['completed'] }}</p>
+        </div>
+    </div>
+    <div onclick="openHoursModal()" class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-purple-600 flex items-center gap-4 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer">
+        <div class="text-2xl flex-shrink-0"><i class="fa-solid fa-stopwatch text-purple-600"></i></div>
+        <div class="min-w-0 flex-1">
+            <h3 class="text-xs font-bold text-gray-400 uppercase leading-none truncate">Total Hours</h3>
+            <p class="text-2xl font-black text-slate-800 truncate" id="statHours">{{ $this->summaryCounts['totalHours'] }}</p>
+        </div>
+    </div>
+</div>
 
     {{-- Sessions Table --}}
     <div class="bg-white rounded-xl shadow-sm border border-gray-100 animate-fade-up [animation-delay:250ms]"
@@ -244,8 +244,8 @@ $summaryCounts = computed(function () {
                         </button>
                     </th>
 
-                    <th class="px-5 py-3 text-xs font-bold text-gray-400 tracking-wider w-[20%]">
-                        <button @click="toggleSort('topic')" class="flex items-center gap-1 transition"
+<th class="px-5 py-3 pl-14 text-xs font-bold text-gray-400 tracking-wider w-[20%]">
+        <button @click="toggleSort('topic')" class="flex items-center gap-1 transition"
                                 :class="sortCol === 'topic' ? 'text-up-maroon' : 'text-gray-400 hover:text-up-maroon'">
                             Topic
                             <i class="fa-solid text-[8px]"
@@ -290,50 +290,53 @@ $summaryCounts = computed(function () {
                 <template x-for="(s, index) in paginatedItems" :key="s.id">
                     <tr class="border-b border-gray-50 hover:bg-slate-50 transition group">
 
-                        {{-- Student --}}
-                        <td class="px-5 py-3">
-                            <p class="font-bold text-slate-700 text-sm truncate"
-                               x-init="$nextTick(() => { if ($el.scrollWidth > $el.clientWidth) $el.title = s.student })"
-                               x-text="s.student"></p>
-                            <p class="text-xs text-gray-400 truncate"
-                               x-init="$nextTick(() => { if ($el.scrollWidth > $el.clientWidth) $el.title = s.yearLevel + ' – ' + s.degreeProgram })"
-                               x-text="s.yearLevel + ' – ' + s.degreeProgram"></p>
-                        </td>
+ {{-- Student --}}
+<td class="px-5 py-3">
+    <p class="font-bold text-slate-700 text-xs truncate"
+       x-init="$nextTick(() => { if ($el.scrollWidth > $el.clientWidth) $el.title = s.student })"
+       x-text="s.student"></p>
+    <p class="text-xs text-gray-400 truncate"
+       x-init="$nextTick(() => { if ($el.scrollWidth > $el.clientWidth) $el.title = s.yearLevel + ' – ' + s.degreeProgram })"
+       x-text="s.yearLevel + ' – ' + s.degreeProgram"></p>
+</td>
 
-                        {{-- Subject --}}
-                        <td class="px-5 py-3">
-                            <p class="font-bold text-slate-700 text-sm" x-text="s.subject"></p>
-                            <p class="text-xs text-gray-400 truncate"
-                               x-init="$nextTick(() => { if ($el.scrollWidth > $el.clientWidth) $el.title = s.subjectName })"
-                               x-text="s.subjectName"></p>
-                        </td>
+{{-- Subject --}}
+<td class="px-5 py-3">
+    <p class="font-bold text-slate-700 text-xs truncate"
+       x-init="$nextTick(() => { if ($el.scrollWidth > $el.clientWidth) $el.title = s.subject })"
+       x-text="s.subject"></p>
+    <p class="text-xs text-gray-400 truncate"
+       x-init="$nextTick(() => { if ($el.scrollWidth > $el.clientWidth) $el.title = s.subjectName })"
+       x-text="s.subjectName"></p>
+</td>
 
-                        {{-- Topic --}}
-                        <td class="px-5 py-3">
-                            <p class="text-sm text-slate-600 truncate"
-                               x-init="$nextTick(() => { if ($el.scrollWidth > $el.clientWidth) $el.title = s.topic })"
-                               x-text="s.topic"></p>
-                        </td>
+{{-- Topic --}}
+<td class="px-5 py-3 pl-14 max-w-0" style="width:20%;max-width:0;"
+    x-init="$nextTick(() => { const p = $el.querySelector('.topic-text'); if (p && p.scrollWidth > p.clientWidth) $el.title = s.topic })">
+    <p class="topic-text text-xs text-slate-600 truncate w-full" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" x-text="s.topic"></p>
+</td>
 
-                        {{-- Date & Time --}}
-                        <td class="px-5 py-3">
-                            <p class="text-sm font-medium text-slate-700" x-text="s.date"></p>
-                            <p class="text-xs text-gray-400" x-text="s.time"></p>
-                        </td>
+{{-- Date & Time --}}
+<td class="px-5 py-3">
+    <p class="text-xs font-medium text-slate-700" x-text="s.date"></p>
+    <p class="text-xs text-gray-400" x-text="s.time"></p>
+</td>
 
-                        {{-- Mode --}}
-                        <td class="px-5 py-3">
-                            <p class="text-sm text-slate-500 truncate"
-                               x-init="$nextTick(() => { if ($el.scrollWidth > $el.clientWidth) $el.title = s.mode })"
-                               x-text="s.mode"></p>
-                        </td>
+{{-- Mode --}}
+<td class="px-5 py-3">
+    <p class="text-xs text-slate-500 truncate"
+       x-init="$nextTick(() => { if ($el.scrollWidth > $el.clientWidth) $el.title = s.mode })"
+       x-text="s.mode"></p>
+</td>
 
-                        {{-- Status --}}
-                        <td class="px-5 py-3">
-                        <span class="font-bold text-xs bg-gray-50 px-2 py-1 rounded border border-current opacity-80"
-                              :class="getStatusColor(s.status)"
-                              x-text="getStatusLabel(s.status)"></span>
-                        </td>
+{{-- Status --}}
+<td class="px-5 py-3">
+    <span class="font-bold text-[10px] bg-gray-50 px-2 py-1 rounded border border-current opacity-80 capitalize"
+          style="white-space:nowrap;"
+          :class="getStatusColor(s.status)"
+          x-text="getStatusLabel(s.status)"></span>
+</td>
+
 
                         {{-- Actions --}}
                         <td class="px-5 py-3 overflow-hidden">
@@ -480,6 +483,75 @@ $summaryCounts = computed(function () {
             </div>
         </div>
     </div>
+    {{-- Total Modal --}}
+<div id="totalModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);backdrop-filter:blur(4px);z-index:1000;align-items:center;justify-content:center;padding:24px;">
+    <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden">
+        <div class="flex items-center gap-4 px-6 py-5 border-b border-gray-100">
+            <div class="w-11 h-11 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center text-xl flex-shrink-0"><i class="fa-solid fa-list-check"></i></div>
+            <div class="flex-1"><h2 class="text-lg font-extrabold text-slate-800">All Sessions</h2><p class="text-xs text-slate-400" id="totalModalCount"></p></div>
+        </div>
+        <div class="px-6 py-4 max-h-80 overflow-y-auto" id="totalModalBody"></div>
+        <div class="px-6 py-4 bg-gray-50 border-t border-gray-100">
+            <button onclick="document.getElementById('totalModal').style.display='none'" class="w-full py-2.5 text-sm font-bold text-white bg-red-900 hover:bg-red-800 rounded-xl transition">Close</button>
+        </div>
+    </div>
+</div>
+
+{{-- Accepted Modal --}}
+<div id="acceptedModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);backdrop-filter:blur(4px);z-index:1000;align-items:center;justify-content:center;padding:24px;">
+    <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden">
+        <div class="flex items-center gap-4 px-6 py-5 border-b border-gray-100">
+            <div class="w-11 h-11 rounded-full bg-green-100 text-green-600 flex items-center justify-center text-xl flex-shrink-0"><i class="fa-solid fa-circle-check"></i></div>
+            <div class="flex-1"><h2 class="text-lg font-extrabold text-slate-800">Accepted Sessions</h2><p class="text-xs text-slate-400" id="acceptedModalCount"></p></div>
+        </div>
+        <div class="px-6 py-4 max-h-80 overflow-y-auto" id="acceptedModalBody"></div>
+        <div class="px-6 py-4 bg-gray-50 border-t border-gray-100">
+            <button onclick="document.getElementById('acceptedModal').style.display='none'" class="w-full py-2.5 text-sm font-bold text-white bg-red-900 hover:bg-red-800 rounded-xl transition">Close</button>
+        </div>
+    </div>
+</div>
+
+{{-- Pending Modal --}}
+<div id="pendingSessModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);backdrop-filter:blur(4px);z-index:1000;align-items:center;justify-content:center;padding:24px;">
+    <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden">
+        <div class="flex items-center gap-4 px-6 py-5 border-b border-gray-100">
+            <div class="w-11 h-11 rounded-full bg-yellow-100 text-yellow-600 flex items-center justify-center text-xl flex-shrink-0"><i class="fa-solid fa-hourglass-half"></i></div>
+            <div class="flex-1"><h2 class="text-lg font-extrabold text-slate-800">Pending Sessions</h2><p class="text-xs text-slate-400" id="pendingSessModalCount"></p></div>
+        </div>
+        <div class="px-6 py-4 max-h-80 overflow-y-auto" id="pendingSessModalBody"></div>
+        <div class="px-6 py-4 bg-gray-50 border-t border-gray-100">
+            <button onclick="document.getElementById('pendingSessModal').style.display='none'" class="w-full py-2.5 text-sm font-bold text-white bg-red-900 hover:bg-red-800 rounded-xl transition">Close</button>
+        </div>
+    </div>
+</div>
+
+{{-- Completed Modal --}}
+<div id="completedSessModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);backdrop-filter:blur(4px);z-index:1000;align-items:center;justify-content:center;padding:24px;">
+    <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden">
+        <div class="flex items-center gap-4 px-6 py-5 border-b border-gray-100">
+            <div class="w-11 h-11 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xl flex-shrink-0"><i class="fa-solid fa-circle-check"></i></div>
+            <div class="flex-1"><h2 class="text-lg font-extrabold text-slate-800">Completed Sessions</h2><p class="text-xs text-slate-400" id="completedSessModalCount"></p></div>
+        </div>
+        <div class="px-6 py-4 max-h-80 overflow-y-auto" id="completedSessModalBody"></div>
+        <div class="px-6 py-4 bg-gray-50 border-t border-gray-100">
+            <button onclick="document.getElementById('completedSessModal').style.display='none'" class="w-full py-2.5 text-sm font-bold text-white bg-red-900 hover:bg-red-800 rounded-xl transition">Close</button>
+        </div>
+    </div>
+</div>
+
+{{-- Hours Modal --}}
+<div id="hoursSessModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);backdrop-filter:blur(4px);z-index:1000;align-items:center;justify-content:center;padding:24px;">
+    <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden">
+        <div class="flex items-center gap-4 px-6 py-5 border-b border-gray-100">
+            <div class="w-11 h-11 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center text-xl flex-shrink-0"><i class="fa-solid fa-stopwatch"></i></div>
+            <div class="flex-1"><h2 class="text-lg font-extrabold text-slate-800">Total Session Hours</h2><p class="text-xs text-slate-400">Completed sessions only</p></div>
+        </div>
+        <div class="px-6 py-4 max-h-80 overflow-y-auto" id="hoursSessModalBody"></div>
+        <div class="px-6 py-4 bg-gray-50 border-t border-gray-100">
+            <button onclick="document.getElementById('hoursSessModal').style.display='none'" class="w-full py-2.5 text-sm font-bold text-white bg-red-900 hover:bg-red-800 rounded-xl transition">Close</button>
+        </div>
+    </div>
+</div>
 </div>
 
 <script>
@@ -808,4 +880,92 @@ $summaryCounts = computed(function () {
                 `);
             });
     }
+const _sessData = @json($this->sessions);
+
+function _getStatusColor(status) {
+    const map = { pending:'text-yellow-500', accepted:'text-green-600', completed:'text-gray-500', rejected:'text-red-500', cancelled:'text-red-600', no_show:'text-orange-600' };
+    return map[status] ?? 'text-slate-400';
+}
+function _getStatusLabel(status) {
+    const map = { pending:'Pending', accepted:'Accepted', completed:'Completed', rejected:'Rejected', cancelled:'Cancelled', no_show:'No Show' };
+    return map[status] ?? (status ? status.charAt(0).toUpperCase() + status.slice(1) : '—');
+}
+
+function _sessRow(item, pillColor, pillLabel) {
+    return `<div class="flex items-center gap-3 py-2.5 border-b border-gray-50 last:border-0">
+        <div class="w-8 h-8 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center text-[10px] font-bold flex-shrink-0">
+            ${(item.student ?? '?').slice(0,2).toUpperCase()}
+        </div>
+        <div class="flex-1 min-w-0">
+            <p class="text-xs font-bold text-slate-700 truncate">${item.subject ?? '—'} — ${item.topic || '—'}</p>
+            <p class="text-[10px] text-gray-400">${item.student ?? '—'} &mdash; ${item.date ?? '—'}</p>
+            <p class="text-[10px] text-gray-400">${item.time ?? '—'}</p>
+        </div>
+        <div class="flex-shrink-0">
+            <span class="${pillColor} font-bold text-[10px] bg-gray-50 px-2 py-1 rounded border border-current opacity-80 capitalize" style="font-size:10px;line-height:1;">${pillLabel}</span>
+        </div>
+    </div>`;
+}
+
+function openTotalModal() {
+    const items = [..._sessData].sort((a,b) => b.rawDate.localeCompare(a.rawDate));
+    document.getElementById('totalModalCount').innerText = `${items.length} session${items.length !== 1 ? 's' : ''}`;
+    document.getElementById('totalModalBody').innerHTML = !items.length
+        ? `<p class="text-xs text-gray-400 italic py-4 text-center">No sessions yet.</p>`
+        : items.map(i => _sessRow(i, _getStatusColor(i.status), _getStatusLabel(i.status))).join('');
+    document.getElementById('totalModal').style.display = 'flex';
+}
+
+function openAcceptedModal() {
+    const items = _sessData.filter(i => i.status === 'accepted').sort((a,b) => b.rawDate.localeCompare(a.rawDate));
+    document.getElementById('acceptedModalCount').innerText = `${items.length} session${items.length !== 1 ? 's' : ''}`;
+    document.getElementById('acceptedModalBody').innerHTML = !items.length
+        ? `<p class="text-xs text-gray-400 italic py-4 text-center">No accepted sessions.</p>`
+        : items.map(i => _sessRow(i, 'text-green-600', 'Accepted')).join('');
+    document.getElementById('acceptedModal').style.display = 'flex';
+}
+
+function openPendingModal() {
+    const items = _sessData.filter(i => i.status === 'pending').sort((a,b) => b.rawDate.localeCompare(a.rawDate));
+    document.getElementById('pendingSessModalCount').innerText = `${items.length} session${items.length !== 1 ? 's' : ''}`;
+    document.getElementById('pendingSessModalBody').innerHTML = !items.length
+        ? `<p class="text-xs text-gray-400 italic py-4 text-center">No pending sessions.</p>`
+        : items.map(i => _sessRow(i, 'text-yellow-500', 'Pending')).join('');
+    document.getElementById('pendingSessModal').style.display = 'flex';
+}
+
+function openCompletedModal() {
+    const items = _sessData.filter(i => i.status === 'completed').sort((a,b) => b.rawDate.localeCompare(a.rawDate));
+    document.getElementById('completedSessModalCount').innerText = `${items.length} session${items.length !== 1 ? 's' : ''}`;
+    document.getElementById('completedSessModalBody').innerHTML = !items.length
+        ? `<p class="text-xs text-gray-400 italic py-4 text-center">No completed sessions yet.</p>`
+        : items.map(i => _sessRow(i, 'text-gray-500', 'Completed')).join('');
+    document.getElementById('completedSessModal').style.display = 'flex';
+}
+
+function openHoursModal() {
+    const items = _sessData.filter(i => i.status === 'completed').sort((a,b) => b.rawDate.localeCompare(a.rawDate));
+    document.getElementById('hoursSessModalBody').innerHTML = !items.length
+        ? `<p class="text-xs text-gray-400 italic py-4 text-center">No completed sessions yet.</p>`
+        : items.map(i => {
+            const hrs = typeof i.durationHours === 'number'
+                ? (i.durationHours === 1 ? '1 hr' : i.durationHours.toFixed(2).replace(/\.?0+$/, '') + ' hrs')
+                : '—';
+            return `<div class="flex items-center gap-3 py-2.5 border-b border-gray-50 last:border-0">
+                <div class="w-8 h-8 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center text-[10px] font-bold flex-shrink-0">
+                    ${(i.student ?? '?').slice(0,2).toUpperCase()}
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-xs font-bold text-slate-700 truncate">${i.subject ?? '—'} — ${i.topic || '—'}</p>
+                    <p class="text-[10px] text-gray-400">${i.student ?? '—'} &mdash; ${i.date ?? '—'}</p>
+                    <p class="text-[10px] text-gray-400">${i.time ?? '—'}</p>
+                </div>
+                <div class="flex-shrink-0 flex items-center gap-2">
+                    <span class="text-xs font-black text-purple-600">${hrs}</span>
+                    <span class="text-gray-500 font-bold text-[10px] bg-gray-50 px-2 py-1 rounded border border-current opacity-80 capitalize" style="font-size:10px;line-height:1;">Completed</span>
+                </div>
+            </div>`;
+        }).join('');
+    document.getElementById('hoursSessModal').style.display = 'flex';
+}
 </script>

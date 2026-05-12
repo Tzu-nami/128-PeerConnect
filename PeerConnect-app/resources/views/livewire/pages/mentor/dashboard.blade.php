@@ -862,9 +862,9 @@ tbody.innerHTML = `<tr><td colspan="4" class="py-4 text-center">
         const monday = new Date(selected);
         monday.setDate(diff);
         monday.setHours(0, 0, 0, 0);
-        const friday = new Date(monday);
-        friday.setDate(monday.getDate() + 4);
-        return { monday, friday };
+const friday = new Date(monday);
+friday.setDate(monday.getDate() + 5);
+return { monday, friday };
     }
 
     function generateWeeklySchedule() {
@@ -877,7 +877,7 @@ tbody.innerHTML = `<tr><td colspan="4" class="py-4 text-center">
         const END_HOUR     = 18;
         const TOTAL_SLOTS  = (END_HOUR - START_HOUR) * 2;
         const TOTAL_HEIGHT = TOTAL_SLOTS * SLOT_H;
-        const DAYS         = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+        const DAYS         = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
         const STATUS_LABEL = { pending: 'Pending', accepted: 'Accepted', completed: 'Completed' };
 
         const wrapper = document.getElementById('weeklyGridContainer');
@@ -1586,8 +1586,10 @@ dayEl.innerHTML = `
                         <p class="text-[10px] text-gray-400">${s.subject} &mdash; ${date}</p>
                         <p class="text-[10px] text-gray-400">${formatTimeTo12Hour(s.start)} – ${formatTimeTo12Hour(s.end)}</p>
                     </div>
-                    <div class="flex-shrink-0"><span class="text-xs font-black text-blue-600">${dur}</span></div>
-                </div>`;
+<div class="flex-shrink-0 flex items-center gap-2">
+    <span class="text-xs font-black text-blue-600">${dur}</span>
+    <span class="text-gray-500 font-bold text-[10px] bg-gray-50 px-2 py-1 rounded border border-current opacity-80 capitalize" style="font-size:10px;line-height:1;">Completed</span>
+</div>                </div>`;
             }).join('');
         document.getElementById('hoursModal').style.display = 'flex';
     }
