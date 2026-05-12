@@ -1109,16 +1109,19 @@ $rejectBooking = action(function (string $id) {
                         </div>
 
                         <div class="px-8 py-5 bg-white border-t flex-shrink-0">
-                            <div class="flex gap-3">
-                                <button type="button" wire:click="closeModal" @click="$wire.showModal = false" x-bind:disabled="isVerifying"
-                                    class="flex-1 py-3 text-xs font-bold text-gray-800 bg-gray-200 hover:bg-gray-300 rounded-xl transition disabled:cursor-not-allowed">
-                                    Cancel
-                                </button>
-                                    <span x-show="!isVerifying">Register Mentor</span>
-                                    <span x-show="isVerifying" style="display: none;"><i class="fa-solid fa-spinner fa-spin mr-1"></i>Validating...</span>
-                                </button>
-                            </div>
-                        </div>
+    <div class="flex gap-3">
+        <button type="button" wire:click="closeModal" @click="$wire.showModal = false" x-bind:disabled="isVerifying"
+            class="flex-1 py-3 text-xs font-bold text-gray-800 bg-gray-200 hover:bg-gray-300 rounded-xl transition disabled:cursor-not-allowed">
+            Cancel
+        </button>
+        <button type="button" @click="isVerifying = true; $wire.confirmMentor().finally(() => isVerifying = false)"
+            x-bind:disabled="isVerifying"
+            class="flex-1 bg-red-900 text-white py-3 rounded-xl text-xs font-bold shadow-lg hover:bg-red-800 transition disabled:cursor-not-allowed">
+            <span x-show="!isVerifying">Register Mentor</span>
+            <span x-show="isVerifying" style="display: none;"><i class="fa-solid fa-spinner fa-spin mr-1"></i>Validating...</span>
+        </button>
+    </div>
+</div>
                     </div>
                 </div>
 
