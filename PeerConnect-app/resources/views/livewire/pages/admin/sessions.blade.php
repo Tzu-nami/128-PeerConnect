@@ -48,7 +48,7 @@ $sessions = computed(function () {
             'subjectName'   => optional($b->subject)->name ?? '',
             'topic'         => $b->topic ?? '—',
             'date'          => $b->date ? \Carbon\Carbon::parse($b->date)->format('F j, Y') : '—',
-            'mode'          => optional($b->tutorialMode)->mode ?? '—',
+            'mode' => optional($b->tutorialMode)->mode? trim(preg_replace('/\s*\([^)]*\)\s*/', ' ', preg_replace('/\s*(Tutorial|Session|Sessions)\s*/i', ' ', optional($b->tutorialMode)->mode))): '—',            'yearLevel'     => optional(optional($b->student)->yearLevel)->name ?? 'N/A',
             'yearLevel'     => optional(optional($b->student)->yearLevel)->name ?? 'N/A',
             'degreeProgram' => optional(optional($b->student)->degreeProgram)->name ?? 'N/A',
 
@@ -128,36 +128,36 @@ $updateEndTime = action(function (int $bookingId, string $newEndTime) {
 
     {{-- STATS CARDS --}}
     <div class="grid grid-cols-[repeat(autofit,_minmax(250px,_1fr))] sm:grid-cols-5 gap-4 mb-6">
-        <div class="bg-white p-4 lg:p-5 rounded-xl shadow-sm border-l-4 border-slate-400 flex items-center gap-3 lg:gap-4">
-            <div class="text-2xl flex-shrink-0"><i class="fa-solid fa-list-check text-slate-500"></i></div>
+        <div onclick="openAdminTotalModal()" class="bg-white p-4 lg:p-5 rounded-xl shadow-sm border-l-4 border-slate-400 flex items-center gap-3 lg:gap-4 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer">
+    <div class="text-2xl flex-shrink-0"><i class="fa-solid fa-list-check text-slate-500"></i></div>
             <div class="min-w-0 flex-1">
                 <h3 class="text-xs font-bold text-gray-400 uppercase leading-none truncate">Total</h3>
                 <p class="text-2xl font-black text-slate-800 truncate" x-text="counts.total"></p>
             </div>
         </div>
-        <div class="bg-white p-4 lg:p-5 rounded-xl shadow-sm border-l-4 border-green-600 flex items-center gap-3 lg:gap-4">
-            <div class="text-2xl flex-shrink-0"><i class="fa-solid fa-circle-check text-green-600"></i></div>
+ <div onclick="openAdminAcceptedModal()" class="bg-white p-4 lg:p-5 rounded-xl shadow-sm border-l-4 border-green-600 flex items-center gap-3 lg:gap-4 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer">
+    <div class="text-2xl flex-shrink-0"><i class="fa-solid fa-circle-check text-green-600"></i></div>
             <div class="min-w-0 flex-1">
                 <h3 class="text-xs font-bold text-gray-400 uppercase leading-none truncate">Accepted</h3>
                 <p class="text-2xl font-black text-slate-800 truncate" x-text="counts.accepted"></p>
             </div>
         </div>
-        <div class="bg-white p-4 lg:p-5 rounded-xl shadow-sm border-l-4 border-yellow-500 flex items-center gap-3 lg:gap-4">
-            <div class="text-2xl flex-shrink-0"><i class="fa-solid fa-hourglass-half text-yellow-500"></i></div>
+        <div onclick="openAdminPendingModal()" class="bg-white p-4 lg:p-5 rounded-xl shadow-sm border-l-4 border-yellow-500 flex items-center gap-3 lg:gap-4 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer">
+    <div class="text-2xl flex-shrink-0"><i class="fa-solid fa-hourglass-half text-yellow-500"></i></div>
             <div class="min-w-0 flex-1">
                 <h3 class="text-xs font-bold text-gray-400 uppercase leading-none truncate">Pending</h3>
                 <p class="text-2xl font-black text-slate-800 truncate" x-text="counts.pending"></p>
             </div>
         </div>
-        <div class="bg-white p-4 lg:p-5 rounded-xl shadow-sm border-l-4 border-blue-600 flex items-center gap-3 lg:gap-4">
-            <div class="text-2xl flex-shrink-0"><i class="fa-solid fa-flag-checkered text-blue-600"></i></div>
+        <div onclick="openAdminCompletedModal()" class="bg-white p-4 lg:p-5 rounded-xl shadow-sm border-l-4 border-blue-600 flex items-center gap-3 lg:gap-4 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer">
+    <div class="text-2xl flex-shrink-0"><i class="fa-solid fa-circle-check text-blue-600"></i></div>
             <div class="min-w-0 flex-1">
                 <h3 class="text-xs font-bold text-gray-400 uppercase leading-none truncate">Completed</h3>
                 <p class="text-2xl font-black text-slate-800 truncate" x-text="counts.completed"></p>
             </div>
         </div>
-        <div class="bg-white p-4 lg:p-5 rounded-xl shadow-sm border-l-4 border-purple-600 flex items-center gap-3 lg:gap-4">
-            <div class="text-2xl flex-shrink-0"><i class="fa-solid fa-stopwatch text-purple-600"></i></div>
+        <div onclick="openAdminHoursModal()" class="bg-white p-4 lg:p-5 rounded-xl shadow-sm border-l-4 border-purple-600 flex items-center gap-3 lg:gap-4 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer">
+    <div class="text-2xl flex-shrink-0"><i class="fa-solid fa-stopwatch text-purple-600"></i></div>
             <div class="min-w-0 flex-1">
                 <h3 class="text-xs font-bold text-gray-400 uppercase leading-none truncate">Total Session Hours</h3>
                 <p class="text-2xl font-black text-slate-800 truncate" x-text="counts.totalHours"></p>
@@ -271,7 +271,7 @@ $updateEndTime = action(function (int $bookingId, string $newEndTime) {
                     </thead>
                     <tbody class="divide-y divide-gray-100">
                         <template x-for="(s, index) in paginatedSessions" :key="s.id">
-                            <tr class="session-row group hover:bg-slate-50 transition">                                
+                            <tr class="session-row group hover:bg-slate-50 transition cursor-pointer" @click="openSessionDetailModal(s)">                                
                                 <td class="px-5 py-4 align-middle">
                                     <div class="hover-tooltip" :data-full="s.student + '\n' + s.yearLevel + ' - ' + s.degreeProgram">
                                         <p class="font-bold text-slate-700 text-xs truncate" x-text="s.student"></p>
@@ -311,8 +311,8 @@ $updateEndTime = action(function (int $bookingId, string $newEndTime) {
                                     </span>
                                 </td>
                                 
-                                <td class="px-5 py-4 align-middle text-center">
-                                    <div class="relative flex items-center justify-center min-h-[28px]">
+                                <td class="px-5 py-4 align-middle text-center" @click.stop>
+    <div class="relative flex items-center justify-center min-h-[28px]">
                                         <div class="action-idle absolute flex items-center justify-center gap-1 pointer-events-none">
                                             <span class="w-2 h-2 rounded-full inline-block" :class="getIdleIndicatorColor(s)"></span>
                                         </div>
@@ -549,4 +549,227 @@ $updateEndTime = action(function (int $bookingId, string $newEndTime) {
             </div>
         </div>
     </div>
+    {{-- Admin Stat Modals --}}
+<div id="adminTotalModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);backdrop-filter:blur(4px);z-index:1000;align-items:center;justify-content:center;padding:24px;">
+    <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden">
+        <div class="flex items-center gap-4 px-6 py-5 border-b border-gray-100">
+            <div class="w-11 h-11 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center text-xl flex-shrink-0"><i class="fa-solid fa-list-check"></i></div>
+            <div class="flex-1"><h2 class="text-lg font-extrabold text-slate-800">All Sessions</h2><p class="text-xs text-slate-400" id="adminTotalModalCount"></p></div>
+        </div>
+        <div class="px-6 py-4 max-h-80 overflow-y-auto" id="adminTotalModalBody"></div>
+        <div class="px-6 py-4 bg-gray-50 border-t border-gray-100">
+            <button onclick="document.getElementById('adminTotalModal').style.display='none'" class="w-full py-2.5 text-sm font-bold text-white bg-red-900 hover:bg-red-800 rounded-xl transition">Close</button>
+        </div>
+    </div>
 </div>
+
+<div id="adminAcceptedModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);backdrop-filter:blur(4px);z-index:1000;align-items:center;justify-content:center;padding:24px;">
+    <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden">
+        <div class="flex items-center gap-4 px-6 py-5 border-b border-gray-100">
+            <div class="w-11 h-11 rounded-full bg-green-100 text-green-600 flex items-center justify-center text-xl flex-shrink-0"><i class="fa-solid fa-circle-check"></i></div>
+            <div class="flex-1"><h2 class="text-lg font-extrabold text-slate-800">Accepted Sessions</h2><p class="text-xs text-slate-400" id="adminAcceptedModalCount"></p></div>
+        </div>
+        <div class="px-6 py-4 max-h-80 overflow-y-auto" id="adminAcceptedModalBody"></div>
+        <div class="px-6 py-4 bg-gray-50 border-t border-gray-100">
+            <button onclick="document.getElementById('adminAcceptedModal').style.display='none'" class="w-full py-2.5 text-sm font-bold text-white bg-red-900 hover:bg-red-800 rounded-xl transition">Close</button>
+        </div>
+    </div>
+</div>
+
+<div id="adminPendingModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);backdrop-filter:blur(4px);z-index:1000;align-items:center;justify-content:center;padding:24px;">
+    <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden">
+        <div class="flex items-center gap-4 px-6 py-5 border-b border-gray-100">
+            <div class="w-11 h-11 rounded-full bg-yellow-100 text-yellow-600 flex items-center justify-center text-xl flex-shrink-0"><i class="fa-solid fa-hourglass-half"></i></div>
+            <div class="flex-1"><h2 class="text-lg font-extrabold text-slate-800">Pending Sessions</h2><p class="text-xs text-slate-400" id="adminPendingModalCount"></p></div>
+        </div>
+        <div class="px-6 py-4 max-h-80 overflow-y-auto" id="adminPendingModalBody"></div>
+        <div class="px-6 py-4 bg-gray-50 border-t border-gray-100">
+            <button onclick="document.getElementById('adminPendingModal').style.display='none'" class="w-full py-2.5 text-sm font-bold text-white bg-red-900 hover:bg-red-800 rounded-xl transition">Close</button>
+        </div>
+    </div>
+</div>
+
+<div id="adminCompletedModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);backdrop-filter:blur(4px);z-index:1000;align-items:center;justify-content:center;padding:24px;">
+    <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden">
+        <div class="flex items-center gap-4 px-6 py-5 border-b border-gray-100">
+            <div class="w-11 h-11 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xl flex-shrink-0"><i class="fa-solid fa-circle-check"></i></div>
+            <div class="flex-1"><h2 class="text-lg font-extrabold text-slate-800">Completed Sessions</h2><p class="text-xs text-slate-400" id="adminCompletedModalCount"></p></div>
+        </div>
+        <div class="px-6 py-4 max-h-80 overflow-y-auto" id="adminCompletedModalBody"></div>
+        <div class="px-6 py-4 bg-gray-50 border-t border-gray-100">
+            <button onclick="document.getElementById('adminCompletedModal').style.display='none'" class="w-full py-2.5 text-sm font-bold text-white bg-red-900 hover:bg-red-800 rounded-xl transition">Close</button>
+        </div>
+    </div>
+</div>
+
+<div id="adminHoursModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);backdrop-filter:blur(4px);z-index:1000;align-items:center;justify-content:center;padding:24px;">
+    <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden">
+        <div class="flex items-center gap-4 px-6 py-5 border-b border-gray-100">
+            <div class="w-11 h-11 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center text-xl flex-shrink-0"><i class="fa-solid fa-stopwatch"></i></div>
+            <div class="flex-1"><h2 class="text-lg font-extrabold text-slate-800">Total Session Hours</h2><p class="text-xs text-slate-400">Completed sessions only</p></div>
+        </div>
+        <div class="px-6 py-4 max-h-80 overflow-y-auto" id="adminHoursModalBody"></div>
+        <div class="px-6 py-4 bg-gray-50 border-t border-gray-100">
+            <button onclick="document.getElementById('adminHoursModal').style.display='none'" class="w-full py-2.5 text-sm font-bold text-white bg-red-900 hover:bg-red-800 rounded-xl transition">Close</button>
+        </div>
+    </div>
+</div>
+
+{{-- Session Detail Modal --}}
+<div id="sessionDetailModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);backdrop-filter:blur(4px);z-index:1000;align-items:center;justify-content:center;padding:24px;">
+    <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden">
+ <div class="flex items-center gap-4 px-6 py-5 border-b border-gray-100">
+    <div class="w-11 h-11 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center text-xl flex-shrink-0">
+        <i class="fa-solid fa-calendar-days"></i>
+    </div>
+    <div class="flex-1 min-w-0">
+        <h2 class="text-lg font-extrabold text-slate-800" id="sdModalTitle"></h2>
+        <p class="text-xs text-slate-400" id="sdModalSubtitle"></p>
+    </div>
+</div>
+        <div class="px-6 py-5 space-y-3" id="sdModalBody"></div>
+        <div class="px-6 py-4 bg-gray-50 border-t border-gray-100">
+            <button onclick="document.getElementById('sessionDetailModal').style.display='none'" class="w-full py-2.5 text-sm font-bold text-white bg-red-900 hover:bg-red-800 rounded-xl transition">Close</button>
+        </div>
+    </div>
+</div>
+</div>
+<script>
+const _adminSessData = @json($this->sessions);
+
+function _adminStatusColor(status) {
+    const map = { pending:'text-yellow-500', accepted:'text-green-600', completed:'text-gray-500', rejected:'text-red-500', cancelled:'text-red-600', no_show:'text-orange-600' };
+    return map[status] ?? 'text-slate-400';
+}
+function _adminStatusLabel(status) {
+    const map = { pending:'Pending', accepted:'Accepted', completed:'Completed', rejected:'Rejected', cancelled:'Cancelled', no_show:'No Show' };
+    return map[status] ?? (status ? status.charAt(0).toUpperCase() + status.slice(1) : '—');
+}
+
+function _adminSessRow(item, pillColor, pillLabel) {
+    const line1 = `${item.subject ?? '—'} — ${item.topic || '—'}`;
+    const line2 = `${item.mentor ?? '—'} — ${item.student ?? '—'}`;
+    const line3 = `${item.date ?? '—'}, ${item.time ?? '—'}`;
+    return `<div class="flex items-center gap-3 py-2.5 border-b border-gray-50 last:border-0">
+        <div class="w-8 h-8 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center text-[10px] font-bold flex-shrink-0">
+            ${(item.student ?? '?').slice(0,2).toUpperCase()}
+        </div>
+        <div class="flex-1 min-w-0">
+            <p class="text-xs font-bold text-slate-700 truncate" style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis;" onmouseenter="this.title=this.scrollWidth>this.clientWidth?'${line1.replace(/'/g,'&#39;')}':'';">${line1}</p>
+            <p class="text-[10px] text-gray-400 truncate" style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis;" onmouseenter="this.title=this.scrollWidth>this.clientWidth?'${line2.replace(/'/g,'&#39;')}':'';">${line2}</p>
+            <p class="text-[10px] text-gray-400 truncate" style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis;" onmouseenter="this.title=this.scrollWidth>this.clientWidth?'${line3.replace(/'/g,'&#39;')}':'';">${line3}</p>
+        </div>
+        <div class="flex-shrink-0">
+            <span class="${pillColor} font-bold text-[10px] bg-gray-50 px-2 py-1 rounded border border-current opacity-80 capitalize" style="font-size:10px;line-height:1;">${pillLabel}</span>
+        </div>
+    </div>`;
+}
+
+function openAdminTotalModal() {
+    const items = [..._adminSessData].sort((a,b) => (b.rawDate ?? '').localeCompare(a.rawDate ?? ''));
+    document.getElementById('adminTotalModalCount').innerText = `${items.length} session${items.length !== 1 ? 's' : ''}`;
+    document.getElementById('adminTotalModalBody').innerHTML = !items.length
+        ? `<p class="text-xs text-gray-400 italic py-4 text-center">No sessions yet.</p>`
+        : items.map(i => _adminSessRow(i, _adminStatusColor(i.status), _adminStatusLabel(i.status))).join('');
+    document.getElementById('adminTotalModal').style.display = 'flex';
+}
+
+function openAdminAcceptedModal() {
+    const items = _adminSessData.filter(i => i.status === 'accepted').sort((a,b) => (b.rawDate ?? '').localeCompare(a.rawDate ?? ''));
+    document.getElementById('adminAcceptedModalCount').innerText = `${items.length} session${items.length !== 1 ? 's' : ''}`;
+    document.getElementById('adminAcceptedModalBody').innerHTML = !items.length
+        ? `<p class="text-xs text-gray-400 italic py-4 text-center">No accepted sessions.</p>`
+        : items.map(i => _adminSessRow(i, 'text-green-600', 'Accepted')).join('');
+    document.getElementById('adminAcceptedModal').style.display = 'flex';
+}
+
+function openAdminPendingModal() {
+    const items = _adminSessData.filter(i => i.status === 'pending').sort((a,b) => (b.rawDate ?? '').localeCompare(a.rawDate ?? ''));
+    document.getElementById('adminPendingModalCount').innerText = `${items.length} session${items.length !== 1 ? 's' : ''}`;
+    document.getElementById('adminPendingModalBody').innerHTML = !items.length
+        ? `<p class="text-xs text-gray-400 italic py-4 text-center">No pending sessions.</p>`
+        : items.map(i => _adminSessRow(i, 'text-yellow-500', 'Pending')).join('');
+    document.getElementById('adminPendingModal').style.display = 'flex';
+}
+
+function openAdminCompletedModal() {
+    const items = _adminSessData.filter(i => i.status === 'completed').sort((a,b) => (b.rawDate ?? '').localeCompare(a.rawDate ?? ''));
+    document.getElementById('adminCompletedModalCount').innerText = `${items.length} session${items.length !== 1 ? 's' : ''}`;
+    document.getElementById('adminCompletedModalBody').innerHTML = !items.length
+        ? `<p class="text-xs text-gray-400 italic py-4 text-center">No completed sessions yet.</p>`
+        : items.map(i => _adminSessRow(i, 'text-gray-500', 'Completed')).join('');
+    document.getElementById('adminCompletedModal').style.display = 'flex';
+}
+
+function openAdminHoursModal() {
+    const items = _adminSessData.filter(i => i.status === 'completed').sort((a,b) => (b.rawDate ?? '').localeCompare(a.rawDate ?? ''));
+    document.getElementById('adminHoursModalBody').innerHTML = !items.length
+        ? `<p class="text-xs text-gray-400 italic py-4 text-center">No completed sessions yet.</p>`
+        : items.map(i => {
+            const hrs = typeof i.durationHours === 'number'
+                ? (i.durationHours === 1 ? '1 hr' : i.durationHours.toFixed(2).replace(/\.?0+$/, '') + ' hrs')
+                : '—';
+const line1 = `${i.subject ?? '—'} — ${i.topic || '—'}`;
+const line2 = `${i.mentor ?? '—'} — ${i.student ?? '—'}`;
+const line3 = `${i.date ?? '—'}, ${i.time ?? '—'}`;
+return `<div class="flex items-center gap-3 py-2.5 border-b border-gray-50 last:border-0">
+    <div class="w-8 h-8 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center text-[10px] font-bold flex-shrink-0">
+        ${(i.student ?? '?').slice(0,2).toUpperCase()}
+    </div>
+    <div class="flex-1 min-w-0">
+        <p class="text-xs font-bold text-slate-700 truncate" style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis;" onmouseenter="this.title=this.scrollWidth>this.clientWidth?'${line1.replace(/'/g,'&#39;')}':'';">${line1}</p>
+        <p class="text-[10px] text-gray-400 truncate" style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis;" onmouseenter="this.title=this.scrollWidth>this.clientWidth?'${line2.replace(/'/g,'&#39;')}':'';">${line2}</p>
+        <p class="text-[10px] text-gray-400 truncate" style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis;" onmouseenter="this.title=this.scrollWidth>this.clientWidth?'${line3.replace(/'/g,'&#39;')}':'';">${line3}</p>
+    </div>
+                <div class="flex-shrink-0 flex items-center gap-2">
+                    <span class="text-xs font-black text-purple-600">${hrs}</span>
+                    <span class="text-gray-500 font-bold text-[10px] bg-gray-50 px-2 py-1 rounded border border-current opacity-80 capitalize" style="font-size:10px;line-height:1;">Completed</span>
+                </div>
+            </div>`;
+        }).join('');
+    document.getElementById('adminHoursModal').style.display = 'flex';
+}
+
+function openSessionDetailModal(s) {
+    const statusColor = _adminStatusColor(s.status);
+    const statusLabel = _adminStatusLabel(s.status);
+    document.getElementById('sdModalTitle').innerText = s.student ?? 'Unknown Student';
+    document.getElementById('sdModalSubtitle').innerText = s.subject + (s.subjectName ? ' – ' + s.subjectName : '');
+    document.getElementById('sdModalBody').innerHTML = `
+        <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 flex items-start gap-3">
+            <i class="fa-solid fa-calendar-days text-slate-400 mt-0.5 text-sm flex-shrink-0"></i>
+            <div>
+                <p class="text-xs font-bold text-slate-700 mb-0.5">${s.date ?? '—'}</p>
+                <p class="text-xs text-slate-500">${s.time ?? '—'}</p>
+            </div>
+        </div>
+        <div class="divide-y divide-gray-100 text-xs">
+            <div class="flex justify-between py-2.5">
+                <span class="text-gray-400 font-medium">Mentor</span>
+                <span class="text-slate-700 font-bold">${s.mentor ?? '—'}</span>
+            </div>
+            <div class="flex justify-between py-2.5">
+                <span class="text-gray-400 font-medium">Subject</span>
+                <span class="text-slate-700 font-bold">${s.subject ?? '—'}</span>
+            </div>
+            <div class="flex justify-between py-2.5">
+                <span class="text-gray-400 font-medium">Topic</span>
+                <span class="text-slate-700 font-bold text-right max-w-[60%]">${s.topic ?? '—'}</span>
+            </div>
+            <div class="flex justify-between py-2.5">
+                <span class="text-gray-400 font-medium">Mode</span>
+                <span class="text-slate-700 font-bold">${s.mode ?? '—'}</span>
+            </div>
+            <div class="flex justify-between py-2.5">
+                <span class="text-gray-400 font-medium">Year Level</span>
+                <span class="text-slate-700 font-bold">${s.yearLevel ?? '—'}</span>
+            </div>
+            <div class="flex justify-between py-2.5">
+                <span class="text-gray-400 font-medium">Status</span>
+                <span class="${statusColor} font-bold text-[10px] bg-gray-50 px-2 py-1 rounded border border-current opacity-80 capitalize">${statusLabel}</span>
+            </div>
+        </div>
+    `;
+    document.getElementById('sessionDetailModal').style.display = 'flex';
+}
+</script>

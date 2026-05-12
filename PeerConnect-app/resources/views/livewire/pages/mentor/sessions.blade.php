@@ -74,8 +74,7 @@ $sessions = computed(function () {
             'topic'         => $b->topic ?? '—',
             'date'          => $b->date ? \Carbon\Carbon::parse($b->date)->format('F j, Y') : '—',
             'rawDate'       => $b->date ? \Carbon\Carbon::parse($b->date)->format('Y-m-d') : '',
-            'mode'          => optional($b->tutorialMode)->mode ?? '—',
-            'yearLevel'     => optional(optional($b->student)->yearLevel)->name ?? 'N/A',
+            'mode' => optional($b->tutorialMode)->mode? trim(preg_replace('/\s*\([^)]*\)\s*/', ' ', preg_replace('/\s*(Tutorial|Session|Sessions)\s*/i', ' ', optional($b->tutorialMode)->mode))): '—',            'yearLevel'     => optional(optional($b->student)->yearLevel)->name ?? 'N/A',
             'degreeProgram' => optional(optional($b->student)->degreeProgram)->name ?? 'N/A',
             'start'         => $start->format('H:i'),
             'end'           => $end->format('H:i'),
@@ -288,10 +287,10 @@ $summaryCounts = computed(function () {
 
                 <tbody>
                 <template x-for="(s, index) in paginatedItems" :key="s.id">
-                    <tr class="border-b border-gray-50 hover:bg-slate-50 transition group">
+                    <tr class="border-b border-gray-50 hover:bg-slate-50 transition group" style="height:56px;">
 
  {{-- Student --}}
-<td class="px-5 py-3">
+<td class="px-5 py-3 max-w-0 align-middle" style="width:15%;">
     <p class="font-bold text-slate-700 text-xs truncate"
        x-init="$nextTick(() => { if ($el.scrollWidth > $el.clientWidth) $el.title = s.student })"
        x-text="s.student"></p>
@@ -301,7 +300,7 @@ $summaryCounts = computed(function () {
 </td>
 
 {{-- Subject --}}
-<td class="px-5 py-3">
+<td class="px-5 py-3 max-w-0 align-middle" style="width:12%;">
     <p class="font-bold text-slate-700 text-xs truncate"
        x-init="$nextTick(() => { if ($el.scrollWidth > $el.clientWidth) $el.title = s.subject })"
        x-text="s.subject"></p>
@@ -316,7 +315,7 @@ $summaryCounts = computed(function () {
     <p class="topic-text text-xs text-slate-600 truncate w-full" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" x-text="s.topic"></p>
 </td>
 
-{{-- Date & Time --}}
+{{-- Date and Time --}}
 <td class="px-5 py-3">
     <p class="text-xs font-medium text-slate-700" x-text="s.date"></p>
     <p class="text-xs text-gray-400" x-text="s.time"></p>
@@ -442,7 +441,7 @@ $summaryCounts = computed(function () {
         {{-- Pagination --}}
         <div class="p-6 flex flex-col items-center justify-center gap-3" x-cloak>
             <div class="flex items-center gap-2" x-show="totalPages > 1">
-                <button @click="currentPage--" :disabled="currentPage === 1" class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-slate-500 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition">
+                <button @click="if(currentPage > 1) currentPage--" :disabled="currentPage === 1" class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-slate-500 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition">
                     <i class="fa-solid fa-chevron-left text-[10px]"></i>
                 </button>
                 <template x-for="(page, index) in pages" :key="index">
@@ -451,7 +450,7 @@ $summaryCounts = computed(function () {
                         <span x-show="page === '...'" class="w-7 h-7 flex items-center justify-center text-[11px] font-bold text-gray-400 tracking-widest shrink-0">...</span>
                     </div>
                 </template>
-                <button @click="currentPage++" :disabled="currentPage === totalPages" class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-slate-500 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition">
+                <button @click="if(currentPage < totalPages) currentPage++" :disabled="currentPage === totalPages" class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-slate-500 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition">
                     <i class="fa-solid fa-chevron-right text-[10px]"></i>
                 </button>
             </div>
@@ -682,7 +681,7 @@ $summaryCounts = computed(function () {
         document.getElementById('statAccepted').textContent  = statuses.filter(s => s === 'accepted').length;
         document.getElementById('statPending').textContent   = statuses.filter(s => s === 'pending').length;
         document.getElementById('statCompleted').textContent = statuses.filter(s => s === 'completed').length;
-        document.getElementById('statHours').textContent     = parseFloat(completedHours.toFixed(2)) + ' hrs';
+        document.getElementById('statHours').textContent     = parseFloat(completedHours.toFixed(2));
     }
 
     /* ── Confirmation modal ── */

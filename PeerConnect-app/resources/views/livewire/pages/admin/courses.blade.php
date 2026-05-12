@@ -234,7 +234,7 @@ mount(function () {
                 </thead>
                 <tbody class="divide-y divide-gray-50">
                         <template x-for="sub in paginatedSubjects" :key="sub.id">
-                            <tr class="courses-row hover:bg-slate-50 transition">
+                            <tr class="courses-row hover:bg-slate-50 transition cursor-pointer" @click="openViewModal(sub)">
                             <td class="px-5 py-4 align-middle" style="width:18%;">
                                 <div class="hover-tooltip" :data-full="sub.code">
                                     <p class="font-bold text-slate-800 text-xs truncate" x-text="sub.code"></p>
@@ -259,7 +259,7 @@ mount(function () {
                                         <span class="w-2 h-2 rounded-full bg-slate-300 inline-block"></span>
                                     </div>
 
-                                    <div class="action-buttons flex items-center justify-center flex-wrap gap-1">
+                                    <div class="action-buttons flex items-center justify-center flex-wrap gap-1" @click.stop>
                                         
                                         <div class="hover-tooltip" data-full="View Mentors">
                                             <button @click="openViewModal(sub)" class="icon-btn icon-btn-view" style="flex-shrink:0;">
@@ -295,7 +295,7 @@ mount(function () {
         {{-- PAGINATION --}}
         <div class="p-6 border-t border-gray-100 flex flex-col justify-center items-center gap-2 bg-white" x-show="totalPages > 1" x-cloak>
             <div class="flex items-center gap-2" x-show="totalPages > 1">
-                <button @click="currentPage--" :disabled="currentPage === 1" class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-slate-500 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition">
+                <button @click="if(currentPage > 1) currentPage--" :disabled="currentPage === 1" class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-slate-500 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition">
                     <i class="fa-solid fa-chevron-left text-[10px]"></i>
                 </button>
                 <template x-for="(page, index) in pages" :key="index">
@@ -305,7 +305,7 @@ mount(function () {
                     </div>
                 </template>
 
-                <button @click="currentPage++" :disabled="currentPage === totalPages" class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-slate-500 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition">
+                <button @click="if(currentPage < totalPages) currentPage++" :disabled="currentPage === totalPages" class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-slate-500 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition">
                     <i class="fa-solid fa-chevron-right text-[10px]"></i>
                 </button>
             </div>
