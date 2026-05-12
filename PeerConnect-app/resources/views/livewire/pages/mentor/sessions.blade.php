@@ -120,7 +120,7 @@ $summaryCounts = computed(function () {
     <div onclick="openTotalModal()" class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-slate-400 flex items-center gap-4 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer">
         <div class="text-2xl flex-shrink-0"><i class="fa-solid fa-list-check text-slate-500"></i></div>
         <div class="min-w-0 flex-1">
-            <h3 class="text-xs font-bold text-gray-400 uppercase leading-none truncate">Total</h3>
+            <h3 class="text-xs font-bold text-gray-400 uppercase leading-none truncate">All Sessions</h3>
             <p class="text-2xl font-black text-slate-800 truncate" id="statTotal">{{ $this->summaryCounts['total'] }}</p>
         </div>
     </div>
@@ -891,14 +891,16 @@ function _getStatusLabel(status) {
 }
 
 function _sessRow(item, pillColor, pillLabel) {
+    const line1 = `${item.subject ?? '—'} — ${item.topic || '—'}`;
+    const line2 = `${item.student ?? '—'} — ${item.date ?? '—'}`;
     return `<div class="flex items-center gap-3 py-2.5 border-b border-gray-50 last:border-0">
         <div class="w-8 h-8 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center text-[10px] font-bold flex-shrink-0">
             ${(item.student ?? '?').slice(0,2).toUpperCase()}
         </div>
         <div class="flex-1 min-w-0">
-            <p class="text-xs font-bold text-slate-700 truncate">${item.subject ?? '—'} — ${item.topic || '—'}</p>
-            <p class="text-[10px] text-gray-400">${item.student ?? '—'} &mdash; ${item.date ?? '—'}</p>
-            <p class="text-[10px] text-gray-400">${item.time ?? '—'}</p>
+            <p class="text-xs font-bold text-slate-700 truncate" style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis;" onmouseenter="this.title=this.scrollWidth>this.clientWidth?'${line1.replace(/'/g,'&#39;').replace(/"/g,'&quot;')}':'';">${line1}</p>
+            <p class="text-[10px] text-gray-400 truncate" style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis;" onmouseenter="this.title=this.scrollWidth>this.clientWidth?'${line2.replace(/'/g,'&#39;').replace(/"/g,'&quot;')}':'';">${line2}</p>
+            <p class="text-[10px] text-gray-400 truncate" style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">${item.time ?? '—'}</p>
         </div>
         <div class="flex-shrink-0">
             <span class="${pillColor} font-bold text-[10px] bg-gray-50 px-2 py-1 rounded border border-current opacity-80 capitalize" style="font-size:10px;line-height:1;">${pillLabel}</span>
@@ -950,14 +952,16 @@ function openHoursModal() {
             const hrs = typeof i.durationHours === 'number'
                 ? (i.durationHours === 1 ? '1 hr' : i.durationHours.toFixed(2).replace(/\.?0+$/, '') + ' hrs')
                 : '—';
+            const line1 = `${i.subject ?? '—'} — ${i.topic || '—'}`;
+            const line2 = `${i.student ?? '—'} — ${i.date ?? '—'}`;
             return `<div class="flex items-center gap-3 py-2.5 border-b border-gray-50 last:border-0">
                 <div class="w-8 h-8 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center text-[10px] font-bold flex-shrink-0">
                     ${(i.student ?? '?').slice(0,2).toUpperCase()}
                 </div>
                 <div class="flex-1 min-w-0">
-                    <p class="text-xs font-bold text-slate-700 truncate">${i.subject ?? '—'} — ${i.topic || '—'}</p>
-                    <p class="text-[10px] text-gray-400">${i.student ?? '—'} &mdash; ${i.date ?? '—'}</p>
-                    <p class="text-[10px] text-gray-400">${i.time ?? '—'}</p>
+                    <p class="text-xs font-bold text-slate-700 truncate" style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis;" onmouseenter="this.title=this.scrollWidth>this.clientWidth?'${line1.replace(/'/g,'&#39;').replace(/"/g,'&quot;')}':'';">${line1}</p>
+                    <p class="text-[10px] text-gray-400 truncate" style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis;" onmouseenter="this.title=this.scrollWidth>this.clientWidth?'${line2.replace(/'/g,'&#39;').replace(/"/g,'&quot;')}':'';">${line2}</p>
+                    <p class="text-[10px] text-gray-400 truncate" style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">${i.time ?? '—'}</p>
                 </div>
                 <div class="flex-shrink-0 flex items-center gap-2">
                     <span class="text-xs font-black text-purple-600">${hrs}</span>
