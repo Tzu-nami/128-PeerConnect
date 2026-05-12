@@ -167,7 +167,7 @@ $dashboardStats = computed(function () {
                     {{-- Filter mentors --}}
                     <div class="relative" @click.outside="showMentorDropdown = false">
                         <button @click="showMentorDropdown = !showMentorDropdown"
-                            class="table-filter-select flex items-center gap-2 min-w-[110px] justify-between transition hover:border-gray-300">
+    class="table-filter-select flex items-center gap-2 w-[110px] justify-between transition hover:border-gray-300">
                             <span class="flex items-center gap-1.5 text-slate-600 font-medium">
                                 <i class="fa-solid fa-filter text-gray-400"></i> Mentor
                             </span>
@@ -195,7 +195,7 @@ $dashboardStats = computed(function () {
                     {{-- Filter Ratings --}}
                     <div class="relative" @click.outside="showRatingDropdown = false">
                         <button @click="showRatingDropdown = !showRatingDropdown"
-                            class="table-filter-select flex items-center gap-2 min-w-[110px] justify-between transition hover:border-gray-300">
+    class="table-filter-select flex items-center gap-2 w-[110px] justify-between transition hover:border-gray-300">
                             <span class="flex items-center gap-1.5 text-slate-600 font-medium">
                                 <i class="fa-solid fa-filter text-gray-400"></i> Ratings
                             </span>
@@ -264,8 +264,8 @@ $dashboardStats = computed(function () {
                                                 : 'fa-arrow-up-arrow-down opacity-30'"></i>
                                     </button>
                                 </th>
-<th class="px-5 py-3 text-xs font-bold text-gray-400 text-left w-[26%]">
-    <button @click="toggleSort('feedback')" class="flex items-center gap-1 hover:text-slate-600 transition uppercase tracking-wider">
+<th class="px-5 py-3 text-xs font-bold text-gray-400 text-left w-[20%]">
+    <button @click="toggleSort('feedback')"class="flex items-center gap-1 hover:text-slate-600 transition uppercase tracking-wider">
         Feedback
                                         <i class="fa-solid text-[8px]"
                                         :class="sortCol === 'feedback'
@@ -273,7 +273,7 @@ $dashboardStats = computed(function () {
                                                 : 'fa-arrow-up-arrow-down opacity-30'"></i>
                                     </button>
                                 </th>
-<th class="px-5 py-3 text-xs font-bold text-gray-400 text-right w-[16%]">
+<th class="px-5 py-3 text-xs font-bold text-gray-400 text-right w-[22%]">
     <button @click="toggleSort('rating')" class="flex items-center justify-end w-full gap-1 hover:text-slate-600 transition uppercase tracking-wider">
         Rating
                                         <i class="fa-solid text-[8px]"
@@ -296,10 +296,9 @@ $dashboardStats = computed(function () {
 <td class="px-5 py-3 align-middle col-subject">
     <span class="bg-red-50 text-red-700 px-2 py-0.5 rounded text-[10px] font-bold border border-red-100 whitespace-nowrap" x-text="fb.subject"></span>
 </td>
-<td class="px-5 py-3 align-middle col-topic" style="overflow:visible; position:relative;">
-    <div class="hover-tooltip" :data-full="fb.topic">
-        <span class="cell-text-wrap text-xs text-slate-600" x-text="fb.topic"></span>
-    </div>
+<td class="px-5 py-3 align-middle col-topic max-w-0"
+    x-init="$nextTick(() => { const p = $el.querySelector('.topic-text'); if (p && p.scrollWidth > p.clientWidth) $el.title = fb.topic })">
+    <span class="topic-text text-xs text-slate-600 truncate block w-full" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" x-text="fb.topic"></span>
 </td>
 <td class="px-5 py-3 align-middle col-feedback max-w-0">
     <button type="button" @click.stop="openFeedbackPopup(fb.has_feedback ? fb.feedback : null)" class="text-left w-full group">
