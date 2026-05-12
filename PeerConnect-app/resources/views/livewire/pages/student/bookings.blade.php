@@ -1896,7 +1896,19 @@ splitSlotSegments(dayKey, slotStartRaw, slotEndRaw, dateStr) {
         'no_show'   => 'No Show',
     ];
 @endphp
-<span class="booking-status-pill status-{{ $statusKey }}">
+@php
+$pillColor = match($statusKey) {
+    'pending'   => 'text-yellow-500',
+    'accepted'  => 'text-green-600',
+    'completed' => 'text-gray-500',
+    'cancelled' => 'text-red-600',
+    'rejected'  => 'text-red-500',
+    'closed'    => 'text-purple-700',
+    'no_show'   => 'text-orange-600',
+    default     => 'text-slate-400',
+};
+@endphp
+<span class="{{ $pillColor }} font-bold text-[10px] bg-gray-50 px-2 py-1 rounded border border-current opacity-80 capitalize">
     {{ $statusLabels[$statusKey] ?? ucfirst($booking->booking_status) }}
 </span>
                                 </div>

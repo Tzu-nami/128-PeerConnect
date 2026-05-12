@@ -518,18 +518,18 @@ $saveProfile = action(function () {
                            style="display:none;">
                         <thead class="bg-gray-50">
                         <tr>
-                            <th class="p-2 border text-[10px] font-bold text-gray-500
-                                           uppercase tracking-wider">Time</th>
-                            <th class="p-2 border text-[10px] font-bold text-gray-500
-                                           uppercase" id="monHead"></th>
-                            <th class="p-2 border text-[10px] font-bold text-gray-500
-                                           uppercase" id="tueHead"></th>
-                            <th class="p-2 border text-[10px] font-bold text-gray-500
-                                           uppercase" id="wedHead"></th>
-                            <th class="p-2 border text-[10px] font-bold text-gray-500
-                                           uppercase" id="thuHead"></th>
-                            <th class="p-2 border text-[10px] font-bold text-gray-500
-                                           uppercase" id="friHead"></th>
+<th class="p-2 border text-[10px] font-bold text-gray-500
+               uppercase" id="monHead"></th>
+<th class="p-2 border text-[10px] font-bold text-gray-500
+               uppercase" id="tueHead"></th>
+<th class="p-2 border text-[10px] font-bold text-gray-500
+               uppercase" id="wedHead"></th>
+<th class="p-2 border text-[10px] font-bold text-gray-500
+               uppercase" id="thuHead"></th>
+<th class="p-2 border text-[10px] font-bold text-gray-500
+               uppercase" id="friHead"></th>
+<th class="p-2 border text-[10px] font-bold text-gray-500
+               uppercase" id="satHead"></th>
                         </tr>
                         </thead>
                         <tbody id="weeklyScheduleBody"></tbody>
@@ -912,18 +912,18 @@ tbody.innerHTML = visible.map(row => `
         const monday = new Date(selected);
         monday.setDate(diff);
         monday.setHours(0, 0, 0, 0);
-        const friday = new Date(monday);
-        friday.setDate(monday.getDate() + 4);
-        return { monday, friday };
+const saturday = new Date(monday);
+saturday.setDate(monday.getDate() + 5);
+return { monday, friday: saturday };
     }
 
     function updateWeekHeaders() {
         const { monday } = getCurrentWeekRange();
-        ['monHead', 'tueHead', 'wedHead', 'thuHead', 'friHead'].forEach((id, i) => {
-            const d = new Date(monday);
-            d.setDate(monday.getDate() + i);
-            document.getElementById(id).innerText = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-        });
+['monHead', 'tueHead', 'wedHead', 'thuHead', 'friHead', 'satHead'].forEach((id, i) => {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    document.getElementById(id).innerText = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+});
     }
 
     function generateWeeklySchedule() {
@@ -948,12 +948,12 @@ tbody.innerHTML = visible.map(row => `
             return h * 60 + m;
         }
 
-        const weekSessions = allSessions.filter(s => {
-            if (!s.date || !s.start || !s.end) return false;
-            if (!ALLOWED_STATUSES.includes(s.status)) return false;
-            const d = new Date(s.date + "T00:00:00").setHours(0,0,0,0);
-            return d >= week.monday.getTime() && d <= week.friday.getTime();
-        });
+const weekSessions = allSessions.filter(s => {
+    if (!s.date || !s.start || !s.end) return false;
+    if (!ALLOWED_STATUSES.includes(s.status)) return false;
+    const d = new Date(s.date + "T00:00:00").setHours(0,0,0,0);
+    return d >= week.monday.getTime() && d <= week.friday.getTime(); 
+});
 
         let startHour = 8, endHour = 18;
 
@@ -968,7 +968,7 @@ tbody.innerHTML = visible.map(row => `
         const rangeEl = document.getElementById('weeklyScheduleRange');
         if (rangeEl) rangeEl.innerText = `${fmtHour(startHour)} – ${fmtHour(endHour)}`;
 
-        const days     = ["Monday","Tuesday","Wednesday","Thursday","Friday"];
+        const days     = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
         const dayCount = days.length;
 
         gridWrap = document.createElement('div');

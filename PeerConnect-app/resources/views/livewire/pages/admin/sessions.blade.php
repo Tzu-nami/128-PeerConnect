@@ -159,7 +159,7 @@ $updateEndTime = action(function (int $bookingId, string $newEndTime) {
         <div class="bg-white p-4 lg:p-5 rounded-xl shadow-sm border-l-4 border-purple-600 flex items-center gap-3 lg:gap-4">
             <div class="text-2xl flex-shrink-0"><i class="fa-solid fa-stopwatch text-purple-600"></i></div>
             <div class="min-w-0 flex-1">
-                <h3 class="text-xs font-bold text-gray-400 uppercase leading-none truncate">Total Hours</h3>
+                <h3 class="text-xs font-bold text-gray-400 uppercase leading-none truncate">Total Session Hours</h3>
                 <p class="text-2xl font-black text-slate-800 truncate" x-text="counts.totalHours"></p>
             </div>
         </div>

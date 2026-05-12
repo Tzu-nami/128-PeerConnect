@@ -54,9 +54,10 @@ mount(function () {
         ->get()
         ->map(fn ($b) => [
             'id'          => $b->id,
-            'student'     => optional(optional($b->student)->user)->firstName
-                ? $b->student->user->firstName . ' ' . $b->student->user->lastName
-                : 'Unknown',
+'student'     => optional(optional($b->student)->user)->firstName
+    ? $b->student->user->firstName . ' ' . $b->student->user->lastName
+    : 'Unknown',
+'email'       => optional(optional($b->student)->user)->email ?? '',
             'subject'     => optional($b->subject)->code ?? 'N/A',
             'subjectName' => optional($b->subject)->name ?? '',
             'date'        => $b->date
@@ -286,8 +287,8 @@ $searchIndex = computed(function () {
                         <h2 class="text-lg font-bold text-slate-800" id="tableTitle">
                             <i class="fa-solid fa-calendar-check"></i> Today's Schedule
                         </h2>
-                        <p class="text-s text-gray-500" id="tableSubtitle"></p>
-                    </div>
+                            <p class="text-xs text-gray-400" id="tableSubtitle"></p>
+                        </div>
 
                     <div class="flex gap-2">
                         <div class="relative w-48">
@@ -300,14 +301,15 @@ $searchIndex = computed(function () {
                                           h-[34px] transition-shadow">
                         </div>
 
-                        <select id="statusFilter" class="table-filter-select">
-                            <option value="">All Status</option>
-                            <option value="pending">Pending</option>
-                            <option value="completed">Completed</option>
-                            <option value="cancelled">Cancelled</option>
-                            <option value="rejected">Rejected</option>
-                            <option value="no_show">No Show</option>
-                        </select>
+<select id="statusFilter" class="table-filter-select">
+    <option value="">All Status</option>
+    <option value="pending">Pending</option>
+    <option value="accepted">Accepted</option>
+    <option value="completed">Completed</option>
+    <option value="cancelled">Cancelled</option>
+    <option value="rejected">Rejected</option>
+    <option value="no_show">No Show</option>
+</select>
                     </div>
                 </div>
 
@@ -355,6 +357,49 @@ $searchIndex = computed(function () {
                     </div>
                 </div>
             </div>
+
+            {{-- Stat Cards --}}
+{{-- ── Stats Row ── --}}
+<div class="grid grid-cols-3 gap-4">
+    <div onclick="openHoursModal()"
+         class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-blue-600
+                flex items-center gap-4 hover:shadow-md hover:-translate-y-0.5
+                transition-all duration-200 cursor-pointer">
+        <div class="text-2xl flex-shrink-0">
+            <i class="fa-solid fa-clock text-blue-600"></i>
+        </div>
+        <div class="min-w-0 flex-1">
+            <h3 class="text-xs font-bold text-gray-400 uppercase leading-none truncate">Total Session Hours</h3>
+            <p class="text-2xl font-black truncate" id="statTotalHours">0</p>
+        </div>
+    </div>
+
+    <div onclick="openCompletedModal()"
+         class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-green-600
+                flex items-center gap-4 hover:shadow-md hover:-translate-y-0.5
+                transition-all duration-200 cursor-pointer">
+        <div class="text-2xl flex-shrink-0">
+            <i class="fa-solid fa-circle-check text-green-600"></i>
+        </div>
+        <div class="min-w-0 flex-1">
+            <h3 class="text-xs font-bold text-gray-400 uppercase leading-none truncate">Completed</h3>
+            <p class="text-2xl font-black truncate" id="statCompleted">0</p>
+        </div>
+    </div>
+
+    <div onclick="openUpcomingModal()"
+         class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-yellow-500
+                flex items-center gap-4 hover:shadow-md hover:-translate-y-0.5
+                transition-all duration-200 cursor-pointer">
+        <div class="text-2xl flex-shrink-0">
+            <i class="fa-solid fa-calendar-days text-yellow-500"></i>
+        </div>
+        <div class="min-w-0 flex-1">
+            <h3 class="text-xs font-bold text-gray-400 uppercase leading-none truncate">Upcoming</h3>
+            <p class="text-2xl font-black truncate" id="statUpcoming">0</p>
+        </div>
+    </div>
+</div>
 
             {{-- Weekly Schedule --}}
             <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
@@ -443,14 +488,14 @@ $searchIndex = computed(function () {
             {{-- Pending Requests --}}
             <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
 
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="font-bold text-slate-800 text-sm tracking-tight">Pending Requests</h3>
+<div class="flex justify-between items-center mb-2">
+                        <h3 class="font-bold text-slate-800 text-sm tracking-tight">Pending Requests</h3>
                     <span id="pendingBadge"
                           class="bg-red-100 text-red-700 text-[10px] font-bold px-2 py-0.5 rounded-full">
                     </span>
                 </div>
 
-                <div id="pendingBannerArea" class="flex flex-col gap-2 mb-2"></div>
+<div id="pendingBannerArea" class="flex flex-col gap-2"></div>
                 <div id="pendingRequestsList" class="flex flex-col gap-4"></div>
 
                 <button id="toggleRequestsBtn"
@@ -488,6 +533,116 @@ $searchIndex = computed(function () {
         </div>
     </div>
 
+    {{-- Session Hours Modal --}}
+<div id="hoursModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);backdrop-filter:blur(4px);z-index:1000;align-items:center;justify-content:center;padding:24px;">
+    <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden">
+        <div class="flex items-center gap-4 px-6 py-5 border-b border-gray-100">
+            <div class="w-11 h-11 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xl flex-shrink-0">
+                <i class="fa-solid fa-clock"></i>
+            </div>
+            <div class="flex-1">
+                <h2 class="text-lg font-extrabold text-slate-800">Total Session Hours</h2>
+                <p class="text-xs text-slate-400">Completed sessions only</p>
+            </div>
+        </div>
+        <div class="px-6 py-4 max-h-80 overflow-y-auto" id="hoursModalBody"></div>
+        <div class="px-6 py-4 bg-gray-50 border-t border-gray-100">
+            <button onclick="document.getElementById('hoursModal').style.display='none'"
+                class="w-full py-2.5 text-sm font-bold text-white bg-red-900 hover:bg-red-800 rounded-xl transition">Close</button>
+        </div>
+    </div>
+</div>
+
+{{-- Completed Modal --}}
+<div id="completedModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);backdrop-filter:blur(4px);z-index:1000;align-items:center;justify-content:center;padding:24px;">
+    <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden">
+        <div class="flex items-center gap-4 px-6 py-5 border-b border-gray-100">
+            <div class="w-11 h-11 rounded-full bg-green-100 text-green-600 flex items-center justify-center text-xl flex-shrink-0">
+                <i class="fa-solid fa-circle-check"></i>
+            </div>
+            <div class="flex-1">
+                <h2 class="text-lg font-extrabold text-slate-800">Completed Sessions</h2>
+                <p class="text-xs text-slate-400" id="completedModalCount"></p>
+            </div>
+        </div>
+        <div class="px-6 py-4 max-h-80 overflow-y-auto" id="completedModalBody"></div>
+        <div class="px-6 py-4 bg-gray-50 border-t border-gray-100">
+            <button onclick="document.getElementById('completedModal').style.display='none'"
+                class="w-full py-2.5 text-sm font-bold text-white bg-red-900 hover:bg-red-800 rounded-xl transition">Close</button>
+        </div>
+    </div>
+</div>
+
+{{-- Upcoming Modal --}}
+<div id="upcomingModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);backdrop-filter:blur(4px);z-index:1000;align-items:center;justify-content:center;padding:24px;">
+    <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden">
+        <div class="flex items-center gap-4 px-6 py-5 border-b border-gray-100">
+            <div class="w-11 h-11 rounded-full bg-yellow-100 text-yellow-600 flex items-center justify-center text-xl flex-shrink-0">
+                <i class="fa-solid fa-calendar-days"></i>
+            </div>
+            <div class="flex-1">
+                <h2 class="text-lg font-extrabold text-slate-800">Upcoming Sessions</h2>
+                <p class="text-xs text-slate-400" id="upcomingModalCount"></p>
+            </div>
+        </div>
+        <div class="px-6 py-4 max-h-80 overflow-y-auto" id="upcomingModalBody"></div>
+        <div class="px-6 py-4 bg-gray-50 border-t border-gray-100">
+            <button onclick="document.getElementById('upcomingModal').style.display='none'"
+                class="w-full py-2.5 text-sm font-bold text-white bg-red-900 hover:bg-red-800 rounded-xl transition">Close</button>
+        </div>
+    </div>
+</div>
+
+{{-- Pending Detail Modal --}}
+<div id="pendingDetailModal"
+    style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);backdrop-filter:blur(4px);z-index:1200;align-items:center;justify-content:center;padding:24px;">
+    <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden">
+<div class="flex items-center gap-4 px-6 py-5 border-b border-gray-100">
+    <div class="w-11 h-11 rounded-full bg-amber-100 text-yellow-600 flex items-center justify-center text-sm font-bold flex-shrink-0"
+         id="pdInitials"></div>
+    <div class="flex-1 min-w-0">
+        <p class="text-base font-black text-slate-800 truncate" id="pdName"></p>
+        <p class="text-[11px] text-gray-400 truncate" id="pdEmail"></p>
+    </div>
+</div>
+
+        <div class="px-6 py-5 space-y-4">
+            <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 flex items-start gap-3">
+                <i class="fa-solid fa-calendar-days text-slate-400 mt-0.5 text-sm flex-shrink-0"></i>
+                <div>
+                    <p class="text-xs font-bold text-slate-700 mb-0.5" id="pdDate"></p>
+                    <p class="text-xs text-slate-500" id="pdTime"></p>
+                </div>
+            </div>
+
+<div class="divide-y divide-gray-100 text-xs">
+    <div class="flex justify-between py-2.5">
+        <span class="text-gray-400 font-medium">Subject</span>
+        <span class="text-slate-700 font-bold text-right" id="pdSubjectDetail"></span>
+    </div>
+    <div class="flex justify-between py-2.5">
+        <span class="text-gray-400 font-medium">Mode</span>
+        <span class="text-slate-700 font-bold" id="pdMode"></span>
+    </div>
+    <div class="flex justify-between py-2.5">
+        <span class="text-gray-400 font-medium">Topic</span>
+        <span class="text-slate-700 font-bold text-right max-w-[60%]" id="pdTopic"></span>
+    </div>
+</div>
+        </div>
+
+        <div class="px-6 py-5 bg-gray-50 border-t border-gray-100 flex gap-3" id="pdActions">
+            <button id="pdRejectBtn"
+                class="flex-1 py-2.5 text-xs font-bold text-red-700 bg-red-50 border border-red-200 hover:bg-red-100 rounded-xl transition">
+                <i class="fa-solid fa-xmark mr-1"></i> Reject
+            </button>
+            <button id="pdAcceptBtn"
+                class="flex-1 py-2.5 text-xs font-bold text-white bg-green-600 hover:bg-green-700 rounded-xl transition shadow-sm">
+                <i class="fa-solid fa-check mr-1"></i> Accept
+            </button>
+        </div>
+    </div>
+</div>
 </div>
 
 <script>
@@ -609,7 +764,11 @@ function getStatusColor(status) {
 
         // Render rows
         if (!total) {
-            tbody.innerHTML = `<tr><td colspan="4" class="py-12 text-center text-gray-400 italic">No sessions for this date.</td></tr>`;
+tbody.innerHTML = `<tr><td colspan="4" class="py-4 text-center">
+    <div class="flex flex-col items-center gap-1.5">
+        <i class="fa-regular fa-calendar-xmark text-gray-300 text-lg"></i>
+        <p class="text-xs text-gray-400 italic">No sessions found for this date.</p>
+    </div></td></tr>`;
         } else {
   tbody.innerHTML = visible.map(row => `
     <tr class="border-b last:border-0 hover:bg-slate-50 transition">
@@ -840,8 +999,10 @@ function getStatusColor(status) {
     }
 
 /**Calendar */
-function hasUpcomingOnDate(dateStr) {
-    return allSessions.some(s => s.date === dateStr && s.status === 'accepted' && s.date >= todayStr);
+function getSessionDotsForDate(dateStr) {
+    const hasAccepted  = allSessions.some(s => s.date === dateStr && s.status === 'accepted');
+    const hasCompleted = allSessions.some(s => s.date === dateStr && s.status === 'completed');
+    return { hasAccepted, hasCompleted };
 }
     function renderCalendar() {
         const grid      = document.getElementById('calendarGrid');
@@ -866,9 +1027,15 @@ function hasUpcomingOnDate(dateStr) {
             if (dateStr === todayStr)        dayEl.classList.add('cal-today');
             if (dateStr === selectedDateStr) dayEl.classList.add('cal-selected');
 
+const { hasAccepted, hasCompleted } = getSessionDotsForDate(dateStr);
+const dots = [];
+if (hasAccepted)  dots.push(`<span style="width:6px;height:6px;background:#22c55e;border-radius:50%;border:1px solid white;display:inline-block;"></span>`);
+if (hasCompleted) dots.push(`<span style="width:6px;height:6px;background:#94a3b8;border-radius:50%;border:1px solid white;display:inline-block;"></span>`);
+
 dayEl.innerHTML = `
-    ${hasUpcomingOnDate(dateStr) ? '<span style="position:absolute;top:2px;right:2px;width:6px;height:6px;background:#22c55e;border-radius:50%;border:1px solid white;"></span>' : ''}
+    ${dots.length ? `<span style="position:absolute;top:2px;right:2px;display:flex;gap:2px;align-items:center;">${dots.join('')}</span>` : ''}
     <span style="position:relative;z-index:1;">${i}</span>`;
+
 
             dayEl.onclick = () => {
                 selectedDateStr = dateStr;
@@ -1013,38 +1180,37 @@ dayEl.innerHTML = `
             </div>`;
 
         container.innerHTML = visible.map(req => `
-            <div class="session-row flex items-center justify-between group">
-                <div class="flex items-center gap-3">
-                    <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center
-                                justify-center text-[10px] font-bold flex-shrink-0">
-                        ${req.student.slice(0, 2).toUpperCase()}
-                    </div>
-                    <div>
-                        <div style="max-width:130px;">
-                            <div id="pname-${req.id}"
-                                 style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis;
-                                        font-size:11px;font-weight:700;color:#1e293b;"
-                                 title="${req.student}">${req.student}</div>
-                            <button onclick="togglePendingName('${req.id}')" id="ptoggle-${req.id}"
-                                    style="font-size:9px;color:#7b1d1d;font-weight:600;margin-top:1px;
-                                           background:none;border:none;cursor:pointer;padding:0;display:none;">
-                                Show more
-                            </button>
-                        </div>
-                        <p class="text-[9px] text-gray-400 font-medium">${req.subject} • ${formatTimeTo12Hour(req.start)} – ${formatTimeTo12Hour(req.end)}</p>
-                        <p class="text-[9px] text-gray-400">${new Date(req.date).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' })}</p>
-                    </div>
-                </div>
-                <div class="relative flex items-center justify-end" style="min-height:28px;">
-                    <div class="action-idle absolute right-0 flex items-center gap-1 pointer-events-none">
-                        <span class="w-2 h-2 rounded-full bg-yellow-400 inline-block"></span>
-                    </div>
-                    <div class="action-buttons flex items-center gap-1 justify-end">
-                        ${pendingBtn('fa-xmark', 'Reject', `rejectRequest('${req.id}')`, 'bg-red-100 hover:bg-red-200', 'text-red-600')}
-                        ${pendingBtn('fa-check', 'Accept', `approveRequest('${req.id}')`, 'bg-emerald-100 hover:bg-emerald-200', 'text-emerald-700')}
-                    </div>
-                </div>
-            </div>
+<div class="session-row flex items-center gap-3 rounded-xl px-2 py-1.5 transition-all duration-200 hover:bg-slate-50 cursor-pointer group"
+     onclick="openPendingDetailModal(${JSON.stringify(req).replace(/"/g, '&quot;')})">
+         <div class="w-7 h-7 rounded-full bg-blue-100 text-blue-700 flex items-center
+                justify-center text-[10px] font-bold flex-shrink-0">
+        ${req.student.slice(0, 2).toUpperCase()}
+    </div>
+    <div class="min-w-0 flex-1">
+        <div style="max-width:130px;">
+            <div id="pname-${req.id}"
+                 style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis;
+                        font-size:11px;font-weight:700;color:#1e293b;"
+                 title="${req.student}">${req.student}</div>
+            <button onclick="togglePendingName('${req.id}')" id="ptoggle-${req.id}"
+                    style="font-size:9px;color:#7b1d1d;font-weight:600;margin-top:1px;
+                           background:none;border:none;cursor:pointer;padding:0;display:none;">
+                Show more
+            </button>
+        </div>
+        <p class="text-[9px] text-gray-400 font-medium">${req.subject} • ${formatTimeTo12Hour(req.start)} – ${formatTimeTo12Hour(req.end)}</p>
+        <p class="text-[9px] text-gray-400">${new Date(req.date).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' })}</p>
+    </div>
+<div class="relative flex items-center justify-end" style="min-height:28px;" onclick="event.stopPropagation()">
+        <div class="action-idle absolute right-0 flex items-center gap-1 pointer-events-none">
+            <span class="w-2 h-2 rounded-full bg-yellow-400 inline-block"></span>
+        </div>
+        <div class="action-buttons flex items-center gap-1 justify-end">
+            ${pendingBtn('fa-xmark', 'Reject', `rejectRequest('${req.id}')`, 'bg-red-100 hover:bg-red-200', 'text-red-600')}
+            ${pendingBtn('fa-check', 'Accept', `approveRequest('${req.id}')`, 'bg-emerald-100 hover:bg-emerald-200', 'text-emerald-700')}
+        </div>
+    </div>
+</div>
         `).join('');
 
         visible.forEach(req => {
@@ -1386,6 +1552,97 @@ dayEl.innerHTML = `
         banner._timer = setTimeout(() => banner.remove(), 6000);
     }
 
+// STAT CARDS
+    function renderStatCards() {
+        const totalMinutes = allSessions
+            .filter(s => s.status === 'completed')
+            .reduce((acc, s) => {
+                const [sh, sm] = s.start.split(':').map(Number);
+                const [eh, em] = s.end.split(':').map(Number);
+                return acc + ((eh * 60 + em) - (sh * 60 + sm));
+            }, 0);
+        document.getElementById('statTotalHours').innerText = (totalMinutes / 60).toFixed(2);
+        document.getElementById('statCompleted').innerText  = allSessions.filter(s => s.status === 'completed').length;
+        document.getElementById('statUpcoming').innerText   = allSessions.filter(s => s.status === 'accepted' && s.date >= todayStr).length;
+    }
+
+    function openHoursModal() {
+        const completed = allSessions.filter(s => s.status === 'completed');
+        const body = document.getElementById('hoursModalBody');
+        body.innerHTML = !completed.length
+            ? `<p class="text-xs text-gray-400 italic py-4 text-center">No completed sessions yet.</p>`
+            : completed.map(s => {
+                const [sh, sm] = s.start.split(':').map(Number);
+                const [eh, em] = s.end.split(':').map(Number);
+                const mins = (eh * 60 + em) - (sh * 60 + sm);
+                const dur  = Math.floor(mins/60) > 0 ? `${Math.floor(mins/60)}h ${mins%60}m` : `${mins%60}m`;
+                const date = new Date(s.date).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+                return `<div class="flex items-center gap-3 py-2.5 border-b border-gray-50 last:border-0">
+                    <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-[10px] font-bold flex-shrink-0">
+                        ${s.student.slice(0,2).toUpperCase()}
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-xs font-bold text-slate-700 truncate">${s.student}</p>
+                        <p class="text-[10px] text-gray-400">${s.subject} &mdash; ${date}</p>
+                        <p class="text-[10px] text-gray-400">${formatTimeTo12Hour(s.start)} – ${formatTimeTo12Hour(s.end)}</p>
+                    </div>
+                    <div class="flex-shrink-0"><span class="text-xs font-black text-blue-600">${dur}</span></div>
+                </div>`;
+            }).join('');
+        document.getElementById('hoursModal').style.display = 'flex';
+    }
+
+    function openCompletedModal() {
+        const completed = allSessions.filter(s => s.status === 'completed').sort((a,b) => b.date.localeCompare(a.date));
+        document.getElementById('completedModalCount').innerText = `${completed.length} session${completed.length !== 1 ? 's' : ''}`;
+        const body = document.getElementById('completedModalBody');
+        body.innerHTML = !completed.length
+            ? `<p class="text-xs text-gray-400 italic py-4 text-center">No completed sessions yet.</p>`
+            : completed.map(s => {
+                const date = new Date(s.date).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+                return `<div class="flex items-center gap-3 py-2.5 border-b border-gray-50 last:border-0">
+                    <div class="w-8 h-8 rounded-full bg-green-100 text-green-600 flex items-center justify-center text-[10px] font-bold flex-shrink-0">
+                        ${s.student.slice(0,2).toUpperCase()}
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-xs font-bold text-slate-700 truncate">${s.student}</p>
+                        <p class="text-[10px] text-gray-400">${s.subject} &mdash; ${s.topic || '—'}</p>
+                        <p class="text-[10px] text-gray-400">${date}, ${formatTimeTo12Hour(s.start)} – ${formatTimeTo12Hour(s.end)}</p>
+                    </div>
+                    <div class="flex-shrink-0">
+                        <span class="${getStatusColor('completed')} font-bold text-[10px] bg-gray-50 px-2 py-1 rounded border border-current opacity-80 capitalize">${getStatusLabel('completed')}</span>
+                    </div>
+                </div>`;
+            }).join('');
+        document.getElementById('completedModal').style.display = 'flex';
+    }
+
+    function openUpcomingModal() {
+        const upcoming = allSessions.filter(s => s.status === 'accepted' && s.date >= todayStr)
+            .sort((a,b) => a.date !== b.date ? a.date.localeCompare(b.date) : a.start.localeCompare(b.start));
+        document.getElementById('upcomingModalCount').innerText = `${upcoming.length} session${upcoming.length !== 1 ? 's' : ''}`;
+        const body = document.getElementById('upcomingModalBody');
+        body.innerHTML = !upcoming.length
+            ? `<p class="text-xs text-gray-400 italic py-4 text-center">No upcoming sessions.</p>`
+            : upcoming.map(s => {
+                const date = new Date(s.date).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+                return `<div class="flex items-center gap-3 py-2.5 border-b border-gray-50 last:border-0">
+                    <div class="w-8 h-8 rounded-full bg-yellow-100 text-yellow-600 flex items-center justify-center text-[10px] font-bold flex-shrink-0">
+                        ${s.student.slice(0,2).toUpperCase()}
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-xs font-bold text-slate-700 truncate">${s.student}</p>
+                        <p class="text-[10px] text-gray-400">${s.subject} &mdash; ${s.topic || '—'}</p>
+                        <p class="text-[10px] text-gray-400">${date}, ${formatTimeTo12Hour(s.start)} – ${formatTimeTo12Hour(s.end)}</p>
+                    </div>
+                    <div class="flex-shrink-0">
+                        <span class="${getStatusColor('accepted')} font-bold text-[10px] bg-gray-50 px-2 py-1 rounded border border-current opacity-80 capitalize">${getStatusLabel('accepted')}</span>
+                    </div>
+                </div>`;
+            }).join('');
+        document.getElementById('upcomingModal').style.display = 'flex';
+    }
+
     // ORCHESTRATION
     function refreshSchedules() {
         applyFilters();
@@ -1394,11 +1651,42 @@ dayEl.innerHTML = `
         renderPendingRequests();
     }
 
-    function initDashboard() {
+let _pdCurrent = null;
+
+function openPendingDetailModal(req) {
+    _pdCurrent = req;
+    document.getElementById('pdInitials').innerText      = req.student.slice(0, 2).toUpperCase();
+    document.getElementById('pdName').innerText          = req.student;
+    document.getElementById('pdEmail').innerText         = req.email ?? '';
+    document.getElementById('pdSubjectDetail').innerText = req.subject + (req.subjectName ? ' (' + req.subjectName + ')' : '');
+    document.getElementById('pdDate').innerText         = new Date(req.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    document.getElementById('pdTime').innerText         = formatTimeTo12Hour(req.start) + ' – ' + formatTimeTo12Hour(req.end);
+    document.getElementById('pdTopic').innerText        = req.topic || '—';
+    document.getElementById('pdMode').innerText         = req.mode ?? 'One-on-One Tutorial';
+
+    document.getElementById('pdRejectBtn').onclick = () => {
+        closePendingDetailModal();
+        rejectRequest(req.id);
+    };
+    document.getElementById('pdAcceptBtn').onclick = () => {
+        closePendingDetailModal();
+        approveRequest(req.id);
+    };
+
+    document.getElementById('pendingDetailModal').style.display = 'flex';
+}
+
+function closePendingDetailModal() {
+    document.getElementById('pendingDetailModal').style.display = 'none';
+    _pdCurrent = null;
+}
+
+function initDashboard() {
         renderCalendar();
         refreshSchedules();
         updateTableDate();
         updateClock();
+        renderStatCards();
     }
 
     // EVENT LISTENERS
