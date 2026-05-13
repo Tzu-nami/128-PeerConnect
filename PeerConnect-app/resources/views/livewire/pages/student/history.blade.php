@@ -103,7 +103,7 @@ $studentHistory = computed(function () {
     </div>
 
     {{-- Summary Stat Cards --}}
-    <div class="grid grid-cols-[repeat(autofit,_minmax(250px,_1fr))] sm:grid-cols-5 gap-4 mb-6 animate-fade-up [animation-delay:150ms]">
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-6 animate-fade-up [animation-delay:150ms]">
 <div onclick="openTotalModal()" class="bg-white p-4 lg:p-5 rounded-xl shadow-sm border-l-4 border-slate-500 flex items-center gap-3 lg:gap-4 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer">            <div class="text-2xl"><i class="fa-solid fa-list-check text-slate-500"></i></div>
             <div class="min-w-0 flex-1">
                 <h3 class="text-xs font-bold text-gray-400 uppercase leading-none truncate">Total Requests</h3>
@@ -205,7 +205,7 @@ $studentHistory = computed(function () {
 
         {{-- Data Table --}}
         <div class="overflow-x-auto">
-            <table class="w-full text-sm text-left table-fixed">
+            <table class="w-full text-sm text-left table-fixed min-w-[700px]">
                 <thead class="bg-slate-50 border-b border-gray-100">
                 <tr>
                     {{-- Subject --}}

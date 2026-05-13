@@ -311,15 +311,15 @@ $saveProfile = action(function () {
     </div>
 
     {{-- ── THREE-COLUMN GRID ── --}}
-    <div class="grid grid-cols-3 gap-8">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
         {{-- LEFT COLUMN --}}
-        <div class="col-span-2 space-y-8 animate-fade-up [animation-delay:150ms]">
+        <div class="col-span-1 lg:col-span-2 space-y-8 animate-fade-up [animation-delay:150ms]">
 
             {{-- ── Today's Schedule Table ── --}}
             <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col">
 
-                <div class="flex justify-between items-center mb-6">
+                <div class="flex flex-wrap justify-between items-center mb-6 gap-3">
                     <div>
                         <h2 class="text-lg font-bold text-slate-800" id="tableTitle">
                             <i class="fa-solid fa-calendar-check"></i> Today's Schedule
@@ -327,8 +327,8 @@ $saveProfile = action(function () {
                         <p class="text-xs text-gray-400" id="tableSubtitle"></p>
                     </div>
 
-                    <div class="flex gap-2">
-                        <div class="relative w-48">
+                    <div class="flex flex-wrap gap-2">
+                        <div class="relative w-full sm:w-48">
                             <i class="fa-solid fa-search absolute left-3 top-1/2
                                       -translate-y-1/2 text-gray-300 text-xs"></i>
                             <input type="text"
@@ -353,7 +353,8 @@ $saveProfile = action(function () {
                     </div>
                 </div>
 
-                <table class="w-full text-left text-sm table-fixed">
+                <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm table-fixed min-w-[520px]">
                     <thead class="text-gray-400 border-b">
                     <tr>
                         <th class="pb-3 text-[10px] tracking-wider" style="width:35%">
@@ -415,12 +416,13 @@ $saveProfile = action(function () {
                     </thead>
                     <tbody id="tableBody"></tbody>
                 </table>
+                </div><!-- end overflow-x-auto -->
 
                 <div class="mt-4 pt-4 border-t border-gray-50 flex items-center justify-between">
                     <div class="text-[11px] text-gray-400 font-medium" id="pageIndicator">
                         Showing 0 results
                     </div>
-                    <div class="flex gap-2">
+                    <div class="flex flex-wrap gap-2">
                         <button id="prevBtn" class="pagination-btn">
                             <i class="fa-solid fa-chevron-left"></i>
                         </button>
@@ -435,7 +437,7 @@ $saveProfile = action(function () {
 
 
  {{-- ── Stats Row ── --}}
-<div class="grid grid-cols-3 gap-4 animate-fade-up [animation-delay:200ms]">
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-4 animate-fade-up [animation-delay:200ms]">
 
 <div onclick="openHoursModal()"
      class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-blue-600
