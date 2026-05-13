@@ -14,7 +14,8 @@ class SessionRejected extends Mailable implements ShouldQueue
 {
     use Queueable, SerializesModels;
 
-    public $bookings;
+    public $booking;
+    public $bookingUrl;
 
     /**
      * Create a new message instance.
@@ -22,6 +23,13 @@ class SessionRejected extends Mailable implements ShouldQueue
     public function __construct(Bookings $booking)
     {
         $this->booking = $booking;
+        // Check what role the mentee is
+        $user = $booking->student->user;
+        if ($user && $user->user_roles === 'mentor') {
+            $this->bookingUrl = route('mentor.bookings');
+        } else {
+            $this->bookingUrl = route('student.bookings');
+        }
     }
 
     /**
