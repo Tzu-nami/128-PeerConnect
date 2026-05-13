@@ -474,19 +474,24 @@ $saveSubject = action(function () {
     $this->showSubjectConfirm = false;
     session()->flash('successMessage', "{$this->newSubjectCode} has been added.");
 });
-
+$getMentorActiveBookingCount = action(function ($id) {
+    $mentorProf = MentorProfiles::findOrFail($id);
+    return \App\Models\Bookings::where('mentor_id', $mentorProf->id)
+        ->whereIn('booking_status', ['pending', 'accepted'])
+        ->count();
+});
 $deleteMentor = action(function ($id) {
     $mentorProf = MentorProfiles::with('user')->findOrFail($id);
 
-    $hasActiveBookings = \App\Models\Bookings::where('mentor_id', $mentorProf->id)
+    // Cancel pending/accepted bookings first
+    \App\Models\Bookings::where('mentor_id', $mentorProf->id)
         ->whereIn('booking_status', ['pending', 'accepted'])
-        ->exists();
+        ->update(['booking_status' => 'cancelled']);
 
-    if ($hasActiveBookings) {
-        session()->flash('errorMessage', "Cannot remove this mentor. They still have pending or accepted bookings.");
-        $this->redirect(route('admin.mentors'), navigate: true);
-        return;
-    }
+    // Detach ALL bookings from this mentor (nullify FK so delete won't violate constraint)
+    \Illuminate\Support\Facades\DB::table('bookings')
+        ->where('mentor_id', $mentorProf->id)
+        ->update(['mentor_id' => null]);
 
     $user = $mentorProf->user;
     if ($user->avatar && \Illuminate\Support\Str::contains($user->avatar, config('filesystems.disks.s3.public_url'))) {
@@ -507,6 +512,15 @@ $deleteMentor = action(function ($id) {
 mount(function () {
     abort_if(!auth()->check(), 401, 'Unauthenticated');
     abort_if(!auth()->user()->isAdmin(), 403, 'Unauthorized Access');
+
+if (request()->get('open') === 'mentor') {
+    $this->showModal = true;
+}
+
+if (request()->get('open') === 'subject') {
+    $this->showSubjectModal = true;
+}
+
 });
 ?>
 
@@ -1430,26 +1444,78 @@ mount(function () {
         </div>
     </div>
 
-    {{-- ── DELETE CONFIRM MODAL ── --}}
-    <template x-teleport="body">
-        <div x-cloak class="modal-overlay" x-show="showDeleteConfirm" @click.self="if(!isSaving) showDeleteConfirm = false" x-data="{ isSaving: false }">
-            <div class="modal-box-crud max-w-sm p-8 text-center m-4">
-                <div class="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center mx-auto mb-5">
-                    <i class="fa-solid fa-triangle-exclamation text-3xl"></i>
+{{-- ── DELETE CONFIRM MODAL ── --}}
+<template x-teleport="body">
+    <div x-cloak class="modal-overlay"
+        x-show="showDeleteConfirm"
+        @click.self="if(!isSaving) showDeleteConfirm = false"
+        x-data="{ isSaving: false, isChecking: false, activeBookingCount: 0, checked: false }"
+        x-init="$watch('showDeleteConfirm', val => { if (val) { checked = false; activeBookingCount = 0; isChecking = true; $wire.getMentorActiveBookingCount(mentorToDelete.id).then(count => { activeBookingCount = count; checked = true; }).finally(() => isChecking = false); } })">
+        <div class="modal-box-crud max-w-sm p-8 text-center m-4">
+
+            {{-- Loading state while checking --}}
+            <template x-if="isChecking || !checked">
+                <div class="flex flex-col items-center justify-center py-6 gap-3">
+                    <i class="fa-solid fa-spinner fa-spin text-3xl text-slate-400"></i>
+                    <p class="text-sm text-gray-400 font-medium">Checking active sessions...</p>
                 </div>
-                <h3 class="text-xl font-black text-slate-800">Remove Mentor?</h3>
-                <p class="text-sm text-gray-500 mt-2 mb-8">Are you sure you want to remove this mentor? Their schedule and subjects will be deleted.</p>
-                <div class="flex gap-3">
-                    <button type="button" @click="showDeleteConfirm = false" class="btn-modal btn-modal-cancel" x-bind:disabled="isSaving">Cancel</button>
-                    <button type="button" @click="isSaving = true; $wire.deleteMentor(mentorToDelete.id).then(() => showDeleteConfirm = false).finally(() => isSaving  = false)" x-bind:disabled="isSaving"
-                        class="btn-modal btn-modal-red"
-                        >
-                        <span x-show="!isSaving">Confirm</span>
-                        <span x-show="isSaving" style="display: none;"><i class="fa-solid fa-spinner fa-spin mr-1"></i>Deleting...</span>
-                    </button>
+            </template>
+
+            {{-- No active bookings: normal deletion warning --}}
+            <template x-if="checked && activeBookingCount === 0">
+                <div>
+                    <div class="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center mx-auto mb-5">
+                        <i class="fa-solid fa-triangle-exclamation text-3xl"></i>
+                    </div>
+                    <h3 class="text-xl font-black text-slate-800">Remove Mentor?</h3>
+                    <p class="text-sm text-gray-500 mt-2 mb-8">Are you sure you want to remove this mentor? Their schedule and subjects will be deleted.</p>
+                    <div class="flex gap-3">
+                        <button type="button" @click="showDeleteConfirm = false" class="btn-modal btn-modal-cancel" x-bind:disabled="isSaving">Cancel</button>
+                        <button type="button"
+                            @click="isSaving = true; $wire.deleteMentor(mentorToDelete.id).then(() => showDeleteConfirm = false).finally(() => isSaving = false)"
+                            x-bind:disabled="isSaving"
+                            class="btn-modal btn-modal-red">
+                            <span x-show="!isSaving">Confirm</span>
+                            <span x-show="isSaving" style="display: none;"><i class="fa-solid fa-spinner fa-spin mr-1"></i>Deleting...</span>
+                        </button>
+                    </div>
                 </div>
-            </div>
+            </template>
+
+            {{-- Has active bookings: warn before cancelling sessions --}}
+            <template x-if="checked && activeBookingCount > 0">
+                <div>
+                    <div class="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center mx-auto mb-5">
+                        <i class="fa-solid fa-triangle-exclamation text-3xl"></i>
+                    </div>
+                    <h3 class="text-xl font-black text-slate-800">Remove Mentor?</h3>
+                    <p class="text-sm text-gray-500 mt-2">Are you sure you want to remove this mentor? Their schedule and subjects will be deleted.</p>
+                    <div class="mt-3 mb-6 px-4 py-3 bg-yellow-50 border border-yellow-200 rounded-xl text-left">
+                        <p class="text-xs font-bold text-yellow-800 flex items-center gap-2 mb-1">
+                            <i class="fa-solid fa-circle-exclamation"></i>
+                            Active Sessions Found
+                        </p>
+                        <p class="text-xs text-yellow-700">
+                            This mentor has <span class="font-black" x-text="activeBookingCount"></span>
+                            active session<span x-show="activeBookingCount > 1">s</span>
+                            (pending or accepted). Proceeding will automatically <span class="font-bold">cancel</span> all of them.
+                        </p>
+                    </div>
+                    <div class="flex gap-3">
+                        <button type="button" @click="showDeleteConfirm = false" class="btn-modal btn-modal-cancel" x-bind:disabled="isSaving">Cancel</button>
+                        <button type="button"
+                            @click="isSaving = true; $wire.deleteMentor(mentorToDelete.id).then(() => showDeleteConfirm = false).finally(() => isSaving = false)"
+                            x-bind:disabled="isSaving"
+                            class="btn-modal btn-modal-red">
+                            <span x-show="!isSaving">Confirm</span>
+                            <span x-show="isSaving" style="display: none;"><i class="fa-solid fa-spinner fa-spin mr-1"></i>Deleting...</span>
+                        </button>
+                    </div>
+                </div>
+            </template>
+
         </div>
-    </template>
+    </div>
+</template>
 
 </div>
