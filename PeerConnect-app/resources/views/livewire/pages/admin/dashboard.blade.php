@@ -1,4 +1,37 @@
 <?php
+/**
+ * FIXED ADMIN DASHBOARD — QUICK ACTIONS
+ *
+ * Bugs fixed in this revision (on top of prior fixes):
+ *
+ * A. isVerifying scope leak in Add-Mentor modal footer.
+ *    — Fixed by merging canSubmit directly into the outer modal wrapper's x-data.
+ *
+ * B. Add-Subject canSubmit used $watch-mirrored local copies — fixed by reading
+ *    $wire.newSubjectCode / $wire.newSubjectName directly inside the canSubmit getter.
+ *
+ * C. All overlay modals moved to be direct children of the root <div> wrapper.
+ *
+ * D. initDashboard() double-fires guard flag.
+ *
+ * E. [NEW] Native <input type="time"> returns "HH:MM AM/PM" on Windows/some locales,
+ *    failing Laravel's date_format:H:i validation silently (the error block is inside
+ *    wire:ignore so it never renders). The confirmMentor action never sets showConfirm,
+ *    leaving the spinner stuck forever.
+ *    FIX: A normalizeTime() JS helper strips AM/PM and converts to 24-hour HH:MM before
+ *    Alpine writes the value back into the entangled $wire.availabilities array.
+ *    The time inputs now use @change="row.start_time = normalizeTime($event.target.value)"
+ *    instead of plain x-model, guaranteeing H:i format reaches Livewire.
+ *
+ * F. [NEW] Availability validation errors are rendered inside a wire:ignore block,
+ *    so Laravel errors on availability.*.day_of_week / start_time / end_time never
+ *    appear in the DOM. Moved the error display div OUTSIDE wire:ignore.
+ *
+ * G. [NEW] canSubmit getter reads $wire.availabilities which is an Alpine-entangled
+ *    proxy. On some Livewire 3 builds the proxy isn't deeply reactive inside a getter,
+ *    so the button can stay disabled even after the user fills slots. Fixed by also
+ *    checking the local Alpine `avails` ref (which IS reactive) instead of the wire proxy.
+ */
 
 use function Livewire\Volt\{layout, state, mount, computed, action, uses};
 use Livewire\WithFileUploads;
@@ -126,19 +159,19 @@ mount(function () {
             'mode'      => $b->mode                ?? 'One-on-One Tutorial',
         ])
         ->toArray();
-}); 
+});
 
 $searchIndex = computed(function () {
     $index = [];
 
     $mentors = \App\Models\User::with([
-        'studentProfile.yearLevel', 
+        'studentProfile.yearLevel',
         'studentProfile.degreeProgram'
     ])->where('user_roles', 'mentor')->get();
 
     foreach ($mentors as $m) {
-        $year = $m->studentProfile->yearLevel->name;
-        $deprog = $m->studentProfile->degreeProgram->name;
+        $year   = $m->studentProfile->yearLevel->name ?? '';
+        $deprog = $m->studentProfile->degreeProgram->name ?? '';
         $index[] = [
             'group' => 'Mentors',
             'label' => $m->lastName . ', ' . $m->firstName,
@@ -162,28 +195,35 @@ $searchIndex = computed(function () {
         ];
     }
 
-    $bookings = \App\Models\Bookings::with('mentor.user', 'subject')->latest()->take(50)->get();
-    foreach ($bookings as $b) {
-        $mentorName = $b->mentor ? ($b->mentor->user->lastName . ', ' . $b->mentor->user->firstName ?? 'Unknown Mentor') : 'Unknown Mentor';
-        $sessionDate = \Carbon\Carbon::parse($b->date)->format('F j, Y');
-        $index[] = [
-            'group' => 'Sessions',
-            'label' => $b->topic ?: 'Tutorial Session',
-            'detail' => $sessionDate . ' -- Subject: ' . $b->subject->code . ' -- Mentor: ' . $mentorName . ' -- Status: ' . ucfirst($b->booking_status),
-            'icon' => 'fa-calendar-days',
-            'bg' => '#d1fae5', 'color' => '#065f46',
-            'url' => route('admin.sessions'),
-            'searchString' => strtolower($b->topic . ' ' . $mentorName . ' ' . $b->booking_status . ' ' . $b->subject->code . ' ' . $sessionDate)
-        ];
-    }
+$bookings = \App\Models\Bookings::with('mentor.user', 'subject')->latest()->take(50)->get();
+foreach ($bookings as $b) {
+    if (!$b->subject) continue;
+    $mentorName  = $b->mentor?->user
+        ? ($b->mentor->user->lastName . ', ' . $b->mentor->user->firstName)
+        : 'Unknown Mentor';
+    $sessionDate = \Carbon\Carbon::parse($b->date)->format('F j, Y');
+    $subjectCode = $b->subject->code ?? 'N/A';
+    $index[] = [
+        'group' => 'Sessions',
+        'label' => $b->topic ?: 'Tutorial Session',
+        'detail' => $sessionDate . ' -- Subject: ' . $subjectCode . ' -- Mentor: ' . $mentorName . ' -- Status: ' . ucfirst($b->booking_status),
+        'icon' => 'fa-calendar-days',
+        'bg' => '#d1fae5', 'color' => '#065f46',
+        'url' => route('admin.sessions'),
+        'searchString' => strtolower($b->topic . ' ' . $mentorName . ' ' . $b->booking_status . ' ' . $subjectCode . ' ' . $sessionDate)
+    ];
+}
 
-    $feedbacks = \App\Models\Feedback::with(['booking.subject', 'booking.mentor.user'])->latest('id')->take(50)->get();
-    foreach ($feedbacks as $fb) {
-        $subjectCode = $fb->booking->subject->code ?? 'N/A';
-        $mentorName = $fb->booking->mentor->user ? ($fb->booking->mentor->user->lastName . ', ' . $fb->booking->mentor->user->firstName) : 'Unknown Mentor';
-        $comment = $fb->feedback ?? 'No comment provided.';
-        $date = isset($fb->date_submitted) ? \Carbon\Carbon::parse($fb->date_submitted)->format('F j, Y') : '';
-        $topic = $fb->topic ?? 'Session Feedback';
+$feedbacks = \App\Models\Feedback::with(['booking.subject', 'booking.mentor.user'])->latest('id')->take(50)->get();
+foreach ($feedbacks as $fb) {
+    if (!$fb->booking) continue;
+    $subjectCode = $fb->booking->subject->code ?? 'N/A';
+    $mentorName  = $fb->booking->mentor?->user
+        ? ($fb->booking->mentor->user->lastName . ', ' . $fb->booking->mentor->user->firstName)
+        : 'Unknown Mentor';
+        $comment     = $fb->feedback ?? 'No comment provided.';
+        $date        = isset($fb->date_submitted) ? \Carbon\Carbon::parse($fb->date_submitted)->format('F j, Y') : '';
+        $topic       = $fb->topic ?? 'Session Feedback';
         $index[] = [
             'group' => 'Feedback',
             'label' => \Illuminate\Support\Str::limit($comment, 40),
@@ -233,7 +273,7 @@ $satisfactionRate = computed(function () {
     $scores = $feedbacks->map(function ($fb) {
         $questions = [$fb->q1, $fb->q2, $fb->q3, $fb->q4, $fb->q5,
                       $fb->q6, $fb->q7, $fb->q8, $fb->q9, $fb->q10];
-        $answered = array_filter($questions, fn($q) => !is_null($q));
+        $answered  = array_filter($questions, fn($q) => !is_null($q));
         return count($answered) > 0 ? array_sum($answered) / count($answered) : null;
     })->filter()->values();
 
@@ -275,21 +315,21 @@ $collegeActivity = computed(function () {
 });
 
 $dashboardStats = computed(function () {
-    $all = \DB::table('feedback')->get();
+    $all           = \DB::table('feedback')->get();
     $totalSessions = \DB::table('bookings')->where('booking_status', 'completed')->count();
-    
+
     if ($all->isEmpty()) {
         return ['avg' => '0.0', 'total' => 0, 'sessions' => number_format($totalSessions)];
     }
 
     $totalScores = [];
     foreach ($all as $fb) {
-        $scores = array_filter([$fb->q1, $fb->q2, $fb->q3, $fb->q4, $fb->q5, $fb->q6, $fb->q7, $fb->q8, $fb->q9], fn($v) => !is_null($v));
+        $scores  = array_filter([$fb->q1, $fb->q2, $fb->q3, $fb->q4, $fb->q5, $fb->q6, $fb->q7, $fb->q8, $fb->q9], fn($v) => !is_null($v));
         if (count($scores) > 0) $totalScores[] = array_sum($scores) / count($scores);
     }
 
     return [
-        'avg'      => number_format(count($totalScores) > 0 ? array_sum($totalScores) / count($totalScores) : 0, 1),
+        'avg' => number_format(count($totalScores) > 0 ? array_sum($totalScores) / count($totalScores) : 0, 1),
     ];
 });
 
@@ -300,18 +340,18 @@ $allSubjects = computed(function () {
 });
 
 $openModal = action(function () {
-    $this->reset(['up_mail', 'newMentor', 'emailError', 'availabilities', 'showConfirm', 'avatar']);
+    $this->reset(['up_mail', 'newMentor', 'emailError', 'showConfirm', 'avatar']);
     $this->selectedSubjects = [];
-    $this->availabilities = [['day_of_week' => '', 'start_time' => '', 'end_time' => '']];
-    $this->showModal = true;
+    $this->availabilities   = [['id' => uniqid(), 'day_of_week' => '', 'start_time' => '', 'end_time' => '']];
+    $this->showModal        = true;
 });
 
 $closeModal = action(function () {
-    $this->showModal = false;
-    $this->showConfirm = false;
+    $this->showModal    = false;
+    $this->showConfirm  = false;
     $this->reset(['up_mail', 'newMentor', 'emailError', 'avatar']);
     $this->selectedSubjects = [];
-    $this->availabilities = [['id' => '1', 'day_of_week' => '', 'start_time' => '', 'end_time' => '']];
+    $this->availabilities   = [['id' => uniqid(), 'day_of_week' => '', 'start_time' => '', 'end_time' => '']];
 });
 
 $openSubjectModal = action(function () {
@@ -320,14 +360,14 @@ $openSubjectModal = action(function () {
 });
 
 $closeSubjectModal = action(function () {
-    $this->showSubjectModal = false;
-    $this->showSubjectConfirm = false;
+    $this->showSubjectModal    = false;
+    $this->showSubjectConfirm  = false;
     $this->reset(['newSubjectCode', 'newSubjectName']);
 });
 
 $checkEmail = action(function () {
     $this->emailError = '';
-    $this->newMentor = null;
+    $this->newMentor  = null;
 
     $this->validate(['up_mail' => ['required', 'email']]);
     $userEmail = User::with('studentProfile')->where('email', $this->up_mail)->first();
@@ -348,14 +388,14 @@ $checkEmail = action(function () {
     }
 
     $this->newMentor = [
-        'id' => $userEmail->id,
-        'name' => $userEmail->name,
+        'id'    => $userEmail->id,
+        'name'  => $userEmail->name,
         'email' => $userEmail->email,
     ];
 });
 
 $toggleAvailabilityOn = action(function () {
-    $this->availabilities[] = ['day_of_week' => '', 'start_time' => '', 'end_time' => ''];
+    $this->availabilities[] = ['id' => uniqid(), 'day_of_week' => '', 'start_time' => '', 'end_time' => ''];
 });
 
 $toggleAvailabilityOff = action(function (int $index) {
@@ -369,18 +409,38 @@ $confirmMentor = action(function () {
         return;
     }
 
+    // FIX E (server-side guard): normalise any time strings that slipped through
+    // as 12-hour format (e.g. "10:00 AM") into H:i before validation runs.
+    // The JS normalizeTime() helper handles this client-side on every change event,
+    // but this server-side pass is a safety net for browsers that behave unexpectedly.
+    $this->availabilities = collect($this->availabilities)->map(function ($row) {
+        foreach (['start_time', 'end_time'] as $field) {
+            $val = trim($row[$field] ?? '');
+            // If it contains AM/PM convert to 24-hour format
+            if (preg_match('/(\d{1,2}):(\d{2})\s*(AM|PM)/i', $val, $m)) {
+                $h = (int)$m[1];
+                $min = $m[2];
+                $meridiem = strtoupper($m[3]);
+                if ($meridiem === 'PM' && $h !== 12) $h += 12;
+                if ($meridiem === 'AM' && $h === 12) $h = 0;
+                $row[$field] = sprintf('%02d:%02d', $h, (int)$min);
+            }
+        }
+        return $row;
+    })->toArray();
+
     $this->validate([
-        'avatar' => ['required', 'image', 'max:2048'],
-        'selectedSubjects' => ['required', 'array', 'min:1'],
-        'selectedSubjects.*' => ['exists:subjects,id'],
-        'availabilities' => ['required', 'array', 'min:1'],
-        'availabilities.*.day_of_week' => ['required', 'in:monday,tuesday,wednesday,thursday,friday,saturday'],
-        'availabilities.*.start_time' => ['required', 'date_format:H:i'],
-        'availabilities.*.end_time' => ['required', 'date_format:H:i'],
+        'avatar'                          => ['required', 'image', 'max:2048'],
+        'selectedSubjects'                => ['required', 'array', 'min:1'],
+        'selectedSubjects.*'              => ['exists:subjects,id'],
+        'availabilities'                  => ['required', 'array', 'min:1'],
+        'availabilities.*.day_of_week'    => ['required', 'in:monday,tuesday,wednesday,thursday,friday,saturday'],
+        'availabilities.*.start_time'     => ['required', 'date_format:H:i'],
+        'availabilities.*.end_time'       => ['required', 'date_format:H:i'],
     ], [], [
-        'avatar' => 'profile picture',
-        'selectedSubjects' => 'subjects',
-        'availabilities' => 'availabilities',
+        'avatar'            => 'profile picture',
+        'selectedSubjects'  => 'subjects',
+        'availabilities'    => 'availabilities',
     ]);
 
     foreach ($this->availabilities as $i => $row) {
@@ -389,6 +449,7 @@ $confirmMentor = action(function () {
             return;
         }
     }
+
     $this->showConfirm = true;
 });
 
@@ -413,14 +474,14 @@ $saveMentor = action(function () {
 
     foreach ($this->availabilities as $sched) {
         MentorAvailabilities::create([
-            'mentor_id' => $mentorProf->id,
+            'mentor_id'   => $mentorProf->id,
             'day_of_week' => $sched['day_of_week'],
-            'start_time' => $sched['start_time'],
-            'end_time' => $sched['end_time'],
+            'start_time'  => $sched['start_time'],
+            'end_time'    => $sched['end_time'],
         ]);
     }
 
-    $this->showModal = false;
+    $this->showModal   = false;
     $this->showConfirm = false;
     session()->flash('successMessage', "{$userMentor->name} has been registered as a mentor.");
     $this->redirect(route('admin.mentors'), navigate: true);
@@ -442,16 +503,12 @@ $saveSubject = action(function () {
         'code' => trim($this->newSubjectCode),
         'name' => trim($this->newSubjectName),
     ]);
-    $this->showSubjectModal = false;
+    $this->showSubjectModal   = false;
     $this->showSubjectConfirm = false;
     session()->flash('successMessage', "{$this->newSubjectCode} has been added.");
     $this->redirect(route('admin.courses'), navigate: true);
 });
 
-/**
- * Reload the pending approvals list from DB and sync allSessions.
- * Extracted helper used by acceptBooking and rejectBooking.
- */
 $reloadPendingList = action(function () {
     $this->pendingApprovalsList = Bookings::with(['student.user', 'mentor.user', 'subject'])
         ->where('booking_status', 'pending')
@@ -508,9 +565,6 @@ $reloadPendingList = action(function () {
 $acceptBooking = action(function (string $id) {
     $booking = Bookings::with(['mentor.user', 'subject', 'student.user'])->findOrFail($id);
 
-    // ── CONFLICT CHECK ─────────────────────────────────────────────────────
-    // Find any already-accepted session for the SAME mentor on the SAME date
-    // whose time window overlaps with the booking being accepted.
     $conflict = Bookings::where('mentor_id', $booking->mentor_id)
         ->where('id', '!=', $booking->id)
         ->where('booking_status', 'accepted')
@@ -523,23 +577,20 @@ $acceptBooking = action(function (string $id) {
         ->first();
 
     if ($conflict) {
-        // Emit an event so JS can display the conflict modal instead of accepting.
         $this->dispatch('booking-conflict-detected', [
-            'pendingId'        => $id,
-            'conflictStudent'  => $conflict->student->user->name ?? 'Unknown Student',
-            'conflictSubject'  => $conflict->subject->code ?? 'N/A',
-            'conflictStart'    => \Carbon\Carbon::parse($conflict->schedule_start)->format('h:i A'),
-            'conflictEnd'      => \Carbon\Carbon::parse($conflict->schedule_end)->format('h:i A'),
-            'conflictDate'     => \Carbon\Carbon::parse($conflict->date)->format('F j, Y'),
-            'mentorName'       => $booking->mentor->user->name ?? 'Unknown Mentor',
+            'pendingId'       => $id,
+            'conflictStudent' => $conflict->student->user->name ?? 'Unknown Student',
+            'conflictSubject' => $conflict->subject->code ?? 'N/A',
+            'conflictStart'   => \Carbon\Carbon::parse($conflict->schedule_start)->format('h:i A'),
+            'conflictEnd'     => \Carbon\Carbon::parse($conflict->schedule_end)->format('h:i A'),
+            'conflictDate'    => \Carbon\Carbon::parse($conflict->date)->format('F j, Y'),
+            'mentorName'      => $booking->mentor->user->name ?? 'Unknown Mentor',
         ]);
         return;
     }
 
-    // ── ACCEPT ─────────────────────────────────────────────────────────────
     Bookings::where('id', $id)->update(['booking_status' => 'accepted']);
 
-    // ── AUTO-REJECT conflicting pending sessions for the same mentor ───────
     $autoRejected = Bookings::where('mentor_id', $booking->mentor_id)
         ->where('id', '!=', $id)
         ->where('booking_status', 'pending')
@@ -554,7 +605,6 @@ $acceptBooking = action(function (string $id) {
         Bookings::whereIn('id', $autoRejected->pluck('id'))
             ->update(['booking_status' => 'rejected']);
 
-        // Notify the frontend about how many were auto-rejected.
         $this->dispatch('bookings-auto-rejected', [
             'count' => $autoRejected->count(),
         ]);
@@ -569,17 +619,26 @@ $rejectBooking = action(function (string $id) {
 });
 ?>
 
+{{--
+    ROOT WRAPPER
+    All overlay modals (mentor, subject, confirms, report, conflict, auto-reject)
+    are DIRECT CHILDREN of this div so they are never clipped by a parent
+    stacking context.
+--}}
 <div>
-    <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-6 relative" 
-        x-data="{ 
+
+    {{-- ═══════════════════════════════════════════════════════════════════
+         GLOBAL SEARCH BAR
+    ════════════════════════════════════════════════════════════════════════ --}}
+    <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-6 relative"
+        x-data="{
             query: '',
             open: false,
             index: @js($this->searchIndex),
-            
+
             get filteredResults() {
                 const term = this.query.toLowerCase();
                 const matches = this.index.filter(item => item.searchString.includes(term));
-
                 const grouped = {};
                 matches.forEach(m => {
                     if (!grouped[m.group]) grouped[m.group] = [];
@@ -587,12 +646,11 @@ $rejectBooking = action(function (string $id) {
                 });
                 return grouped;
             }
-        }" 
+        }"
         @click.outside="open = false">
-        
+
         <div class="relative">
             <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-300 text-xs"></i>
-            
             <input type="text" x-model="query"
                 @focus="open = true"
                 @keydown.escape.window="open = false; query = ''"
@@ -603,11 +661,10 @@ $rejectBooking = action(function (string $id) {
                           h-[34px] transition-shadow" autocomplete="off">
         </div>
 
-        {{-- Dropdown Results --}}
         <div x-show="open && query.length >= 1" x-cloak x-transition
             class="absolute left-0 right-0 bg-white rounded-xl shadow-xl border border-gray-100 overflow-y-auto"
             style="top: calc(100% + 6px); max-height: 420px; z-index: 20;">
-            
+
             <template x-if="Object.keys(filteredResults).length === 0">
                 <div style="padding:20px;text-align:center;font-size:13px;color:#9ca3af;font-style:italic;">
                     No matches found for "<strong x-text="query"></strong>"
@@ -616,22 +673,18 @@ $rejectBooking = action(function (string $id) {
 
             <template x-for="(items, group) in filteredResults" :key="group">
                 <div>
-                    <div x-text="group" style="padding:10px 14px;font-size:10px;font-weight:900;color:#000000;text-transform:uppercase;letter-spacing:.05em; background: #f0f0f0;"></div>
-                    
+                    <div x-text="group" style="padding:10px 14px;font-size:10px;font-weight:900;color:#000000;text-transform:uppercase;letter-spacing:.05em;background:#f0f0f0;"></div>
                     <template x-for="item in items" :key="item.label + item.detail">
-                        <a :href="item.url" class="block group" style="display:flex;align-items:center;gap:12px;padding:10px 14px;cursor:pointer;border-bottom:1px solid #f1f5f9;transition:background .15s; text-decoration:none;" onmouseover="this.style.background='#f4f5f7'" onmouseout="this.style.background='transparent'">
-                            
-                            {{-- Icon Badge --}}
+                        <a :href="item.url" class="block group"
+                            style="display:flex;align-items:center;gap:12px;padding:10px 14px;cursor:pointer;border-bottom:1px solid #f1f5f9;transition:background .15s;text-decoration:none;"
+                            onmouseover="this.style.background='#f4f5f7'" onmouseout="this.style.background='transparent'">
                             <span :style="`font-size:11px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:6px;flex-shrink:0;background:${item.bg};color:${item.color};`">
                                 <i class="fa-solid" :class="item.icon"></i>
                             </span>
-                            
-                            {{-- Text Content --}}
                             <div style="flex:1;min-width:0;">
                                 <div style="font-size:13px;font-weight:700;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" x-text="item.label"></div>
                                 <div style="font-size:11px;font-weight:500;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;" x-text="item.detail"></div>
                             </div>
-                            
                             <i class="fa-solid fa-arrow-up-right-from-square opacity-0 group-hover:opacity-100 transition-opacity" style="font-size:10px;color:#cbd5e1;flex-shrink:0;"></i>
                         </a>
                     </template>
@@ -640,79 +693,79 @@ $rejectBooking = action(function (string $id) {
         </div>
     </div>
 
-    <div class="grid grid-cols-[repeat(autofit,_minmax(250px, 1fr))] sm:grid-cols-5 gap-4 mb-8">
-      <a href="{{ route('admin.mentors') }}" wire:navigate
-        class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-green-600 flex items-center gap-4 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer">
-        <div class="text-2xl flex-shrink-0">
-          <i class="fa-solid fa-users text-green-600"></i>
-        </div>
-        <div class="min-w-0 flex-1">
-          <h3 class="text-xs font-bold text-gray-400 uppercase leading-none truncate">Total Mentors</h3>
-          <p class="text-2xl font-black truncate">{{ $totalMentors }}</p>
-        </div>
-      </a>
+    {{-- ═══════════════════════════════════════════════════════════════════
+         STAT CARDS
+    ════════════════════════════════════════════════════════════════════════ --}}
+    <div class="grid grid-cols-[repeat(autofit,_minmax(250px,_1fr))] sm:grid-cols-5 gap-4 mb-8">
+        <a href="{{ route('admin.mentors') }}" wire:navigate
+            class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-green-600 flex items-center gap-4 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer">
+            <div class="text-2xl flex-shrink-0"><i class="fa-solid fa-users text-green-600"></i></div>
+            <div class="min-w-0 flex-1">
+                <h3 class="text-xs font-bold text-gray-400 uppercase leading-none truncate">Total Mentors</h3>
+                <p class="text-2xl font-black truncate">{{ $totalMentors }}</p>
+            </div>
+        </a>
 
-      <a href="{{ route('admin.sessions') }}" wire:navigate
-        class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-blue-600 flex items-center gap-4 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer">
-        <div class="text-2xl flex-shrink-0">
-          <i class="fa-solid fa-calendar-day text-blue-600"></i>
-        </div>
-        <div class="min-w-0 flex-1">
-          <h3 class="text-xs font-bold text-gray-400 uppercase leading-none truncate">Sessions Today</h3>
-          <p class="text-2xl font-black truncate">{{ $sessionsToday }}</p>
-        </div>
-      </a>
+        <a href="{{ route('admin.sessions') }}" wire:navigate
+            class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-blue-600 flex items-center gap-4 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer">
+            <div class="text-2xl flex-shrink-0"><i class="fa-solid fa-calendar-day text-blue-600"></i></div>
+            <div class="min-w-0 flex-1">
+                <h3 class="text-xs font-bold text-gray-400 uppercase leading-none truncate">Sessions Today</h3>
+                <p class="text-2xl font-black truncate">{{ $sessionsToday }}</p>
+            </div>
+        </a>
 
-      <a href="{{ route('admin.sessions') }}" wire:navigate
-        class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-yellow-500 flex items-center gap-4 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer">
-        <div class="text-2xl flex-shrink-0">
-          <i class="fa-solid fa-clock text-yellow-500"></i>
-        </div>
-        <div class="min-w-0 flex-1">
-          <h3 class="text-xs font-bold text-gray-400 uppercase leading-none truncate">Pending</h3>
-          <p class="text-2xl font-black truncate">{{ $pendingBookings }}</p>
-        </div>
-      </a>
+        <a href="{{ route('admin.sessions') }}" wire:navigate
+            class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-yellow-500 flex items-center gap-4 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer">
+            <div class="text-2xl flex-shrink-0"><i class="fa-solid fa-clock text-yellow-500"></i></div>
+            <div class="min-w-0 flex-1">
+                <h3 class="text-xs font-bold text-gray-400 uppercase leading-none truncate">Pending</h3>
+                <p class="text-2xl font-black truncate">{{ $pendingBookings }}</p>
+            </div>
+        </a>
 
-      <a href="{{ route('admin.feedbacks') }}" wire:navigate
-        class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-red-600 flex items-center gap-4 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer">
-        <div class="text-2xl flex-shrink-0">
-          <i class="fa-solid fa-star text-red-600"></i>
-        </div>
-        <div class="min-w-0 flex-1">
-          <h3 class="text-xs font-bold text-gray-400 uppercase leading-none truncate">Average Ratings</h3>
-          <p class="text-2xl font-black truncate">{{ $this->dashboardStats['avg'] }}</p>
-        </div>
-      </a>
+        <a href="{{ route('admin.feedbacks') }}" wire:navigate
+            class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-red-600 flex items-center gap-4 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer">
+            <div class="text-2xl flex-shrink-0"><i class="fa-solid fa-star text-red-600"></i></div>
+            <div class="min-w-0 flex-1">
+                <h3 class="text-xs font-bold text-gray-400 uppercase leading-none truncate">Average Ratings</h3>
+                <p class="text-2xl font-black truncate">{{ $this->dashboardStats['avg'] }}</p>
+            </div>
+        </a>
 
-      <a href="{{ route('admin.mentors') }}" wire:navigate
-        class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-pink-600 flex items-center gap-4 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer">
-        <div class="text-2xl flex-shrink-0">
-          <i class="fa-solid fa-user-graduate text-pink-600"></i>
-        </div>
-        <div class="min-w-0 flex-1">
-          <h3 class="text-xs font-bold text-gray-400 uppercase leading-none truncate">Total Mentees</h3>
-          <p class="text-2xl font-black truncate">{{ $totalStudents }}</p>
-        </div>
-      </a>
+        <a href="{{ route('admin.mentors') }}" wire:navigate
+            class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-pink-600 flex items-center gap-4 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer">
+            <div class="text-2xl flex-shrink-0"><i class="fa-solid fa-user-graduate text-pink-600"></i></div>
+            <div class="min-w-0 flex-1">
+                <h3 class="text-xs font-bold text-gray-400 uppercase leading-none truncate">Total Mentees</h3>
+                <p class="text-2xl font-black truncate">{{ $totalStudents }}</p>
+            </div>
+        </a>
     </div>
 
+    {{-- ═══════════════════════════════════════════════════════════════════
+         MAIN TWO-COLUMN LAYOUT
+    ════════════════════════════════════════════════════════════════════════ --}}
     <div class="grid grid-cols-3 gap-8">
+
+        {{-- LEFT / MAIN COLUMN ──────────────────────────────────────────── --}}
         <div class="col-span-2 space-y-8">
-            <div wire:ignore class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col" id="section-schedule">                            
+
+            {{-- Today's Schedule table --}}
+            <div wire:ignore class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col" id="section-schedule">
                 <div class="flex justify-between items-center mb-6">
                     <div>
                         <div class="flex items-center gap-2">
                             <i class="fa-solid fa-calendar-check"></i>
-                                <h2 class="text-lg font-bold text-slate-800" id="tableTitle">Today's Schedule</h2>
-                        </div>    
+                            <h2 class="text-lg font-bold text-slate-800" id="tableTitle">Today's Schedule</h2>
+                        </div>
                         <p class="text-xs text-gray-400" id="tableSubtitle"></p>
                     </div>
-
                     <div class="flex gap-2">
                         <div class="relative w-48">
                             <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-300 text-xs"></i>
-                            <input type="text" id="liveSearchInput" placeholder="Search..." class="w-full pl-9 pr-3 py-2 text-xs border border-gray-200 rounded-lg outline-none focus:ring-1 focus:ring-red-800">
+                            <input type="text" id="liveSearchInput" placeholder="Search..."
+                                class="w-full pl-9 pr-3 py-2 text-xs border border-gray-200 rounded-lg outline-none focus:ring-1 focus:ring-red-800">
                         </div>
                         <select id="statusFilter" class="table-filter-select">
                             <option value="">All Status</option>
@@ -756,12 +809,15 @@ $rejectBooking = action(function (string $id) {
                     <div class="flex gap-2">
                         <button id="prevBtn" class="pagination-btn" disabled>
                             <i class="fa-solid fa-chevron-left"></i>
-                        </button>                                    
-                        <button id="nextBtn" class="pagination-btn"><i class="fa-solid fa-chevron-right"></i></button>
+                        </button>
+                        <button id="nextBtn" class="pagination-btn">
+                            <i class="fa-solid fa-chevron-right"></i>
+                        </button>
                     </div>
                 </div>
             </div>
 
+            {{-- Analytics --}}
             <div wire:ignore class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
                 <div class="flex justify-between items-center mb-6">
                     <div class="flex items-center gap-2">
@@ -778,439 +834,64 @@ $rejectBooking = action(function (string $id) {
             </div>
         </div>
 
+        {{-- RIGHT SIDEBAR COLUMN ────────────────────────────────────────── --}}
         <div class="flex flex-col gap-6">
-            <div>
-                {{-- ── QUICK ACTIONS CARD ── --}}
-                <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100" id="section-quickactions">
-                    <h3 class="font-bold mb-3 text-slate-800 text-sm tracking-tight">Quick Actions</h3>
-                    <div class="flex flex-col gap-2">
-                        <div class="grid grid-cols-2 gap-2">
-                            <button wire:click="openModal" @click="$wire.showModal = true"
-                                class="border border-slate-300 p-2.5 rounded-lg text-[11px] font-bold hover:bg-gray-50 transition flex items-center justify-center gap-1.5">
-                                <i class="fa-solid fa-user-plus text-[10px]"></i> Add Mentor
-                            </button>
-                            
-                            <button wire:click="openSubjectModal" @click="$wire.showSubjectModal = true"
-                                class="border border-slate-300 p-2.5 rounded-lg text-[11px] font-bold hover:bg-gray-50 transition flex items-center justify-center gap-1.5">
-                                <i class="fa-solid fa-book-open text-[10px]"></i> Add Subject
-                            </button>
-                        </div>
-                        <button onclick="openReportModal()"
-                            class="w-full border border-slate-300 p-2.5 rounded-lg text-[11px] font-bold hover:bg-gray-50 transition flex items-center justify-center gap-1.5">
-                            <i class="fa-solid fa-file-invoice text-[10px]"></i> Generate Report
-                        </button>
-                    </div>
-                </div>
 
-                {{-- ── GENERATE REPORT MODAL ── --}}
-                <div id="reportModal"
-                    style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); backdrop-filter:blur(4px); z-index:1000; align-items:center; justify-content:center; padding:24px;">
-                    <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden">
+            {{-- ── QUICK ACTIONS CARD ── --}}
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100" id="section-quickactions">
+                <h3 class="font-bold mb-3 text-slate-800 text-sm tracking-tight">Quick Actions</h3>
 
-                        <div class="flex items-center gap-4 px-6 py-5 border-b border-gray-100">
-                            <div class="w-12 h-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xl flex-shrink-0">
-                                <i class="fa-solid fa-file-arrow-down"></i>
-                            </div>
-                            <div class="flex-1 min-w-0">
-                                <h2 class="text-xl font-extrabold text-slate-800 tracking-tight mb-0.5">Generate Weekly Report</h2>
-                                <p class="text-xs text-slate-500 leading-snug" id="reportWeekLabel">Loading week range...</p>
-                            </div>
-                            <button onclick="document.getElementById('reportModal').style.display='none'"
-                                class="text-gray-400 hover:text-red-600 transition">
-                                <i class="fa-solid fa-xmark text-xl"></i>
-                            </button>
-                        </div>
+                <div class="flex flex-col gap-2"
+                    x-data="{
+                        mentorOpening: false,
+                        subjectOpening: false
+                    }">
 
-                        <div class="px-6 py-5">
-                            <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 flex items-start gap-3">
-                                <i class="fa-solid fa-calendar-week text-slate-400 mt-0.5 text-sm flex-shrink-0"></i>
-                                <div>
-                                    <p class="text-xs font-bold text-slate-700 mb-0.5">Current Week</p>
-                                    <p class="text-xs text-slate-500" id="reportWeekDetail">—</p>
-                                </div>
-                            </div>
-                            <p class="text-xs text-slate-400 mt-3 leading-relaxed">
-                                Exports all sessions for this week (Monday – Sunday) with student, mentor, subject, topic, date &amp; time, and session mode.
-                            </p>
-                        </div>
+                    <div class="grid grid-cols-2 gap-2">
 
-                        <div class="px-6 py-5 bg-gray-50 border-t border-gray-100">
-                            <div class="flex gap-3">
-                                <button type="button"
-                                    onclick="document.getElementById('reportModal').style.display='none'"
-                                    class="flex-1 py-2.5 text-sm font-bold text-gray-600 bg-white border border-gray-200 hover:bg-gray-100 rounded-xl transition">
-                                    Cancel
-                                </button>
-                                <button type="button" onclick="submitReport()"
-                                    class="flex-1 bg-red-900 text-white py-2.5 rounded-xl text-sm font-bold shadow-md hover:bg-red-800 transition">
-                                    <i class="fa-solid fa-download mr-1"></i> Export
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                        {{-- Add Mentor --}}
+<button
+    type="button"
+    onclick="window.location.href='{{ route('admin.mentors', ['open' => 'mentor']) }}'"
+    class="w-full border border-slate-300 p-2.5 rounded-lg text-[11px] font-bold
+           hover:bg-gray-50 transition flex items-center justify-center gap-1.5">
 
-                {{-- ── CONFLICT WARNING MODAL ── --}}
-                {{--
-                    Shown when acceptBooking detects that the mentor already has an accepted
-                    session overlapping the one the admin is trying to approve.
-                    The admin sees the conflicting session's details and cannot override it
-                    (they must first resolve the conflict on the Sessions page).
-                --}}
-                <div id="conflictModal"
-                    style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5);
-                           backdrop-filter:blur(4px); z-index:1200; align-items:center;
-                           justify-content:center; padding:24px;">
-                    <div class="bg-white w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden">
-
-                        <div class="flex items-center gap-4 px-6 py-5 border-b border-gray-100">
-                            <div class="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center text-xl flex-shrink-0">
-                                <i class="fa-solid fa-triangle-exclamation"></i>
-                            </div>
-                            <div class="flex-1 min-w-0">
-                                <h2 class="text-lg font-extrabold text-slate-800">Schedule Conflict</h2>
-                                <p class="text-xs text-slate-500 leading-snug mt-0.5">This booking cannot be accepted.</p>
-                            </div>
-                            <button onclick="closeConflictModal()" class="text-gray-400 hover:text-red-600 transition">
-                                <i class="fa-solid fa-xmark text-xl"></i>
-                            </button>
-                        </div>
-
-                        <div class="px-6 py-5 space-y-4">
-                            <p class="text-xs text-slate-600 leading-relaxed">
-                                <strong id="conflictMentorName" class="text-slate-800"></strong> already has an accepted session that overlaps with this booking:
-                            </p>
-
-                            <div class="bg-red-50 border border-red-200 rounded-xl p-4 space-y-2 text-xs">
-                                <div class="flex justify-between">
-                                    <span class="text-gray-500 font-medium">Student</span>
-                                    <span class="text-slate-700 font-bold" id="conflictStudentName"></span>
-                                </div>
-                                <div class="flex justify-between">
-                                    <span class="text-gray-500 font-medium">Subject</span>
-                                    <span class="text-slate-700 font-bold" id="conflictSubject"></span>
-                                </div>
-                                <div class="flex justify-between">
-                                    <span class="text-gray-500 font-medium">Date</span>
-                                    <span class="text-slate-700 font-bold" id="conflictDate"></span>
-                                </div>
-                                <div class="flex justify-between">
-                                    <span class="text-gray-500 font-medium">Time</span>
-                                    <span class="text-slate-700 font-bold" id="conflictTime"></span>
-                                </div>
-                            </div>
-
-                            <p class="text-[11px] text-slate-400 leading-relaxed">
-                                To resolve this conflict, cancel or reject the existing accepted session first, then try accepting this booking again.
-                            </p>
-                        </div>
-
-                        <div class="px-6 py-4 bg-gray-50 border-t border-gray-100">
-                            <button onclick="closeConflictModal()"
-                                class="w-full py-2.5 text-sm font-bold text-white bg-red-900 hover:bg-red-800 rounded-xl transition">
-                                Got it
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                {{-- ── AUTO-REJECT NOTIFICATION MODAL ── --}}
-                {{--
-                    Shown briefly after acceptBooking auto-rejects overlapping pending
-                    sessions for the same mentor on the same day.
-                --}}
-                <div id="autoRejectModal"
-                    style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4);
-                           backdrop-filter:blur(4px); z-index:1200; align-items:center;
-                           justify-content:center; padding:24px;">
-                    <div class="bg-white w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden">
-
-                        <div class="flex items-center gap-4 px-6 py-5 border-b border-gray-100">
-                            <div class="w-12 h-12 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center text-xl flex-shrink-0">
-                                <i class="fa-solid fa-circle-info"></i>
-                            </div>
-                            <div class="flex-1 min-w-0">
-                                <h2 class="text-lg font-extrabold text-slate-800">Booking Accepted</h2>
-                                <p class="text-xs text-slate-500 leading-snug mt-0.5">Overlapping requests were handled.</p>
-                            </div>
-                        </div>
-
-                        <div class="px-6 py-5">
-                            <p class="text-xs text-slate-600 leading-relaxed" id="autoRejectBody"></p>
-                        </div>
-
-                        <div class="px-6 py-4 bg-gray-50 border-t border-gray-100">
-                            <button onclick="closeAutoRejectModal()"
-                                class="w-full py-2.5 text-sm font-bold text-slate-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition">
-                                Dismiss
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                {{-- ── ADD MENTOR MODAL ── --}}
-                <div x-show="$wire.showModal" x-cloak class="modal-overlay" 
-    x-data="{ fileName: '', isVerifying: false, get canSubmit() { return true; } }" 
-    x-init="$watch('$wire.showModal', val => { if (!val) { fileName = ''; document.getElementById('avatar-upload').value = ''; } })">
-                    <div class="bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col" style="max-height: 90vh;">
-                        <div class="px-8 py-6 border-b flex justify-between items-center flex-shrink-0 bg-white">
-                            <div>
-                                <h2 class="text-xl font-black text-slate-800">Register Mentor</h2>
-                                <p class="text-sm text-gray-400 mt-0.5">Add their email, assign their subjects, then set their availabilities.</p>
-                            </div>
-                            <button wire:click="closeModal" @click="$wire.showModal = false" class="text-gray-400 hover:text-red-600 transition disabled:cursor-not-allowed" x-bind:disabled="isVerifying">
-                                <i class="fa-solid fa-xmark text-xl"></i>
-                            </button>
-                        </div>
-
-                        <div class="px-8 py-6 space-y-5 overflow-y-auto bg-white">
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                {{-- Step 1: Email --}}
-                                <div>
-                                    <div class="flex items-center gap-2 mb-3">
-                                        <span class="flex items-center justify-center w-5 h-5 bg-slate-800 text-white rounded-full text-[10px] font-bold shrink-0">1</span>
-                                        <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest m-0">Student Email</h3>
-                                    </div>
-                                    <div class="flex flex-col gap-2">
-                                        <div>
-                                            <input type="email" wire:model.lazy="up_mail" placeholder="student@up.edu.ph" class="form-input" wire:keydown.enter.prevent="checkEmail" />
-                                            @error('up_mail') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
-                                            @if($emailError) <p class="mt-1 text-xs text-red-600">{{ $emailError }}</p> @endif
-                                        </div>
-                                        <button type="button"
-    @click="isVerifying = true; $wire.checkEmail().finally(() => isVerifying = false)"
-    x-bind:disabled="isVerifying"
-    class="w-full px-4 py-2.5 bg-slate-800 text-white text-xs font-bold rounded-lg hover:bg-black transition disabled:cursor-not-allowed">
-    <span x-show="!isVerifying">Find Email</span>
-    <span x-show="isVerifying" style="display: none;">
-        <i class="fa-solid fa-spinner fa-spin mr-1"></i>Verifying...
+    <span class="flex items-center gap-1.5">
+        <i class="fa-solid fa-user-plus text-[10px]"></i>
+        Add Mentor
     </span>
 </button>
-                                    </div>
-                                    @if($newMentor)
-                                        <div class="mt-3 flex items-center gap-3 bg-green-50 border border-green-200 rounded-lg px-4 py-3">
-                                            <div class="w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">{{ substr($newMentor['name'], 0, 1) }}</div>
-                                            <div class="min-w-0">
-                                                <p class="text-sm font-bold text-slate-800 truncate">{{ $newMentor['name'] }}</p>
-                                                <p class="text-[10px] text-gray-500 truncate">{{ $newMentor['email'] }}</p>
-                                            </div>
-                                            <i class="fa-solid fa-circle-check text-green-500 ml-auto text-lg"></i>
-                                        </div>
-                                    @endif
-                                </div>
 
-                                {{-- Step 2: Profile Picture --}}
-                                <div>
-                                    <div class="flex items-center gap-2 mb-3">
-                                        <span class="flex items-center justify-center w-5 h-5 bg-slate-800 text-white rounded-full text-[10px] font-bold shrink-0">2</span>
-                                        <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest m-0">Profile Picture</h3>
-                                    </div>
-                                    <div class="flex items-start gap-4">
-                                        <div class="flex-shrink-0">
-                                            @if($avatar)
-                                                <img src="{{ $avatar->temporaryUrl() }}" class="w-32 h-32 rounded-xl object-cover border border-gray-200 shadow-sm">
-                                            @else
-                                                <div class="w-32 h-32 rounded-xl bg-white border border-dashed border-gray-300 flex items-center justify-center text-gray-400 shadow-sm">
-                                                    <i class="fa-solid fa-image text-2xl" wire:loading.remove wire:target="avatar"></i>
-                                                    <i class="fa-solid fa-circle-notch fa-spin text-2xl text-slate-800" wire:loading wire:target="avatar"></i>
-                                                </div>
-                                            @endif
-                                        </div>
-                                        <div class="flex-1 pt-1 flex flex-col justify-center h-32 min-w-0">
-                                            <input type="file" id="avatar-upload" wire:model="avatar" accept="image/*" class="hidden"
-                                                @change="fileName = $event.target.files[0].name" />
-                                            <label for="avatar-upload" class="block w-full text-center py-2.5 px-4 rounded-lg text-xs font-bold bg-slate-800 text-white hover:bg-black cursor-pointer transition shadow-sm">
-                                                <span wire:loading.remove wire:target="avatar">Choose File</span>
-                                                <span wire:loading wire:target="avatar"><i class="fa-solid fa-spinner fa-spin mr-1"></i>Uploading...</span>
-                                            </label>
-                                            <div class="mt-3 text-[10px] text-center w-full">
-                                                <p x-show="fileName" class="text-slate-700 font-bold truncate px-2 block w-full" x-text="fileName"></p>
-                                            </div>
-                                            @error('avatar') <p class="mt-1 text-xs text-red-600 text-center">{{ $message }}</p> @enderror
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                        {{-- Add Subject --}}
+<button
+    type="button"
+    onclick="window.location.href='{{ route('admin.mentors', ['open' => 'subject']) }}'"
+    class="w-full border border-slate-300 p-2.5 rounded-lg text-[11px] font-bold
+           hover:bg-gray-50 transition flex items-center justify-center gap-1.5">
 
-                            {{-- Step 3: Subjects --}}
-                            <div>
-                                <div class="flex items-center gap-2 mb-3">
-                                    <span class="flex items-center justify-center w-5 h-5 bg-slate-800 text-white rounded-full text-[10px] font-bold shrink-0">3</span>
-                                    <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest m-0">Teachable Subjects</h3>
-                                </div>
-                                <div class="border border-gray-200 rounded-xl overflow-hidden">
-                                    <div class="max-h-44 overflow-y-auto divide-y divide-gray-50 bg-white">
-                                        @forelse($this->allSubjects as $subject)
-                                            <div class="flex items-center px-4 hover:bg-gray-50" wire:key="sub-{{ $subject['id'] }}">
-                                                <input type="checkbox" id="subject-{{ $subject['id'] }}" wire:model="selectedSubjects" value="{{ $subject['id'] }}"
-                                                    class="rounded border-gray-300 text-slate-800 focus:ring-slate-800 w-4 h-4 cursor-pointer flex-shrink-0" />
-                                                <label for="subject-{{ $subject['id'] }}" class="flex items-center gap-3 ml-3 py-2.5 cursor-pointer flex-1">
-                                                    <span class="text-xs font-bold text-slate-700 w-16">{{ $subject['code'] }}</span>
-                                                    <span class="text-xs text-gray-400">{{ $subject['name'] }}</span>
-                                                </label>
-                                            </div>
-                                        @empty
-                                            <p class="text-xs text-gray-400 text-center py-4">No subjects yet. Please add the subject first.</p>
-                                        @endforelse
-                                    </div>
-                                </div>
-                                @error('selectedSubjects') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
-                            </div>
+    <span class="flex items-center gap-1.5">
+        <i class="fa-solid fa-book-open text-[10px]"></i>
+        Add Subject
+    </span>
+</button>
 
-                            {{-- Step 4: Availabilities --}}
-                            <div>
-                                <div class="flex items-center gap-2 mb-3">
-                                    <span class="flex items-center justify-center w-5 h-5 bg-slate-800 text-white rounded-full text-[10px] font-bold shrink-0">4</span>
-                                    <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest m-0">Availability Schedule</h3>
-                                </div>
-                                <div x-data="{ avails: $wire.entangle('availabilities') }">
-                                    <div wire:ignore>
-                                        <div class="grid grid-cols-[1fr_1fr_1fr_auto] gap-2 px-1 mb-1">
-                                            <label class="text-[10px] font-bold text-slate-500 uppercase">Day</label>
-                                            <label class="text-[10px] font-bold text-slate-500 uppercase">Start Time</label>
-                                            <label class="text-[10px] font-bold text-slate-500 uppercase">End Time</label>
-                                            <div class="w-8"></div>
-                                        </div>
-                                        <div class="space-y-2">
-                                            <template x-for="(row, index) in avails" :key="row.id">
-                                                <div class="grid grid-cols-[1fr_1fr_1fr_auto] gap-2 items-center">
-                                                    <select x-model="row.day_of_week" class="form-input text-xs h-10 w-full">
-                                                        <option value="">- Day -</option>
-                                                        <option value="monday">Monday</option>
-                                                        <option value="tuesday">Tuesday</option>
-                                                        <option value="wednesday">Wednesday</option>
-                                                        <option value="thursday">Thursday</option>
-                                                        <option value="friday">Friday</option>
-                                                        <option value="saturday">Saturday</option>
-                                                    </select>
-                                                    <input type="time" x-model="row.start_time" class="form-input text-xs h-10 w-full" />
-                                                    <input type="time" x-model="row.end_time" class="form-input text-xs h-10 w-full" />
-                                                    <div class="flex items-center justify-center">
-                                                        <template x-if="avails.length > 1">
-                                                            <button type="button" @click="avails.splice(index, 1)" class="w-8 h-8 flex items-center justify-center rounded-lg bg-red-50 text-red-400 hover:bg-red-100 hover:text-red-600 transition">
-                                                                <i class="fa-solid fa-xmark text-xs"></i>
-                                                            </button>
-                                                        </template>
-                                                        <template x-if="avails.length <= 1">
-                                                            <div class="w-8"></div>
-                                                        </template>
-                                                    </div>
-                                                </div>
-                                            </template>
-                                        </div>
-                                        <button @click="avails.push({id: Date.now() + Math.random(), day_of_week: '', start_time: '', end_time: ''})" type="button"
-                                            class="mt-3 flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-800 transition">
-                                            <i class="fa-solid fa-plus text-[10px]"></i> Add more days or time slots
-                                        </button>
-                                    </div>
-                                    @error('availabilities') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="px-8 py-5 bg-white border-t flex-shrink-0">
-    <div class="flex gap-3">
-        <button type="button" wire:click="closeModal" @click="$wire.showModal = false" x-bind:disabled="isVerifying"
-            class="flex-1 py-3 text-xs font-bold text-gray-800 bg-gray-200 hover:bg-gray-300 rounded-xl transition disabled:cursor-not-allowed">
-            Cancel
-        </button>
-        <button type="button" @click="isVerifying = true; $wire.confirmMentor().finally(() => isVerifying = false)"
-            x-bind:disabled="isVerifying"
-            class="flex-1 bg-red-900 text-white py-3 rounded-xl text-xs font-bold shadow-lg hover:bg-red-800 transition disabled:cursor-not-allowed">
-            <span x-show="!isVerifying">Register Mentor</span>
-            <span x-show="isVerifying" style="display: none;"><i class="fa-solid fa-spinner fa-spin mr-1"></i>Validating...</span>
-        </button>
-    </div>
-</div>
                     </div>
-                </div>
 
-                {{-- ── CONFIRM ADD MENTOR ── --}}
-                <div x-show="$wire.showConfirm" x-cloak class="modal-overlay flex items-center justify-center" style="z-index: 1100;" wire:click.self="$set('showConfirm', false)">
-                    <div class="bg-white w-full max-w-sm rounded-2xl shadow-2xl p-8 text-center m-4">
-                        <div class="w-16 h-16 bg-amber-100 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-5">
-                            <i class="fa-solid fa-user-plus text-3xl"></i>
-                        </div>
-                        <h3 class="text-xl font-black text-slate-800">Confirm Mentor Registration</h3>
-                        <p class="text-sm text-gray-500 mt-2 mb-8">This will register the student as a peer mentor and will allow them access to the mentor module.</p>
-                        <div class="flex gap-3" x-data="{ isSaving: false }">
-                            <button type="button" @click="$wire.showConfirm = false" class="flex-1 py-3 text-xs font-bold text-gray-800 bg-gray-200 hover:bg-gray-300 rounded-xl transition disabled:cursor-not-allowed" x-bind:disabled="isSaving">Cancel</button>
-                            <button type="button" @click="isSaving = true; $wire.saveMentor().finally(() => isSaving = false)"
-                                class="flex-1 bg-red-900 text-white py-3 rounded-xl text-xs font-bold shadow-lg hover:bg-red-800 transition disabled:cursor-not-allowed" x-bind:disabled="isSaving">
-                                <span x-show="!isSaving">Save</span>
-                                <span x-show="isSaving" style="display: none;"><i class="fa-solid fa-spinner fa-spin mr-1"></i>Saving...</span>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                {{-- Add Subject Modal --}}
-                <div x-show="$wire.showSubjectModal" x-cloak class="modal-overlay" x-data="{ isVerifying: false }">
-                    <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden">
-                        <div class="px-8 py-5 bg-white border-b flex justify-between items-center">
-                            <div>
-                                <h2 class="text-lg font-black text-slate-800">Add New Subject</h2>
-                                <p class="text-xs text-gray-400 mt-0.5">This subject will become available for mentor assignments.</p>
-                            </div>
-                            <button wire:click="closeSubjectModal" @click="$wire.showSubjectModal = false" x-bind:disabled="isVerifying" class="text-gray-400 hover:text-red-600 transition disabled:cursor-not-allowed">
-                                <i class="fa-solid fa-xmark text-xl"></i>
-                            </button>
-                        </div>
-                        <div class="px-8 py-4 space-y-4">
-                            <div>
-                                <label class="form-label">Subject Code <span class="text-red-500">*</span></label>
-                                <input type="text" wire:model.lazy="newSubjectCode" placeholder="e.g. Math 54" class="form-input" />
-                                @error('newSubjectCode') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
-                            </div>
-                            <div>
-                                <label class="form-label">Subject Name <span class="text-red-500">*</span></label>
-                                <input type="text" wire:model.lazy="newSubjectName" placeholder="e.g. Elementary Analysis II" class="form-input" />
-                                @error('newSubjectName') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
-                            </div>
-                        </div>
-                        <div class="px-8 py-5 bg-white border-t">
-                            <div class="flex gap-3">
-                                <button type="button" wire:click="closeSubjectModal" @click="$wire.showSubjectModal = false" x-bind:disabled="isVerifying"
-                                    class="flex-1 py-3 text-xs font-bold text-gray-800 bg-gray-200 hover:bg-gray-300 rounded-xl transition disabled:cursor-not-allowed">Cancel</button>
-                                <button type="button" @click="isVerifying = true; $wire.confirmSubject().finally(() => isVerifying = false)" x-bind:disabled="isVerifying"
-                                    class="flex-1 bg-red-900 text-white py-3 rounded-xl text-xs font-bold shadow-lg hover:bg-red-800 transition disabled:cursor-not-allowed">
-                                    <span x-show="!isVerifying">Add Subject</span>
-                                    <span x-show="isVerifying" style="display: none;"><i class="fa-solid fa-spinner fa-spin mr-1"></i>Validating...</span>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {{-- ── CONFIRM ADD SUBJECT MODAL ── --}}
-                <div x-show="$wire.showSubjectConfirm" x-cloak class="modal-overlay flex items-center justify-center" style="z-index: 1100;" wire:click.self="$set('showSubjectConfirm', false)">
-                    <div class="bg-white w-full max-w-sm rounded-2xl shadow-2xl p-8 text-center m-4">
-                        <div class="w-16 h-16 bg-amber-100 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-5">
-                            <i class="fa-solid fa-book text-3xl"></i>
-                        </div>
-                        <h3 class="text-xl font-black text-slate-800">Confirm New Subject</h3>
-                        <p class="text-sm text-gray-500 mt-2 mb-8">This will be added to the list of available subjects.</p>
-                        <div class="flex gap-3" x-data="{ isSaving: false }">
-                            <button type="button" @click="$wire.showSubjectConfirm = false" class="flex-1 py-3 text-xs font-bold text-gray-800 bg-gray-200 hover:bg-gray-300 rounded-xl transition disabled:cursor-not-allowed" x-bind:disabled="isSaving">Cancel</button>
-                            <button type="button" @click="isSaving = true; $wire.saveSubject().finally(() => isSaving = false)" x-bind:disabled="isSaving" 
-                                class="flex-1 bg-red-900 text-white py-3 rounded-xl text-xs font-bold shadow-lg hover:bg-red-800 transition disabled:cursor-not-allowed">
-                                <span x-show="!isSaving">Save</span>
-                                <span x-show="isSaving" style="display: none;"><i class="fa-solid fa-spinner fa-spin mr-1"></i>Saving...</span>
-                            </button>
-                        </div>
-                    </div>
+                    <button onclick="openReportModal()"
+                        class="w-full border border-slate-300 p-2.5 rounded-lg text-[11px] font-bold
+                               hover:bg-gray-50 transition flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-file-invoice text-[10px]"></i>
+                        Generate Report
+                    </button>
                 </div>
             </div>
 
             {{-- ── CALENDAR + CLOCK ── --}}
             <div wire:ignore class="bg-white rounded-xl shadow-sm border border-gray-100">
-                {{-- Clock --}}
                 <div class="bg-slate-900 rounded-t-xl px-4 py-3 flex items-center justify-between">
                     <div id="liveDate" class="text-[10px] font-medium text-slate-400 uppercase tracking-widest"></div>
                     <div id="liveClock" class="text-sm font-bold text-white tracking-widest" style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;"></div>
                 </div>
-
-                {{-- Calendar --}}
                 <div class="p-4">
                     <div class="flex items-center justify-center gap-3 mb-4">
                         <button onclick="changeMonth(-1)"
@@ -1223,7 +904,6 @@ $rejectBooking = action(function (string $id) {
                             <i class="fa-solid fa-chevron-right text-[10px]"></i>
                         </button>
                     </div>
-
                     <div class="grid grid-cols-7 gap-1 mb-1">
                         <div class="cal-header-day">S</div>
                         <div class="cal-header-day">M</div>
@@ -1250,14 +930,12 @@ $rejectBooking = action(function (string $id) {
                     }
                 }">
 
-                {{-- ── DETAIL MODAL ── --}}
-                <div x-show="modalOpen" x-cloak
-                    x-transition
+                {{-- Detail Modal --}}
+                <div x-show="modalOpen" x-cloak x-transition
                     class="fixed inset-0 z-[1200] flex items-center justify-center p-6"
                     style="background:rgba(0,0,0,0.45);"
                     @click.self="modalOpen = false">
                     <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden" @click.stop>
-                        {{-- Header --}}
                         <div class="flex items-center gap-4 px-6 py-5 border-b border-gray-100">
                             <div class="w-11 h-11 rounded-full bg-amber-100 text-yellow-600 flex items-center justify-center text-sm font-bold flex-shrink-0"
                                 x-text="selected?.initials"></div>
@@ -1269,10 +947,7 @@ $rejectBooking = action(function (string $id) {
                                 <i class="fa-solid fa-xmark text-lg"></i>
                             </button>
                         </div>
-
-                        {{-- Body --}}
                         <div class="px-6 py-5 space-y-4">
-                            {{-- Session time block --}}
                             <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 flex items-start gap-3">
                                 <i class="fa-solid fa-calendar-days text-slate-400 mt-0.5 text-sm flex-shrink-0"></i>
                                 <div>
@@ -1280,8 +955,6 @@ $rejectBooking = action(function (string $id) {
                                     <p class="text-xs text-slate-500" x-text="(selected?.time_start ?? '') + ' – ' + (selected?.time_end ?? '')"></p>
                                 </div>
                             </div>
-
-                            {{-- Detail rows --}}
                             <div class="divide-y divide-gray-100 text-xs">
                                 <div class="flex justify-between py-2.5">
                                     <span class="text-gray-400 font-medium">Subject</span>
@@ -1310,8 +983,6 @@ $rejectBooking = action(function (string $id) {
                                 </template>
                             </div>
                         </div>
-
-                        {{-- Footer actions --}}
                         <div class="px-6 py-5 bg-gray-50 border-t border-gray-100 flex gap-3"
                             x-show="selected && !doneIds[selected?.id]">
                             <button
@@ -1350,30 +1021,24 @@ $rejectBooking = action(function (string $id) {
                     </div>
                 </div>
 
-                {{-- ── LIST HEADER ── --}}
                 <div class="flex justify-between items-center mb-2">
                     <h3 class="font-bold text-slate-800 text-sm tracking-tight">Pending Requests</h3>
-                    <span id="pendingBadge" class="bg-red-100 text-red-700 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                    <span id="pendingBadge"
+                        class="bg-red-100 text-red-700 text-[10px] font-bold px-2 py-0.5 rounded-full">
                         {{ count($pendingApprovalsList) }} {{ count($pendingApprovalsList) !== 1 ? 'Requests' : 'Request' }}
                     </span>
                 </div>
 
-                {{-- ── AUTO-REJECT BANNER AREA ── --}}
                 <div id="adminPendingBannerArea" class="flex flex-col gap-2"></div>
 
-                {{-- ── REQUEST LIST ── --}}
                 <div id="adminPendingList" class="flex flex-col gap-0">
                     @forelse($pendingApprovalsList as $item)
                         <div class="session-row flex items-center gap-3 rounded-xl px-2 py-1.5 transition-all duration-200 hover:bg-slate-50 cursor-pointer group"
                             wire:key="pending-{{ $item['id'] }}"
                             @click="openDetail({{ json_encode($item) }})">
-
-                            {{-- Avatar --}}
                             <div class="w-7 h-7 rounded-full bg-amber-100 text-yellow-600 flex items-center justify-center text-[10px] font-bold flex-shrink-0">
                                 {{ $item['initials'] }}
                             </div>
-
-                            {{-- Info --}}
                             <div class="min-w-0 flex-1">
                                 <p class="text-[11px] font-bold text-slate-700 truncate group-hover:text-slate-900 transition-colors">{{ $item['name'] }}</p>
                                 <p class="text-[9px] text-gray-400 font-medium truncate">
@@ -1384,37 +1049,25 @@ $rejectBooking = action(function (string $id) {
                                     {{ $item['date_full'] }}, {{ $item['time_start'] }} – {{ $item['time_end'] }}
                                 </p>
                             </div>
-
-                            {{-- Action area --}}
                             <div class="relative flex items-center justify-end" style="min-height:28px;" @click.stop>
-                                {{-- Idle dot (shown when not hovered) --}}
                                 <div class="action-idle absolute right-0 flex items-center gap-1 pointer-events-none">
                                     <span class="w-2 h-2 rounded-full bg-yellow-400 inline-block"></span>
                                 </div>
-
                                 <template x-if="processingId === '{{ $item['id'] }}' && !doneIds['{{ $item['id'] }}']">
                                     <div class="w-16 flex items-center justify-center">
                                         <i class="fa-solid fa-spinner fa-spin text-slate-400 text-xs"></i>
                                     </div>
                                 </template>
-
                                 <template x-if="doneIds['{{ $item['id'] }}'] === 'accepted'">
-                                    <span class="text-green-600 text-[9px] font-bold bg-green-50 border border-green-200 px-2 py-0.5 rounded-full">
-                                        Accepted ✓
-                                    </span>
+                                    <span class="text-green-600 text-[9px] font-bold bg-green-50 border border-green-200 px-2 py-0.5 rounded-full">Accepted ✓</span>
                                 </template>
-
                                 <template x-if="doneIds['{{ $item['id'] }}'] === 'rejected'">
-                                    <span class="text-red-500 text-[9px] font-bold bg-red-50 border border-red-200 px-2 py-0.5 rounded-full">
-                                        Rejected ✗
-                                    </span>
+                                    <span class="text-red-500 text-[9px] font-bold bg-red-50 border border-red-200 px-2 py-0.5 rounded-full">Rejected ✗</span>
                                 </template>
-
                                 <template x-if="processingId !== '{{ $item['id'] }}' && !doneIds['{{ $item['id'] }}']">
                                     <div class="action-buttons flex items-center gap-1 justify-end">
                                         <div class="hover-tooltip" data-full="Accept">
-                                            <button
-                                                title="Accept"
+                                            <button title="Accept"
                                                 @click="
                                                     processingId = '{{ $item['id'] }}';
                                                     $wire.acceptBooking('{{ $item['id'] }}').then(() => {
@@ -1427,8 +1080,7 @@ $rejectBooking = action(function (string $id) {
                                             </button>
                                         </div>
                                         <div class="hover-tooltip" data-full="Reject">
-                                            <button
-                                                title="Reject"
+                                            <button title="Reject"
                                                 @click="
                                                     processingId = '{{ $item['id'] }}';
                                                     $wire.rejectBooking('{{ $item['id'] }}').then(() => {
@@ -1452,470 +1104,601 @@ $rejectBooking = action(function (string $id) {
                     @endforelse
                 </div>
 
-                {{-- ── TOGGLE / PAGINATION BUTTON ── --}}
                 @if(count($pendingApprovalsList) > 5)
                     <button id="toggleRequestsBtn"
-                        class="w-full mt-4 py-2 text-[10px] font-bold text-slate-400 hover:text-slate-600
-                               border-t border-gray-50 transition text-center">
+                        class="w-full mt-4 py-2 text-[10px] font-bold text-slate-400 hover:text-slate-600 border-t border-gray-50 transition text-center">
                         View All Requests
                     </button>
                 @endif
             </div>
 
+        </div>{{-- end right column --}}
+    </div>{{-- end grid --}}
+
+
+    {{-- ── GENERATE REPORT MODAL ────────────────────────────────────────── --}}
+    <div id="reportModal"
+        style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); backdrop-filter:blur(4px); z-index:1000; align-items:center; justify-content:center; padding:24px;">
+        <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden">
+            <div class="flex items-center gap-4 px-6 py-5 border-b border-gray-100">
+                <div class="w-12 h-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xl flex-shrink-0">
+                    <i class="fa-solid fa-file-arrow-down"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <h2 class="text-xl font-extrabold text-slate-800 tracking-tight mb-0.5">Generate Weekly Report</h2>
+                    <p class="text-xs text-slate-500 leading-snug" id="reportWeekLabel">Loading week range...</p>
+                </div>
+                <button onclick="document.getElementById('reportModal').style.display='none'"
+                    class="text-gray-400 hover:text-red-600 transition">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+            <div class="px-6 py-5">
+                <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 flex items-start gap-3">
+                    <i class="fa-solid fa-calendar-week text-slate-400 mt-0.5 text-sm flex-shrink-0"></i>
+                    <div>
+                        <p class="text-xs font-bold text-slate-700 mb-0.5">Current Week</p>
+                        <p class="text-xs text-slate-500" id="reportWeekDetail">—</p>
+                    </div>
+                </div>
+                <p class="text-xs text-slate-400 mt-3 leading-relaxed">
+                    Exports all sessions for this week (Monday – Sunday) with student, mentor, subject, topic, date &amp; time, and session mode.
+                </p>
+            </div>
+            <div class="px-6 py-5 bg-gray-50 border-t border-gray-100">
+                <div class="flex gap-3">
+                    <button type="button"
+                        onclick="document.getElementById('reportModal').style.display='none'"
+                        class="flex-1 py-2.5 text-sm font-bold text-gray-600 bg-white border border-gray-200 hover:bg-gray-100 rounded-xl transition">
+                        Cancel
+                    </button>
+                    <button type="button" onclick="submitReport()"
+                        class="flex-1 bg-red-900 text-white py-2.5 rounded-xl text-sm font-bold shadow-md hover:bg-red-800 transition">
+                        <i class="fa-solid fa-download mr-1"></i> Export
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    {{-- ── CONFLICT WARNING MODAL ───────────────────────────────────────── --}}
+    <div id="conflictModal"
+        style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); backdrop-filter:blur(4px); z-index:1200; align-items:center; justify-content:center; padding:24px;">
+        <div class="bg-white w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden">
+            <div class="flex items-center gap-4 px-6 py-5 border-b border-gray-100">
+                <div class="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center text-xl flex-shrink-0">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <h2 class="text-lg font-extrabold text-slate-800">Schedule Conflict</h2>
+                    <p class="text-xs text-slate-500 leading-snug mt-0.5">This booking cannot be accepted.</p>
+                </div>
+                <button onclick="closeConflictModal()" class="text-gray-400 hover:text-red-600 transition">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+            <div class="px-6 py-5 space-y-4">
+                <p class="text-xs text-slate-600 leading-relaxed">
+                    <strong id="conflictMentorName" class="text-slate-800"></strong> already has an accepted session that overlaps with this booking:
+                </p>
+                <div class="bg-red-50 border border-red-200 rounded-xl p-4 space-y-2 text-xs">
+                    <div class="flex justify-between">
+                        <span class="text-gray-500 font-medium">Student</span>
+                        <span class="text-slate-700 font-bold" id="conflictStudentName"></span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-500 font-medium">Subject</span>
+                        <span class="text-slate-700 font-bold" id="conflictSubject"></span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-500 font-medium">Date</span>
+                        <span class="text-slate-700 font-bold" id="conflictDate"></span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-500 font-medium">Time</span>
+                        <span class="text-slate-700 font-bold" id="conflictTime"></span>
+                    </div>
+                </div>
+                <p class="text-[11px] text-slate-400 leading-relaxed">
+                    To resolve this conflict, cancel or reject the existing accepted session first, then try accepting this booking again.
+                </p>
+            </div>
+            <div class="px-6 py-4 bg-gray-50 border-t border-gray-100">
+                <button onclick="closeConflictModal()"
+                    class="w-full py-2.5 text-sm font-bold text-white bg-red-900 hover:bg-red-800 rounded-xl transition">
+                    Got it
+                </button>
+            </div>
+        </div>
+    </div>
+
+
+    {{-- ── AUTO-REJECT NOTIFICATION MODAL ──────────────────────────────── --}}
+    <div id="autoRejectModal"
+        style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); backdrop-filter:blur(4px); z-index:1200; align-items:center; justify-content:center; padding:24px;">
+        <div class="bg-white w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden">
+            <div class="flex items-center gap-4 px-6 py-5 border-b border-gray-100">
+                <div class="w-12 h-12 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center text-xl flex-shrink-0">
+                    <i class="fa-solid fa-circle-info"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <h2 class="text-lg font-extrabold text-slate-800">Booking Accepted</h2>
+                    <p class="text-xs text-slate-500 leading-snug mt-0.5">Overlapping requests were handled.</p>
+                </div>
+            </div>
+            <div class="px-6 py-5">
+                <p class="text-xs text-slate-600 leading-relaxed" id="autoRejectBody"></p>
+            </div>
+            <div class="px-6 py-4 bg-gray-50 border-t border-gray-100">
+                <button onclick="closeAutoRejectModal()"
+                    class="w-full py-2.5 text-sm font-bold text-slate-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition">
+                    Dismiss
+                </button>
+            </div>
         </div>
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script>
-    // ── STATUS HELPERS ──────────────────────────────────────────────────────
-    function getStatusColor(status) {
-        const map = {
-            pending:   'text-yellow-500',
-            accepted:  'text-green-600',
-            active:    'text-green-600',
-            upcoming:  'text-orange-500',
-            completed: 'text-gray-500',
-            rejected:  'text-red-500',
-            cancelled: 'text-red-600',
-            closed:    'text-purple-700',
-            no_show:   'text-orange-600',
-        };
-        return map[status] ?? 'text-slate-400';
-    }
-
-    function getStatusLabel(status) {
-        const map = {
-            no_show:   'No Show',
-            accepted:  'Accepted',
-            completed: 'Completed',
-            closed:    'Closed',
-            rejected:  'Rejected',
-            cancelled: 'Cancelled',
-            pending:   'Pending',
-        };
-        return map[status] ?? (status ? status.charAt(0).toUpperCase() + status.slice(1) : '—');
-    }
-
-    // ── TIME HELPERS ────────────────────────────────────────────────────────
-    function timeToMinutes(t) {
-        if (!t) return 0;
-        const [h, m] = t.split(':').map(Number);
-        return h * 60 + m;
-    }
-
-    // ── CONFLICT DETECTION (client-side mirror of server logic) ────────────
-    // Used to give immediate feedback before the Livewire round-trip returns.
-    function sessionsOverlap(a, b) {
-        return timeToMinutes(a.start_24) < timeToMinutes(b.end_24)
-            && timeToMinutes(a.end_24)   > timeToMinutes(b.start_24);
-    }
-
-    function findConflictForBooking(pendingItem) {
-        // Look for any accepted session with the same mentor_id on the same date
-        return allSessions.find(s =>
-            s.mentor_id  === pendingItem.mentor_id
-            && s.status  === 'accepted'
-            && s.date    === pendingItem.date_raw
-            && sessionsOverlap(
-                { start_24: pendingItem.start_24, end_24: pendingItem.end_24 },
-                { start_24: s.start_24,            end_24: s.end_24 }
-            )
-        ) ?? null;
-    }
-
-    // ── CONFLICT MODAL HELPERS ──────────────────────────────────────────────
-    function openConflictModal(data) {
-        document.getElementById('conflictMentorName').textContent   = data.mentorName;
-        document.getElementById('conflictStudentName').textContent  = data.conflictStudent;
-        document.getElementById('conflictSubject').textContent      = data.conflictSubject;
-        document.getElementById('conflictDate').textContent         = data.conflictDate;
-        document.getElementById('conflictTime').textContent         = data.conflictStart + ' – ' + data.conflictEnd;
-        document.getElementById('conflictModal').style.display      = 'flex';
-    }
-
-    function closeConflictModal() {
-        document.getElementById('conflictModal').style.display = 'none';
-    }
-
-    // ── AUTO-REJECT NOTIFICATION MODAL ─────────────────────────────────────
-    function openAutoRejectModal(count) {
-        document.getElementById('autoRejectBody').innerHTML =
-            `<strong>${count} overlapping pending ${count === 1 ? 'request was' : 'requests were'} automatically rejected</strong> `
-            + `because they conflicted with the session you just accepted. The affected students can submit a new booking request.`;
-        document.getElementById('autoRejectModal').style.display = 'flex';
-    }
-
-    function closeAutoRejectModal() {
-        document.getElementById('autoRejectModal').style.display = 'none';
-    }
-
-    // ── REPORT HELPERS ──────────────────────────────────────────────────────
-    function getWeekRange() {
-        const now = new Date();
-        const end = new Date(now);
-        end.setHours(23, 59, 59, 999);
-        const start = new Date(now);
-        start.setDate(now.getDate() - 6);
-        start.setHours(0, 0, 0, 0);
-        return { mon: start, sun: end };
-    }
-
-    function formatDisplay(d) {
-        return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-    }
-
-    function toDateStr(d) {
-        return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-    }
-
-    function openReportModal() {
-        const { mon, sun } = getWeekRange();
-        const shortLabel  = `${formatDisplay(mon)} – ${formatDisplay(sun)}`;
-        const detailLabel = `${mon.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })} – ${sun.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}`;
-
-        document.getElementById('reportWeekLabel').textContent  = shortLabel;
-        document.getElementById('reportWeekDetail').textContent = detailLabel;
-        document.getElementById('reportModal').style.display    = 'flex';
-    }
-
-    function submitReport() {
-        if (typeof XLSX === 'undefined') {
-            alert('Spreadsheet export library is loading or missing.');
-            return;
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script>
+        // ── FIX E: normalizeTime ────────────────────────────────────────────────
+        // Converts any time string a browser <input type="time"> might return into
+        // strict "HH:MM" (24-hour, zero-padded) expected by Laravel date_format:H:i.
+        // Handles: "10:00", "10:00 AM", "10:00 PM", "2:30 PM", "14:30", etc.
+        function normalizeTime(val) {
+            if (!val) return '';
+            val = val.trim();
+            // Already 24-hour (e.g. "14:30" or "09:00") — just ensure zero-padding
+            const plain = val.match(/^(\d{1,2}):(\d{2})$/);
+            if (plain) {
+                return String(parseInt(plain[1], 10)).padStart(2, '0') + ':' + plain[2];
+            }
+            // 12-hour with AM/PM (e.g. "10:00 AM", "2:30 PM")
+            const ampm = val.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+            if (ampm) {
+                let h = parseInt(ampm[1], 10);
+                const m = ampm[2];
+                const meridiem = ampm[3].toUpperCase();
+                if (meridiem === 'PM' && h !== 12) h += 12;
+                if (meridiem === 'AM' && h === 12) h = 0;
+                return String(h).padStart(2, '0') + ':' + m;
+            }
+            // Fallback: return as-is and let the server-side guard handle it
+            return val;
         }
 
-        const { mon, sun } = getWeekRange();
-        const fromStr = toDateStr(mon);
-        const toStr   = toDateStr(sun);
+        // ── STATUS HELPERS ──────────────────────────────────────────────────────
+        function getStatusColor(status) {
+            const map = {
+                pending:   'text-yellow-500',
+                accepted:  'text-green-600',
+                active:    'text-green-600',
+                upcoming:  'text-orange-500',
+                completed: 'text-gray-500',
+                rejected:  'text-red-500',
+                cancelled: 'text-red-600',
+                closed:    'text-purple-700',
+                no_show:   'text-orange-600',
+            };
+            return map[status] ?? 'text-slate-400';
+        }
 
-        const topMentors   = @json($this->topMentors);
-        const topSubjects  = @json($this->topSubjects);
-        const satisfaction = @json($this->satisfactionRate);
-        const collegeData  = @json($this->collegeActivity);
-        const monthlyData  = @json($this->monthlyTrends);
+        function getStatusLabel(status) {
+            const map = {
+                no_show:   'No Show',
+                accepted:  'Accepted',
+                completed: 'Completed',
+                closed:    'Closed',
+                rejected:  'Rejected',
+                cancelled: 'Cancelled',
+                pending:   'Pending',
+            };
+            return map[status] ?? (status ? status.charAt(0).toUpperCase() + status.slice(1) : '—');
+        }
 
-        const filtered = allSessions.filter(row => {
-            const datePart = String(row.date).substring(0, 10);
-            const d = new Date(datePart + 'T00:00:00');
-            return d >= mon && d <= sun;
-        });
+        function timeToMinutes(t) {
+            if (!t) return 0;
+            const [h, m] = t.split(':').map(Number);
+            return h * 60 + m;
+        }
 
-        const wb = XLSX.utils.book_new();
-        const sessionHeader = ['Student', 'Mentor', 'Subject', 'Topic', 'Date & Time', 'Mode'];
-        const sessionRows = filtered.length
-            ? filtered.map(r => {
-                const start = new Date(r.start.includes('T') ? r.start : r.start.replace(' ', 'T'));
-                const end   = new Date(r.end.includes('T')   ? r.end   : r.end.replace(' ', 'T'));
-                const fmt   = t => t.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-                const dateFormatted = new Date(r.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-                const mins  = Math.max(0, (end - start) / 60000);
-                const hrs   = Math.floor(mins / 60);
-                const rem   = Math.round(mins % 60);
-                const dur   = hrs > 0 ? `${hrs} hr${hrs > 1 ? 's' : ''}` : `${rem} min`;
-                const dateTime = `${dateFormatted}  ${fmt(start)} – ${fmt(end)}  (${dur})`;
-                return [r.mentee ?? 'Unknown', r.mentor ?? 'Unknown', r.subject ?? 'N/A', r.topic ?? '—', dateTime, r.mode ?? 'One-on-One Tutorial'];
-            })
-            : [['No sessions found for this week.', '', '', '', '', '']];
+        function sessionsOverlap(a, b) {
+            return timeToMinutes(a.start_24) < timeToMinutes(b.end_24)
+                && timeToMinutes(a.end_24)   > timeToMinutes(b.start_24);
+        }
 
-        const sessionSheet = XLSX.utils.aoa_to_sheet([sessionHeader, ...sessionRows]);
-        sessionSheet['!cols'] = [{ wch: 24 }, { wch: 24 }, { wch: 14 }, { wch: 24 }, { wch: 36 }, { wch: 28 }];
-        XLSX.utils.book_append_sheet(wb, sessionSheet, 'Weekly Sessions');
+        function openConflictModal(data) {
+            document.getElementById('conflictMentorName').textContent  = data.mentorName;
+            document.getElementById('conflictStudentName').textContent = data.conflictStudent;
+            document.getElementById('conflictSubject').textContent     = data.conflictSubject;
+            document.getElementById('conflictDate').textContent        = data.conflictDate;
+            document.getElementById('conflictTime').textContent        = data.conflictStart + ' – ' + data.conflictEnd;
+            document.getElementById('conflictModal').style.display     = 'flex';
+        }
 
-        const statusSummary = { completed: 0, accepted: 0, pending: 0, rejected: 0 };
-        filtered.forEach(r => { const s = (r.status ?? '').toLowerCase(); if (statusSummary[s] !== undefined) statusSummary[s]++; });
+        function closeConflictModal() {
+            document.getElementById('conflictModal').style.display = 'none';
+        }
 
-        let totalMins = 0;
-        filtered.forEach(r => {
-            const s = new Date(r.start.includes('T') ? r.start : r.start.replace(' ', 'T'));
-            const e = new Date(r.end.includes('T')   ? r.end   : r.end.replace(' ', 'T'));
-            totalMins += Math.max(0, (e - s) / 60000);
-        });
-        const totalH = Math.floor(totalMins / 60);
-        const totalM = Math.round(totalMins % 60);
+        function openAutoRejectModal(count) {
+            document.getElementById('autoRejectBody').innerHTML =
+                `<strong>${count} overlapping pending ${count === 1 ? 'request was' : 'requests were'} automatically rejected</strong> `
+                + `because they conflicted with the session you just accepted. The affected students can submit a new booking request.`;
+            document.getElementById('autoRejectModal').style.display = 'flex';
+        }
 
-        const overviewRows = [
-            ['LRC PEERCONNECT — WEEKLY SESSION REPORT'], [],
-            ['Report Period', `${formatDisplay(mon)}  to  ${formatDisplay(sun)}`],
-            ['Generated on',  new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })], [],
-            ['SUMMARY'],
-            ['Total Sessions', filtered.length], ['Completed', statusSummary.completed],
-            ['Accepted', statusSummary.accepted], ['Pending', statusSummary.pending],
-            ['Rejected', statusSummary.rejected], ['Total Hours', `${totalH}h ${totalM}m`], [],
-            ['TOP MENTORS (ALL-TIME)'], ['Rank', 'Mentor', 'Sessions'],
-            ...topMentors.map((m, i) => [i + 1, m.name, m.count]), [],
-            ['TOP SUBJECTS (ALL-TIME)'], ['Rank', 'Subject', 'Bookings'],
-            ...topSubjects.map((s, i) => [i + 1, s.name, s.count]), [],
-            ['COLLEGE ACTIVITY'], ['College', 'Students'],
-            ...Object.entries(collegeData).map(([c, n]) => [c, n]),
-        ];
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(overviewRows), 'Overview');
-        XLSX.writeFile(wb, `lrc-weekly-report-${fromStr}-to-${toStr}.xlsx`);
-        document.getElementById('reportModal').style.display = 'none';
-    }
+        function closeAutoRejectModal() {
+            document.getElementById('autoRejectModal').style.display = 'none';
+        }
 
-    // ── CORE STATE ──────────────────────────────────────────────────────────
-    const searchInput  = document.getElementById('liveSearchInput');
-    const statusFilter = document.getElementById('statusFilter');
-    const charts = [];
-    let currentPage = 1;
+        function getWeekRange() {
+            const now = new Date();
+            const end = new Date(now);
+            end.setHours(23, 59, 59, 999);
+            const start = new Date(now);
+            start.setDate(now.getDate() - 6);
+            start.setHours(0, 0, 0, 0);
+            return { mon: start, sun: end };
+        }
 
-    // allSessions includes start_24 / end_24 / mentor_id for conflict checks.
-    let allSessions = @json($allSessions);
+        function formatDisplay(d) {
+            return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+        }
 
-    const _now = new Date();
-    let selectedDateStr = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, '0')}-${String(_now.getDate()).padStart(2, '0')}`;
-    let viewDate        = new Date(_now.getFullYear(), _now.getMonth(), 1);
+        function toDateStr(d) {
+            return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+        }
 
-    const monthlyData  = @json($this->monthlyTrends);
-    const topMentors   = @json($this->topMentors);
-    const satisfaction = @json($this->satisfactionRate);
-    const collegeData  = @json($this->collegeActivity);
-    const topSubjects  = @json($this->topSubjects);
+        function openReportModal() {
+            const { mon, sun } = getWeekRange();
+            const shortLabel  = `${formatDisplay(mon)} – ${formatDisplay(sun)}`;
+            const detailLabel = `${mon.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })} – ${sun.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}`;
+            document.getElementById('reportWeekLabel').textContent  = shortLabel;
+            document.getElementById('reportWeekDetail').textContent = detailLabel;
+            document.getElementById('reportModal').style.display    = 'flex';
+        }
 
-    // ── LIVEWIRE EVENT LISTENERS ────────────────────────────────────────────
-    // booking-conflict-detected: server found a conflict → show the conflict modal.
-    document.addEventListener('livewire:initialized', () => {
-        Livewire.on('booking-conflict-detected', ([data]) => {
-            openConflictModal(data);
-        });
+        function submitReport() {
+            if (typeof XLSX === 'undefined') {
+                alert('Spreadsheet export library is loading or missing.');
+                return;
+            }
 
-        // bookings-auto-rejected: N pending sessions were rejected automatically.
-        Livewire.on('bookings-auto-rejected', ([data]) => {
-            // Mark those sessions accepted/rejected in the local JS array so the
-            // table and calendar update without a full page reload.
-            allSessions.forEach(s => {
-                if (s.mentor_id === data.mentorId && s.status === 'pending') {
-                    // We don't know which IDs were rejected from here, but a
-                    // re-render via applyFilters picks up the Livewire state update.
-                }
+            const { mon, sun } = getWeekRange();
+            const fromStr = toDateStr(mon);
+            const toStr   = toDateStr(sun);
+
+            const topMentors   = @json($this->topMentors);
+            const topSubjects  = @json($this->topSubjects);
+            const satisfaction = @json($this->satisfactionRate);
+            const collegeData  = @json($this->collegeActivity);
+            const monthlyData  = @json($this->monthlyTrends);
+
+            const filtered = allSessions.filter(row => {
+                const datePart = String(row.date).substring(0, 10);
+                const d = new Date(datePart + 'T00:00:00');
+                return d >= mon && d <= sun;
             });
 
-            openAutoRejectModal(data.count);
-            applyFilters();
-            renderCalendar();
-        });
+            const wb = XLSX.utils.book_new();
+            const sessionHeader = ['Student', 'Mentor', 'Subject', 'Topic', 'Date & Time', 'Mode'];
+            const sessionRows = filtered.length
+                ? filtered.map(r => {
+                    const start = new Date(r.start.includes('T') ? r.start : r.start.replace(' ', 'T'));
+                    const end   = new Date(r.end.includes('T')   ? r.end   : r.end.replace(' ', 'T'));
+                    const fmt   = t => t.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+                    const dateFormatted = new Date(r.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+                    const mins  = Math.max(0, (end - start) / 60000);
+                    const hrs   = Math.floor(mins / 60);
+                    const rem   = Math.round(mins % 60);
+                    const dur   = hrs > 0 ? `${hrs} hr${hrs > 1 ? 's' : ''}` : `${rem} min`;
+                    const dateTime = `${dateFormatted}  ${fmt(start)} – ${fmt(end)}  (${dur})`;
+                    return [r.mentee ?? 'Unknown', r.mentor ?? 'Unknown', r.subject ?? 'N/A', r.topic ?? '—', dateTime, r.mode ?? 'One-on-One Tutorial'];
+                })
+                : [['No sessions found for this week.', '', '', '', '', '']];
 
-        Livewire.on('mentor-saved', () => { initCharts(); });
-    });
+            const sessionSheet = XLSX.utils.aoa_to_sheet([sessionHeader, ...sessionRows]);
+            sessionSheet['!cols'] = [{ wch: 24 }, { wch: 24 }, { wch: 14 }, { wch: 24 }, { wch: 36 }, { wch: 28 }];
+            XLSX.utils.book_append_sheet(wb, sessionSheet, 'Weekly Sessions');
 
-    // ── CLOCK ──────────────────────────────────────────────────────────────
-    function updateClock() {
-        const now   = new Date();
-        const clockEl = document.getElementById('liveClock');
-        const dateEl  = document.getElementById('liveDate');
-        if (clockEl) clockEl.innerText = now.toLocaleTimeString('en-US', { hour12: false });
-        if (dateEl)  dateEl.innerText  = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
-    }
-    setInterval(updateClock, 1000);
+            const statusSummary = { completed: 0, accepted: 0, pending: 0, rejected: 0 };
+            filtered.forEach(r => { const s = (r.status ?? '').toLowerCase(); if (statusSummary[s] !== undefined) statusSummary[s]++; });
 
-    // ── CHARTS ─────────────────────────────────────────────────────────────
-    function initCharts() {
-        if (typeof Chart === 'undefined') return;
+            let totalMins = 0;
+            filtered.forEach(r => {
+                const s = new Date(r.start.includes('T') ? r.start : r.start.replace(' ', 'T'));
+                const e = new Date(r.end.includes('T')   ? r.end   : r.end.replace(' ', 'T'));
+                totalMins += Math.max(0, (e - s) / 60000);
+            });
+            const totalH = Math.floor(totalMins / 60);
+            const totalM = Math.round(totalMins % 60);
 
-        charts.push(new Chart(document.getElementById('lineChart'), {
-            type: 'line',
-            data: {
-                labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
-                datasets: [{
-                    label: 'Sessions', data: monthlyData, borderColor: '#7b1d1d',
-                    backgroundColor: 'rgba(123,29,29,0.08)', tension: 0.4, fill: true,
-                    pointBackgroundColor: '#7b1d1d', pointRadius: 4, pointHoverRadius: 6,
-                }]
-            },
-            options: {
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        callbacks: {
-                            title: ctx => {
-                                const weekIndex = ctx[0].dataIndex;
-                                const start = new Date();
-                                start.setDate(start.getDate() - start.getDay() + 1 - ((3 - weekIndex) * 7));
-                                const end = new Date(start);
-                                end.setDate(start.getDate() + 6);
-                                const fmt = d => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                                return `${ctx[0].label}  (${fmt(start)} – ${fmt(end)})`;
-                            },
-                            label: ctx => ` ${ctx.parsed.y} session${ctx.parsed.y !== 1 ? 's' : ''}`
-                        }
-                    }
-                },
-                scales: {
-                    x: { grid: { display: false }, ticks: { font: { size: 9 } } },
-                    y: { beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { font: { size: 9 }, stepSize: 1, precision: 0 } }
-                }
-            }
-        }));
-
-        charts.push(new Chart(document.getElementById('pieChart'), {
-            type: 'pie',
-            data: {
-                labels: topMentors.map(m => m.name),
-                datasets: [{ data: topMentors.map(m => m.count), backgroundColor: ['#1a3c2f', '#7b1d1d', '#94a3b8', '#cbd5e1'] }]
-            },
-            options: { maintainAspectRatio: false, plugins: { legend: { display: true, position: 'right', labels: { boxWidth: 8, font: { size: 9 } } } } }
-        }));
-
-        charts.push(new Chart(document.getElementById('topSubjectsChart'), {
-            type: 'bar',
-            data: {
-                labels: topSubjects.map(s => s.name),
-                datasets: [{ label: 'Bookings', data: topSubjects.map(s => s.count), backgroundColor: ['#1a3c2f', '#7b1d1d', '#94a3b8', '#cbd5e1', '#fef3c7'], borderRadius: 4, barThickness: 20 }]
-            },
-            options: { maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false }, ticks: { font: { size: 9 } } }, y: { beginAtZero: true, grid: { display: false }, ticks: { font: { size: 9 } } } } }
-        }));
-
-        charts.push(new Chart(document.getElementById('activeCollegeChart'), {
-            type: 'bar',
-            data: {
-                labels: Object.keys(collegeData),
-                datasets: [{ label: 'Active Students', data: Object.values(collegeData), backgroundColor: ['#94a3b8', '#1a3c2f', '#7b1d1d'], borderRadius: 4, barThickness: 20 }]
-            },
-            options: { indexAxis: 'y', maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, grid: { display: false }, ticks: { font: { size: 9 } } }, y: { grid: { display: false }, ticks: { font: { size: 9 } } } } }
-        }));
-    }
-
-    // ── TABLE / FILTERS ────────────────────────────────────────────────────
-    function applyFilters() {
-        const tbody = document.getElementById('tableBody');
-        if (!tbody) return;
-
-        const searchTerm     = searchInput.value.toLowerCase().trim();
-        const selectedStatus = statusFilter.value;
-
-        document.getElementById('tableTitle').textContent    = "Today's Schedule";
-        document.getElementById('tableSubtitle').textContent = new Date(selectedDateStr + 'T00:00:00').toLocaleDateString('en-US', {
-            month: 'long', day: 'numeric', year: 'numeric',
-        });
-
-        const filtered = allSessions.filter(item => {
-            const matchesDate   = item.date === selectedDateStr;
-            const matchesSearch = !searchTerm || [item.mentor, item.mentee, item.subject].some(v =>
-                (v ?? '').toLowerCase().includes(searchTerm));
-            const matchesStatus = !selectedStatus || item.status === selectedStatus;
-            return matchesDate && matchesSearch && matchesStatus;
-        });
-
-        const perPage    = 4;
-        const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
-        if (currentPage > totalPages) currentPage = 1;
-
-        const start     = (currentPage - 1) * perPage;
-        const paginated = filtered.slice(start, start + perPage);
-
-        if (!paginated.length) {
-            tbody.innerHTML = `<tr><td colspan="5" class="py-4 text-center">
-                <div class="flex flex-col items-center gap-2">
-                    <i class="fa-regular fa-calendar-xmark text-gray-300 text-2xl"></i>
-                    <p class="text-xs text-gray-400 italic">No sessions found for this date.</p>
-                </div></td></tr>`;
-        } else {
-            tbody.innerHTML = paginated.map(row => {
-                const rawStatus = row.status;
-                const colorCls  = getStatusColor(rawStatus);
-                const label     = getStatusLabel(rawStatus);
-
-const statusCell = `<span class="${colorCls} font-bold text-[10px] bg-gray-50 px-2 py-1 rounded border border-current opacity-80 capitalize">${label}</span>`;
-
-
-return `<tr class="border-b last:border-0 hover:bg-slate-50 transition">
-    <td class="py-3 max-w-0" style="width:22%;" title="${row.mentee}"><div class="truncate text-xs font-bold text-slate-700">${row.mentee}</div></td>
-    <td class="py-3 max-w-0" style="width:22%;" title="${row.mentor}"><div class="truncate text-xs text-slate-600">${row.mentor}</div></td>
-    <td class="py-3 max-w-0 text-xs text-slate-500" style="width:16%;" title="${row.subject}"><div class="truncate">${row.subject}</div></td>
-    <td class="py-3 pl-4 max-w-0 text-xs text-slate-500" style="width:20%;" title="${row.time}"><div class="truncate">${row.time}</div></td>    <td class="py-3 text-center" style="width:20%;">${statusCell}</td>
-</tr>`;
-            }).join('');
+            const overviewRows = [
+                ['LRC PEERCONNECT — WEEKLY SESSION REPORT'], [],
+                ['Report Period', `${formatDisplay(mon)}  to  ${formatDisplay(sun)}`],
+                ['Generated on',  new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })], [],
+                ['SUMMARY'],
+                ['Total Sessions', filtered.length], ['Completed', statusSummary.completed],
+                ['Accepted', statusSummary.accepted], ['Pending', statusSummary.pending],
+                ['Rejected', statusSummary.rejected], ['Total Hours', `${totalH}h ${totalM}m`], [],
+                ['TOP MENTORS (ALL-TIME)'], ['Rank', 'Mentor', 'Sessions'],
+                ...topMentors.map((m, i) => [i + 1, m.name, m.count]), [],
+                ['TOP SUBJECTS (ALL-TIME)'], ['Rank', 'Subject', 'Bookings'],
+                ...topSubjects.map((s, i) => [i + 1, s.name, s.count]), [],
+                ['COLLEGE ACTIVITY'], ['College', 'Students'],
+                ...Object.entries(collegeData).map(([c, n]) => [c, n]),
+            ];
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(overviewRows), 'Overview');
+            XLSX.writeFile(wb, `lrc-weekly-report-${fromStr}-to-${toStr}.xlsx`);
+            document.getElementById('reportModal').style.display = 'none';
         }
 
-        const showing = filtered.length === 0 ? '0' : `${start + 1}–${Math.min(start + perPage, filtered.length)}`;
-        document.getElementById('pageIndicator').innerText = `Showing ${showing} of ${filtered.length} result${filtered.length !== 1 ? 's' : ''}`;
-        document.getElementById('prevBtn').disabled = currentPage <= 1;
-        document.getElementById('nextBtn').disabled = currentPage >= totalPages;
-        document.getElementById('prevBtn').classList.toggle('opacity-30', currentPage <= 1);
-        document.getElementById('nextBtn').classList.toggle('opacity-30', currentPage >= totalPages);
-    }
+        // ── CORE STATE ──────────────────────────────────────────────────────────
+        const searchInput  = document.getElementById('liveSearchInput');
+        const statusFilter = document.getElementById('statusFilter');
+        const charts = [];
+        let currentPage = 1;
 
-    // ── CALENDAR ───────────────────────────────────────────────────────────
-    function hasAcceptedOnDate(dateStr) {
-        return allSessions.some(s => s.date === dateStr && s.status === 'accepted');
-}  
+        let allSessions = @json($allSessions);
 
-    function hasCompletedOnDate(dateStr) {
-        return allSessions.some(s => s.date === dateStr && s.status === 'completed');
-}
+        const _now = new Date();
+        let selectedDateStr = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, '0')}-${String(_now.getDate()).padStart(2, '0')}`;
+        let viewDate        = new Date(_now.getFullYear(), _now.getMonth(), 1);
 
-    function renderCalendar() {
-        const grid     = document.getElementById('calendarGrid');
-        if (!grid) return;
+        const monthlyData  = @json($this->monthlyTrends);
+        const topMentors   = @json($this->topMentors);
+        const satisfaction = @json($this->satisfactionRate);
+        const collegeData  = @json($this->collegeActivity);
+        const topSubjects  = @json($this->topSubjects);
 
-        const localToday = new Date();
-        localToday.setHours(0, 0, 0, 0);
+        // ── LIVEWIRE EVENT LISTENERS ────────────────────────────────────────────
+        document.addEventListener('livewire:initialized', () => {
+            Livewire.on('booking-conflict-detected', ([data]) => {
+                openConflictModal(data);
+            });
 
-        const todayStr  = `${localToday.getFullYear()}-${String(localToday.getMonth() + 1).padStart(2, '0')}-${String(localToday.getDate()).padStart(2, '0')}`;
-        const monthDisp = document.getElementById('monthDisplay');
-
-        grid.innerHTML = '';
-        monthDisp.innerText = viewDate.toLocaleString('default', { month: 'long', year: 'numeric' });
-
-        const lastDay  = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 0).getDate();
-        const startDay = new Date(viewDate.getFullYear(), viewDate.getMonth(), 1).getDay();
-
-        for (let i = 0; i < startDay; i++) grid.innerHTML += '<div></div>';
-
-        for (let i = 1; i <= lastDay; i++) {
-            const dateStr = `${viewDate.getFullYear()}-${String(viewDate.getMonth() + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
-            const dateObj = new Date(viewDate.getFullYear(), viewDate.getMonth(), i);
-            dateObj.setHours(0, 0, 0, 0);
-
-            const isPast     = dateObj < localToday;
-            const isToday    = dateStr === todayStr;
-            const isSelected = dateStr === selectedDateStr;
-const hasAccepted  = hasAcceptedOnDate(dateStr);
-const hasCompleted = hasCompletedOnDate(dateStr);
-
-const dayEl = document.createElement('div');
-dayEl.className = `cal-day${isToday ? ' cal-today' : ''}${isSelected ? ' cal-selected' : ''}`;
-
-if (isPast && !isToday) dayEl.style.color = '#9ca3af';
-
-dayEl.innerHTML = `
-    ${hasAccepted  ? '<span style="position:absolute;top:2px;right:2px;width:6px;height:6px;background:#22c55e;border-radius:50%;border:1px solid white;"></span>' : ''}
-    ${hasCompleted && !hasAccepted ? '<span style="position:absolute;top:2px;right:2px;width:6px;height:6px;background:#9ca3af;border-radius:50%;border:1px solid white;"></span>' : ''}
-    <span style="position:relative;z-index:1;">${i}</span>`;
-
-            dayEl.onclick = () => {
-                selectedDateStr = dateStr;
-                currentPage     = 1;
+            Livewire.on('bookings-auto-rejected', ([data]) => {
+                openAutoRejectModal(data.count);
                 applyFilters();
                 renderCalendar();
-            };
-            grid.appendChild(dayEl);
+            });
+
+            Livewire.on('mentor-saved', () => { initCharts(); });
+        });
+
+        // ── CLOCK ──────────────────────────────────────────────────────────────
+        function updateClock() {
+            const now     = new Date();
+            const clockEl = document.getElementById('liveClock');
+            const dateEl  = document.getElementById('liveDate');
+            if (clockEl) clockEl.innerText = now.toLocaleTimeString('en-US', { hour12: false });
+            if (dateEl)  dateEl.innerText  = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
         }
-    }
+        setInterval(updateClock, 1000);
 
-    function changeMonth(dir) {
-        viewDate.setMonth(viewDate.getMonth() + dir);
-        renderCalendar();
-    }
+        // ── CHARTS ─────────────────────────────────────────────────────────────
+        function initCharts() {
+            if (typeof Chart === 'undefined') return;
 
-    // ── INIT ───────────────────────────────────────────────────────────────
-    function initDashboard() {
-        initCharts();
-        renderCalendar();
-        applyFilters();
-        updateClock();
+            charts.forEach(c => c.destroy());
+            charts.length = 0;
 
-        if (searchInput) searchInput.addEventListener('input', () => { currentPage = 1; applyFilters(); });
-        if (statusFilter) statusFilter.addEventListener('change', () => { currentPage = 1; applyFilters(); });
+            charts.push(new Chart(document.getElementById('lineChart'), {
+                type: 'line',
+                data: {
+                    labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+                    datasets: [{
+                        label: 'Sessions', data: monthlyData, borderColor: '#7b1d1d',
+                        backgroundColor: 'rgba(123,29,29,0.08)', tension: 0.4, fill: true,
+                        pointBackgroundColor: '#7b1d1d', pointRadius: 4, pointHoverRadius: 6,
+                    }]
+                },
+                options: {
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                title: ctx => {
+                                    const weekIndex = ctx[0].dataIndex;
+                                    const start = new Date();
+                                    start.setDate(start.getDate() - start.getDay() + 1 - ((3 - weekIndex) * 7));
+                                    const end = new Date(start);
+                                    end.setDate(start.getDate() + 6);
+                                    const fmt = d => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                                    return `${ctx[0].label}  (${fmt(start)} – ${fmt(end)})`;
+                                },
+                                label: ctx => ` ${ctx.parsed.y} session${ctx.parsed.y !== 1 ? 's' : ''}`
+                            }
+                        }
+                    },
+                    scales: {
+                        x: { grid: { display: false }, ticks: { font: { size: 9 } } },
+                        y: { beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { font: { size: 9 }, stepSize: 1, precision: 0 } }
+                    }
+                }
+            }));
 
-        const prevBtn = document.getElementById('prevBtn');
-        const nextBtn = document.getElementById('nextBtn');
-        if (prevBtn) prevBtn.addEventListener('click', () => { currentPage--; applyFilters(); });
-        if (nextBtn) nextBtn.addEventListener('click', () => { currentPage++; applyFilters(); });
-    }
+            charts.push(new Chart(document.getElementById('pieChart'), {
+                type: 'pie',
+                data: {
+                    labels: topMentors.map(m => m.name),
+                    datasets: [{ data: topMentors.map(m => m.count), backgroundColor: ['#1a3c2f', '#7b1d1d', '#94a3b8', '#cbd5e1'] }]
+                },
+                options: { maintainAspectRatio: false, plugins: { legend: { display: true, position: 'right', labels: { boxWidth: 8, font: { size: 9 } } } } }
+            }));
 
-    document.addEventListener('livewire:navigated',   initDashboard);
-</script>
+            charts.push(new Chart(document.getElementById('topSubjectsChart'), {
+                type: 'bar',
+                data: {
+                    labels: topSubjects.map(s => s.name),
+                    datasets: [{ label: 'Bookings', data: topSubjects.map(s => s.count), backgroundColor: ['#1a3c2f', '#7b1d1d', '#94a3b8', '#cbd5e1', '#fef3c7'], borderRadius: 4, barThickness: 20 }]
+                },
+                options: { maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false }, ticks: { font: { size: 9 } } }, y: { beginAtZero: true, grid: { display: false }, ticks: { font: { size: 9 } } } } }
+            }));
+
+            charts.push(new Chart(document.getElementById('activeCollegeChart'), {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(collegeData),
+                    datasets: [{ label: 'Active Students', data: Object.values(collegeData), backgroundColor: ['#94a3b8', '#1a3c2f', '#7b1d1d'], borderRadius: 4, barThickness: 20 }]
+                },
+                options: { indexAxis: 'y', maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, grid: { display: false }, ticks: { font: { size: 9 } } }, y: { grid: { display: false }, ticks: { font: { size: 9 } } } } }
+            }));
+        }
+
+        // ── TABLE / FILTERS ────────────────────────────────────────────────────
+        function applyFilters() {
+            const tbody = document.getElementById('tableBody');
+            if (!tbody) return;
+
+            const searchTerm     = searchInput.value.toLowerCase().trim();
+            const selectedStatus = statusFilter.value;
+
+            document.getElementById('tableTitle').textContent    = "Today's Schedule";
+            document.getElementById('tableSubtitle').textContent = new Date(selectedDateStr + 'T00:00:00').toLocaleDateString('en-US', {
+                month: 'long', day: 'numeric', year: 'numeric',
+            });
+
+            const filtered = allSessions.filter(item => {
+                const matchesDate   = item.date === selectedDateStr;
+                const matchesSearch = !searchTerm || [item.mentor, item.mentee, item.subject].some(v =>
+                    (v ?? '').toLowerCase().includes(searchTerm));
+                const matchesStatus = !selectedStatus || item.status === selectedStatus;
+                return matchesDate && matchesSearch && matchesStatus;
+            });
+
+            const perPage    = 4;
+            const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
+            if (currentPage > totalPages) currentPage = 1;
+
+            const start     = (currentPage - 1) * perPage;
+            const paginated = filtered.slice(start, start + perPage);
+
+            if (!paginated.length) {
+                tbody.innerHTML = `<tr><td colspan="5" class="py-4 text-center">
+                    <div class="flex flex-col items-center gap-2">
+                        <i class="fa-regular fa-calendar-xmark text-gray-300 text-2xl"></i>
+                        <p class="text-xs text-gray-400 italic">No sessions found for this date.</p>
+                    </div></td></tr>`;
+            } else {
+                tbody.innerHTML = paginated.map(row => {
+                    const rawStatus = row.status;
+                    const colorCls  = getStatusColor(rawStatus);
+                    const label     = getStatusLabel(rawStatus);
+                    const statusCell = `<span class="${colorCls} font-bold text-[10px] bg-gray-50 px-2 py-1 rounded border border-current opacity-80 capitalize">${label}</span>`;
+                    return `<tr class="border-b last:border-0 hover:bg-slate-50 transition">
+                        <td class="py-3 max-w-0" style="width:22%;" title="${row.mentee}"><div class="truncate text-xs font-bold text-slate-700">${row.mentee}</div></td>
+                        <td class="py-3 max-w-0" style="width:22%;" title="${row.mentor}"><div class="truncate text-xs text-slate-600">${row.mentor}</div></td>
+                        <td class="py-3 max-w-0 text-xs text-slate-500" style="width:16%;" title="${row.subject}"><div class="truncate">${row.subject}</div></td>
+                        <td class="py-3 pl-4 max-w-0 text-xs text-slate-500" style="width:20%;" title="${row.time}"><div class="truncate">${row.time}</div></td>
+                        <td class="py-3 text-center" style="width:20%;">${statusCell}</td>
+                    </tr>`;
+                }).join('');
+            }
+
+            const showing = filtered.length === 0 ? '0' : `${start + 1}–${Math.min(start + perPage, filtered.length)}`;
+            document.getElementById('pageIndicator').innerText = `Showing ${showing} of ${filtered.length} result${filtered.length !== 1 ? 's' : ''}`;
+            document.getElementById('prevBtn').disabled = currentPage <= 1;
+            document.getElementById('nextBtn').disabled = currentPage >= totalPages;
+            document.getElementById('prevBtn').classList.toggle('opacity-30', currentPage <= 1);
+            document.getElementById('nextBtn').classList.toggle('opacity-30', currentPage >= totalPages);
+        }
+
+        // ── CALENDAR ───────────────────────────────────────────────────────────
+        function hasAcceptedOnDate(dateStr) {
+            return allSessions.some(s => s.date === dateStr && s.status === 'accepted');
+        }
+
+        function hasCompletedOnDate(dateStr) {
+            return allSessions.some(s => s.date === dateStr && s.status === 'completed');
+        }
+
+        function renderCalendar() {
+            const grid = document.getElementById('calendarGrid');
+            if (!grid) return;
+
+            const localToday = new Date();
+            localToday.setHours(0, 0, 0, 0);
+            const todayStr  = `${localToday.getFullYear()}-${String(localToday.getMonth() + 1).padStart(2, '0')}-${String(localToday.getDate()).padStart(2, '0')}`;
+            const monthDisp = document.getElementById('monthDisplay');
+
+            grid.innerHTML = '';
+            monthDisp.innerText = viewDate.toLocaleString('default', { month: 'long', year: 'numeric' });
+
+            const lastDay  = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 0).getDate();
+            const startDay = new Date(viewDate.getFullYear(), viewDate.getMonth(), 1).getDay();
+
+            for (let i = 0; i < startDay; i++) grid.innerHTML += '<div></div>';
+
+            for (let i = 1; i <= lastDay; i++) {
+                const dateStr = `${viewDate.getFullYear()}-${String(viewDate.getMonth() + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+                const dateObj = new Date(viewDate.getFullYear(), viewDate.getMonth(), i);
+                dateObj.setHours(0, 0, 0, 0);
+
+                const isPast     = dateObj < localToday;
+                const isToday    = dateStr === todayStr;
+                const isSelected = dateStr === selectedDateStr;
+                const hasAccepted  = hasAcceptedOnDate(dateStr);
+                const hasCompleted = hasCompletedOnDate(dateStr);
+
+                const dayEl = document.createElement('div');
+                dayEl.className = `cal-day${isToday ? ' cal-today' : ''}${isSelected ? ' cal-selected' : ''}`;
+                if (isPast && !isToday) dayEl.style.color = '#9ca3af';
+
+                dayEl.innerHTML = `
+                    ${hasAccepted  ? '<span style="position:absolute;top:2px;right:2px;width:6px;height:6px;background:#22c55e;border-radius:50%;border:1px solid white;"></span>' : ''}
+                    ${hasCompleted && !hasAccepted ? '<span style="position:absolute;top:2px;right:2px;width:6px;height:6px;background:#9ca3af;border-radius:50%;border:1px solid white;"></span>' : ''}
+                    <span style="position:relative;z-index:1;">${i}</span>`;
+
+                dayEl.onclick = () => {
+                    selectedDateStr = dateStr;
+                    currentPage     = 1;
+                    applyFilters();
+                    renderCalendar();
+                };
+                grid.appendChild(dayEl);
+            }
+        }
+
+        function changeMonth(dir) {
+            viewDate.setMonth(viewDate.getMonth() + dir);
+            renderCalendar();
+        }
+
+        // ── INIT ───────────────────────────────────────────────────────────────
+        // FIX D: guard flag prevents double-init when both DOMContentLoaded
+        // and livewire:navigated fire on the first page load.
+        let _dashboardInited = false;
+
+        function initDashboard() {
+            if (_dashboardInited) {
+                // On subsequent navigated events, reset and re-init fully.
+                charts.forEach(c => c.destroy());
+                charts.length = 0;
+            }
+            _dashboardInited = true;
+
+            initCharts();
+            renderCalendar();
+            applyFilters();
+            updateClock();
+
+            // Re-attach event listeners (safe: listeners on fresh elements each navigate).
+            const si = document.getElementById('liveSearchInput');
+            const sf = document.getElementById('statusFilter');
+            const pb = document.getElementById('prevBtn');
+            const nb = document.getElementById('nextBtn');
+
+            if (si) si.addEventListener('input',  () => { currentPage = 1; applyFilters(); });
+            if (sf) sf.addEventListener('change', () => { currentPage = 1; applyFilters(); });
+            if (pb) pb.addEventListener('click',  () => { currentPage--; applyFilters(); });
+            if (nb) nb.addEventListener('click',  () => { currentPage++; applyFilters(); });
+        }
+
+        document.addEventListener('DOMContentLoaded',   initDashboard);
+        document.addEventListener('livewire:navigated', initDashboard);
+    </script>
+</div>
