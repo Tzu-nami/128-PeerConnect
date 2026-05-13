@@ -155,7 +155,7 @@ $tutorialModes = computed(function () {
 $studentBookings = computed(function () {
     $profile = StudentProfiles::where('user_id', auth()->id())->first();
     if (!$profile) return collect();
-    return Bookings::with(['mentor', 'subject', 'tutorialMode'])
+    return Bookings::with(['mentor.user', 'subject', 'tutorialMode'])
         ->where('student_id', $profile->id)
         ->latest()
         ->take(5)
@@ -1837,7 +1837,7 @@ splitSlotSegments(dayKey, slotStartRaw, slotEndRaw, dateStr) {
 
                                 <div class="flex-1 min-w-0"
                                      x-data="{
-                                        mentor:          '{{ addslashes(strtoupper($booking->mentor->user->lastName ?? 'MENTOR') . ', ' . ($booking->mentor->user->firstName ?? 'TBD')) }}',
+                                        mentor:          '{{ addslashes(strtoupper($booking->mentor?->user?->lastName ?? 'MENTOR') . ', ' . ($booking->mentor?->user?->firstName ?? 'TBD')) }}',
                                         topic:           '{{ addslashes($booking->topic) }}',
                                         mentorTruncated: false,
                                     }"
@@ -1845,12 +1845,12 @@ splitSlotSegments(dayKey, slotStartRaw, slotEndRaw, dateStr) {
                                         const el = $el.querySelector('.mentor-name');
                                         if (el) mentorTruncated = el.scrollWidth > el.clientWidth;
                                     })">
-                                    <p class="text-sm font-bold text-gray-800">{{ strtoupper($booking->subject->code) }}</p>
+                                    <p class="text-sm font-bold text-gray-800">{{ strtoupper($booking->subject->code ?? '—') }}</p>
 
                                     <div :class="mentorTruncated ? 'hover-tooltip' : ''" :data-full="mentorTruncated ? mentor : ''">
-                                        <p class="mentor-name text-xs font-medium text-gray-500 mt-0.5 truncate">
-                                            Mentor: {{ strtoupper($booking->mentor->user->lastName ?? 'MENTOR') }}, {{ $booking->mentor->user->firstName ?? 'TBD' }}
-                                        </p>
+<p class="text-xs font-medium text-gray-500 mt-0.5 truncate">
+    Mentor: {{ strtoupper($booking->mentor?->user?->lastName ?? 'MENTOR') }}, {{ $booking->mentor?->user?->firstName ?? 'TBD' }}
+</p>
                                     </div>
 
                                     <div class="hover-tooltip" :data-full="topic">
