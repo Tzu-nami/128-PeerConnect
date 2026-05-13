@@ -13,6 +13,7 @@ state([
     'editSubjectId' => null,
     'editSubjectCode' => '',
     'editSubjectName' => '',
+    
 ]);
 
 $allSubjects = computed(function () {
@@ -95,10 +96,26 @@ $updateSubject = action(function () {
     session()->flash('successMessage', "{$this->editSubjectCode} has been successfully updated.");
     $this->redirect(route('admin.courses'), navigate: true);
 });
-
+$getSubjectActiveBookingCount = action(function ($id) {
+    return \App\Models\Bookings::whereHas('mentor.subjects', function ($q) use ($id) {
+        $q->where('subjects.id', $id);
+    })->whereIn('booking_status', ['pending', 'accepted'])
+      ->count();
+});
 $deleteSubject = action(function ($id) {
     $subject = Subjects::findOrFail($id);
     $code = $subject->code;
+
+    // Get all mentor IDs that teach this subject
+    $mentorIds = MentorSubjects::where('subject_id', $subject->id)->pluck('mentor_id');
+
+    // Cancel all pending/accepted bookings for those mentors
+    // where the booking's subject matches this subject
+    \App\Models\Bookings::whereIn('mentor_id', $mentorIds)
+        ->where('subject_id', $subject->id)
+        ->whereIn('booking_status', ['pending', 'accepted'])
+        ->update(['booking_status' => 'cancelled']);
+
     MentorSubjects::where('subject_id', $subject->id)->delete();
     $subject->delete();
     session()->flash('successMessage', "{$code} has been successfully removed.");
@@ -273,11 +290,18 @@ mount(function () {
                                             </button>
                                         </div>
 
-                                        <div class="hover-tooltip" data-full="Delete Subject">
-                                            <button @click="openDeleteModal(sub)" class="icon-btn icon-btn-delete" style="flex-shrink:0;">
-                                                <i class="fa-solid fa-trash" style="font-size:11px;"></i>
-                                            </button>
-                                        </div>
+<div class="hover-tooltip" data-full="Delete Subject">
+    <button @click="openDeleteModal(sub)" class="icon-btn icon-btn-delete" style="flex-shrink:0;"
+        :disabled="deletingSubjectId === sub.id"
+        :class="deletingSubjectId === sub.id ? 'opacity-50 cursor-not-allowed' : ''">
+        <template x-if="deletingSubjectId !== sub.id">
+            <i class="fa-solid fa-trash" style="font-size:11px;"></i>
+        </template>
+        <template x-if="deletingSubjectId === sub.id">
+            <i class="fa-solid fa-spinner fa-spin" style="font-size:11px;"></i>
+        </template>
+    </button>
+</div>
                                         
                                     </div>
                                 </div>
@@ -477,20 +501,128 @@ mount(function () {
         </div>
     </div>
 
-    {{-- ── CONFIRMATION MODAL ── --}}
-    <div id="confirmModal" class="modal-overlay" style="display: none;">
-        <div class="modal-box-crud max-w-sm p-6 mx-4" id="confirmModalBox">
-            <div class="flex items-center gap-3 mb-3">
-                <div id="confirmIconWrap" class="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0"></div>
-                <h3 id="confirmTitle" class="text-base font-bold text-gray-900"></h3>
-            </div>
-            <p id="confirmBody" class="text-sm text-gray-600 mb-1 leading-relaxed"></p>
-            <div id="confirmMeta" class="mt-3 mb-5 bg-gray-50 border border-gray-100 rounded-lg px-4 py-3 text-xs text-gray-600 space-y-1"></div>
-            <div class="flex justify-end gap-3 mt-6">
-                <button id="confirmCancelBtn" class="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-300 hover:text-gray-800 
-                rounded-lg transition-colors">Cancel</button>
-                <button id="confirmOkBtn" class="px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors">Confirm</button>
-            </div>
+{{-- ── CONFIRMATION MODAL (add/edit/delete) ── --}}
+<div id="confirmModal" class="modal-overlay" style="display: none;">
+    <div class="modal-box-crud max-w-sm p-6 mx-4" id="confirmModalBox">
+        <div class="flex items-center gap-3 mb-3">
+            <div id="confirmIconWrap" class="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0"></div>
+            <h3 id="confirmTitle" class="text-base font-bold text-gray-900"></h3>
+        </div>
+        <p id="confirmBody" class="text-sm text-gray-600 mb-1 leading-relaxed"></p>
+        <div id="confirmMeta" class="mt-3 mb-5 bg-gray-50 border border-gray-100 rounded-lg px-4 py-3 text-xs text-gray-600 space-y-1"></div>
+        <div class="flex justify-end gap-3 mt-6">
+            <button id="confirmCancelBtn" class="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-300 hover:text-gray-800 
+            rounded-lg transition-colors">Cancel</button>
+            <button id="confirmOkBtn" class="px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors">Confirm</button>
         </div>
     </div>
+</div>
+
+{{-- ── DELETE SUBJECT CONFIRM MODAL ── --}}
+<template x-teleport="body">
+    <div x-cloak class="modal-overlay"
+        x-show="showDeleteConfirm"
+        @click.self="if (!isDeleting) showDeleteConfirm = false"
+        x-data="{
+            isDeleting: false,
+            isChecking: false,
+            activeBookingCount: 0,
+            checked: false
+        }"
+        x-init="$watch('showDeleteConfirm', val => {
+            if (val && subjectToDelete) {
+                checked = false;
+                activeBookingCount = 0;
+                isChecking = true;
+                $wire.getSubjectActiveBookingCount(subjectToDelete.id)
+                    .then(count => { activeBookingCount = count; checked = true; })
+                    .finally(() => isChecking = false);
+            }
+        })">
+        <div class="modal-box-crud max-w-sm p-8 text-center m-4">
+
+            {{-- Loading --}}
+            <template x-if="isChecking || !checked">
+                <div class="flex flex-col items-center justify-center py-6 gap-3">
+                    <i class="fa-solid fa-spinner fa-spin text-3xl text-slate-400"></i>
+                    <p class="text-sm text-gray-400 font-medium">Checking active sessions...</p>
+                </div>
+            </template>
+
+            {{-- No active bookings --}}
+            <template x-if="checked && activeBookingCount === 0">
+                <div>
+                    <div class="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center mx-auto mb-5">
+                        <i class="fa-solid fa-triangle-exclamation text-3xl"></i>
+                    </div>
+                    <h3 class="text-xl font-black text-slate-800">Delete Subject?</h3>
+                    <p class="text-sm text-gray-500 mt-2 mb-8">
+                        Are you sure you want to remove
+                        <span class="font-bold text-slate-700" x-text="subjectToDelete?.code"></span>?
+                        It will be unassigned from all mentors.
+                    </p>
+                    <div class="flex gap-3">
+                        <button type="button" @click="showDeleteConfirm = false"
+                            class="btn-modal btn-modal-cancel" x-bind:disabled="isDeleting">
+                            Cancel
+                        </button>
+                        <button type="button"
+                            @click="isDeleting = true; $wire.deleteSubject(subjectToDelete.id).finally(() => { isDeleting = false; showDeleteConfirm = false; })"
+                            x-bind:disabled="isDeleting"
+                            class="btn-modal btn-modal-red">
+                            <span x-show="!isDeleting">Confirm</span>
+                            <span x-show="isDeleting" style="display:none;">
+                                <i class="fa-solid fa-spinner fa-spin mr-1"></i>Deleting...
+                            </span>
+                        </button>
+                    </div>
+                </div>
+            </template>
+
+            {{-- Has active bookings --}}
+            <template x-if="checked && activeBookingCount > 0">
+                <div>
+                    <div class="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center mx-auto mb-5">
+                        <i class="fa-solid fa-triangle-exclamation text-3xl"></i>
+                    </div>
+                    <h3 class="text-xl font-black text-slate-800">Delete Subject?</h3>
+                    <p class="text-sm text-gray-500 mt-2">
+                        Are you sure you want to remove
+                        <span class="font-bold text-slate-700" x-text="subjectToDelete?.code"></span>?
+                        It will be unassigned from all mentors.
+                    </p>
+                    <div class="mt-3 mb-6 px-4 py-3 bg-yellow-50 border border-yellow-200 rounded-xl text-left">
+                        <p class="text-xs font-bold text-yellow-800 flex items-center gap-2 mb-1">
+                            <i class="fa-solid fa-circle-exclamation"></i>
+                            Active Sessions Found
+                        </p>
+                        <p class="text-xs text-yellow-700">
+                            There <span x-text="activeBookingCount === 1 ? 'is' : 'are'"></span>
+                            <span class="font-black" x-text="activeBookingCount"></span>
+                            active session<span x-show="activeBookingCount > 1">s</span>
+                            (pending or accepted) linked to this subject. Proceeding will automatically
+                            <span class="font-bold">cancel</span> all of them.
+                        </p>
+                    </div>
+                    <div class="flex gap-3">
+                        <button type="button" @click="showDeleteConfirm = false"
+                            class="btn-modal btn-modal-cancel" x-bind:disabled="isDeleting">
+                            Cancel
+                        </button>
+                        <button type="button"
+                            @click="isDeleting = true; $wire.deleteSubject(subjectToDelete.id).finally(() => { isDeleting = false; showDeleteConfirm = false; })"
+                            x-bind:disabled="isDeleting"
+                            class="btn-modal btn-modal-red">
+                            <span x-show="!isDeleting">Confirm</span>
+                            <span x-show="isDeleting" style="display:none;">
+                                <i class="fa-solid fa-spinner fa-spin mr-1"></i>Deleting...
+                            </span>
+                        </button>
+                    </div>
+                </div>
+            </template>
+
+        </div>
+    </div>
+</template>
 </div>
