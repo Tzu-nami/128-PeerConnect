@@ -24,28 +24,28 @@ class AppServiceProvider extends ServiceProvider
         // Allow variables to be available in all views
         View::composer('*', function ($view) {
             $user = auth()->user();
-            $bookUrl = route('login');
-            $dashboardUrl = route('login');
-            $historyUrl = route('login');
+            $bookUrl = route('auth.google');
+            $dashboardUrl = route('auth.google');
+            $historyUrl = route('auth.google');
 
             if ($user) {
                 $bookUrl = match(true) {
                     $user->isStudent() => route('student.bookings'),
                     $user->isMentor()  => route('mentor.bookings'),
-                    default            => route('login'),
+                    default            => route('auth.google'),
                 };
 
                 $dashboardUrl = match(true) {
                     $user->isStudent() => route('student.dashboard'),
                     $user->isMentor()  => route('mentor.dashboard'),
                     $user->isAdmin()   => route('admin.dashboard'),
-                    default            => route('login'),
+                    default            => route('auth.google'),
                 };
 
                 $historyUrl = match(true) {
                     $user->isStudent() => route('student.history'),
                     $user->isMentor()  => route('mentor.history'),
-                    default            => route('login'),
+                    default            => route('auth.google'),
                 };
             }
 

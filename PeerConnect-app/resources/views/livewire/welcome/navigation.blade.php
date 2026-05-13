@@ -47,10 +47,10 @@
 
         {{-- User action --}}
         <div class="hidden lg:flex items-center justify-end gap-3.5 min-w-fit xl:w-1/4">
-                <a href="{{ $dashboardUrl }}"
+                <a href="{{ auth()->check() ? $dashboardUrl : route('auth.google') }}"
                    class="bg-up-yellow text-up-maroon-dark px-7 py-2.5 text-[14px] font-semibold tracking-widest uppercase rounded-sm
                    transition-colors duration-200 hover:bg-up-yellow-light no-underline">
-                    {{ auth()->check() ? 'Dashboard' : 'Log In' }}
+                    {{ auth()->check() ? 'Dashboard' : 'Log In with UP Mail' }}
                 </a>
         </div>
 
@@ -98,7 +98,7 @@
                 <a href="{{ $dashboardUrl }}"
                    class="bg-up-yellow text-up-maroon-dark px-3 md:px-7 py-1 md:py-2.5 text-[10px] md:text-[14px] font-semibold tracking-widest uppercase
                    transition-colors duration-200 hover:bg-up-yellow-light no-underline">
-                    {{ auth()->check() ? 'Dashboard' : 'Log In' }}
+                    {{ auth()->check() ? 'Dashboard' : 'Log In with UP Mail' }}
                 </a>
             </li>
         </ul>

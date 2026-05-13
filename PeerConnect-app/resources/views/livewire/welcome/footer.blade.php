@@ -49,7 +49,7 @@
                     @endif
                     <a href="{{ $dashboardUrl }}" class="hover:text-cream transition-colors">Dashboard</a>
                 @else
-                    <a href="{{ route('login') }}" class="hover:text-cream transition-colors">Log In</a>
+                    <a href="{{ route('auth.google') }}" class="hover:text-cream transition-colors">Log In</a>
                 @endauth
             </div>
 

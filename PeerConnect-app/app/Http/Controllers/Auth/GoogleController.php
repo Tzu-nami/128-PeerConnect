@@ -21,12 +21,12 @@ class GoogleController extends Controller
         try {
             $googleUser = Socialite::driver('google')->user();
         } catch (\Exception $e)  {
-            return redirect()->route('login')->withErrors(['google' => 'Google Authentication failed. Please try again.']);
+            return redirect('/')->withErrors(['errorMessage' => 'Google Authentication failed. Please try again.']);
         }
 
         //Block not up emails
         if (!Str::endsWith($googleUser->getEmail(), '@up.edu.ph')) {
-            return redirect()->route('login')->withErrors(['google' => 'Only UP Mail accounts are allowed.']);
+            return redirect('/')->withErrors(['errorMessage' => 'Only UP Mail accounts are allowed.']);
         }
 
         // Extract name

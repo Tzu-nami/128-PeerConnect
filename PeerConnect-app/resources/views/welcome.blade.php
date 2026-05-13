@@ -6,6 +6,13 @@
 
         <div class="pt-[60px] md:pt-[83px]"></div>
 
+        @if(session('errorMessage'))
+            <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+                <strong class="font-bold">Sorry!</strong>
+                <span class="block sm:inline">{{ session('errorMessage') }}</span>
+            </div>
+        @endif
+
         {{-- Overlay --}}
         <div class="absolute inset-0 z-0"
              style="background: linear-gradient(
