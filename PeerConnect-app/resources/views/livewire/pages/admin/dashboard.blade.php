@@ -1,38 +1,4 @@
 <?php
-/**
- * FIXED ADMIN DASHBOARD — QUICK ACTIONS
- *
- * Bugs fixed in this revision (on top of prior fixes):
- *
- * A. isVerifying scope leak in Add-Mentor modal footer.
- *    — Fixed by merging canSubmit directly into the outer modal wrapper's x-data.
- *
- * B. Add-Subject canSubmit used $watch-mirrored local copies — fixed by reading
- *    $wire.newSubjectCode / $wire.newSubjectName directly inside the canSubmit getter.
- *
- * C. All overlay modals moved to be direct children of the root <div> wrapper.
- *
- * D. initDashboard() double-fires guard flag.
- *
- * E. [NEW] Native <input type="time"> returns "HH:MM AM/PM" on Windows/some locales,
- *    failing Laravel's date_format:H:i validation silently (the error block is inside
- *    wire:ignore so it never renders). The confirmMentor action never sets showConfirm,
- *    leaving the spinner stuck forever.
- *    FIX: A normalizeTime() JS helper strips AM/PM and converts to 24-hour HH:MM before
- *    Alpine writes the value back into the entangled $wire.availabilities array.
- *    The time inputs now use @change="row.start_time = normalizeTime($event.target.value)"
- *    instead of plain x-model, guaranteeing H:i format reaches Livewire.
- *
- * F. [NEW] Availability validation errors are rendered inside a wire:ignore block,
- *    so Laravel errors on availability.*.day_of_week / start_time / end_time never
- *    appear in the DOM. Moved the error display div OUTSIDE wire:ignore.
- *
- * G. [NEW] canSubmit getter reads $wire.availabilities which is an Alpine-entangled
- *    proxy. On some Livewire 3 builds the proxy isn't deeply reactive inside a getter,
- *    so the button can stay disabled even after the user fills slots. Fixed by also
- *    checking the local Alpine `avails` ref (which IS reactive) instead of the wire proxy.
- */
-
 use function Livewire\Volt\{layout, state, mount, computed, action, uses};
 use Livewire\WithFileUploads;
 use App\Models\MentorProfiles;
@@ -409,14 +375,9 @@ $confirmMentor = action(function () {
         return;
     }
 
-    // FIX E (server-side guard): normalise any time strings that slipped through
-    // as 12-hour format (e.g. "10:00 AM") into H:i before validation runs.
-    // The JS normalizeTime() helper handles this client-side on every change event,
-    // but this server-side pass is a safety net for browsers that behave unexpectedly.
     $this->availabilities = collect($this->availabilities)->map(function ($row) {
         foreach (['start_time', 'end_time'] as $field) {
             $val = trim($row[$field] ?? '');
-            // If it contains AM/PM convert to 24-hour format
             if (preg_match('/(\d{1,2}):(\d{2})\s*(AM|PM)/i', $val, $m)) {
                 $h = (int)$m[1];
                 $min = $m[2];
@@ -619,12 +580,6 @@ $rejectBooking = action(function (string $id) {
 });
 ?>
 
-{{--
-    ROOT WRAPPER
-    All overlay modals (mentor, subject, confirms, report, conflict, auto-reject)
-    are DIRECT CHILDREN of this div so they are never clipped by a parent
-    stacking context.
---}}
 <div>
 
     {{-- ═══════════════════════════════════════════════════════════════════
@@ -693,9 +648,7 @@ $rejectBooking = action(function (string $id) {
         </div>
     </div>
 
-    {{-- ═══════════════════════════════════════════════════════════════════
-         STAT CARDS
-    ════════════════════════════════════════════════════════════════════════ --}}
+    {{-- STAT CARDS--}}
     <div class="grid grid-cols-[repeat(autofit,_minmax(250px,_1fr))] sm:grid-cols-5 gap-4 mb-8">
         <a href="{{ route('admin.mentors') }}" wire:navigate
             class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-green-600 flex items-center gap-4 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer">
@@ -743,9 +696,6 @@ $rejectBooking = action(function (string $id) {
         </a>
     </div>
 
-    {{-- ═══════════════════════════════════════════════════════════════════
-         MAIN TWO-COLUMN LAYOUT
-    ════════════════════════════════════════════════════════════════════════ --}}
     <div class="grid grid-cols-3 gap-8">
 
         {{-- LEFT / MAIN COLUMN ──────────────────────────────────────────── --}}
@@ -1243,19 +1193,14 @@ $rejectBooking = action(function (string $id) {
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script>
-        // ── FIX E: normalizeTime ────────────────────────────────────────────────
-        // Converts any time string a browser <input type="time"> might return into
-        // strict "HH:MM" (24-hour, zero-padded) expected by Laravel date_format:H:i.
-        // Handles: "10:00", "10:00 AM", "10:00 PM", "2:30 PM", "14:30", etc.
+
         function normalizeTime(val) {
             if (!val) return '';
             val = val.trim();
-            // Already 24-hour (e.g. "14:30" or "09:00") — just ensure zero-padding
             const plain = val.match(/^(\d{1,2}):(\d{2})$/);
             if (plain) {
                 return String(parseInt(plain[1], 10)).padStart(2, '0') + ':' + plain[2];
             }
-            // 12-hour with AM/PM (e.g. "10:00 AM", "2:30 PM")
             const ampm = val.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
             if (ampm) {
                 let h = parseInt(ampm[1], 10);
@@ -1265,7 +1210,6 @@ $rejectBooking = action(function (string $id) {
                 if (meridiem === 'AM' && h === 12) h = 0;
                 return String(h).padStart(2, '0') + ':' + m;
             }
-            // Fallback: return as-is and let the server-side guard handle it
             return val;
         }
 
@@ -1444,8 +1388,11 @@ $rejectBooking = action(function (string $id) {
         let allSessions = @json($allSessions);
 
         const _now = new Date();
-        let selectedDateStr = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, '0')}-${String(_now.getDate()).padStart(2, '0')}`;
-        let viewDate        = new Date(_now.getFullYear(), _now.getMonth(), 1);
+        let viewDate = window._calViewDate ?? new Date(_now.getFullYear(), _now.getMonth(), 1);
+        let selectedDateStr = window._calSelectedDate ?? 
+        `${_now.getFullYear()}-${String(_now.getMonth()+1).padStart(2,'0')}-${String(_now.getDate()).padStart(2,'0')}`;
+        window._calViewDate     = viewDate;
+        window._calSelectedDate = selectedDateStr;
 
         const monthlyData  = @json($this->monthlyTrends);
         const topMentors   = @json($this->topMentors);
@@ -1654,28 +1601,26 @@ $rejectBooking = action(function (string $id) {
                     <span style="position:relative;z-index:1;">${i}</span>`;
 
                 dayEl.onclick = () => {
-                    selectedDateStr = dateStr;
-                    currentPage     = 1;
-                    applyFilters();
-                    renderCalendar();
-                };
+    selectedDateStr         = dateStr;
+    window._calSelectedDate = dateStr;
+    currentPage             = 1;
+    applyFilters();
+    renderCalendar();
+};
                 grid.appendChild(dayEl);
             }
         }
 
         function changeMonth(dir) {
-            viewDate.setMonth(viewDate.getMonth() + dir);
-            renderCalendar();
-        }
+    viewDate.setMonth(viewDate.getMonth() + dir);
+    window._calViewDate = viewDate;
+    renderCalendar();
+}
 
-        // ── INIT ───────────────────────────────────────────────────────────────
-        // FIX D: guard flag prevents double-init when both DOMContentLoaded
-        // and livewire:navigated fire on the first page load.
         let _dashboardInited = false;
 
         function initDashboard() {
             if (_dashboardInited) {
-                // On subsequent navigated events, reset and re-init fully.
                 charts.forEach(c => c.destroy());
                 charts.length = 0;
             }
@@ -1686,16 +1631,15 @@ $rejectBooking = action(function (string $id) {
             applyFilters();
             updateClock();
 
-            // Re-attach event listeners (safe: listeners on fresh elements each navigate).
             const si = document.getElementById('liveSearchInput');
             const sf = document.getElementById('statusFilter');
             const pb = document.getElementById('prevBtn');
             const nb = document.getElementById('nextBtn');
 
-            if (si) si.addEventListener('input',  () => { currentPage = 1; applyFilters(); });
-            if (sf) sf.addEventListener('change', () => { currentPage = 1; applyFilters(); });
-            if (pb) pb.addEventListener('click',  () => { currentPage--; applyFilters(); });
-            if (nb) nb.addEventListener('click',  () => { currentPage++; applyFilters(); });
+            if (si) si.oninput  = () => { currentPage = 1; applyFilters(); };
+            if (sf) sf.onchange = () => { currentPage = 1; applyFilters(); };
+            if (pb) pb.onclick  = () => { if (currentPage > 1) { currentPage--; applyFilters(); } };
+            if (nb) nb.onclick  = () => { currentPage++; applyFilters(); };
         }
 
         document.addEventListener('DOMContentLoaded',   initDashboard);
