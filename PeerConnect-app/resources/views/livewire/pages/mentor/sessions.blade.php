@@ -385,26 +385,45 @@ $summaryCounts = computed(function () {
                                             </button>
                                         </template>
 
-                                        {{-- accepted --}}
-                                        <template x-if="s.status === 'accepted'">
-                                            <div class="flex gap-1">
-                                                <button @click="updateStatus(s.id, 'completed')"
-                                                        title="Complete"
-                                                        class="w-7 h-7 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 flex items-center justify-center transition hover:scale-110">
-                                                    <i class="fa-solid fa-flag-checkered" style="font-size:11px;"></i>
-                                                </button>
-                                                <button @click="updateStatus(s.id, 'no_show')"
-                                                        title="No-show"
-                                                        class="w-7 h-7 rounded-lg bg-orange-100 hover:bg-orange-200 text-orange-600 flex items-center justify-center transition hover:scale-110">
-                                                    <i class="fa-solid fa-user-slash" style="font-size:11px;"></i>
-                                                </button>
-                                                <button @click="updateStatus(s.id, 'cancelled')"
-                                                        title="Cancel"
-                                                        class="w-7 h-7 rounded-lg bg-red-100 hover:bg-red-200 text-red-600 flex items-center justify-center transition hover:scale-110">
-                                                    <i class="fa-solid fa-ban" style="font-size:11px;"></i>
-                                                </button>
-                                            </div>
-                                        </template>
+{{-- accepted --}}
+<template x-if="s.status === 'accepted'">
+    <div class="flex gap-1"
+         x-data="{
+             get sessionHasStarted() {
+                 if (!s.rawDate || !s.start) return false;
+                 const now = new Date();
+                 const sessionStart = new Date(s.rawDate + 'T' + s.start + ':00');
+                 return now >= sessionStart;
+             }
+         }">
+
+        {{-- Complete: only show once session start time has passed --}}
+        <template x-if="sessionHasStarted">
+            <button @click="updateStatus(s.id, 'completed')"
+                    title="Complete"
+                    class="w-7 h-7 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 flex items-center justify-center transition hover:scale-110">
+                <i class="fa-solid fa-flag-checkered" style="font-size:11px;"></i>
+            </button>
+        </template>
+
+        {{-- No-show: only show once session start time has passed --}}
+        <template x-if="sessionHasStarted">
+            <button @click="updateStatus(s.id, 'no_show')"
+                    title="No-show"
+                    class="w-7 h-7 rounded-lg bg-orange-100 hover:bg-orange-200 text-orange-600 flex items-center justify-center transition hover:scale-110">
+                <i class="fa-solid fa-user-slash" style="font-size:11px;"></i>
+            </button>
+        </template>
+
+        {{-- Cancel: always available for accepted sessions --}}
+        <button @click="updateStatus(s.id, 'cancelled')"
+                title="Cancel"
+                class="w-7 h-7 rounded-lg bg-red-100 hover:bg-red-200 text-red-600 flex items-center justify-center transition hover:scale-110">
+            <i class="fa-solid fa-ban" style="font-size:11px;"></i>
+        </button>
+
+    </div>
+</template>
 
                                         {{-- completed / no_show / rejected — undo --}}
                                         <template x-if="['completed','no_show','rejected'].includes(s.status)">
