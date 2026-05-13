@@ -155,7 +155,7 @@ $tutorialModes = computed(function () {
 $studentBookings = computed(function () {
     $profile = StudentProfiles::where('user_id', auth()->id())->first();
     if (!$profile) return collect();
-    return Bookings::with(['mentor', 'subject', 'tutorialMode'])
+    return Bookings::with(['mentor.user', 'subject', 'tutorialMode'])
         ->where('student_id', $profile->id)
         ->latest()
         ->take(5)
@@ -1837,7 +1837,7 @@ splitSlotSegments(dayKey, slotStartRaw, slotEndRaw, dateStr) {
 
                                 <div class="flex-1 min-w-0"
                                      x-data="{
-                                        mentor:          '{{ addslashes(strtoupper($booking->mentor->user->lastName ?? 'MENTOR') . ', ' . ($booking->mentor->user->firstName ?? 'TBD')) }}',
+                                        mentor:          '{{ addslashes(strtoupper($booking->mentor?->user?->lastName ?? 'MENTOR') . ', ' . ($booking->mentor?->user?->firstName ?? 'TBD')) }}',
                                         topic:           '{{ addslashes($booking->topic) }}',
                                         mentorTruncated: false,
                                     }"
@@ -1845,12 +1845,12 @@ splitSlotSegments(dayKey, slotStartRaw, slotEndRaw, dateStr) {
                                         const el = $el.querySelector('.mentor-name');
                                         if (el) mentorTruncated = el.scrollWidth > el.clientWidth;
                                     })">
-                                    <p class="text-sm font-bold text-gray-800">{{ strtoupper($booking->subject->code) }}</p>
+                                    <p class="text-sm font-bold text-gray-800">{{ strtoupper($booking->subject->code ?? '—') }}</p>
 
                                     <div :class="mentorTruncated ? 'hover-tooltip' : ''" :data-full="mentorTruncated ? mentor : ''">
-                                        <p class="mentor-name text-xs font-medium text-gray-500 mt-0.5 truncate">
-                                            Mentor: {{ strtoupper($booking->mentor->user->lastName ?? 'MENTOR') }}, {{ $booking->mentor->user->firstName ?? 'TBD' }}
-                                        </p>
+<p class="text-xs font-medium text-gray-500 mt-0.5 truncate">
+    Mentor: {{ strtoupper($booking->mentor?->user?->lastName ?? 'MENTOR') }}, {{ $booking->mentor?->user?->firstName ?? 'TBD' }}
+</p>
                                     </div>
 
                                     <div class="hover-tooltip" :data-full="topic">
@@ -1896,7 +1896,19 @@ splitSlotSegments(dayKey, slotStartRaw, slotEndRaw, dateStr) {
         'no_show'   => 'No Show',
     ];
 @endphp
-<span class="booking-status-pill status-{{ $statusKey }}">
+@php
+$pillColor = match($statusKey) {
+    'pending'   => 'text-yellow-500',
+    'accepted'  => 'text-green-600',
+    'completed' => 'text-gray-500',
+    'cancelled' => 'text-red-600',
+    'rejected'  => 'text-red-500',
+    'closed'    => 'text-purple-700',
+    'no_show'   => 'text-orange-600',
+    default     => 'text-slate-400',
+};
+@endphp
+<span class="{{ $pillColor }} font-bold text-[10px] bg-gray-50 px-2 py-1 rounded border border-current opacity-80 capitalize">
     {{ $statusLabels[$statusKey] ?? ucfirst($booking->booking_status) }}
 </span>
                                 </div>
