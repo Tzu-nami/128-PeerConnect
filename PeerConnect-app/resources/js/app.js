@@ -1,6 +1,6 @@
 import './bootstrap';
-import Swiper from 'swiper';
-import { Pagination } from 'swiper/modules';
+import Splide from '@splidejs/splide';
+import GLightbox from 'glightbox';
 
 // Prevent automatic scrolling down of pages
 if (history.scrollRestoration) {
@@ -9,38 +9,38 @@ if (history.scrollRestoration) {
 
 // Swiper for Image Carousel
 document.addEventListener('DOMContentLoaded', () => {
-    const swiperEl = document.getElementById('activities-swiper');
-    if (swiperEl) {
-        const swiper = new Swiper('#activities-swiper', {
-            modules: [Pagination],
-            loop: true,
-            centeredSlides: true,
-            slidesPerView: 1,
-            spaceBetween: 16,
-            initialSlide: 0,
-            watchSlidesProgress: true,
-            pagination: {
-                el: '.swiper-pagination',
-                clickable: true,
-            },
+    const splideEl = document.getElementById('activities-splide');
+    if (splideEl) {
+        new Splide('#activities-splide', {
+            type    : 'loop',
+            padding : '5rem',
+            perPage : 1,
+            gap     : '1rem',
+            focus   : 'center',
             breakpoints: {
-                640: { slidesPerView: 2, initialSlide: 1 },
-                1024: { slidesPerView: 3, initialSlide: 2 },
-            },
-        });
-
-        document.getElementById('btn-prev')?.addEventListener('click', () => swiper.slidePrev());
-        document.getElementById('btn-next')?.addEventListener('click', () => swiper.slideNext());
+                768: {
+                    padding : '0',
+                    gap     : '0',
+                    arrows  : false,
+                },
+                1024: {
+                    padding : '3rem',
+                    gap     : '1rem',
+                },
+            }
+        }).mount();
     }
 
-    // Sidebar toggle
+    GLightbox({
+        selector    : '[data-glightbox]',
+        loop        : true,
+    });
+
     document.addEventListener('click', (e) => {
         const toggleBtn = e.target.closest('#sidebarToggle');
         if (!toggleBtn) return;
-
         const sidebar = document.getElementById('sidebar');
         if (!sidebar) return;
-
         sidebar.classList.toggle('collapsed');
         setTimeout(() => {
             window.__dashboardCharts?.forEach(c => c.resize());
@@ -917,7 +917,7 @@ hasConflict(newReq) {
         this.counts.totalHours = rawHours.toFixed(2);
     },
 
-    
+
 
     // Edit Modal
     showEditModal: false,
@@ -1036,7 +1036,7 @@ document.addEventListener('alpine:init', () => {
             this.banner.message = message;
             this.banner.type = type;
             this.banner.show = true;
-            
+
             clearTimeout(this.banner.timer);
             this.banner.timer = setTimeout(() => { this.banner.show = false; }, 5000);
         },
@@ -1149,7 +1149,7 @@ document.addEventListener('alpine:init', () => {
                 avails.push({ id: Date.now() + Math.random(), day_of_week: '', start_time: '', end_time: '' });
             }
             this.editForm.availabilities = avails;
-            
+
             // Check if there are any new inputs
             this.originalForm = {
                 firstName: mentor.firstName,
@@ -1195,7 +1195,7 @@ document.addEventListener('alpine:init', () => {
                     this.updateDisplay();
                 }
             });
-            
+
             // Setup initial display if data is already present
             if (this.timeValue) {
                 const [h, m] = this.timeValue.split(':').map(Number);
@@ -1219,7 +1219,7 @@ document.addEventListener('alpine:init', () => {
             const rect  = trigger.getBoundingClientRect();
             const dropH = drop.offsetHeight || 240;
             const dropW = drop.offsetWidth  || 220;
-            
+
             // Position directly below the input
             drop.style.top  = (rect.bottom + 4) + 'px';
             let left = rect.left;
@@ -1242,7 +1242,7 @@ document.addEventListener('alpine:init', () => {
             e.target.value = String(val).padStart(2, '0');
             this.commit();
         },
-        
+
         onMinInput(e) {
             let val = parseInt(e.target.value);
             if (isNaN(val) || val < 0) val = 0;
@@ -1262,7 +1262,7 @@ document.addEventListener('alpine:init', () => {
         },
 
         clampTime() {
-            // Optional clamp, limits bounds to 8 AM to 6 PM 
+            // Optional clamp, limits bounds to 8 AM to 6 PM
             let h24 = (this.hour % 12) + (this.ampm === 'PM' ? 12 : 0);
             let totalMins = h24 * 60 + this.minute;
             const MIN_MINS = 8 * 60;
@@ -1281,9 +1281,9 @@ document.addEventListener('alpine:init', () => {
             this.clampTime();
             this.syncHourInput();
             this.syncMinInput();
-            
+
             // This automatically updates row.start_time / row.end_time via x-modelable!
-            this.timeValue = this.getFormattedTime(); 
+            this.timeValue = this.getFormattedTime();
             this.updateDisplay();
         },
 
@@ -1293,7 +1293,81 @@ document.addEventListener('alpine:init', () => {
             this.selectedTime = `${h}:${m} ${this.ampm}`;
         },
     }));
+
+    Alpine.data('staffManagement', (initialStaff, wire) => ({
+        staff: initialStaff,
+        showViewModal: false,
+        selectedStaff: null,
+        showEditModal: false,
+        editingStaff: null,
+        editForm: { availabilities: [] },
+        originalForm: { availabilities: [] },
+        showDeleteConfirm: false,
+        staffToDelete: null,
+        weekDays: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'],
+
+        convertTime(timeStr) {
+            if (!timeStr) return '';
+            const [time, modifier] = timeStr.split(' ');
+            let [hours, minutes] = time.split(':');
+            if (hours === '12') hours = '00';
+            if (modifier === 'PM') hours = (parseInt(hours, 10) + 12).toString();
+            return `${hours.padStart(2, '0')}:${minutes}`;
+        },
+
+        openViewModal(staff) {
+            this.selectedStaff = staff;
+            this.showViewModal = true;
+        },
+
+        openEditModal(staff) {
+            this.editingStaff = staff;
+            this.$wire.editFirstName = staff.firstName;
+            this.$wire.editLastName = staff.lastName;
+            this.$wire.editMiddleInitial = staff.middleInitial ? staff.middleInitial.replace('.', '').trim() : '';
+            this.$wire.editEmail = staff.email;
+            this.$wire.editRole = staff.role;
+
+            let avails = [];
+            for (const day in staff.schedule) {
+                staff.schedule[day].slots.forEach(slot => {
+                    avails.push({
+                        id: Date.now() + Math.random(),
+                        day_of_week: day.toLowerCase(),
+                        start_time: this.convertTime(slot.start),
+                        end_time: this.convertTime(slot.end),
+                    });
+                });
+            }
+            if (avails.length === 0) {
+                avails.push({ id: Date.now() + Math.random(), day_of_week: '', start_time: '', end_time: '' });
+            }
+
+            this.editForm.availabilities = avails;
+            this.originalForm = {
+                firstName: staff.firstName,
+                lastName: staff.lastName,
+                middleInitial: staff.middleInitial ? staff.middleInitial.replace('.', '').trim() : '',
+                email: staff.email,
+                role: staff.role,
+                availabilities: avails.map(a => ({
+                    day_of_week: a.day_of_week,
+                    start_time: a.start_time,
+                    end_time: a.end_time,
+                })),
+            };
+
+            this.showEditModal = true;
+        },
+
+        openDeleteModal(staff) {
+            this.staffToDelete = staff;
+            this.showDeleteConfirm = true;
+        },
+    }));
+
 });
+
 
 // Courses table
 window.closeConfirmModal = function() {
@@ -1338,7 +1412,7 @@ window.openConfirmModal = function({ title, body, meta, variant, confirmText, lo
         confirmOkBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i>${loadingText || 'Processing...'}`;
         confirmOkBtn.classList.add('opacity-70', 'cursor-not-allowed');
         confirmOkBtn.style.pointerEvents = 'none';
-        
+
         confirmCancelBtn.disabled = true;
         confirmCancelBtn.classList.add('opacity-50', 'cursor-not-allowed');
 
@@ -1359,7 +1433,7 @@ window.openConfirmModal = function({ title, body, meta, variant, confirmText, lo
             closeConfirmModal();
         }
     };
-    
+
     // Make the modal visible
     confirmModal.style.display = 'flex';
 }
