@@ -1188,8 +1188,7 @@ $rejectBooking = action(function (string $id) {
             </div>
         </div>
     </div>
-</div>
-
+    </div>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script>
@@ -1642,7 +1641,11 @@ $rejectBooking = action(function (string $id) {
             if (nb) nb.onclick  = () => { currentPage++; applyFilters(); };
         }
 
-        document.addEventListener('DOMContentLoaded',   initDashboard);
         document.addEventListener('livewire:navigated', initDashboard);
+if (document.readyState === 'complete' || document.readyState === 'interactive') {
+    initDashboard();
+} else {
+    document.addEventListener('DOMContentLoaded', initDashboard);
+}
     </script>
 </div>
