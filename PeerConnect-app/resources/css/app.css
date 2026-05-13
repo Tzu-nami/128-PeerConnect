@@ -1,7 +1,6 @@
 /* ── External imports ── */
-@import 'swiper/css';
-@import 'swiper/css/navigation';
-@import 'swiper/css/pagination';
+@import '@splidejs/splide/css';
+@import 'glightbox/dist/css/glightbox.css';
 
 /* ── Google Fonts ── */
 @import url('https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,200..1000;1,200..1000&display=swap');
@@ -426,68 +425,97 @@ body.app-layout { overflow: hidden; }
     color: var(--up-maroon);
 }
 
-
 /* ─────────────────────────────────────────────
-   IMAGE CAROUSEL (Swiper)
+   IMAGE CAROUSEL (Splide)
    ───────────────────────────────────────────── */
-.swiper-outer {
-    display: flex;
-    align-items: center;
-    gap: 26px;
-}
 
-.swiper-nav-btn {
-    background: var(--up-maroon);
-    border: none;
-    font-size: 36px;
-    font-weight: 400;
-    color: white;
-    cursor: pointer;
-    line-height: 1;
-    flex-shrink: 0;
-    opacity: 1;
-    transition: opacity 0.2s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    padding: 0;
-}
-
-.swiper-nav-btn:hover { opacity: 0.85; }
-
-.swiper {
-    flex: 1;
-    overflow: hidden;
+#activities-splide {
     padding-bottom: 2rem;
 }
 
-.swiper-slide {
-    transition: transform 0.4s ease, opacity 0.4s ease;
-    opacity: 0.4;
-    transform: scale(0.88);
-    border-radius: 10px;
-    overflow: hidden;
-    aspect-ratio: 16 / 9;
-    min-height: 180px;
-    background: #f0f0f0;
+#activities-splide .splide__track {
+    align-items: stretch;
 }
 
-.swiper-slide-active { opacity: 1; transform: scale(1); }
+#activities-splide .splide__slide {
+    height: 500px;
+    opacity: 0.4;
+    transition: opacity 0.3s ease;
+}
 
-.swiper-slide img {
+#activities-splide .splide__slide.is-active {
+    opacity: 1;
+}
+
+#activities-splide .splide__slide img {
     width: 100%;
     height: 100%;
     object-fit: cover;
     display: block;
 }
 
-.swiper-pagination { bottom: 0; }
+#activities-splide .splide__arrow {
+    background: var(--up-maroon);
+    opacity: 1;
+    width: 3rem;
+    height: 3rem;
+}
 
-.swiper-pagination-bullet       { background: var(--up-maroon); opacity: 0.3; }
-.swiper-pagination-bullet-active { opacity: 1; background: var(--up-maroon); }
+#activities-splide .splide__arrow svg {
+    fill: white;
+    width: 1.5rem;
+    height: 1.5rem;
+}
+
+#activities-splide .splide__pagination {
+    position: relative;
+    bottom: auto;
+    margin-top: 0.75rem;
+}
+
+#activities-splide .splide__pagination__page {
+    background: var(--up-maroon);
+    opacity: 0.3;
+}
+
+#activities-splide .splide__pagination__page.is-active {
+    background: var(--up-maroon);
+    opacity: 1;
+}
+
+#activities-splide .splide__arrow:hover {
+    background: var(--up-maroon);
+    opacity: 0.8;
+}
+
+/* desktop — default */
+#activities-splide .splide__slide {
+    height: 500px;
+}
+
+@media (max-width: 1024px) {
+    #activities-splide .splide__slide {
+        height: 380px;
+    }
+}
+
+@media (max-width: 768px) {
+    #activities-splide .splide__slide {
+        opacity: 1;
+        transition: none;
+        height: 250px;
+    }
+
+    #activities-splide .splide__arrow {
+        width: 2rem;
+        height: 2rem;
+    }
+
+    #activities-splide .splide__arrow svg {
+        width: 1rem;
+        height: 1rem;
+    }
+}
 
 /* ─────────────────────────────────────────────
    MENTOR CARDS
@@ -1213,7 +1241,7 @@ td:last-child .hover-tooltip:hover::after { opacity: 1; transform: translate(0);
 /* Table Actions buttons */
 .session-row .action-buttons,
 .mentor-row .action-buttons,
-.courses-row .action-buttons { opacity: 0; transform: translateX(6px); transition: opacity 0.15s ease, 
+.courses-row .action-buttons { opacity: 0; transform: translateX(6px); transition: opacity 0.15s ease,
     transform 0.15s ease; pointer-events: none; }
 .session-row:hover .action-buttons,
 .mentor-row:hover .action-buttons,
