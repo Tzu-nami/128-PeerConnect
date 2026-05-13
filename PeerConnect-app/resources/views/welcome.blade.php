@@ -88,66 +88,69 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-0">
             {{-- Column 1 --}}
             <a href="{{ route('public.services') }}"
-               class="group flex flex-col px-4 sm:px-8 md:px-10 lg:px-12 py-6 sm:py-10
-                      border-b sm:border-b-0 sm:border-r border-cream-dark
-                      transition-colors hover:bg-cream-dark/30">
+               class="group flex flex-col px-4 sm:px-8 md:px-10 lg:px-12
+                  py-4 sm:py-10
+                  border-b sm:border-b-0 sm:border-r border-cream-dark
+                  transition-colors hover:bg-cream-dark/30">
                 <img src="https://cwpbwqcxlccbittkhasq.supabase.co/storage/v1/object/public/assets/images/landing-page/services/one-on-one.jpeg"
                      alt="One on One Tutorial Session"
-                     class="w-full h-36 sm:h-44 md:h-48 object-cover rounded-sm mb-4 sm:mb-5 border border-cream-border">
+                     class="w-full h-32 sm:h-44 md:h-48 object-cover rounded-sm mb-3 sm:mb-5 border border-cream-border">
                 <div class="text-sm sm:text-base md:text-[15px] lg:text-[18px] xl:text-[22px] text-up-maroon font-medium mb-1 md:mb-2">One-on-One Sessions</div>
-                <div class="text-[11px] sm:text-sm lg:text-base leading-6 sm:leading-7 font-light mb-1 md:mb-3">
+                <div class="text-[11px] sm:text-sm lg:text-base leading-5 sm:leading-7 font-light text-gray-600 mb-2 md:mb-3">
                     Get personalized support from one of our experienced mentors.
                     Work through challenging concepts, review course materials, and build confidence at your own pace.
                 </div>
-                <div class="flex items-center gap-1 text-up-maroon text-sm">
+                <div class="flex items-center gap-1 text-up-maroon text-[11px] sm:text-sm font-light tracking-wide mt-auto">
                     Read more
-                    <span class="hidden lg:flex opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200 material-symbols-outlined">arrow_right_alt</span>
+                    <span class="hidden lg:flex opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200 material-symbols-outlined sm:text-sm md:text-xl">arrow_right_alt</span>
                 </div>
             </a>
 
             {{-- Column 2 --}}
             <a href="{{ route('public.services') }}#group-session"
-               class="group flex flex-col px-4 sm:px-8 md:px-10 lg:px-12 py-6 sm:py-10
-                      border-b sm:border-b-0 lg:border-r border-cream-dark
-                      transition-colors hover:bg-cream-dark/30">
+               class="group flex flex-col px-4 sm:px-8 md:px-10 lg:px-12
+                  py-4 sm:py-10
+                  border-b sm:border-b-0 lg:border-r border-cream-dark
+                  transition-colors hover:bg-cream-dark/30">
                 <img src="https://cwpbwqcxlccbittkhasq.supabase.co/storage/v1/object/public/assets/images/landing-page/services/group-session.jpg"
                      alt="Group Tutorial Session"
-                     class="w-full h-36 sm:h-44 md:h-48 object-cover rounded-sm mb-4 sm:mb-5 border border-cream-border">
+                     class="w-full h-32 sm:h-44 md:h-48 object-cover rounded-sm mb-3 sm:mb-5 border border-cream-border">
                 <div class="text-sm sm:text-base md:text-[15px] lg:text-[18px] xl:text-[22px] text-up-maroon font-medium mb-1 md:mb-2">Group Sessions</div>
-                <div class="text-[11px] sm:text-sm lg:text-base leading-6 sm:leading-7 font-light mb-1 md:mb-3">
+                <div class="text-[11px] sm:text-sm lg:text-base leading-5 sm:leading-7 font-light text-gray-600 mb-2 md:mb-3">
                     Gather with a group of friends in a guided session led by a peer mentor.
                     Ideal for tackling challenging subjects together and learning from one another.
                 </div>
-                <div class="flex items-center gap-1 text-up-maroon text-sm">
+                <div class="flex items-center gap-1 text-up-maroon text-[11px] sm:text-sm font-light tracking-wide mt-auto">
                     Read more
-                    <span class="hidden lg:flex opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200 material-symbols-outlined">arrow_right_alt</span>
+                    <span class="hidden lg:flex opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200 material-symbols-outlined sm:text-sm md:text-xl">arrow_right_alt</span>
                 </div>
             </a>
 
             {{-- Column 3 --}}
             <a href="{{ route('public.services') }}#review-classes"
-               class="group flex flex-col px-4 sm:px-8 md:px-10 lg:px-12 py-6 sm:py-10
-                      transition-colors hover:bg-cream-dark/30">
+               class="group flex flex-col px-4 sm:px-8 md:px-10 lg:px-12
+                  py-4 sm:py-10
+                  transition-colors hover:bg-cream-dark/30">
                 <img src="https://cwpbwqcxlccbittkhasq.supabase.co/storage/v1/object/public/assets/images/landing-page/services/review-classes.jpg"
                      alt="Review Class"
-                     class="w-full h-36 sm:h-44 md:h-48 object-cover rounded-sm mb-4 sm:mb-5 border border-cream-border">
+                     class="w-full h-32 sm:h-44 md:h-48 object-cover rounded-sm mb-3 sm:mb-5 border border-cream-border">
                 <div class="text-sm sm:text-base md:text-[15px] lg:text-[18px] xl:text-[22px] text-up-maroon font-medium mb-1 md:mb-2">Review Classes</div>
-                <div class="text-[11px] sm:text-sm lg:text-base leading-6 sm:leading-7 font-light mb-1 md:mb-3">
+                <div class="text-[11px] sm:text-sm lg:text-base leading-5 sm:leading-7 font-light text-gray-600 mb-2 md:mb-3">
                     Prepare for major exams through review sessions led by experienced peer mentors.
                     Review key topics and build effective exam strategies.
                 </div>
-                <div class="flex items-center gap-1 text-up-maroon text-sm">
+                <div class="flex items-center gap-1 text-up-maroon text-[11px] sm:text-sm font-light tracking-wide mt-auto">
                     Read more
-                    <span class="hidden lg:flex opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200 material-symbols-outlined">arrow_right_alt</span>
+                    <span class="hidden lg:flex opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200 material-symbols-outlined sm:text-sm md:text-xl">arrow_right_alt</span>
                 </div>
             </a>
         </div>
     </section>
 
     {{-- How It Works --}}
-    <section class="w-full px-5 sm:px-10 md:px-16 lg:px-28 xl:px-52 py-10 sm:py-16 md:py-20 bg-up-green">
+    <section class="w-full px-5 sm:px-10 md:px-16 lg:px-28 xl:px-52 py-8 sm:py-16 md:py-20 bg-up-green">
         {{-- Header --}}
-        <div class="flex flex-col gap-2 sm:gap-4 mb-8 sm:mb-12 text-center">
+        <div class="flex flex-col gap-2 sm:gap-4 mb-6 sm:mb-12 text-center">
             <div class="flex items-center justify-center gap-3 text-up-yellow text-[9px] sm:text-[10px] md:text-xs tracking-widest font-medium uppercase">
                 <span class="block w-6 md:w-8 h-px bg-up-yellow"></span>
                 How It Works
@@ -159,54 +162,57 @@
         </div>
 
         {{-- Steps --}}
-        <div class="flex flex-col sm:flex-row items-stretch justify-center gap-4 sm:gap-4 md:gap-6 text-white">
+        <div class="flex flex-col sm:flex-row items-stretch justify-center gap-3 sm:gap-4 md:gap-6 text-white">
 
             {{-- Step 1 --}}
             <a href="{{ $dashboardUrl }}"
-               class="group w-full sm:flex-1 max-w-sm mx-auto flex flex-col items-center
-                      px-5 sm:px-6 md:px-8 lg:px-10 py-7 sm:py-12
-                      border border-up-yellow/25 no-underline transition-all duration-300
-                      hover:border-up-yellow hover:bg-white/5">
-                <span class="material-symbols-outlined text-3xl sm:text-5xl text-up-yellow/70 mb-4 sm:mb-6 transition-transform duration-300 group-hover:scale-110 group-hover:text-up-yellow">login</span>
-                <div class="text-[9px] sm:text-xs md:text-sm text-up-yellow tracking-[0.15em] sm:tracking-[0.2em] font-semibold uppercase mb-2">Step 1</div>
-                <div class="font-heading text-lg sm:text-xl md:text-2xl text-cream font-medium tracking-wider mb-3 sm:mb-4">Login</div>
-                <span class="block w-8 h-px bg-up-yellow/40 mb-3 sm:mb-4 transition-all duration-300 group-hover:w-12 group-hover:bg-up-yellow/60"></span>
-                <div class="text-[11px] sm:text-sm md:text-base leading-6 sm:leading-7 font-light text-cream/60 text-center">
+               class="group w-full sm:flex-1 sm:max-w-none mx-auto flex flex-col items-center
+                  px-5 sm:px-6 md:px-8 lg:px-10
+                  py-5 sm:py-12
+                  border border-up-yellow/25 no-underline transition-all duration-300
+                  hover:border-up-yellow hover:bg-white/5">
+                <span class="material-symbols-outlined text-2xl sm:text-5xl text-up-yellow/70 mb-2 sm:mb-6 transition-transform duration-300 group-hover:scale-110 group-hover:text-up-yellow">login</span>
+                <div class="text-[9px] sm:text-xs md:text-sm text-up-yellow tracking-[0.15em] sm:tracking-[0.2em] font-semibold uppercase mb-1 sm:mb-2">Step 1</div>
+                <div class="font-heading text-base sm:text-xl md:text-2xl text-cream font-medium tracking-wider mb-2 sm:mb-4">Login</div>
+                <span class="block w-8 h-px bg-up-yellow/40 mb-2 sm:mb-4 transition-all duration-300 group-hover:w-12 group-hover:bg-up-yellow/60"></span>
+                <div class="text-[11px] sm:text-sm md:text-base leading-5 sm:leading-7 font-light text-cream/60 text-center">
                     Sign in with your UP email to access the booking system, browse available mentors and check session schedules.
                 </div>
             </a>
 
             {{-- Arrow --}}
-            <span class="material-symbols-outlined text-up-yellow/40 text-2xl sm:text-3xl flex-shrink-0 rotate-90 sm:rotate-0 self-center">arrow_forward</span>
+            <span class="material-symbols-outlined text-up-yellow/40 text-xl sm:text-3xl flex-shrink-0 rotate-90 sm:rotate-0 self-center my-0">arrow_forward</span>
 
             {{-- Step 2 --}}
             <a href="{{ $bookUrl }}"
-               class="group w-full sm:flex-1 max-w-sm mx-auto flex flex-col items-center
-                      px-5 sm:px-6 md:px-8 lg:px-10 py-7 sm:py-12
-                      border border-up-yellow/25 no-underline transition-all duration-300
-                      hover:border-up-yellow hover:bg-white/5">
-                <span class="material-symbols-outlined text-3xl sm:text-5xl text-up-yellow/70 mb-4 sm:mb-6 transition-transform duration-300 group-hover:scale-110 group-hover:text-up-yellow">schedule</span>
-                <div class="text-[9px] sm:text-xs md:text-sm text-up-yellow tracking-[0.15em] sm:tracking-[0.2em] font-semibold uppercase mb-2">Step 2</div>
-                <div class="font-heading text-lg sm:text-xl md:text-2xl text-cream font-medium tracking-wider mb-3 sm:mb-4">Schedule</div>
-                <span class="block w-8 h-px bg-up-yellow/40 mb-3 sm:mb-4 transition-all duration-300 group-hover:w-12 group-hover:bg-up-yellow/60"></span>
-                <div class="text-[11px] sm:text-sm md:text-base leading-6 sm:leading-7 font-light text-cream/60 text-center">
+               class="group w-full sm:flex-1 sm:max-w-none mx-auto flex flex-col items-center
+                  px-5 sm:px-6 md:px-8 lg:px-10
+                  py-5 sm:py-12
+                  border border-up-yellow/25 no-underline transition-all duration-300
+                  hover:border-up-yellow hover:bg-white/5">
+                <span class="material-symbols-outlined text-2xl sm:text-5xl text-up-yellow/70 mb-2 sm:mb-6 transition-transform duration-300 group-hover:scale-110 group-hover:text-up-yellow">schedule</span>
+                <div class="text-[9px] sm:text-xs md:text-sm text-up-yellow tracking-[0.15em] sm:tracking-[0.2em] font-semibold uppercase mb-1 sm:mb-2">Step 2</div>
+                <div class="font-heading text-base sm:text-xl md:text-2xl text-cream font-medium tracking-wider mb-2 sm:mb-4">Schedule</div>
+                <span class="block w-8 h-px bg-up-yellow/40 mb-2 sm:mb-4 transition-all duration-300 group-hover:w-12 group-hover:bg-up-yellow/60"></span>
+                <div class="text-[11px] sm:text-sm md:text-base leading-5 sm:leading-7 font-light text-cream/60 text-center">
                     Choose a session type, select your preferred mentor and subject, and pick a date and time that works for you.
                 </div>
             </a>
 
             {{-- Arrow --}}
-            <span class="material-symbols-outlined text-up-yellow/40 text-2xl sm:text-3xl flex-shrink-0 rotate-90 sm:rotate-0 self-center">arrow_forward</span>
+            <span class="material-symbols-outlined text-up-yellow/40 text-xl sm:text-3xl flex-shrink-0 rotate-90 sm:rotate-0 self-center my-0">arrow_forward</span>
 
             {{-- Step 3 --}}
-            <div class="group w-full sm:flex-1 max-w-sm mx-auto flex flex-col items-center
-                        px-5 sm:px-6 md:px-8 lg:px-10 py-7 sm:py-12
-                        border border-up-yellow/25 transition-all duration-300
-                        hover:border-up-yellow hover:bg-white/5">
-                <span class="material-symbols-outlined text-3xl sm:text-5xl text-up-yellow/70 mb-4 sm:mb-6 transition-transform duration-300 group-hover:scale-110 group-hover:text-up-yellow">person_raised_hand</span>
-                <div class="text-[9px] sm:text-xs md:text-sm text-up-yellow tracking-[0.15em] sm:tracking-[0.2em] font-semibold uppercase mb-2">Step 3</div>
-                <div class="font-heading text-lg sm:text-xl md:text-2xl text-cream font-medium tracking-wider mb-3 sm:mb-4">Attend</div>
-                <span class="block w-8 h-px bg-up-yellow/40 mb-3 sm:mb-4 transition-all duration-300 group-hover:w-12 group-hover:bg-up-yellow/60"></span>
-                <div class="text-[11px] sm:text-sm md:text-base leading-6 sm:leading-7 font-light text-cream/60 text-center">
+            <div class="group w-full sm:flex-1 sm:max-w-none mx-auto flex flex-col items-center
+                    px-5 sm:px-6 md:px-8 lg:px-10
+                    py-5 sm:py-12
+                    border border-up-yellow/25 transition-all duration-300
+                    hover:border-up-yellow hover:bg-white/5">
+                <span class="material-symbols-outlined text-2xl sm:text-5xl text-up-yellow/70 mb-2 sm:mb-6 transition-transform duration-300 group-hover:scale-110 group-hover:text-up-yellow">person_raised_hand</span>
+                <div class="text-[9px] sm:text-xs md:text-sm text-up-yellow tracking-[0.15em] sm:tracking-[0.2em] font-semibold uppercase mb-1 sm:mb-2">Step 3</div>
+                <div class="font-heading text-base sm:text-xl md:text-2xl text-cream font-medium tracking-wider mb-2 sm:mb-4">Attend</div>
+                <span class="block w-8 h-px bg-up-yellow/40 mb-2 sm:mb-4 transition-all duration-300 group-hover:w-12 group-hover:bg-up-yellow/60"></span>
+                <div class="text-[11px] sm:text-sm md:text-base leading-5 sm:leading-7 font-light text-cream/60 text-center">
                     Attend your scheduled session and make the most of your time. Engage, ask questions, and learn actively.
                 </div>
             </div>
@@ -227,19 +233,37 @@
         </div>
 
         {{-- Image carousel --}}
-        <div class="swiper-outer">
-            <button class="swiper-nav-btn" id="btn-prev">&#8249;</button>
-            <div class="swiper" id="activities-swiper">
-                <div class="swiper-wrapper">
-                    <div class="swiper-slide"><img src="https://cwpbwqcxlccbittkhasq.supabase.co/storage/v1/object/public/assets/images/landing-page/carousel/Image-1.jpg" alt="Activity 1"></div>
-                    <div class="swiper-slide"><img src="https://cwpbwqcxlccbittkhasq.supabase.co/storage/v1/object/public/assets/images/landing-page/carousel/Image-2.jpg" alt="Activity 2"></div>
-                    <div class="swiper-slide"><img src="https://cwpbwqcxlccbittkhasq.supabase.co/storage/v1/object/public/assets/images/landing-page/carousel/Image-3.jpg" alt="Activity 3"></div>
-                    <div class="swiper-slide"><img src="https://cwpbwqcxlccbittkhasq.supabase.co/storage/v1/object/public/assets/images/landing-page/carousel/Image-4.jpg" alt="Activity 4"></div>
-                    <div class="swiper-slide"><img src="https://cwpbwqcxlccbittkhasq.supabase.co/storage/v1/object/public/assets/images/landing-page/carousel/Image-5.jpg" alt="Activity 5"></div>
-                </div>
-                <div class="swiper-pagination"></div>
+        <div class="splide" id="activities-splide">
+            <div class="splide__track">
+                <ul class="splide__list">
+                    <li class="splide__slide">
+                        <a href="https://cwpbwqcxlccbittkhasq.supabase.co/storage/v1/object/public/assets/images/landing-page/carousel/Image-1.jpg" data-glightbox="gallery: activities">
+                            <img src="https://cwpbwqcxlccbittkhasq.supabase.co/storage/v1/object/public/assets/images/landing-page/carousel/Image-1.jpg" alt="Activity 1">
+                        </a>
+                    </li>
+                    <li class="splide__slide">
+                        <a href="https://cwpbwqcxlccbittkhasq.supabase.co/storage/v1/object/public/assets/images/landing-page/carousel/Image-2.jpg" data-glightbox="gallery: activities">
+                            <img src="https://cwpbwqcxlccbittkhasq.supabase.co/storage/v1/object/public/assets/images/landing-page/carousel/Image-2.jpg" alt="Activity 2">
+                        </a>
+                    </li>
+                    <li class="splide__slide">
+                        <a href="https://cwpbwqcxlccbittkhasq.supabase.co/storage/v1/object/public/assets/images/landing-page/carousel/Image-3.jpg" data-glightbox="gallery: activities">
+                            <img src="https://cwpbwqcxlccbittkhasq.supabase.co/storage/v1/object/public/assets/images/landing-page/carousel/Image-3.jpg" alt="Activity 3">
+                        </a>
+                    </li>
+                    <li class="splide__slide">
+                        <a href="https://cwpbwqcxlccbittkhasq.supabase.co/storage/v1/object/public/assets/images/landing-page/carousel/Image-4.jpg" data-glightbox="gallery: activities">
+                            <img src="https://cwpbwqcxlccbittkhasq.supabase.co/storage/v1/object/public/assets/images/landing-page/carousel/Image-4.jpg" alt="Activity 4">
+                        </a>
+                    </li>
+                    <li class="splide__slide">
+                        <a href="https://cwpbwqcxlccbittkhasq.supabase.co/storage/v1/object/public/assets/images/landing-page/carousel/Image-5.jpg" data-glightbox="gallery: activities">
+                            <img src="https://cwpbwqcxlccbittkhasq.supabase.co/storage/v1/object/public/assets/images/landing-page/carousel/Image-5.jpg" alt="Activity 5">
+                        </a>
+                    </li>
+                </ul>
             </div>
-            <button class="swiper-nav-btn" id="btn-next">&#8250;</button>
         </div>
+
     </section>
 </x-layouts.landing>
