@@ -127,11 +127,11 @@
             </a>
 
             {{-- Column 3 --}}
-            <a href="{{ route('public.services') }}#review-classes"
+            <a href="{{ route('public.services') }}#review_classes"
                class="group flex flex-col px-4 sm:px-8 md:px-10 lg:px-12
                   py-4 sm:py-10
                   transition-colors hover:bg-cream-dark/30">
-                <img src="https://cwpbwqcxlccbittkhasq.supabase.co/storage/v1/object/public/assets/images/landing-page/services/review-classes.jpg"
+                <img src="https://cwpbwqcxlccbittkhasq.supabase.co/storage/v1/object/public/assets/images/landing-page/services/review_classes.jpg"
                      alt="Review Class"
                      class="w-full h-32 sm:h-44 md:h-48 object-cover rounded-sm mb-3 sm:mb-5 border border-cream-border">
                 <div class="text-sm sm:text-base md:text-[15px] lg:text-[18px] xl:text-[22px] text-up-maroon font-medium mb-1 md:mb-2">Review Classes</div>

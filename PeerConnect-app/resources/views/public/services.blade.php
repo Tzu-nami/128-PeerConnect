@@ -17,7 +17,7 @@
             <div class="flex gap-6 flex-wrap mt-2">
                 <a href="#one-on-one" class="border border-text-brown rounded-[40px] px-4 py-1 hover:bg-cream">One-on-One Sessions</a>
                 <a href="#group-session" class="border border-text-brown rounded-[40px] px-4 py-1 hover:bg-cream">Group Sessions</a>
-                <a href="#review-classes" class="border border-text-brown rounded-[40px] px-4 py-1 hover:bg-cream">Review Classes</a>
+                <a href="#review_classes" class="border border-text-brown rounded-[40px] px-4 py-1 hover:bg-cream">Review Classes</a>
             </div>
         </div>
     </section>
@@ -88,7 +88,7 @@
             {{-- Row 3 --}}
             <div id="review-classes" class="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-14 scroll-mt-44 lg:scroll-mt-52 xl:scroll-mt-72 items-center">
                 <img
-                    src="https://cwpbwqcxlccbittkhasq.supabase.co/storage/v1/object/public/assets/images/landing-page/services/review-classes.jpg"
+                    src="https://cwpbwqcxlccbittkhasq.supabase.co/storage/v1/object/public/assets/images/landing-page/services/review_classes.jpg"
                     alt="Review Class"
                     class="w-full aspect-[16/9] object-cover bg-cream-dark border border-cream-border max-h-64 lg:max-h-none">
                 <div class="flex flex-col justify-center">
