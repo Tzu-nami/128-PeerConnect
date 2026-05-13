@@ -1006,17 +1006,24 @@ if (request()->get('open') === 'subject') {
                                     </div>
                                 </template>
                             </div>
-                            <button @click=" const last = avails[avails.length - 1] || {}; 
-                                    avails.push({
-                                        id: Date.now() + Math.random(), 
-                                        day_of_week: last.day_of_week || '', 
-                                        start_time: last.start_time || '', 
-                                        end_time: last.end_time || ''
-                                    })" 
+                            <div class="flex items-center justify-between px-1">
+                                <button @click=" const last = avails[avails.length - 1] || {}; 
+                                        avails.push({
+                                            id: Date.now() + Math.random(), 
+                                            day_of_week: last.day_of_week || '', 
+                                            start_time: last.start_time || '', 
+                                            end_time: last.end_time || ''
+                                        })" 
+                                        type="button"
+                                        class="mt-3 flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-800 transition">
+                                    <i class="fa-solid fa-plus text-[10px]"></i> Add more days or time slots
+                                </button>
+                                <button @click="avails = [{id: Date.now() + Math.random(), day_of_week: '', start_time: '', end_time: ''}]" 
                                     type="button"
-                                    class="mt-3 flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-800 transition">
-                                <i class="fa-solid fa-plus text-[10px]"></i> Add more days or time slots
-                            </button>
+                                    class="mt-3 flex items-center gap-1.5 text-xs font-bold text-red-400 hover:text-red-600 hover:text-red-600 transition">
+                                    <i class="fa-solid fa-rotate-left text-[10px]"></i> Clear all
+                                </button>
+                            </div>
                         </div>
                         @if($errors->hasAny(['availabilities', 'availabilities.*']))
                         <div class="mt-2 p-3 rounded-lg bg-red-50 border border-red-200">
