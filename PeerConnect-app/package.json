@@ -20,8 +20,6 @@
     "dependencies": {
         "@splidejs/splide": "^4.1.4",
         "alpinejs": "^3.15.11",
-        "glightbox": "^3.3.1",
-        "splide": "^0.0.1-security",
-        "swiper": "^12.1.2"
+        "glightbox": "^3.3.1"
     }
 }
