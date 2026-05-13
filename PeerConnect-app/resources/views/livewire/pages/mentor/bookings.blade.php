@@ -714,10 +714,10 @@ $skipFeedback = action(function () {
     </div>
 
     {{-- ── Main content grid ── --}}
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
 
         {{-- LEFT COLUMN --}}
-        <div class="lg:col-span-2">
+        <div class="md:col-span-2">
 
             @php
                 $questions = [
@@ -1656,7 +1656,7 @@ splitSlotSegments(dayKey, slotStartRaw, slotEndRaw, dateStr) {
         </div>
 
         {{-- RIGHT COLUMN --}}
-        <div class="lg:col-span-1 space-y-6">
+        <div class="md:col-span-1 space-y-6">
 
             {{-- Student Profile --}}
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"

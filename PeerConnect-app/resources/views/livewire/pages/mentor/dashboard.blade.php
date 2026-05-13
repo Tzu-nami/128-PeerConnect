@@ -274,15 +274,15 @@ $searchIndex = computed(function () {
     </div>
 
     {{-- ── MAIN GRID ──────────────────────────────────────────────────────── --}}
-    <div class="grid grid-cols-3 gap-8">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
         {{-- ── LEFT COLUMN ──────────────────────────────────────────── --}}
-        <div class="col-span-2 space-y-8">
+        <div class="col-span-1 lg:col-span-2 space-y-8">
 
             {{-- Today's Schedule --}}
             <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col">
 
-                <div class="flex justify-between items-center mb-6">
+                <div class="flex flex-wrap justify-between items-center mb-6 gap-3">
                     <div>
                         <h2 class="text-lg font-bold text-slate-800" id="tableTitle">
                             <i class="fa-solid fa-calendar-check"></i> Today's Schedule
@@ -290,8 +290,8 @@ $searchIndex = computed(function () {
                             <p class="text-xs text-gray-400" id="tableSubtitle"></p>
                         </div>
 
-                    <div class="flex gap-2">
-                        <div class="relative w-48">
+                    <div class="flex flex-wrap gap-2">
+                        <div class="relative w-full sm:w-48">
                             <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-300 text-xs"></i>
                             <input type="text" id="liveSearchInput"
                                    placeholder="Search..."
@@ -351,7 +351,7 @@ $searchIndex = computed(function () {
 
                 <div class="mt-4 pt-4 border-t border-gray-50 flex items-center justify-between">
                     <div class="text-[11px] text-gray-400 font-medium" id="pageIndicator">Showing 0 results</div>
-                    <div class="flex gap-2">
+                    <div class="flex flex-wrap gap-2">
                         <button id="prevBtn" class="pagination-btn"><i class="fa-solid fa-chevron-left"></i></button>
                         <button id="nextBtn" class="pagination-btn"><i class="fa-solid fa-chevron-right"></i></button>
                     </div>
@@ -360,7 +360,7 @@ $searchIndex = computed(function () {
 
             {{-- Stat Cards --}}
 {{-- ── Stats Row ── --}}
-<div class="grid grid-cols-3 gap-4">
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
     <div onclick="openHoursModal()"
          class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-blue-600
                 flex items-center gap-4 hover:shadow-md hover:-translate-y-0.5

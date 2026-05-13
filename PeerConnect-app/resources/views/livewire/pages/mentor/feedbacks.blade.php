@@ -119,7 +119,7 @@ $subjects = computed(function () {
                     <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-300 text-sm"></i>
                     <input type="text"
                            placeholder="Search..."
-                           class="pl-8 pr-3 py-1.5 text-xs font-medium text-slate-700 placeholder-gray-400 border border-gray-200 rounded-lg bg-white outline-none focus:ring-1 focus:border-up-maroon focus:ring-up-maroon w-56 h-[34px] transition-shadow"
+                           class="pl-8 pr-3 py-1.5 text-xs font-medium text-slate-700 placeholder-gray-400 border border-gray-200 rounded-lg bg-white outline-none focus:ring-1 focus:border-up-maroon focus:ring-up-maroon w-full sm:w-56 h-[34px] transition-shadow"
                            x-model="search"
                            @input="currentPage = 1">
                 </div>
@@ -166,7 +166,7 @@ $subjects = computed(function () {
 
         {{-- Data Table --}}
         <div class="overflow-x-auto">
-            <table class="w-full text-sm text-left table-fixed">
+            <table class="w-full text-sm text-left table-fixed min-w-[650px]">
                 <thead class="bg-slate-50 border-b border-gray-100">
                 <tr>
                     {{-- Date --}}

@@ -58,7 +58,7 @@ mount(function () {
 ?>
 
 <div x-data="mentorDirectory(@js($this->allMentors))">
-    <div class="mb-3 pb-4 border-b border-gray-200 flex flex-wrap items-center justify-between gap-4 animate-fade-up">
+    <div class="mb-3 pb-4 border-b border-gray-200 flex flex-col sm:flex-row flex-wrap items-start sm:items-center justify-between gap-3 animate-fade-up">
         <div>
             <h1 class="text-3xl font-extrabold tracking-tight text-transparent bg-clip-text bg-up-maroon flex items-center gap-3">
                 Our Peer Mentors
@@ -66,19 +66,19 @@ mount(function () {
             <p class="text-sm font-medium text-slate-500 mt-1">Browse available mentors and their expertise.</p>
         </div>
 
-        <div class="flex flex-wrap items-center gap-3">
+        <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
             {{-- Search --}}
             <div class="relative shadow-sm">
                 <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
                 <input type="text" x-model="searchQuery" @input="currentPage = 1"
                        placeholder="Search by name..."
-                       class="pl-8 pr-3 py-1.5 text-xs font-medium text-slate-700 placeholder-gray-400 border border-gray-200 rounded-lg bg-white outline-none focus:ring-1 focus:border-up-maroon focus:ring-up-maroon w-56 h-[34px] transition-shadow">
+                       class="pl-8 pr-3 py-1.5 text-xs font-medium text-slate-700 placeholder-gray-400 border border-gray-200 rounded-lg bg-white outline-none focus:ring-1 focus:border-up-maroon focus:ring-up-maroon w-full sm:w-56 h-[34px] transition-shadow">
             </div>
 
             {{-- Day filter --}}
             <div class="flex items-center gap-2 bg-gray-50 p-1 rounded-lg border border-gray-200 shadow-sm">
                 <span class="text-[10px] font-bold uppercase tracking-widest text-gray-400 pl-2 pr-1">Day</span>
-                <div class="flex gap-1">
+                <div class="flex flex-wrap gap-1">
                     <button @click="selectedDay = ''; currentPage = 1"
                             :class="selectedDay === '' ? 'bg-up-maroon text-white shadow-md' : 'bg-white text-slate-600 border border-gray-200 hover:bg-gray-100'"
                             class="px-3 py-1.5 text-xs font-bold rounded transition">All</button>
@@ -147,7 +147,7 @@ mount(function () {
                 {{-- Subjects --}}
                 <div class="px-4 pt-3 pb-2 flex-1">
                     <p class="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Subjects</p>
-                    <div class="flex gap-1">
+                    <div class="flex flex-wrap gap-1">
                         <template x-for="(subject, index) in mentor.subjects.slice(0, 3)" :key="index">
                         <span class="bg-red-50 text-red-700 border border-red-100 px-2 py-0.5 rounded text-[10px] font-bold whitespace-nowrap"
                               x-text="subject.code"></span>
@@ -209,8 +209,8 @@ mount(function () {
                 <template x-if="selectedMentor">
                     <div>
                         {{-- Modal Header --}}
-                        <div class="flex-shrink-0 flex items-start gap-5 p-6 bg-[#1a3c2f]">
-                            <div class="w-36 h-36 rounded-2xl overflow-hidden flex-shrink-0 border-2 border-white/20 shadow-lg bg-gray-200">
+                        <div class="flex-shrink-0 flex items-start gap-4 p-4 sm:p-6 bg-[#1a3c2f]">
+                            <div class="w-24 h-24 sm:w-36 sm:h-36 rounded-2xl overflow-hidden flex-shrink-0 border-2 border-white/20 shadow-lg bg-gray-200">
                                 <img :src="selectedMentor.avatar" :alt="selectedMentor.lastName" class="w-full h-full object-cover bg-white" />
                             </div>
                             <div class="flex-1 min-w-0 pt-1">

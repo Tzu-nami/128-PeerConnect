@@ -119,7 +119,7 @@ $summaryCounts = computed(function () {
     </div>
 
     {{-- Summary Stat Cards --}}
-    <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-6 animate-fade-up [animation-delay:150ms]">
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-6 animate-fade-up [animation-delay:150ms]">
         <div onclick="openTotalModal()" class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-slate-400 flex items-center gap-4 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer">
             <div class="text-2xl flex-shrink-0"><i class="fa-solid fa-list-check text-slate-500"></i></div>
             <div class="min-w-0 flex-1">
@@ -225,7 +225,7 @@ $summaryCounts = computed(function () {
 
         {{-- Data Table --}}
         <div class="overflow-x-auto">
-            <table class="w-full text-sm text-left table-fixed">
+            <table class="w-full text-sm text-left table-fixed min-w-[750px]">
                 <thead class="bg-slate-50 border-b border-gray-100">
                 <tr>
                     <th class="px-5 py-3 text-xs font-bold text-gray-400 tracking-wider w-[15%]">
