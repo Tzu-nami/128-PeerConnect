@@ -15,6 +15,7 @@ class SessionCompleted extends Mailable implements ShouldQueue
     use Queueable, SerializesModels;
 
     public $booking;
+    public $feedbackUrl;
 
     /**
      * Create a new message instance.
@@ -22,6 +23,14 @@ class SessionCompleted extends Mailable implements ShouldQueue
     public function __construct(Bookings $booking)
     {
         $this->booking = $booking;
+        
+        // Check what role the mentee is
+        $user = $booking->student->user;
+        if ($user && $user->user_roles === 'mentor') {
+            $this->feedbackUrl = route('mentor.bookings');
+        } else {
+            $this->feedbackUrl = route('student.bookings');
+        }
     }
 
     /**

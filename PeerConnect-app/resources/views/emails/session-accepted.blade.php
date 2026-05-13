@@ -11,7 +11,7 @@ Your enrichment session request for **{{ $booking->subject->code }}** has been *
 
 Please make sure to arrive on time and bring any materials or questions you have prepared. You can view your full session details in your dashboard.
 
-<x-mail::button :url="route('student.dashboard')">
+<x-mail::button :url="$dashboardUrl">
 View My Session
 </x-mail::button>
 

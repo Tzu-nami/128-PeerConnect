@@ -1232,7 +1232,21 @@ document.addEventListener('alpine:init', () => {
 
         changeHour(dir) { this.hour = ((this.hour - 1 + dir + 12) % 12) + 1; this.syncHourInput(); this.commit(); },
         changeMin(dir)  { this.minute = (this.minute + dir * 15 + 60) % 60; this.syncMinInput(); this.commit(); },
-        setAmpm(val)    { this.ampm = val; this.commit(); },
+        setAmpm(val)    { 
+            if (this.ampm === val) return;
+            
+            this.ampm = val; 
+
+            if (val === 'PM' && this.hour !== 12 && this.hour >= 7) {
+                this.hour = 12;
+            }
+
+            if (val === 'AM' && (this.hour === 12 || this.hour <= 6)) {
+                this.hour = 8;
+            }
+            
+            this.commit(); 
+        },
 
         onHourInput(e) {
             let val = parseInt(e.target.value) || 1;
