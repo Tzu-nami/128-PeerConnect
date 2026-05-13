@@ -113,7 +113,7 @@ $allMentors = computed(function () {
         return [
             'id' => $mp->id,
             'user_id' => $mp->user_id,
-            'lastName' => strtoupper($mp->user->lastName),
+            'lastName' => $mp->user->lastName,
             'firstName' => $mp->user->firstName,
             'middleInitial' => $mp->user->middleInitial ? $mp->user->middleInitial . '.' : '',
             'email' => $mp->user->email,
@@ -635,8 +635,8 @@ if (request()->get('open') === 'subject') {
                         <tr class="mentor-row border-b border-gray-50 hover:bg-slate-50 transition">
 
                             <td class="px-5 py-4 align-middle" style="width:22%;">
-                                <div class="hover-tooltip" :data-full="mentor.lastName + ', ' + mentor.firstName + ' ' + mentor.middleInitial + '\n' + mentor.yearLevel + ' — ' + mentor.degreeProgram">
-                                    <p class="font-bold text-slate-700 text-xs truncate" x-text="mentor.lastName + ', ' + mentor.firstName + ' ' + mentor.middleInitial"></p>
+                                <div class="hover-tooltip" :data-full="mentor.lastName.toUpperCase() + ', ' + mentor.firstName + ' ' + mentor.middleInitial + '\n' + mentor.yearLevel + ' — ' + mentor.degreeProgram">
+                                    <p class="font-bold text-slate-700 text-xs truncate" x-text="mentor.lastName.toUpperCase() + ', ' + mentor.firstName + ' ' + mentor.middleInitial"></p>
                                     <p class="text-[10px] text-gray-400 mt-0.5 truncate" x-text="mentor.yearLevel + ' — ' + mentor.degreeProgram"></p>
                                 </div>
                             </td>
@@ -742,7 +742,7 @@ if (request()->get('open') === 'subject') {
                                 <img :src="selectedMentor.avatar" alt="avatar" class="w-full h-full object-cover bg-white" />
                             </div>
                             <div class="flex-1 min-w-0 pt-1">
-                                <p class="text-white font-black text-2xl leading-tight tracking-tight" x-text="selectedMentor.lastName + ', ' + selectedMentor.firstName + ' ' + selectedMentor.middleInitial"></p>
+                                <p class="text-white font-black text-2xl leading-tight tracking-tight" x-text="selectedMentor.lastName.toUpperCase() + ', ' + selectedMentor.firstName + ' ' + selectedMentor.middleInitial"></p>
                                 <template x-if="selectedMentor.yearLevel && selectedMentor.degreeProgram">
                                     <p class="text-white/60 text-xs mt-1" x-text="selectedMentor.yearLevel + ' — ' + selectedMentor.degreeProgram"></p>
                                 </template>
