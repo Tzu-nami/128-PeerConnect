@@ -631,7 +631,7 @@ $skipFeedback = action(function () {
         x-data="{ show: {{ ($this->completedBooking && $showFeedbackModal) ? 'true' : 'false' }} }"
         x-show="show"
         x-cloak
-        class="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+        class="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
 
         @if ($this->completedBooking)
             @php $cb = $this->completedBooking; @endphp
@@ -714,10 +714,10 @@ $skipFeedback = action(function () {
     </div>
 
     {{-- ── Main content grid ── --}}
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
         {{-- LEFT COLUMN --}}
-        <div class="md:col-span-2">
+        <div class="lg:col-span-2">
 
             @php
                 $questions = [
@@ -1020,7 +1020,7 @@ $skipFeedback = action(function () {
                             </div>
                         </div>
 
-                        <div class="mt-6 pt-5 border-t border-gray-100 flex items-center justify-between gap-4">
+                        <div class="mt-6 pt-5 border-t border-gray-100 flex flex-wrap items-center justify-between gap-3">
                             <p class="flex items-center gap-2 text-xs font-bold text-gray-500 flex-1">
                                 <i class="fa-solid fa-circle-info text-gray-500 flex-shrink-0 font-bold"></i>
                                 You may cancel this booking at any time.
@@ -1052,7 +1052,7 @@ $skipFeedback = action(function () {
 </p>
                 </div>
 
-<div class="bg-white pl-6 pr-6 pb-6 pt-4 rounded-lg shadow-sm border-gray-200 overflow-visible"
+<div class="bg-white px-4 sm:px-6 pb-6 pt-4 rounded-lg shadow-sm border-gray-200 overflow-visible"
      x-data="{
         subject_id:       $wire.entangle('subject_id'),
         topic:            $wire.entangle('topic'),
@@ -1510,7 +1510,7 @@ splitSlotSegments(dayKey, slotStartRaw, slotEndRaw, dateStr) {
 </div>
  
         {{-- Date + Time row --}}
-        <div class="grid grid-cols-3 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
  
             {{-- Preferred Day --}}
             <div x-data="bookingDatePicker()" x-init="init()" @click.outside="close()">
@@ -1656,7 +1656,7 @@ splitSlotSegments(dayKey, slotStartRaw, slotEndRaw, dateStr) {
         </div>
 
         {{-- RIGHT COLUMN --}}
-        <div class="md:col-span-1 space-y-6">
+        <div class="lg:col-span-1 space-y-6">
 
             {{-- Student Profile --}}
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"
