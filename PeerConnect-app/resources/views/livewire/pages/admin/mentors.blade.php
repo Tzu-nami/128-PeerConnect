@@ -235,7 +235,7 @@ $confirmEdit = action(function ($id, $subjects, $availabilities) {
             }
         }
         $groupedSchedule[$day][] = [
-            'start_time' => $row['start_time'], 
+            'start_time' => $row['start_time'],
             'end_time' => $row['end_time']
         ];
     }
@@ -353,7 +353,7 @@ $confirmMentor = action(function () {
         ])
         ->values()
         ->toArray();
-        
+
     $this->validate([
         'avatar' => ['required', 'image', 'max:2048'],
         'selectedSubjects' => ['required', 'array', 'min:1'],
@@ -386,7 +386,7 @@ $confirmMentor = action(function () {
             }
         }
         $groupedSchedule[$day][] = [
-            'start_time' => $row['start_time'], 
+            'start_time' => $row['start_time'],
             'end_time' => $row['end_time']
         ];
     }
@@ -499,7 +499,7 @@ if (request()->get('open') === 'subject') {
 ?>
 
 <div x-data="mentorManagement(@js($this->allMentors), $wire)">
-    
+
     {{-- Page heading --}}
     <div class="mb-6 pb-4 border-b border-gray-200 flex flex-wrap items-center justify-between gap-4">
         <div>
@@ -519,7 +519,7 @@ if (request()->get('open') === 'subject') {
                 <p class="text-xl lg:text-2xl font-black text-slate-800 truncate">{{ $this->mentorStats['total'] }}</p>
             </div>
         </div>
-        
+
         <div class="bg-white p-4 lg:p-5 rounded-xl shadow-sm border-l-4 border-green-600 flex items-center gap-3 lg:gap-4">
             <div class="text-2xl flex-shrink-0"><i class="fa-solid fa-circle-check text-green-600"></i></div>
             <div class="min-w-0 flex-1">
@@ -527,7 +527,7 @@ if (request()->get('open') === 'subject') {
                 <p class="text-xl lg:text-2xl font-black text-slate-800 truncate">{{ $this->mentorStats['acceptedThisWeek'] }}</p>
             </div>
         </div>
-        
+
         <div class="bg-white p-4 lg:p-5 rounded-xl shadow-sm border-l-4 border-yellow-500 flex items-center gap-3 lg:gap-4">
             <div class="text-2xl flex-shrink-0"><i class="fa-solid fa-hourglass-half text-yellow-500"></i></div>
             <div class="min-w-0 flex-1">
@@ -535,7 +535,7 @@ if (request()->get('open') === 'subject') {
                 <p class="text-xl lg:text-2xl font-black text-slate-800 truncate">{{ $this->mentorStats['pendingThisWeek'] }}</p>
             </div>
         </div>
-        
+
         <div class="bg-white p-4 lg:p-5 rounded-xl shadow-sm border-l-4 border-purple-600 flex items-center gap-3 lg:gap-4">
             <div class="text-2xl flex-shrink-0"><i class="fa-solid fa-trophy text-purple-600"></i></div>
             <div class="min-w-0 flex-1">
@@ -561,7 +561,7 @@ if (request()->get('open') === 'subject') {
                         class="pl-8 pr-3 py-1.5 text-xs font-medium text-slate-700 placeholder-gray-400 border border-gray-200 rounded-lg bg-white outline-none focus:ring-1 focus:border-up-maroon focus:ring-up-maroon w-60 h-[34px] transition-shadow">
                 </div>
 
-                <button type="button" 
+                <button type="button"
                     @click="opening = 'subject'; $wire.openSubjectModal().finally(() => opening = null)"
                     x-bind:disabled="opening !== null"
                     class="flex items-center justify-center bg-slate-800 text-white rounded-lg text-xs font-bold hover:bg-black transition shadow-sm h-[34px] w-[120px] disabled:cursor-not-allowed">
@@ -573,11 +573,11 @@ if (request()->get('open') === 'subject') {
                     </span>
                 </button>
 
-                <button type="button" 
+                <button type="button"
                     @click="opening = 'mentor'; $wire.openModal().finally(() => opening = null)"
                     x-bind:disabled="opening !== null"
                     class="flex items-center justify-center bg-slate-800 text-white rounded-lg text-xs font-bold hover:bg-black transition shadow-sm h-[34px] w-[120px] disabled:cursor-not-allowed">
-                    
+
                     <span x-show="opening !== 'mentor'" class="flex items-center gap-2">
                         <i class="fa-solid fa-user-plus text-[10px]"></i> Add Mentor
                     </span>
@@ -589,7 +589,7 @@ if (request()->get('open') === 'subject') {
         </div>
 
         @if(session('successMessage'))
-            <div x-data="{ show: true }" 
+            <div x-data="{ show: true }"
                  x-cloak
                  x-show="show"
                  x-init="setTimeout(() => show = false, 5000)"
@@ -600,7 +600,7 @@ if (request()->get('open') === 'subject') {
                  x-transition:leave-start="opacity-100"
                  x-transition:leave-end="opacity-0"
                  class="mx-5 mt-4 mb-2">
-                
+
                 <div class="flex items-center justify-between px-4 py-3 rounded-lg border bg-emerald-50 border-emerald-200 text-emerald-800">
                     <div class="flex items-center gap-3">
                         <i class="fa-solid fa-circle-check text-emerald-600"></i>
@@ -800,7 +800,7 @@ if (request()->get('open') === 'subject') {
 
     {{-- Add Mentor Modal --}}
     <div x-cloak class="modal-overlay" x-show="$wire.showModal" x-cloak
-        x-data="{ fileName: '', isVerifying: false }" 
+        x-data="{ fileName: '', isVerifying: false }"
         x-init="$watch('$wire.showModal', val => { if (!val) { fileName = ''; document.getElementById('avatar-upload').value = ''; } })">
         <div class="modal-box-crud max-w-2xl flex flex-col" style="max-height: 90vh;">
             <div class="px-8 py-6 border-b flex justify-between items-center flex-shrink-0 bg-white">
@@ -1075,26 +1075,26 @@ if (request()->get('open') === 'subject') {
         x-data="{ fileName: '', isVerifying: false,
         get hasChanges() {
             if (this.fileName !== '') return true;
-            
+
             // Check Name changes
             if ($wire.editMentorFirstName !== editingMentor.firstName) return true;
             if ($wire.editMentorLastName !== editingMentor.lastName) return true;
             let origMI = (editingMentor.middleInitial || '').replace('.', '').trim();
             let newMI = ($wire.editMentorMiddleInitial || '').trim();
             if (newMI !== origMI) return true;
-            
+
             // Check Subject changes
             const origSubs = [...originalForm.subjects].sort().join(',');
             const newSubs = [...editForm.subjects].sort().join(',');
             if (origSubs !== newSubs) return true;
-            
+
             // Check Availability changes
             const clean = arr => arr.map(a => `${a.day_of_week}-${a.start_time}-${a.end_time}`).sort().join('|');
             if (clean(originalForm.availabilities) !== clean(editForm.availabilities)) return true;
-            
+
             return false;
             }
-        }" 
+        }"
         x-init="$watch('$wire.showEditModal', val => { if (!val) { fileName = ''; document.getElementById('edit-avatar-upload').value = ''; } })">
         <div class="modal-box-crud max-w-2xl overflow-hidden flex flex-col" style="max-height: 90vh;">
             <div class="px-8 py-6 bg-white border-b flex justify-between items-center flex-shrink-0">
@@ -1110,7 +1110,7 @@ if (request()->get('open') === 'subject') {
             <div id="editModalScroll" class="px-8 py-6 space-y-5 overflow-y-auto bg-white">
                 <template x-if="editingMentor">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        
+
                         {{-- Step 1: Basic Information --}}
                         <div class="flex flex-col">
                             <div class="flex items-center gap-2 mb-3">
@@ -1347,7 +1347,7 @@ if (request()->get('open') === 'subject') {
     </div>
 
     {{-- ── SUBJECT MODAL ── --}}
-<div x-cloak class="modal-overlay" x-show="$wire.showSubjectModal"
+    <div x-cloak class="modal-overlay" x-show="$wire.showSubjectModal"
     x-data="{
         isVerifying: false,
         subjectCode: '',
@@ -1359,7 +1359,7 @@ if (request()->get('open') === 'subject') {
             this.$watch('$wire.newSubjectCode', v => this.subjectCode = v ?? '');
             this.$watch('$wire.newSubjectName', v => this.subjectName = v ?? '');
         }
-    }">      
+    }">
     <div class="modal-box-crud max-w-md">
             <div class="px-8 py-5 bg-white border-b flex justify-between items-center">
                 <div>
@@ -1409,7 +1409,7 @@ if (request()->get('open') === 'subject') {
             <p class="text-sm text-gray-500 mt-2 mb-8">This will be added to the list of available subjects.</p>
             <div class="flex gap-3" x-data="{ isSaving: false }">
                 <button type="button" @click="$wire.showSubjectConfirm = false" class="btn-modal btn-modal-cancel" x-bind:disabled="isSaving">Cancel</button>
-                <button type="button" @click="isSaving = true; $wire.saveSubject().finally(() => isSaving = false)" x-bind:disabled="isSaving" 
+                <button type="button" @click="isSaving = true; $wire.saveSubject().finally(() => isSaving = false)" x-bind:disabled="isSaving"
                     class="btn-modal btn-modal-green">
                     <span x-show="!isSaving">Save</span>
                     <span x-show="isSaving" style="display: none;"><i class="fa-solid fa-spinner fa-spin mr-1"></i>Saving...</span>
