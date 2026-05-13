@@ -500,7 +500,7 @@ body.app-layout { overflow: hidden; }
 }
 
 #activities-splide .splide__slide {
-    height: 500px;
+    height: 400px;
     opacity: 0.4;
     transition: opacity 0.3s ease;
 }
@@ -550,14 +550,9 @@ body.app-layout { overflow: hidden; }
     opacity: 0.8;
 }
 
-/* desktop — default */
-#activities-splide .splide__slide {
-    height: 500px;
-}
-
 @media (max-width: 1024px) {
     #activities-splide .splide__slide {
-        height: 380px;
+        height: 280px;
     }
 }
 
@@ -565,7 +560,7 @@ body.app-layout { overflow: hidden; }
     #activities-splide .splide__slide {
         opacity: 1;
         transition: none;
-        height: 250px;
+        height: 200px;
     }
 
     #activities-splide .splide__arrow {

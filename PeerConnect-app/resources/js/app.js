@@ -13,7 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (splideEl) {
         new Splide('#activities-splide', {
             type    : 'loop',
-            padding : '5rem',
+            padding : '15rem',
             perPage : 1,
             gap     : '1rem',
             focus   : 'center',

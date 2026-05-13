@@ -98,6 +98,7 @@ new class extends Component {
         $user = auth()->user();
         $navItems = match(true) {
             $user->isAdmin() => [
+                ['route' => 'home',            'icon' => 'fa-solid fa-graduation-cap',  'label' => 'LRC PeerConnect'],
                 ['route' => 'admin.dashboard', 'icon' => 'fa-solid fa-gauge',           'label' => 'Dashboard'],
                 ['route' => 'admin.mentors',   'icon' => 'fa-solid fa-chalkboard-user', 'label' => 'Mentor Management'],
                 ['route' => 'admin.staff',     'icon' => 'fa-solid fa-user-tie',        'label' => 'Staff Management'],
@@ -106,6 +107,7 @@ new class extends Component {
                 ['route' => 'admin.feedbacks', 'icon' => 'fa-solid fa-comments',        'label' => 'Student Feedback'],
             ],
             $user->isMentor() => [
+                ['route' => 'home',             'icon' => 'fa-solid fa-graduation-cap',    'label' => 'LRC PeerConnect'],
                 ['route' => 'mentor.dashboard', 'icon' => 'fa-solid fa-gauge',             'label' => 'Dashboard'],
                 ['route' => 'mentor.bookings',  'icon' => 'fa-solid fa-calendar-check',    'label' => 'Booking Form'],
                 ['route' => 'mentor.history',   'icon' => 'fa-solid fa-clock-rotate-left', 'label' => 'Booking History'],
@@ -114,6 +116,7 @@ new class extends Component {
                 ['route' => 'mentor.feedbacks', 'icon' => 'fa-solid fa-comment-dots',      'label' => 'Student Feedbacks'],
             ],
             $user->isStudent() => [
+                ['route' => 'home',              'icon' => 'fa-solid fa-graduation-cap',    'label' => 'LRC PeerConnect'],
                 ['route' => 'student.dashboard', 'icon' => 'fa-solid fa-gauge',             'label' => 'Dashboard'],
                 ['route' => 'student.bookings',  'icon' => 'fa-solid fa-calendar-check',    'label' => 'Booking Form'],
                 ['route' => 'student.history',   'icon' => 'fa-solid fa-clock-rotate-left', 'label' => 'Booking History'],
