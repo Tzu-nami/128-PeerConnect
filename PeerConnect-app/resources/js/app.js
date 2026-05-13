@@ -63,12 +63,27 @@ document.addEventListener('alpine:init', () => {
             active: null,
             toggle(name) {
                 this.active = this.active === name ? null : name;
+                // Close mobile nav when any dropdown opens
+                if (this.active !== null) {
+                    Alpine.store('sidebar').close();
+                }
             },
             close() {
                 this.active = null;
             },
         });
     }
+
+    Alpine.store('sidebar', {
+        open: false,
+        toggle() {
+            this.open = !this.open;
+            if (this.open) {
+                Alpine.store('dropdowns').close();
+            }
+        },
+        close() { this.open = false; },
+    });
 });
 
 // Auto fade for Display Messages
@@ -1232,10 +1247,10 @@ document.addEventListener('alpine:init', () => {
 
         changeHour(dir) { this.hour = ((this.hour - 1 + dir + 12) % 12) + 1; this.syncHourInput(); this.commit(); },
         changeMin(dir)  { this.minute = (this.minute + dir * 15 + 60) % 60; this.syncMinInput(); this.commit(); },
-        setAmpm(val)    { 
+        setAmpm(val)    {
             if (this.ampm === val) return;
-            
-            this.ampm = val; 
+
+            this.ampm = val;
 
             if (val === 'PM' && this.hour !== 12 && this.hour >= 7) {
                 this.hour = 12;
@@ -1244,8 +1259,8 @@ document.addEventListener('alpine:init', () => {
             if (val === 'AM' && (this.hour === 12 || this.hour <= 6)) {
                 this.hour = 8;
             }
-            
-            this.commit(); 
+
+            this.commit();
         },
 
         onHourInput(e) {

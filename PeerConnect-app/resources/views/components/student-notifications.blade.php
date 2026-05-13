@@ -171,7 +171,8 @@
          x-cloak
          x-transition
          @click.stop
-         class="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-xl border border-gray-100 z-50 overflow-hidden">
+         class="fixed lg:absolute top-[70px] lg:top-auto right-2 lg:right-0 left-2 lg:left-auto mt-0 lg:mt-2
+            w-auto lg:w-80 bg-white rounded-xl shadow-xl border border-gray-100 z-50 overflow-hidden">
 
         {{-- Header --}}
         <div class="px-4 py-3 border-b border-gray-100 bg-slate-50 flex items-center justify-between">

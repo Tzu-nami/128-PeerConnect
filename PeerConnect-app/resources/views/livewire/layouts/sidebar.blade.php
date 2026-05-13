@@ -40,44 +40,56 @@ new class extends Component {
 };
 ?>
 
-<aside class="sidebar" id="sidebar">
-
-    {{-- Logo --}}
-    <div class="sidebar-logo-container">
-        <a href="{{ route('home')  }}" class="logo-content">
-            <i class="fa-solid fa-graduation-cap logo-icon"></i>
-            <span class="logo-text">LRC PeerConnect</span>
-        </a>
+<div>
+    <div
+        x-data
+        x-show="$store.sidebar.open"
+        x-transition.opacity
+        @click="$store.sidebar.close()"
+        class="fixed inset-0 bg-black/50 z-20 lg:hidden"
+        x-cloak>
     </div>
 
-    {{-- Collapse toggle --}}
-    <button class="sidebar-toggle-btn" id="sidebarToggle" aria-label="Toggle sidebar">
-        <span class="toggle-icon">
-            <i class="fa-solid fa-chevron-right"></i>
-        </span>
-    </button>
+    <aside class="sidebar hidden lg:flex lg:flex-col" id="sidebar">
 
-    {{-- Nav links --}}
-    <nav class="flex-grow">
-        @foreach ($navItems as $item)
-            <a href="{{ route($item['route']) }}"
-               class="nav-item {{ request()->routeIs($item['route']) ? 'active' : '' }}"
-               data-tooltip="{{ $item['label'] }}">
-                <i class="{{ $item['icon'] }}"></i>
-                <span>{{ $item['label'] }}</span>
+        {{-- Logo --}}
+        <div class="sidebar-logo-container">
+            <a href="{{ route('home')  }}" class="logo-content">
+                <i class="fa-solid fa-graduation-cap logo-icon"></i>
+                <span class="logo-text">LRC PeerConnect</span>
             </a>
-        @endforeach
-    </nav>
+        </div>
 
-    {{-- Logout --}}
-    <div class="sidebar-footer">
-        <form method="POST" action="{{ route('logout') }}" class="m-0">
-            @csrf
-            <button type="submit" class="nav-item" data-tooltip="Logout">
-                <i class="fa-solid fa-right-from-bracket"></i>
-                <span>Logout</span>
-            </button>
-        </form>
-    </div>
+        {{-- Collapse toggle --}}
+        <button class="sidebar-toggle-btn" id="sidebarToggle" aria-label="Toggle sidebar">
+            <span class="toggle-icon">
+                <i class="fa-solid fa-chevron-right"></i>
+            </span>
+        </button>
 
-</aside>
+        {{-- Nav links --}}
+        <nav class="flex-grow">
+            @foreach ($navItems as $item)
+                <a href="{{ route($item['route']) }}"
+                   class="nav-item {{ request()->routeIs($item['route']) ? 'active' : '' }}"
+                   data-tooltip="{{ $item['label'] }}"
+                   @click="$store.sidebar.close()">
+                    <i class="{{ $item['icon'] }}"></i>
+                    <span>{{ $item['label'] }}</span>
+                </a>
+            @endforeach
+        </nav>
+
+        {{-- Logout --}}
+        <div class="sidebar-footer">
+            <form method="POST" action="{{ route('logout') }}" class="m-0">
+                @csrf
+                <button type="submit" class="nav-item" data-tooltip="Logout" @click="$store.sidebar.close()">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                    <span>Logout</span>
+                </button>
+            </form>
+        </div>
+
+    </aside>
+</div>
