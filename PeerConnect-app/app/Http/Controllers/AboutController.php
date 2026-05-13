@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\MentorProfiles;
 use App\Models\Subjects;
 use App\Models\Bookings;
+use App\Models\StaffProfiles;
 
 class AboutController extends Controller {
     public function index() {
@@ -13,6 +14,9 @@ class AboutController extends Controller {
             'subjects' => Subjects::count(),
             'bookings' => Bookings::count(),
         ];
-        return view('public.about', ['stats' => $stats]);
+
+        $staff = StaffProfiles::where('role', 'LRC Head')->first();
+
+        return view('public.about', ['stats' => $stats, 'staff' => $staff]);
     }
 }

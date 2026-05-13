@@ -70,10 +70,10 @@
             <div class="max-w-3xl mx-auto text-center">
                 <i class="fa-solid fa-quote-left text-4xl text-cream-border block mb-6"></i>
                 <p class="italic text-text-brown leading-9 text-xl md:text-2xl mb-6">
-                    "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."
+                    "At the LRC, we believe that every student has the capacity to succeed. Sometimes, all they need is the right peer beside them."
                 </p>
                 <div class="w-8 h-px bg-up-yellow mx-auto mb-4"></div>
-                <p class="text-text-brown-light text-xs tracking-widest uppercase">— LRC Head</p>
+                <p class="text-text-brown-light text-xs tracking-widest uppercase">— {{ $staff->firstName }} {{ $staff->middleInitial ? $staff->middleInitial . '. ' : '' }}{{ $staff->lastName }}, LRC Head</p>
             </div>
         </section>
 
