@@ -793,21 +793,22 @@ Alpine.data('sessionManagement', (initialSessions = [], initialCounts = {}) => (
     },
 
     // Actions and check conflicts
-    hasConflict(newReq) {
-        const toMin = (t) => {
-            const [h, m] = t.split(':').map(Number);
-            return h * 60 + m;
-        };
-        return this.sessions.some(s => {
-            if (s.id === newReq.id) return false;
-            if (s.status !== 'accepted') return false;
-            if (s.date !== newReq.date) return false;
+hasConflict(newReq) {
+    const toMin = (t) => {
+        const [h, m] = t.split(':').map(Number);
+        return h * 60 + m;
+    };
+    return this.sessions.some(s => {
+        if (s.id === newReq.id) return false;
+        if (!['accepted', 'completed'].includes(s.status)) return false;
+        if (s.date !== newReq.date) return false;
+        if (s.mentor !== newReq.mentor) return false;
 
-            const sStart = toMin(s.start), sEnd = toMin(s.end);
-            const rStart = toMin(newReq.start), rEnd = toMin(newReq.end);
-            return rStart < sEnd && rEnd > sStart;
-        });
-    },
+        const sStart = toMin(s.start), sEnd = toMin(s.end);
+        const rStart = toMin(newReq.start), rEnd = toMin(newReq.end);
+        return rStart < sEnd && rEnd > sStart;
+    });
+},
 
     promptUpdateStatus(session, newStatus) {
         // Cannot accept or reject ANY choice
@@ -1384,10 +1385,13 @@ document.addEventListener('alpine:init', () => {
         selectedSubject: null,
         showEditModal: false,
         editingSubject: null,
-        editForm: { code: '', name: '' },
-        originalForm: { code: '', name: '' },
+editForm: { code: '', name: '' },
+originalForm: { code: '', name: '' },
+showDeleteConfirm: false,
+subjectToDelete: null,
+deletingSubjectId: null,
 
-        init() {
+init() {
             window.addEventListener('mentor-filter-changed', (e) => {
                 this.mentorFilter = e.detail;
                 this.currentPage = 1;
@@ -1471,15 +1475,13 @@ document.addEventListener('alpine:init', () => {
             this.showEditModal  = true;
         },
 
-        openDeleteModal(sub) {
-            openConfirmModal({
-                title: 'Delete Subject?',
-                body:  `Are you sure you want to permanently delete <strong>${sub.code}</strong>? This will also remove the subject from all mentors currently assigned to teach it.`,
-                variant: 'reject',
-                confirmText: 'Delete',
-                loadingText: 'Deleting...',
-                onConfirm: async () => { await this.$wire.deleteSubject(sub.id); }
-            });
-        },
+openDeleteModal(sub) {
+    this.subjectToDelete = sub;
+    this.showDeleteConfirm = true;
+    this.deletingSubjectId = sub.id;
+    this.$watch('showDeleteConfirm', val => {
+        if (!val) this.deletingSubjectId = null;
+    });
+},
     }));
 });
