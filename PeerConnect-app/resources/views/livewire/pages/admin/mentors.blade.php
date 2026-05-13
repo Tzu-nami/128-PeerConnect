@@ -1006,8 +1006,15 @@ if (request()->get('open') === 'subject') {
                                     </div>
                                 </template>
                             </div>
-                            <button @click="avails.push({id: Date.now() + Math.random(), day_of_week: '', start_time: '', end_time: ''})" type="button"
-                                class="mt-3 flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-800 transition">
+                            <button @click=" const last = avails[avails.length - 1] || {}; 
+                                    avails.push({
+                                        id: Date.now() + Math.random(), 
+                                        day_of_week: last.day_of_week || '', 
+                                        start_time: last.start_time || '', 
+                                        end_time: last.end_time || ''
+                                    })" 
+                                    type="button"
+                                    class="mt-3 flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-800 transition">
                                 <i class="fa-solid fa-plus text-[10px]"></i> Add more days or time slots
                             </button>
                         </div>
