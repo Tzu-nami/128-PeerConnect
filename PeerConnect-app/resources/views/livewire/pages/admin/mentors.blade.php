@@ -26,9 +26,6 @@ state([
     'editMentorFirstName' => '',
     'editMentorLastName' => '',
     'editMentorMiddleInitial' => '',
-    'editCollegeId' => '',
-    'editDegreeProgramId' => '',
-    'editYearLevelId' => '',
     'editMentorEmail' => '',
     'editAvatarPreview' => '',
     'editAvatar' => null,
@@ -170,12 +167,6 @@ $editMentor = action(function ($id) {
     $this->editAvatarPreview = $mentor->user->avatar ?? app(Avatar::class)->placeholder($mentor->user->firstName . ' ' . $mentor->user->lastName);
     $this->editAvatar = null;
 
-    if ($mentor->user->studentProfile) {
-        $this->editCollegeId = $mentor->user->studentProfile->college_id;
-        $this->editDegreeProgramId = $mentor->user->studentProfile->degreeProgram_id;
-        $this->editYearLevelId = $mentor->user->studentProfile->yearLevel_id;
-    }
-
     $this->selectedSubjects = $mentor->subjects->pluck('id')->map(fn($id) => (string) $id)->toArray();
 
     if ($mentor->availabilities->count() > 0) {
@@ -211,9 +202,6 @@ $confirmEdit = action(function ($id, $subjects, $availabilities) {
         'editMentorFirstName' => ['required', 'string', 'max:255'],
         'editMentorLastName' => ['required', 'string', 'max:255'],
         'editMentorMiddleInitial' => ['nullable', 'string', 'max:2'],
-        'editCollegeId' => ['required', 'exists:colleges,id'],
-        'editDegreeProgramId' => ['required', 'exists:degree_programs,id'],
-        'editYearLevelId' => ['required', 'exists:year_levels,id'],
         'editAvatar' => ['nullable', 'image', 'max:2048'],
         'selectedSubjects' => ['required', 'array', 'min:1'],
         'selectedSubjects.*' => ['exists:subjects,id'],
@@ -224,9 +212,6 @@ $confirmEdit = action(function ($id, $subjects, $availabilities) {
     ], [], [
         'editMentorFirstName' => 'first name',
         'editMentorLastName' => 'last name',
-        'editCollegeId' => 'college',
-        'editDegreeProgramId' => 'degree program',
-        'editYearLevelId' => 'year level',
         'editAvatar' => 'profile picture',
         'selectedSubjects' => 'subjects',
         'availabilities' => 'availabilities',
@@ -267,14 +252,6 @@ $updateMentor = action(function () {
         'middleInitial' => trim($this->editMentorMiddleInitial) ?: null,
     ]);
 
-    if ($mentorNew->user->studentProfile) {
-        $mentorNew->user->studentProfile->update([
-            'college_id' => $this->editCollegeId,
-            'degreeProgram_id' => $this->editDegreeProgramId,
-            'yearLevel_id' => $this->editYearLevelId,
-        ]);
-    }
-
     if ($this->editAvatar) {
         $baseUrl = rtrim(config('filesystems.disks.s3.public_url'), '/');
         $oldFile = str_replace($baseUrl . '/', '', $mentorNew->user->avatar);
@@ -311,9 +288,6 @@ $closeEditModal = action(function () {
     $this->showEditModal = false;
     $this->showEditConfirm = false;
     $this->editAvatar = null;
-    $this->editCollegeId = '';
-    $this->editDegreeProgramId = '';
-    $this->editYearLevelId = '';
     $this->selectedSubjects = [];
     $this->availabilities = [];
 });
