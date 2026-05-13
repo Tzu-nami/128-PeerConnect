@@ -115,9 +115,7 @@
                     <a href="https://x.com/lrc_upbaguio"
                        target="_blank" rel="noopener noreferrer"
                        class="flex gap-5 items-center py-4 px-4 hover:bg-cream-dark transition-colors">
-                        <span class="text-up-maroon text-2xl w-8 h-8 flex justify-center items-center flex-shrink-0 font-black" style="font-family:Arial,sans-serif;font-size:20px;font-weight:900;">
-                        𝕏
-                        </span>
+                        <span class="text-up-maroon text-2xl w-8 h-8 flex justify-center items-center flex-shrink-0 font-black ">𝕏</span>
                         <div class="text-sm">x.com/lrc_upbaguio</div>
                     </a>
                 </div>
