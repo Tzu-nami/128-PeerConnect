@@ -60,7 +60,7 @@ mount(function () {
     $this->totalMentors = MentorProfiles::count();
     $this->sessionsToday = Bookings::whereDate('date', Carbon::today())->count();
     $this->pendingBookings = Bookings::where('booking_status', 'pending')->count();
-    $this->totalStudents = StudentProfiles::count();
+    $this->totalStudents = Bookings::distinct('student_id')->count('student_id');
 
     $this->todaySessions = Bookings::with(['mentor.user', 'student.user', 'subject'])
         ->whereDate('date', Carbon::today())
