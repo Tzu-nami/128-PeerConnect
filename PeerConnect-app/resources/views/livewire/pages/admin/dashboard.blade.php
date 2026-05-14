@@ -270,14 +270,20 @@ $topSubjects = computed(function () {
 });
 
 $collegeActivity = computed(function () {
-    return StudentProfiles::join('degree_programs', 'student_profiles.degreeProgram_id', '=', 'degree_programs.id')
+    $defaults = ['CAC' => 0, 'CSS' => 0];
+
+    $results = \DB::table('bookings')
+        ->join('student_profiles', 'bookings.student_id', '=', 'student_profiles.id')
+        ->join('degree_programs', 'student_profiles.degreeProgram_id', '=', 'degree_programs.id')
         ->join('colleges', 'degree_programs.college_id', '=', 'colleges.id')
-        ->selectRaw('colleges.code as college, COUNT(*) as count')
+        ->selectRaw('colleges.code as college, COUNT(DISTINCT bookings.student_id) as count')
         ->groupBy('colleges.id', 'colleges.code')
         ->orderByDesc('count')
         ->take(3)
         ->pluck('count', 'college')
         ->toArray();
+
+    return array_merge($defaults, $results);
 });
 
 $dashboardStats = computed(function () {
