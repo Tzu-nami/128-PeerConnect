@@ -52,6 +52,7 @@ mount(function () {
 state([
     // Booking form
     'mentor_id'        => '',
+    'group_emails'     => [],
     'isMentorLocked'   => false,
     'subject_id'       => '',
     'topic'            => '',
@@ -281,6 +282,7 @@ $bookingAttributes = [
     'date'            => 'date',
     'schedule_start'  => 'start time',
     'schedule_end'    => 'end time',
+    'group_emails'    => 'emails',
 ];
 
 // Booking Actions
@@ -334,25 +336,78 @@ $validateBooking = action(function () use ($bookingRules, $bookingAttributes) {
         }
     }
 
-// Check for conflicting existing sessions on that mentor
-if ($this->mentor_id && $this->mentor_id !== 'any' && $this->date && $this->schedule_start && $this->schedule_end) {
-    $schedStart = $this->schedule_start;
-    $schedEnd   = $this->schedule_end;
+    // Check for conflicting existing sessions on that mentor
+    if ($this->mentor_id && $this->mentor_id !== 'any' && $this->date && $this->schedule_start && $this->schedule_end) {
+        $schedStart = $this->schedule_start;
+        $schedEnd   = $this->schedule_end;
 
-    $conflict = Bookings::where('mentor_id', $this->mentor_id)
-        ->whereDate('date', $this->date)
-        ->whereRaw("booking_status::text IN ('accepted', 'completed')")
-        ->where(function ($q) use ($schedStart, $schedEnd) {
-            $q->whereTime('schedule_start', '<', $schedEnd)
-              ->whereTime('schedule_end', '>', $schedStart);
-        })
-        ->exists();
+        $conflict = Bookings::where('mentor_id', $this->mentor_id)
+            ->whereDate('date', $this->date)
+            ->whereRaw("booking_status::text IN ('accepted', 'completed')")
+            ->where(function ($q) use ($schedStart, $schedEnd) {
+                $q->whereTime('schedule_start', '<', $schedEnd)
+                ->whereTime('schedule_end', '>', $schedStart);
+            })
+            ->exists();
 
-    if ($conflict) {
-        $this->addError('schedule_start', 'This mentor already has a session during the selected time. Please choose a different time slot.');
-        return;
+        if ($conflict) {
+            $this->addError('schedule_start', 'This mentor already has a session during the selected time. Please choose a different time slot.');
+            return;
+        }
     }
-}
+
+    $this->group_emails = array_values(array_filter($this->group_emails, fn($e) => !empty(trim($e))));
+    $mode = TutorialMode::find($this->tutorialMode_id);
+    
+    if ($mode && (str_contains(strtolower($mode->mode), 'small group') || str_contains(strtolower($mode->mode), 'large group'))) {
+        
+        if (in_array(auth()->user()->email, $this->group_emails)) {
+            $this->addError('group_emails', 'You do not need to add your own email.');
+            return;
+        }
+
+        // Small Group Limits
+        if (str_contains(strtolower($mode->mode), 'small group')) {
+            if (count($this->group_emails) < 1) {
+                $this->addError('group_emails', 'Small group tutorials require at least 1 additional member.');
+                return;
+            }
+            if (count($this->group_emails) > 4) {
+                $this->addError('group_emails', 'Small group tutorials can only have up to 4 additional members.');
+                return;
+            }
+        }
+
+        // Large Group Limits
+        if (str_contains(strtolower($mode->mode), 'large group')) {
+            if (count($this->group_emails) < 5) {
+                $this->addError('group_emails', 'Large group tutorials require at least 5 additional members.');
+                return;
+            }
+            if (count($this->group_emails) > 13) {
+                $this->addError('group_emails', 'Large group tutorials can only have up to 13 additional members.');
+                return;
+            }
+        }
+
+        foreach ($this->group_emails as $email) {
+            $user = \App\Models\User::where('email', $email)->first();
+            
+            if (!$user || !$user->studentProfile) {
+                $this->addError('group_emails', "The email {$email} does not belong to a registered student with a completed profile.");
+                return;
+            }
+
+            $memberHasActive = Bookings::where('student_id', $user->studentProfile->id)
+                ->whereRaw("booking_status::text IN ('pending', 'accepted')")
+                ->exists();
+                
+            if ($memberHasActive) {
+                $this->addError('group_emails', "The student {$email} already has an active booking and cannot join this session.");
+                return;
+            }
+        }
+    }
 
     $this->dispatch('show-booking-confirm');
 });
@@ -429,7 +484,25 @@ $submitBooking = action(function () use ($bookingRules, $bookingAttributes) {
         }
     }
 
-    $this->reset(['mentor_id', 'subject_id', 'topic', 'tutorialMode_id', 'date', 'schedule_start', 'schedule_end']);
+    $mode = TutorialMode::find($validated['tutorialMode_id']);
+    $isGroup = $mode && (str_contains(strtolower($mode->mode), 'small group') || str_contains(strtolower($mode->mode), 'large group'));
+
+    if ($isGroup && !empty($this->group_emails)) {
+        $groupUsers = \App\Models\User::whereIn('email', $this->group_emails)->with('studentProfile')->get();
+        
+        foreach($groupUsers as $gUser) {
+            if ($gUser->studentProfile) {
+                Bookings::create([
+                    ...$validated,
+                    'student_id'     => $gUser->studentProfile->id,
+                    'mentor_id'      => $validated['mentor_id'] === 'any' ? null : $validated['mentor_id'],
+                    'booking_status' => 'pending',
+                ]);
+            }
+        }
+    }
+
+    $this->reset(['mentor_id', 'subject_id', 'topic', 'tutorialMode_id', 'date', 'schedule_start', 'schedule_end', 'group_emails']);
     $this->successMessage = true;
 });
 
@@ -1054,6 +1127,7 @@ $skipFeedback = action(function () {
 
 <div class="bg-white px-4 sm:px-6 pb-6 pt-4 rounded-lg shadow-sm border-gray-200 overflow-visible"
      x-data="{
+        group_emails:     $wire.entangle('group_emails'),
         subject_id:       $wire.entangle('subject_id'),
         topic:            $wire.entangle('topic'),
         tutorialMode_id:  $wire.entangle('tutorialMode_id'),
@@ -1069,12 +1143,33 @@ $skipFeedback = action(function () {
         hasProfile:       @js((bool) auth()->user()->studentProfile),
  
         // ── Data from PHP ──────────────────────────────────────────
+        allTutorialModes:  @js($this->tutorialModes),
         allMentors:        @js($this->mentors),
         allSubjects:       @js($this->mentorSubjects),
         allAvailabilities: @js($this->mentorAvailabilities),
         allBookedSlots:    @js($this->mentorBookedSlots),
  
         // ── Helpers ────────────────────────────────────────────────
+        get isGroupTutorial() {
+            if (!this.tutorialMode_id) return false;
+            const mode = this.allTutorialModes.find(m => m.id == this.tutorialMode_id);
+            if (!mode) return false;
+            const name = mode.mode.toLowerCase();
+            return name.includes('small group') || name.includes('large group');
+        },
+
+        get groupLimits() {
+            if (!this.tutorialMode_id) return { min: 1, max: 1 };
+            const mode = this.allTutorialModes.find(m => m.id == this.tutorialMode_id);
+            if (!mode) return { min: 1, max: 1 };
+            
+            const name = mode.mode.toLowerCase();
+            if (name.includes('small group')) return { min: 1, max: 4 };
+            if (name.includes('large group')) return { min: 5, max: 13 };
+            
+            return { min: 1, max: 1 };
+        },
+
         getDayOfWeek(dateStr) {
             const days = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
             return days[new Date(dateStr + 'T00:00:00').getDay()];
@@ -1401,6 +1496,48 @@ splitSlotSegments(dayKey, slotStartRaw, slotEndRaw, dateStr) {
             <span x-show="showError('tutorialMode_id')" x-cloak class="mt-1 text-xs text-red-600 block" wire:loading.class="hidden" wire:target="validateBooking">{{ $message }}</span>
             @enderror
         </div>
+
+        <template x-if="isGroupTutorial">
+            <div class="mt-3 p-4 bg-blue-50 border border-blue-100 rounded-lg animate-[slideDown_0.2s_ease]">
+                <div class="flex items-center justify-between mb-1">
+                    <label class="block text-sm font-medium text-blue-900">Group Members (UP Mails)</label>
+                    <span class="text-[10px] font-bold px-2 py-0.5 rounded-full" 
+                          :class="group_emails.length >= groupLimits.min && group_emails.length <= groupLimits.max ? 'bg-green-200 text-green-800' : 'bg-blue-200 text-blue-800'"
+                          x-text="`${group_emails.length} / ${groupLimits.max} added`">
+                    </span>
+                </div>
+                
+                <p class="text-[10px] text-blue-700 mb-3 leading-tight">
+                    Add the UP Mails of the students joining you. 
+                    <span x-show="groupLimits.min > 1" class="font-bold">You must add at least <span x-text="groupLimits.min"></span> members.</span>
+                </p>
+                
+                <div class="space-y-2 mb-3">
+                    <template x-for="(email, index) in group_emails" :key="index">
+                        <div class="flex items-center gap-2">
+                            <input type="email" x-model="group_emails[index]" class="form-input text-xs w-full h-[34px] border-blue-200 focus:border-blue-500 focus:ring-blue-500" placeholder="student@up.edu.ph">
+                            <button type="button" @click="group_emails.splice(index, 1)" class="text-red-400 hover:text-red-600 transition flex-shrink-0 w-6 flex justify-center">
+                                <i class="fa-solid fa-xmark"></i>
+                            </button>
+                        </div>
+                    </template>
+                </div>
+                
+                <button type="button" @click="group_emails.push('')" 
+                        x-show="group_emails.length < groupLimits.max"
+                        class="text-xs font-bold text-blue-600 hover:text-blue-800 transition">
+                    <i class="fa-solid fa-plus mr-1"></i> Add Student
+                </button>
+
+                <p x-show="group_emails.length > 0 && group_emails.length < groupLimits.min" class="text-[10px] text-red-500 mt-2 font-bold">
+                    <i class="fa-solid fa-circle-exclamation mr-1"></i> You need <span x-text="groupLimits.min - group_emails.length"></span> more member(s) to meet the minimum requirement.
+                </p>
+                
+                @error('group_emails') 
+                    <span class="text-xs text-red-600 block mt-2 font-bold"><i class="fa-solid fa-triangle-exclamation mr-1"></i>{{ $message }}</span> 
+                @enderror
+            </div>
+        </template>
  
         {{-- Preferred Mentor --}}
         <div>
@@ -1639,7 +1776,7 @@ splitSlotSegments(dayKey, slotStartRaw, slotEndRaw, dateStr) {
             <button type="button" id="bookingSubmitBtn"
                     wire:click="validateBooking"
                     @click="clearedErrors = []"
-                    :disabled="!hasProfile || dateError !== '' || startTimeError !== '' || endTimeError !== '' || !subject_id || !topic || !tutorialMode_id || !date || !start_time || !end_time || !mentor_id"
+                    :disabled="!hasProfile || dateError !== '' || startTimeError !== '' || endTimeError !== '' || !subject_id || !topic || !tutorialMode_id || !date || !start_time || !end_time || !mentor_id || (isGroupTutorial && group_emails.filter(e => e.trim() !== '').length < groupLimits.min)"
                     class="w-full bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium py-2 px-4 rounded-lg text-sm transition-colors"
                     wire:loading.attr="disabled"
                     wire:loading.class="opacity-60 cursor-not-allowed"
@@ -2285,6 +2422,11 @@ $pillColor = match($statusKey) {
             }
         }
 
+        const rootEl = document.querySelector('[wire\\:id]');
+        const wire = Livewire.find(rootEl.getAttribute('wire:id'));
+        const rawEmails = wire.group_emails || (typeof wire.get === 'function' ? wire.get('group_emails') : []);
+        const emails = Object.values(rawEmails || {}).filter(e => typeof e === 'string' && e.trim() !== '');
+
         const metaHtml = `
             <div class="flex justify-between items-start gap-4 mb-1">
                 <span class="text-gray-400 shrink-0">Subject</span>
@@ -2298,6 +2440,12 @@ $pillColor = match($statusKey) {
                 <span class="text-gray-400 shrink-0">Mode</span>
                 <span class="font-semibold text-gray-700 text-right truncate">${tutorialModeText}</span>
             </div>
+            ${emails.length > 0 ? `
+            <div class="flex justify-between items-start gap-4 mb-1">
+                <span class="text-gray-400 shrink-0">Group</span>
+                <span class="font-semibold text-gray-700 text-right break-words text-[10px]">${emails.join(', ')}</span>
+            </div>
+            ` : ''}
             <div class="flex justify-between items-start gap-4 mb-1">
                 <span class="text-gray-400 shrink-0">Mentor</span>
                 <span class="font-semibold text-gray-700 text-right truncate">${mentorText}</span>

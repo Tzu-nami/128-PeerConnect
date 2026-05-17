@@ -39,37 +39,47 @@ mount(function () {
     if (!$mentorProfile) return;
 
     // Auto-complete past accepted sessions
-    Bookings::where('mentor_id', $mentorProfile->id)
-        ->where('booking_status', 'accepted')
-        ->whereDate('date', '<', today())
-        ->whereDate('updated_at', '<', today())
-        ->update([
-            'booking_status' => 'completed',
-            'completed_at'   => now(),
-        ]);
-
-    // Load all sessions for this mentor
-    $this->sessions = Bookings::with(['student.user', 'subject'])
+    $rawSessions = Bookings::with(['student.user', 'subject', 'tutorialMode'])
         ->where('mentor_id', $mentorProfile->id)
-        ->get()
-        ->map(fn ($b) => [
+        ->get();
+
+    $groupedBookings = $rawSessions->groupBy(function ($b) {
+        $mode = strtolower(optional($b->tutorialMode)->mode ?? '');
+        if (str_contains($mode, 'group')) {
+            return $b->date . '|' . $b->schedule_start . '|' . $b->schedule_end . '|' . $b->subject_id . '|' . trim($b->topic);
+        }
+        return $b->id;
+    });
+
+    $this->sessions = $groupedBookings->map(function ($group) {
+        $b = $group->first();
+        
+        // Combine names and emails for the UI
+        $studentNames = $group->map(function($bk) {
+            return optional(optional($bk->student)->user)->firstName ? $bk->student->user->firstName . ' ' . $bk->student->user->lastName : 'Unknown';
+        })->implode(', ');
+        
+        $emails = $group->map(function($bk) {
+            return optional(optional($bk->student)->user)->email ?? '';
+        })->implode(', ');
+
+        return [
             'id'          => $b->id,
-'student'     => optional(optional($b->student)->user)->firstName
-    ? $b->student->user->firstName . ' ' . $b->student->user->lastName
-    : 'Unknown',
-'email'       => optional(optional($b->student)->user)->email ?? '',
+            'group_ids'   => $group->pluck('id')->toArray(),
+            'student'     => $group->count() > 1 ? $group->count() . ' Students (Group)' : $studentNames,
+            'studentNames'=> $studentNames,
+            'email'       => $group->count() > 1 ? 'Multiple Emails' : $emails,
+            'emails'      => $emails,
             'subject'     => optional($b->subject)->code ?? 'N/A',
             'subjectName' => optional($b->subject)->name ?? '',
-            'date'        => $b->date
-                ? \Carbon\Carbon::parse($b->date)->format('Y-m-d')
-                : null,
-            'start'  => \Carbon\Carbon::parse($b->schedule_start)->format('H:i'),
-            'end'    => \Carbon\Carbon::parse($b->schedule_end)->format('H:i'),
-            'topic'  => $b->topic ?? '',
-            'status' => $b->booking_status,
-        ])
-        ->values()
-        ->toArray();
+            'date'        => $b->date ? \Carbon\Carbon::parse($b->date)->format('Y-m-d') : null,
+            'start'       => \Carbon\Carbon::parse($b->schedule_start)->format('H:i'),
+            'end'         => \Carbon\Carbon::parse($b->schedule_end)->format('H:i'),
+            'topic'       => $b->topic ?? '',
+            'mode'        => optional($b->tutorialMode)->mode ?? 'Tutorial Session',
+            'status'      => $b->booking_status,
+        ];
+    })->values()->toArray();
 });
 
 // ── SEARCH INDEX  ───────────────────────
@@ -773,7 +783,7 @@ tbody.innerHTML = `<tr><td colspan="4" class="py-4 text-center">
   tbody.innerHTML = visible.map(row => `
     <tr class="border-b last:border-0 hover:bg-slate-50 transition">
         <td class="py-3 max-w-0" style="width:22%;">
-            <div class="hover-tooltip" data-full="${row.student}" style="max-width:260px;">
+            <div class="hover-tooltip" data-full="${row.studentNames || row.student}" style="max-width:260px;">
                 <div id="name-${row.id}"
                      class="truncate text-xs font-bold text-slate-700">
                     ${row.student}
@@ -1092,7 +1102,7 @@ dayEl.innerHTML = `
                             <div id="qaname-${s.id}"
                                  style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis;
                                         font-size:11px;font-weight:700;color:#1e293b;"
-                                 title="${s.student}">${s.student}</div>
+                                 title="${s.studentNames || s.student}">${s.studentNames || s.student}</div>
                             <button onclick="toggleQaName('${s.id}')" id="qatoggle-${s.id}"
                                     style="font-size:9px;color:#7b1d1d;font-weight:600;margin-top:1px;
                                            background:none;border:none;cursor:pointer;padding:0;display:none;">
@@ -1107,9 +1117,19 @@ dayEl.innerHTML = `
                             <span class="w-2 h-2 rounded-full bg-green-400 inline-block"></span>
                         </div>
                         <div class="action-buttons flex items-center gap-1 justify-end">
-                            ${qaBtn('fa-flag-checkered', 'Complete', 'completed', 'bg-gray-100 hover:bg-gray-200',    'text-gray-600',   s.id)}
-                            ${qaBtn('fa-user-slash',     'No-show',  'no_show',   'bg-orange-100 hover:bg-orange-200', 'text-orange-600', s.id)}
-                            ${qaBtn('fa-ban',            'Cancel',   'cancelled', 'bg-red-100 hover:bg-red-200',       'text-red-600',    s.id)}
+                            ${(function() {
+                                const now = _nowManila();
+                                const sessionStart = new Date(s.date + 'T' + s.start + ':00');
+                                const hasStarted = now >= sessionStart;
+                                
+                                let btns = '';
+                                if (hasStarted) {
+                                    btns += qaBtn('fa-flag-checkered', 'Complete', 'completed', 'bg-gray-100 hover:bg-gray-200', 'text-gray-600', s.id);
+                                    btns += qaBtn('fa-user-slash', 'No-show', 'no_show', 'bg-orange-100 hover:bg-orange-200', 'text-orange-600', s.id);
+                                }
+                                btns += qaBtn('fa-ban', 'Cancel', 'cancelled', 'bg-red-100 hover:bg-red-200', 'text-red-600', s.id);
+                                return btns;
+                            })()}
                         </div>
                     </div>
                 </div>
@@ -1191,7 +1211,7 @@ dayEl.innerHTML = `
             <div id="pname-${req.id}"
                  style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis;
                         font-size:11px;font-weight:700;color:#1e293b;"
-                 title="${req.student}">${req.student}</div>
+                 title="${req.studentNames || req.student}">${req.student}</div>
             <button onclick="togglePendingName('${req.id}')" id="ptoggle-${req.id}"
                     style="font-size:9px;color:#7b1d1d;font-weight:600;margin-top:1px;
                            background:none;border:none;cursor:pointer;padding:0;display:none;">
@@ -1264,79 +1284,81 @@ dayEl.innerHTML = `
     // STATUS UPDATE
     function updateStatus(id, status, source = 'qa') {
         const fromPending = source === 'pending';
+        const target = allSessions.find(s => s.id === id);
+        if (!target) return;
 
-        const loadingMsgs = {
-            accepted:  'Accepting booking',
-            rejected:  'Rejecting booking',
-            completed: 'Marking as completed',
-            cancelled: 'Cancelling session',
-            no_show:   'Marking as no-show',
-        };
-        const successMsgs = {
-            accepted:  'Booking accepted successfully.',
-            rejected:  'Booking rejected.',
-            completed: 'Session marked as completed.',
-            cancelled: 'Session cancelled.',
-            no_show:   'Marked as no-show.',
-        };
+        const loadingMsgs = { accepted: 'Accepting booking', rejected: 'Rejecting booking', completed: 'Marking as completed', cancelled: 'Cancelling session', no_show: 'Marking as no-show' };
+        const successMsgs = { accepted: 'Booking accepted successfully.', rejected: 'Booking rejected.', completed: 'Session marked as completed.', cancelled: 'Session cancelled.', no_show: 'Marked as no-show.' };
 
         if (fromPending) showLoadingBanner('pendingBannerArea', 'pending', loadingMsgs[status] ?? 'Updating status');
         else             showLoadingBanner('quickActionsBannerArea', 'qa', loadingMsgs[status] ?? 'Updating status');
 
-        fetch('{{ route("mentor.dashboard.update") }}', {
-            method:  'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' },
-            body:    JSON.stringify({ id, status }),
-        })
+        const idsToUpdate = target.group_ids || [id];
+        let completedCount = 0;
+        let hasError = false;
+
+        idsToUpdate.forEach(bookingId => {
+            fetch('{{ route("mentor.dashboard.update") }}', {
+                method:  'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' },
+                body:    JSON.stringify({ id: bookingId, status }),
+            })
             .then(res => res.json())
             .then(data => {
-                hideLoadingBanner(fromPending ? 'pending' : 'qa');
-
-                if (!data.success) {
-                    if (fromPending) showErrorBanner('pendingBannerArea', 'pending', 'Please try again.');
-                    else             showErrorBanner('quickActionsBannerArea', 'qa', 'Please try again.');
-                    return;
-                }
-
-                // Optimistically update local state
-                const target = allSessions.find(s => s.id === id);
-                if (target) {
-                    target.status = status;
-
-                    // Auto-reject conflicting pending sessions when one is accepted
-                    if (status === 'accepted') {
-                        const conflictIds = getConflictingPendingIds(target);
-                        conflictIds.forEach(cid => {
-                            const cs = allSessions.find(s => s.id === cid);
-                            if (cs) cs.status = 'rejected';
-                            fetch('{{ route("mentor.dashboard.update") }}', {
-                                method:  'POST',
-                                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' },
-                                body:    JSON.stringify({ id: cid, status: 'rejected' }),
-                            }).catch(err => console.error('Auto-reject failed for id', cid, err));
-                        });
-
-                        if (conflictIds.length > 0) {
-                            const area   = fromPending ? 'pendingBannerArea' : 'quickActionsBannerArea';
-                            const prefix = fromPending ? 'pending' : 'qa';
-                            showAutoRejectBannerInSection(area, prefix, conflictIds.length);
-                            refreshSchedules();
-                            return;
-                        }
-                    }
-                }
-
-                if (fromPending) showSuccessBanner('pendingBannerArea', 'pending', successMsgs[status] ?? 'Status updated.');
-                else             showSuccessBanner('quickActionsBannerArea', 'qa', successMsgs[status] ?? 'Status updated.');
-
-                refreshSchedules();
+                if (!data.success) hasError = true;
+                completedCount++;
+                if (completedCount === idsToUpdate.length) finalizeUpdate(target, status, source, hasError, successMsgs);
             })
             .catch(err => {
-                hideLoadingBanner(fromPending ? 'pending' : 'qa');
-                if (fromPending) showErrorBanner('pendingBannerArea', 'pending', 'Please check your connection and retry.');
-                else             showErrorBanner('quickActionsBannerArea', 'qa', 'Please check your connection and retry.');
+                hasError = true;
+                completedCount++;
+                if (completedCount === idsToUpdate.length) finalizeUpdate(target, status, source, hasError, successMsgs);
                 console.error(err);
             });
+        });
+    }
+
+    function finalizeUpdate(target, status, source, hasError, successMsgs) {
+        const fromPending = source === 'pending';
+        hideLoadingBanner(fromPending ? 'pending' : 'qa');
+
+        if (hasError) {
+            if (fromPending) showErrorBanner('pendingBannerArea', 'pending', 'Please try again.');
+            else             showErrorBanner('quickActionsBannerArea', 'qa', 'Please try again.');
+            return;
+        }
+
+        target.status = status;
+
+        // Auto-reject conflicting pending sessions when one is accepted
+        if (status === 'accepted') {
+            const conflictIds = getConflictingPendingIds(target);
+            if (conflictIds.length > 0) {
+                conflictIds.forEach(cid => {
+                    const cs = allSessions.find(s => s.id === cid);
+                    if (cs) cs.status = 'rejected';
+                    
+                    const cIdsToReject = cs ? (cs.group_ids || [cid]) : [cid];
+                    cIdsToReject.forEach(rId => {
+                        fetch('{{ route("mentor.dashboard.update") }}', {
+                            method:  'POST',
+                            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' },
+                            body:    JSON.stringify({ id: rId, status: 'rejected' }),
+                        }).catch(err => console.error('Auto-reject failed', rId, err));
+                    });
+                });
+
+                const area   = fromPending ? 'pendingBannerArea' : 'quickActionsBannerArea';
+                const prefix = fromPending ? 'pending' : 'qa';
+                showAutoRejectBannerInSection(area, prefix, conflictIds.length);
+                refreshSchedules();
+                return;
+            }
+        }
+
+        if (fromPending) showSuccessBanner('pendingBannerArea', 'pending', successMsgs[status] ?? 'Status updated.');
+        else             showSuccessBanner('quickActionsBannerArea', 'qa', successMsgs[status] ?? 'Status updated.');
+        refreshSchedules();
     }
 
     function hasConflict(req) {
@@ -1658,8 +1680,8 @@ let _pdCurrent = null;
 function openPendingDetailModal(req) {
     _pdCurrent = req;
     document.getElementById('pdInitials').innerText      = req.student.slice(0, 2).toUpperCase();
-    document.getElementById('pdName').innerText          = req.student;
-    document.getElementById('pdEmail').innerText         = req.email ?? '';
+    document.getElementById('pdName').innerText          = req.studentNames || req.student;
+    document.getElementById('pdEmail').innerText         = req.emails || req.email || '';
     document.getElementById('pdSubjectDetail').innerText = req.subject + (req.subjectName ? ' (' + req.subjectName + ')' : '');
     document.getElementById('pdDate').innerText         = new Date(req.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
     document.getElementById('pdTime').innerText         = formatTimeTo12Hour(req.start) + ' – ' + formatTimeTo12Hour(req.end);

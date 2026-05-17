@@ -808,22 +808,22 @@ Alpine.data('sessionManagement', (initialSessions = [], initialCounts = {}) => (
     },
 
     // Actions and check conflicts
-hasConflict(newReq) {
-    const toMin = (t) => {
-        const [h, m] = t.split(':').map(Number);
-        return h * 60 + m;
-    };
-    return this.sessions.some(s => {
-        if (s.id === newReq.id) return false;
-        if (!['accepted', 'completed'].includes(s.status)) return false;
-        if (s.date !== newReq.date) return false;
-        if (s.mentor !== newReq.mentor) return false;
+    hasConflict(newReq) {
+        const toMin = (t) => {
+            const [h, m] = t.split(':').map(Number);
+            return h * 60 + m;
+        };
+        return this.sessions.some(s => {
+            if (s.id === newReq.id) return false;
+            if (newReq.group_ids && newReq.group_ids.includes(s.id)) return false; // 🌟 Ignore siblings
+            if (!['accepted', 'completed'].includes(s.status)) return false;
+            if (s.mentor !== newReq.mentor) return false;
 
-        const sStart = toMin(s.start), sEnd = toMin(s.end);
-        const rStart = toMin(newReq.start), rEnd = toMin(newReq.end);
-        return rStart < sEnd && rEnd > sStart;
-    });
-},
+            const sStart = toMin(s.start), sEnd = toMin(s.end);
+            const rStart = toMin(newReq.start), rEnd = toMin(newReq.end);
+            return rStart < sEnd && rEnd > sStart;
+        });
+    },
 
     promptUpdateStatus(session, newStatus) {
         // Cannot accept or reject ANY choice
@@ -870,7 +870,7 @@ hasConflict(newReq) {
         cfg.metaHtml = `
             <div class="flex justify-between items-start gap-2 mb-1">
                 <span class="text-gray-400">Student</span>
-                <span class="font-medium text-gray-700 text-right truncate">${session.student}</span>
+                <span class="font-medium text-gray-700 text-right truncate" title="${session.studentNames || session.student}">${session.studentNames || session.student}</span>
             </div>
             <div class="flex justify-between items-start gap-2 mb-1">
                 <span class="text-gray-400">Subject</span>
@@ -896,15 +896,18 @@ hasConflict(newReq) {
 
     async executeConfirm() {
         this.isConfirming = true;
-
-        const formData = new FormData();
-        formData.append('_token', document.querySelector('meta[name="csrf-token"]').content);
-        formData.append('booking_id', this.sessionToUpdate.id);
-        formData.append('booking_status', this.newStatusToApply);
+        const idsToUpdate = this.sessionToUpdate.group_ids || [this.sessionToUpdate.id];
 
         try {
-            const res = await fetch('/admin/sessions/update', { method: 'POST', body: formData });
-            if (!res.ok) throw new Error('Request failed');
+            await Promise.all(idsToUpdate.map(async (bookingId) => {
+                const formData = new FormData();
+                formData.append('_token', document.querySelector('meta[name="csrf-token"]').content);
+                formData.append('booking_id', bookingId);
+                formData.append('booking_status', this.newStatusToApply);
+
+                const res = await fetch('/admin/sessions/update', { method: 'POST', body: formData });
+                if (!res.ok) throw new Error('Request failed');
+            }));
 
             this.sessionToUpdate.status = this.newStatusToApply;
             this.recalculateCounts();
@@ -914,9 +917,7 @@ hasConflict(newReq) {
         } finally {
             this.isConfirming = false;
             this.closeConfirmModal();
-            if (!this.banner.show || this.banner.type !== 'error') {
-                 this.triggerBanner('Session status updated successfully.', 'success');
-            }
+            this.triggerBanner('Session status updated successfully.', 'success');
         }
     },
 
@@ -984,26 +985,25 @@ hasConflict(newReq) {
             this.editEndTimeError = 'End time must be after the start time.';
             return;
         }
+        
         this.isSavingEdit = true;
-        try {
-            const formData = new FormData();
-            formData.append('_token', document.querySelector('meta[name="csrf-token"]').content);
-            formData.append('booking_id', this.editSession.id);
-            formData.append('end_time', this.editEndTime);
+        const idsToUpdate = this.editSession.group_ids || [this.editSession.id];
 
-            const res = await fetch('/admin/sessions/update-end-time', { method: 'POST', body: formData });
-            if (!res.ok) throw new Error('Request failed');
+        try {
+            await Promise.all(idsToUpdate.map(async (bookingId) => {
+                const formData = new FormData();
+                formData.append('_token', document.querySelector('meta[name="csrf-token"]').content);
+                formData.append('booking_id', bookingId);
+                formData.append('end_time', this.editEndTime);
+
+                const res = await fetch('/admin/sessions/update-end-time', { method: 'POST', body: formData });
+                if (!res.ok) throw new Error('Request failed');
+            }));
 
             this.editSession.end = this.editEndTime;
             this.editSession.time = this.formatTo12h(this.editSession.start) + ' – ' + this.formatTo12h(this.editEndTime);
-
-            const diffMins = (eh * 60 + em) - (sh * 60 + sm);
-            const diffHours = diffMins / 60;
-            const durationText = diffHours === 1 ? '1 hr' : String(diffHours.toFixed(2)).replace(/\.?0+$/, '');
-            this.editSession.duration = this.formatTo12h(this.editSession.start) + ' - ' + this.formatTo12h(this.editEndTime) + ' (' + durationText + ')';
-            this.editSession.durationHours = diffHours;
-
             this.closeEditModal();
+            this.triggerBanner('Time updated successfully.', 'success');
         } catch (err) {
             this.editEndTimeError = 'Failed to save. Please try again.';
         } finally {

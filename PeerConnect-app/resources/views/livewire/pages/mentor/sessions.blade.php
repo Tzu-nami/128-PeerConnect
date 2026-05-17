@@ -54,7 +54,16 @@ $sessions = computed(function () {
         });
     });
 
-    return $validBookings->map(function ($b) {
+    $groupedBookings = $validBookings->groupBy(function ($b) {
+        $mode = strtolower(optional($b->tutorialMode)->mode ?? '');
+        if (str_contains($mode, 'group')) {
+            return $b->date . '|' . $b->schedule_start . '|' . $b->schedule_end . '|' . $b->subject_id . '|' . trim($b->topic);
+        }
+        return $b->id;
+    });
+
+    return $groupedBookings->map(function ($group) {
+        $b     = $group->first();
         $start = \Carbon\Carbon::parse($b->schedule_start);
         $end   = \Carbon\Carbon::parse($b->schedule_end);
 
@@ -64,11 +73,19 @@ $sessions = computed(function () {
             ? '1 hr'
             : rtrim(rtrim(number_format($durationHours, 2), '0'), '.') . ' hrs';
 
+        $studentNames = $group->map(function($bk) {
+            return optional(optional($bk->student)->user)->firstName ? $bk->student->user->firstName . ' ' . $bk->student->user->lastName : 'Unknown';
+        })->implode(', ');
+
+        $emails = $group->map(function($bk) {
+            return optional(optional($bk->student)->user)->email ?? '';
+        })->implode(', ');
+
         return [
             'id'            => $b->id,
-            'student'       => optional(optional($b->student)->user)->firstName
-                ? $b->student->user->firstName . ' ' . $b->student->user->lastName
-                : 'Unknown',
+            'group_ids'     => $group->pluck('id')->toArray(),
+            'student'       => $group->count() > 1 ? $group->count() . ' Students (Group)' : $studentNames,
+            'studentNames'  => $studentNames,
             'subject'       => optional($b->subject)->code ?? 'N/A',
             'subjectName'   => optional($b->subject)->name ?? '',
             'topic'         => $b->topic ?? '—',
@@ -79,6 +96,8 @@ $sessions = computed(function () {
                 : '—',
             'yearLevel'     => optional(optional($b->student)->yearLevel)->name ?? 'N/A',
             'degreeProgram' => optional(optional($b->student)->degreeProgram)->name ?? 'N/A',
+            'email'         => $group->count() > 1 ? 'Multiple Emails' : $emails,
+            'emails'        => $emails,
             'start'         => $start->format('H:i'),
             'end'           => $end->format('H:i'),
             'time'          => $start->format('g:i A') . ' – ' . $end->format('g:i A'),
@@ -294,12 +313,12 @@ $summaryCounts = computed(function () {
 
                         {{-- Student --}}
                         <td class="px-5 py-3 max-w-0 align-middle" style="width:15%;">
-                            <p class="font-bold text-slate-700 text-xs truncate"
-                               x-init="$nextTick(() => { if ($el.scrollWidth > $el.clientWidth) $el.title = s.student })"
+                            <p class="font-bold text-slate-700 text-xs truncate cursor-default"
+                               x-init="$nextTick(() => { if ($el.scrollWidth > $el.clientWidth || s.group_ids.length > 1) $el.title = s.studentNames })"
                                x-text="s.student"></p>
-                            <p class="text-xs text-gray-400 truncate"
-                               x-init="$nextTick(() => { if ($el.scrollWidth > $el.clientWidth) $el.title = s.yearLevel + ' – ' + s.degreeProgram })"
-                               x-text="s.yearLevel + ' – ' + s.degreeProgram"></p>
+                            <p class="text-xs text-gray-400 truncate cursor-default"
+                               x-init="$nextTick(() => { if ($el.scrollWidth > $el.clientWidth || s.group_ids.length > 1) $el.title = s.emails })"
+                               x-text="s.email"></p>
                         </td>
 
                         {{-- Subject --}}
@@ -616,6 +635,15 @@ $summaryCounts = computed(function () {
         return h * 60 + m;
     }
 
+    function isGroupSibling(s1, s2) {
+        return s1.date === s2.date &&
+               s1.start === s2.start &&
+               s1.end === s2.end &&
+               s1.subject === s2.subject &&
+               s1.topic === s2.topic &&
+               (s1.mode || '').toLowerCase().includes('group');
+    }
+
     function hasConflict(req, items) {
         return items.some(s => {
             if (s.id === req.id) return false;
@@ -864,73 +892,86 @@ $summaryCounts = computed(function () {
     function commitStatus(id, status, target, items) {
         showLoadingBanner();
 
-        const formData = new FormData();
-        formData.append('_token', csrfToken);
-        formData.append('booking_id', id);
-        formData.append('booking_status', status);
+        const idsToUpdate = target.group_ids || [id];
+        let completedCount = 0;
+        let hasError = false;
 
-        fetch(sessionsUrl, { method: 'POST', body: formData })
-            .then(res => {
-                if (!res.ok) throw new Error('Request failed');
+        idsToUpdate.forEach(bookingId => {
+            const formData = new FormData();
+            formData.append('_token', csrfToken);
+            formData.append('booking_id', bookingId);
+            formData.append('booking_status', status);
 
-                target.status = status;
+            fetch(sessionsUrl, { method: 'POST', body: formData })
+                .then(res => {
+                    if (!res.ok) throw new Error('Request failed');
+                    completedCount++;
 
-                if (status === 'accepted') {
-                    const conflictingIds = getConflictingPendingIds(target, items);
-                    if (conflictingIds.length > 0) {
-                        let completed = 0;
-                        conflictingIds.forEach(conflictId => {
-                            const conflictSession = items.find(s => s.id == conflictId);
-                            if (conflictSession) conflictSession.status = 'rejected';
+                    if (completedCount === idsToUpdate.length && !hasError) {
+                        target.status = status; // Update the UI row
 
-                            const fd = new FormData();
-                            fd.append('_token', csrfToken);
-                            fd.append('booking_id', conflictId);
-                            fd.append('booking_status', 'rejected');
+                        if (status === 'accepted') {
+                            // Find and reject overlapping requests
+                            const conflictingRows = items.filter(s => {
+                                if (s.id === target.id || s.status !== 'pending' || s.date !== target.date) return false;
+                                const sStart = toMin(s.start), sEnd = toMin(s.end);
+                                const aStart = toMin(target.start), aEnd = toMin(target.end);
+                                return aStart < sEnd && aEnd > sStart;
+                            });
 
-                            fetch(sessionsUrl, { method: 'POST', body: fd })
-                                .then(() => {
-                                    completed++;
-                                    if (completed === conflictingIds.length) {
-                                        hideLoadingBanner();
-                                        updateSummaryCounts(items);
-                                        showAutoRejectBanner(conflictingIds.length);
-                                    }
-                                })
-                                .catch(err => {
-                                    hideLoadingBanner();
-                                    console.error('Auto-reject failed for id', conflictId, err);
+                            if (conflictingRows.length > 0) {
+                                let rejectIds = [];
+                                conflictingRows.forEach(row => {
+                                    row.status = 'rejected'; // Update UI
+                                    rejectIds.push(...(row.group_ids || [row.id]));
                                 });
-                        });
-                        updateSummaryCounts(items);
-                        return;
-                    }
-                }
 
-                hideLoadingBanner();
-                updateSummaryCounts(items);
-            })
-            .catch(() => {
-                hideLoadingBanner();
-                showBanner('errorBanner', `
-                    <div style="border:1px solid #fca5a5; background:#fef2f2; border-radius:8px;">
-                        <div style="display:flex; align-items:flex-start; gap:8px; padding:10px 12px;">
-                            <div style="flex-shrink:0; margin-top:2px;">
-                                <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-                                    <circle cx="8" cy="8" r="7.5" stroke="#ef4444" stroke-width="1"/>
-                                    <path d="M8 4.5v4" stroke="#ef4444" stroke-width="1.5" stroke-linecap="round"/>
-                                    <circle cx="8" cy="11" r="0.75" fill="#ef4444"/>
-                                </svg>
+                                let rejectedCount = 0;
+                                rejectIds.forEach(rejId => {
+                                    const fd = new FormData();
+                                    fd.append('_token', csrfToken);
+                                    fd.append('booking_id', rejId);
+                                    fd.append('booking_status', 'rejected');
+
+                                    fetch(sessionsUrl, { method: 'POST', body: fd }).then(() => {
+                                        rejectedCount++;
+                                        if (rejectedCount === rejectIds.length) {
+                                            hideLoadingBanner();
+                                            updateSummaryCounts(items);
+                                            showAutoRejectBanner(conflictingRows.length);
+                                        }
+                                    }).catch(console.error);
+                                });
+                                return;
+                            }
+                        }
+
+                        hideLoadingBanner();
+                        updateSummaryCounts(items);
+                    }
+                })
+                    .catch(() => {
+                        hideLoadingBanner();
+                        showBanner('errorBanner', `
+                            <div style="border:1px solid #fca5a5; background:#fef2f2; border-radius:8px;">
+                                <div style="display:flex; align-items:flex-start; gap:8px; padding:10px 12px;">
+                                    <div style="flex-shrink:0; margin-top:2px;">
+                                        <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                                            <circle cx="8" cy="8" r="7.5" stroke="#ef4444" stroke-width="1"/>
+                                            <path d="M8 4.5v4" stroke="#ef4444" stroke-width="1.5" stroke-linecap="round"/>
+                                            <circle cx="8" cy="11" r="0.75" fill="#ef4444"/>
+                                        </svg>
+                                    </div>
+                                    <div style="flex:1; color:#b91c1c; line-height:1.5;">
+                                        <span style="font-weight:600;">Update failed —</span> please check your connection and try again.
+                                    </div>
+                                    <button onclick="document.getElementById('errorBanner').remove()"
+                                            style="flex-shrink:0; background:none; border:none; cursor:pointer; color:#b91c1c; font-size:14px; line-height:1; padding:0;">&times;</button>
+                                </div>
                             </div>
-                            <div style="flex:1; color:#b91c1c; line-height:1.5;">
-                                <span style="font-weight:600;">Update failed —</span> please check your connection and try again.
-                            </div>
-                            <button onclick="document.getElementById('errorBanner').remove()"
-                                    style="flex-shrink:0; background:none; border:none; cursor:pointer; color:#b91c1c; font-size:14px; line-height:1; padding:0;">&times;</button>
-                        </div>
-                    </div>
-                `);
-            });
+                        `);
+                    });
+                });
     }
 
     const _sessData = @json($this->sessions);

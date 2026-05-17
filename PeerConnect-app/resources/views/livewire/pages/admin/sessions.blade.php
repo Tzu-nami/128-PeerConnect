@@ -25,7 +25,16 @@ $sessions = computed(function () {
         'tutorialMode',
     ])->get();
 
-    return $allBookings->map(function ($b) {
+    $groupedBookings = $allBookings->groupBy(function ($b) {
+        $mode = strtolower(optional($b->tutorialMode)->mode ?? '');
+        if (str_contains($mode, 'group')) {
+            return $b->date . '|' . $b->schedule_start . '|' . $b->schedule_end . '|' . $b->subject_id . '|' . trim($b->topic);
+        }
+        return $b->id; // Individual sessions remain unique
+    });
+
+    return $groupedBookings->map(function ($group) {
+        $b = $group->first();
         $start = \Carbon\Carbon::parse($b->schedule_start);
         $end   = \Carbon\Carbon::parse($b->schedule_end);
 
@@ -36,11 +45,21 @@ $sessions = computed(function () {
             ? '1 hr'
             : rtrim(rtrim(number_format($durationHours, 2), '0'), '.') . ' hrs';
 
+        $studentNames = $group->map(function($bk) {
+            return optional(optional($bk->student)->user)->firstName ? $bk->student->user->firstName . ' ' . $bk->student->user->lastName : 'Unknown';
+        })->implode(', ');
+        
+        $emails = $group->map(function($bk) {
+            return optional(optional($bk->student)->user)->email ?? '';
+        })->implode(', ');
+
         return [
             'id'            => $b->id,
-            'student'       => optional(optional($b->student)->user)->firstName
-                             ? $b->student->user->firstName . ' ' . $b->student->user->lastName
-                             : 'Unknown',
+            'group_ids'     => $group->pluck('id')->toArray(),
+            'student'       => $group->count() > 1 ? $group->count() . ' Students (Group)' : $studentNames,
+            'studentNames'  => $studentNames,
+            'email'         => $group->count() > 1 ? 'Multiple Emails' : $emails,
+            'emails'        => $emails,
             'mentor'        => optional(optional($b->mentor)->user)->firstName
                              ? $b->mentor->user->firstName . ' ' . $b->mentor->user->lastName
                              : '—',
@@ -273,9 +292,9 @@ $updateEndTime = action(function (int $bookingId, string $newEndTime) {
                         <template x-for="(s, index) in paginatedSessions" :key="s.id">
                             <tr class="session-row group hover:bg-slate-50 transition cursor-pointer" @click="openSessionDetailModal(s)">                                
                                 <td class="px-5 py-4 align-middle">
-                                    <div class="hover-tooltip" :data-full="s.student + '\n' + s.yearLevel + ' - ' + s.degreeProgram">
+                                    <div class="hover-tooltip" :data-full="(s.studentNames || s.student) + '\n' + (s.emails || s.email)">
                                         <p class="font-bold text-slate-700 text-xs truncate" x-text="s.student"></p>
-                                        <p class="text-[10px] text-gray-400 mt-0.5 truncate" x-text="(s.yearLevel !== '—' ? s.yearLevel : '') + ' - ' + (s.degreeProgram !== '—' ? s.degreeProgram : '')"></p>
+                                        <p class="text-[10px] text-gray-400 mt-0.5 truncate" x-text="s.email"></p>
                                     </div>
                                 </td>
                                 
@@ -648,7 +667,7 @@ function _adminStatusLabel(status) {
 
 function _adminSessRow(item, pillColor, pillLabel) {
     const line1 = `${item.subject ?? '—'} — ${item.topic || '—'}`;
-    const line2 = `${item.mentor ?? '—'} — ${item.student ?? '—'}`;
+    const line2 = `${item.mentor ?? '—'} — ${item.studentNames || item.student ?? '—'}`;
     const line3 = `${item.date ?? '—'}, ${item.time ?? '—'}`;
     return `<div class="flex items-center gap-3 py-2.5 border-b border-gray-50 last:border-0">
         <div class="w-8 h-8 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center text-[10px] font-bold flex-shrink-0">
@@ -710,7 +729,7 @@ function openAdminHoursModal() {
                 ? (i.durationHours === 1 ? '1 hr' : i.durationHours.toFixed(2).replace(/\.?0+$/, '') + ' hrs')
                 : '—';
 const line1 = `${i.subject ?? '—'} — ${i.topic || '—'}`;
-const line2 = `${i.mentor ?? '—'} — ${i.student ?? '—'}`;
+const line2 = `${item.mentor ?? '—'} — ${item.studentNames || item.student ?? '—'}`;
 const line3 = `${i.date ?? '—'}, ${i.time ?? '—'}`;
 return `<div class="flex items-center gap-3 py-2.5 border-b border-gray-50 last:border-0">
     <div class="w-8 h-8 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center text-[10px] font-bold flex-shrink-0">

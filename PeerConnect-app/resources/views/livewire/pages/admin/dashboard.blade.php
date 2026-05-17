@@ -58,8 +58,16 @@ state([
 mount(function () {
     abort_if(!auth()->user()->isAdmin(), 403, 'Unauthorized Access');
     $this->totalMentors = MentorProfiles::count();
-    $this->sessionsToday = Bookings::whereDate('date', Carbon::today())->count();
-    $this->pendingBookings = Bookings::where('booking_status', 'pending')->count();
+    $this->sessionsToday = Bookings::with('tutorialMode')->whereDate('date', Carbon::today())->get()->groupBy(function($b) {
+        $mode = strtolower(optional($b->tutorialMode)->mode ?? '');
+        return str_contains($mode, 'group') ? $b->date . '|' . $b->schedule_start . '|' . $b->schedule_end . '|' . $b->subject_id . '|' . trim($b->topic) : $b->id;
+    })->count();
+
+    $this->pendingBookings = Bookings::with('tutorialMode')->where('booking_status', 'pending')->get()->groupBy(function($b) {
+        $mode = strtolower(optional($b->tutorialMode)->mode ?? '');
+        return str_contains($mode, 'group') ? $b->date . '|' . $b->schedule_start . '|' . $b->schedule_end . '|' . $b->subject_id . '|' . trim($b->topic) : $b->id;
+    })->count();
+
     $this->totalStudents = Bookings::distinct('student_id')->count('student_id');
 
     $this->todaySessions = Bookings::with(['mentor.user', 'student.user', 'subject'])
@@ -77,20 +85,35 @@ mount(function () {
         ])
         ->toArray();
 
-    $this->pendingApprovalsList = Bookings::with(['student.user', 'mentor.user', 'subject'])
+    $rawPending = Bookings::with(['student.user', 'mentor.user', 'subject', 'tutorialMode'])
         ->where('booking_status', 'pending')
         ->latest('created_at')
-        ->get()
-        ->map(fn($b) => [
+        ->get();
+
+    $this->pendingApprovalsList = $rawPending->groupBy(function($b) {
+        $mode = strtolower(optional($b->tutorialMode)->mode ?? '');
+        if (str_contains($mode, 'group')) {
+            return $b->date . '|' . $b->schedule_start . '|' . $b->schedule_end . '|' . $b->subject_id . '|' . trim($b->topic);
+        }
+        return $b->id;
+    })->map(function($group) {
+        $b = $group->first();
+        $studentNames = $group->map(fn($bk) => optional(optional($bk->student)->user)->firstName ? $bk->student->user->firstName . ' ' . $bk->student->user->lastName : 'Unknown')->implode(', ');
+        $emails = $group->map(fn($bk) => optional(optional($bk->student)->user)->email ?? '')->implode(', ');
+
+        return [
             'id'           => $b->id,
+            'group_ids'    => $group->pluck('id')->toArray(),
             'mentor_id'    => $b->mentor_id,
             'initials'     => strtoupper(substr($b->student->user->name ?? 'U', 0, 2)),
-            'name'         => $b->student->user->name ?? 'Unknown Student',
-            'email'        => $b->student->user->email ?? '',
+            'name'         => $group->count() > 1 ? $group->count() . ' Students (Group)' : ($b->student->user->name ?? 'Unknown Student'),
+            'studentNames' => $studentNames,
+            'email'        => $group->count() > 1 ? 'Multiple Emails' : ($b->student->user->email ?? ''),
+            'emails'       => $emails,
             'type'         => 'Session Booking',
-            'subject'      => $b->subject->code       ?? 'N/A',
-            'subject_name' => $b->subject->name       ?? '',
-            'mentor'       => $b->mentor->user->name  ?? 'Unknown Mentor',
+            'subject'      => $b->subject->code ?? 'N/A',
+            'subject_name' => $b->subject->name ?? '',
+            'mentor'       => $b->mentor->user->name ?? 'Unknown Mentor',
             'date'         => \Carbon\Carbon::parse($b->date)->format('M j'),
             'date_full'    => \Carbon\Carbon::parse($b->date)->format('F j, Y'),
             'date_raw'     => \Carbon\Carbon::parse($b->date)->format('Y-m-d'),
@@ -99,32 +122,90 @@ mount(function () {
             'start_24'     => \Carbon\Carbon::parse($b->schedule_start)->format('H:i'),
             'end_24'       => \Carbon\Carbon::parse($b->schedule_end)->format('H:i'),
             'topic'        => $b->topic ?? '—',
-            'mode'         => $b->mode ?? 'One-on-One Tutorial',
+            'mode'         => optional($b->tutorialMode)->mode ?? 'One-on-One Tutorial',
             'notes'        => $b->notes ?? null,
             'created_at'   => $b->created_at->format('M j, Y g:i A'),
-        ])
-        ->toArray();
+        ];
+    })->values()->toArray();
 
-    $this->allSessions = Bookings::with(['mentor.user', 'student.user', 'subject'])
+    $rawAll = Bookings::with(['mentor.user', 'student.user', 'subject', 'tutorialMode'])
         ->orderBy('date')
-        ->get()
-        ->map(fn($b) => [
-            'id'        => $b->id,
-            'mentor_id' => $b->mentor_id,
-            'date'      => \Carbon\Carbon::parse($b->date)->format('Y-m-d'),
-            'mentor'    => $b->mentor->user->name  ?? 'Unknown',
-            'mentee'    => $b->student->user->name ?? 'Unknown',
-            'subject'   => $b->subject->code       ?? 'N/A',
-            'topic'     => $b->topic               ?? '—',
-            'time'      => Carbon::parse($b->schedule_start)->format('h:i A'),
-            'status'    => $b->booking_status,
-            'start'     => \Carbon\Carbon::parse($b->schedule_start)->format('Y-m-d\TH:i:s'),
-            'end'       => \Carbon\Carbon::parse($b->schedule_end)->format('Y-m-d\TH:i:s'),
-            'start_24'  => \Carbon\Carbon::parse($b->schedule_start)->format('H:i'),
-            'end_24'    => \Carbon\Carbon::parse($b->schedule_end)->format('H:i'),
-            'mode'      => $b->mode                ?? 'One-on-One Tutorial',
-        ])
-        ->toArray();
+        ->get();
+
+    $this->allSessions = $rawAll->groupBy(function($b) {
+        $mode = strtolower(optional($b->tutorialMode)->mode ?? '');
+        if (str_contains($mode, 'group')) {
+            return $b->date . '|' . $b->schedule_start . '|' . $b->schedule_end . '|' . $b->subject_id . '|' . trim($b->topic);
+        }
+        return $b->id;
+    })->map(function($group) {
+        $b = $group->first();
+        $studentNames = $group->map(fn($bk) => optional(optional($bk->student)->user)->firstName ? $bk->student->user->firstName . ' ' . $bk->student->user->lastName : 'Unknown')->implode(', ');
+
+        return [
+            'id'           => $b->id,
+            'group_ids'    => $group->pluck('id')->toArray(),
+            'mentor_id'    => $b->mentor_id,
+            'date'         => \Carbon\Carbon::parse($b->date)->format('Y-m-d'),
+            'mentor'       => $b->mentor->user->name ?? 'Unknown',
+            'mentee'       => $group->count() > 1 ? $group->count() . ' Students (Group)' : ($b->student->user->name ?? 'Unknown'),
+            'studentNames' => $studentNames,
+            'subject'      => $b->subject->code ?? 'N/A',
+            'subjectName'  => $b->subject->name ?? '',
+            'topic'        => $b->topic ?? '—',
+            'time'         => \Carbon\Carbon::parse($b->schedule_start)->format('h:i A'),
+            'status'       => $b->booking_status,
+            'start'        => \Carbon\Carbon::parse($b->schedule_start)->format('Y-m-d\TH:i:s'),
+            'end'          => \Carbon\Carbon::parse($b->schedule_end)->format('Y-m-d\TH:i:s'),
+            'start_24'     => \Carbon\Carbon::parse($b->schedule_start)->format('H:i'),
+            'end_24'       => \Carbon\Carbon::parse($b->schedule_end)->format('H:i'),
+            'mode'         => optional($b->tutorialMode)->mode ?? 'One-on-One Tutorial',
+            'yearLevel'    => optional(optional($b->student)->yearLevel)->name ?? 'N/A',
+            'degreeProgram'=> optional(optional($b->student)->degreeProgram)->name ?? 'N/A',
+        ];
+    })->values()->toArray();
+});
+
+$sessions = computed(function () {
+    $rawAll = Bookings::with(['student.user', 'mentor.user', 'subject', 'tutorialMode'])->get();
+
+    $groupedBookings = $rawAll->groupBy(function ($b) {
+        $mode = strtolower(optional($b->tutorialMode)->mode ?? '');
+        if (str_contains($mode, 'group')) {
+            return $b->date . '|' . $b->schedule_start . '|' . $b->schedule_end . '|' . $b->subject_id . '|' . trim($b->topic);
+        }
+        return $b->id;
+    });
+
+    return $groupedBookings->map(function ($group) {
+        $b = $group->first();
+        $start = \Carbon\Carbon::parse($b->schedule_start);
+        $end   = \Carbon\Carbon::parse($b->schedule_end);
+        $durationHours = $start->diffInMinutes($end) / 60;
+        $studentNames = $group->map(fn($bk) => optional(optional($bk->student)->user)->firstName ? $bk->student->user->firstName . ' ' . $bk->student->user->lastName : 'Unknown')->implode(', ');
+
+        return [
+            'id'            => $b->id,
+            'group_ids'     => $group->pluck('id')->toArray(),
+            'student'       => $group->count() > 1 ? $group->count() . ' Students (Group)' : $studentNames,
+            'studentNames'  => $studentNames,
+            'mentor'        => optional(optional($b->mentor)->user)->firstName ? $b->mentor->user->firstName . ' ' . $b->mentor->user->lastName : '—',
+            'subject'       => optional($b->subject)->code ?? 'N/A',
+            'subjectName'   => optional($b->subject)->name ?? '',
+            'topic'         => $b->topic ?? '—',
+            'date'          => $b->date ? \Carbon\Carbon::parse($b->date)->format('F j, Y') : '—',
+            'rawDate'       => $b->date ? \Carbon\Carbon::parse($b->date)->format('Y-m-d') : '',
+            'mode'          => optional($b->tutorialMode)->mode ?? '—',
+            'yearLevel'     => optional(optional($b->student)->yearLevel)->name ?? 'N/A',
+            'degreeProgram' => optional(optional($b->student)->degreeProgram)->name ?? 'N/A',
+            'start'         => $start->format('H:i'),
+            'end'           => $end->format('H:i'),
+            'time'          => $start->format('g:i A') . ' – ' . $end->format('g:i A'),
+            'duration'      => $start->format('h:i A') . ' - ' . $end->format('h:i A') . ' (' . ($durationHours == 1 ? '1 hr' : number_format($durationHours, 2) . ' hrs') . ')',
+            'durationHours' => $durationHours,
+            'status'        => $b->booking_status,
+        ];
+    })->values()->toArray();
 });
 
 $searchIndex = computed(function () {
@@ -209,24 +290,31 @@ $monthlyTrends = computed(function () {
     for ($i = 3; $i >= 0; $i--) {
         $start = Carbon::now()->startOfWeek()->subWeeks($i);
         $end   = Carbon::now()->startOfWeek()->subWeeks($i)->endOfWeek();
-        $count = Bookings::whereBetween('date', [$start, $end])->count();
+        
+        $count = Bookings::with('tutorialMode')->whereBetween('date', [$start, $end])->get()->groupBy(function($b) {
+            $mode = strtolower(optional($b->tutorialMode)->mode ?? '');
+            return str_contains($mode, 'group') ? $b->date . '|' . $b->schedule_start . '|' . $b->schedule_end . '|' . $b->subject_id . '|' . trim($b->topic) : $b->id;
+        })->count();
+        
         $weeks[] = $count;
     }
     return $weeks;
 });
 
 $topMentors = computed(function () {
-    return Bookings::with('mentor.user')
-        ->selectRaw('mentor_id, COUNT(*) as session_count')
-        ->groupBy('mentor_id')
-        ->orderByDesc('session_count')
-        ->take(4)
-        ->get()
-        ->map(fn($b) => [
-            'name'  => $b->mentor->user->lastName ?? 'Unknown',
-            'count' => $b->session_count,
-        ])
-        ->toArray();
+    $raw = Bookings::with(['mentor.user', 'tutorialMode'])->whereNotNull('mentor_id')->get();
+    
+    return $raw->groupBy('mentor_id')->map(function($mentorBookings) {
+        $uniqueCount = $mentorBookings->groupBy(function($b) {
+            $mode = strtolower(optional($b->tutorialMode)->mode ?? '');
+            return str_contains($mode, 'group') ? $b->date . '|' . $b->schedule_start . '|' . $b->schedule_end . '|' . $b->subject_id . '|' . trim($b->topic) : $b->id;
+        })->count();
+        
+        return [
+            'name'  => $mentorBookings->first()->mentor->user->lastName ?? 'Unknown',
+            'count' => $uniqueCount,
+        ];
+    })->sortByDesc('count')->take(4)->values()->toArray();
 });
 
 $satisfactionRate = computed(function () {
@@ -256,17 +344,19 @@ $satisfactionRate = computed(function () {
 });
 
 $topSubjects = computed(function () {
-    return Bookings::with('subject')
-        ->selectRaw('subject_id, COUNT(*) as booking_count')
-        ->groupBy('subject_id')
-        ->orderByDesc('booking_count')
-        ->take(5)
-        ->get()
-        ->map(fn($b) => [
-            'name'  => $b->subject->code ?? 'Unknown',
-            'count' => $b->booking_count,
-        ])
-        ->toArray();
+    $raw = Bookings::with(['subject', 'tutorialMode'])->get();
+    
+    return $raw->groupBy('subject_id')->map(function($subjectBookings) {
+        $uniqueCount = $subjectBookings->groupBy(function($b) {
+            $mode = strtolower(optional($b->tutorialMode)->mode ?? '');
+            return str_contains($mode, 'group') ? $b->date . '|' . $b->schedule_start . '|' . $b->schedule_end . '|' . $b->subject_id . '|' . trim($b->topic) : $b->id;
+        })->count();
+        
+        return [
+            'name'  => $subjectBookings->first()->subject->code ?? 'Unknown',
+            'count' => $uniqueCount,
+        ];
+    })->sortByDesc('count')->take(5)->values()->toArray();
 });
 
 $collegeActivity = computed(function () {
@@ -287,8 +377,12 @@ $collegeActivity = computed(function () {
 });
 
 $dashboardStats = computed(function () {
-    $all           = \DB::table('feedback')->get();
-    $totalSessions = \DB::table('bookings')->where('booking_status', 'completed')->count();
+    $all = \DB::table('feedback')->get();
+    
+    $totalSessions = Bookings::with('tutorialMode')->where('booking_status', 'completed')->get()->groupBy(function($b) {
+        $mode = strtolower(optional($b->tutorialMode)->mode ?? '');
+        return str_contains($mode, 'group') ? $b->date . '|' . $b->schedule_start . '|' . $b->schedule_end . '|' . $b->subject_id . '|' . trim($b->topic) : $b->id;
+    })->count();
 
     if ($all->isEmpty()) {
         return ['avg' => '0.0', 'total' => 0, 'sessions' => number_format($totalSessions)];
@@ -944,11 +1038,11 @@ $rejectBooking = action(function (string $id) {
                             <button
                                 @click="
                                     if (!selected) return;
-                                    const id = selected.id;
-                                    processingId = id;
+                                    processingId = selected.id;
                                     modalOpen = false;
-                                    $wire.rejectBooking(id).then(() => {
-                                        doneIds[id] = 'rejected';
+                                    const ids = selected.group_ids || [selected.id];
+                                    Promise.all(ids.map(gid => $wire.rejectBooking(gid))).then(() => {
+                                        doneIds[selected.id] = 'rejected';
                                         processingId = null;
                                     })
                                 "
@@ -958,10 +1052,11 @@ $rejectBooking = action(function (string $id) {
                             <button
                                 @click="
                                     if (!selected) return;
-                                    const id = selected.id;
-                                    processingId = id;
+                                    processingId = selected.id;
                                     modalOpen = false;
-                                    $wire.acceptBooking(id).then(() => {
+                                    const ids = selected.group_ids || [selected.id];
+                                    Promise.all(ids.map(gid => $wire.acceptBooking(gid))).then(() => {
+                                        doneIds[selected.id] = 'accepted';
                                         processingId = null;
                                     })
                                 "
@@ -1542,7 +1637,13 @@ $rejectBooking = action(function (string $id) {
                     const label     = getStatusLabel(rawStatus);
                     const statusCell = `<span class="${colorCls} font-bold text-[10px] bg-gray-50 px-2 py-1 rounded border border-current opacity-80 capitalize">${label}</span>`;
                     return `<tr class="border-b last:border-0 hover:bg-slate-50 transition">
-                        <td class="py-3 max-w-0" style="width:22%;" title="${row.mentee}"><div class="truncate text-xs font-bold text-slate-700">${row.mentee}</div></td>
+                        <td class="py-3 max-w-0" style="width:22%;">
+                            <div class="hover-tooltip" data-full="${(row.studentNames || row.mentee).replace(/"/g, '&quot;')}" style="max-width:260px;">
+                                <div id="name-${row.id}" class="truncate text-xs font-bold text-slate-700">
+                                    ${row.mentee}
+                                </div>
+                            </div>
+                        </td>
                         <td class="py-3 max-w-0" style="width:22%;" title="${row.mentor}"><div class="truncate text-xs text-slate-600">${row.mentor}</div></td>
                         <td class="py-3 max-w-0 text-xs text-slate-500" style="width:16%;" title="${row.subject}"><div class="truncate">${row.subject}</div></td>
                         <td class="py-3 pl-4 max-w-0 text-xs text-slate-500" style="width:20%;" title="${row.time}"><div class="truncate">${row.time}</div></td>
