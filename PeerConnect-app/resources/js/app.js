@@ -815,7 +815,7 @@ Alpine.data('sessionManagement', (initialSessions = [], initialCounts = {}) => (
         };
         return this.sessions.some(s => {
             if (s.id === newReq.id) return false;
-            if (newReq.group_ids && newReq.group_ids.includes(s.id)) return false; // 🌟 Ignore siblings
+            if (newReq.group_ids && newReq.group_ids.includes(s.id)) return false;
             if (!['accepted', 'completed'].includes(s.status)) return false;
             if (s.mentor !== newReq.mentor) return false;
 
