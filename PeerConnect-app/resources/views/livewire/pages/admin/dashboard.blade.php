@@ -1176,24 +1176,66 @@ $rejectBooking = action(function (string $id) {
                     <i class="fa-solid fa-file-arrow-down"></i>
                 </div>
                 <div class="flex-1 min-w-0">
-                    <h2 class="text-xl font-extrabold text-slate-800 tracking-tight mb-0.5">Generate Weekly Report</h2>
-                    <p class="text-xs text-slate-500 leading-snug" id="reportWeekLabel">Loading week range...</p>
+                    <h2 class="text-xl font-extrabold text-slate-800 tracking-tight mb-0.5">Generate Report</h2>
+                    <p class="text-xs text-slate-500 leading-snug">Select a date range to export sessions.</p>
                 </div>
                 <button onclick="document.getElementById('reportModal').style.display='none'"
                     class="text-gray-400 hover:text-red-600 transition">
                     <i class="fa-solid fa-xmark text-xl"></i>
                 </button>
             </div>
-            <div class="px-6 py-5">
-                <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 flex items-start gap-3">
-                    <i class="fa-solid fa-calendar-week text-slate-400 mt-0.5 text-sm flex-shrink-0"></i>
+            <div class="px-6 py-5 space-y-4">
+                <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <p class="text-xs font-bold text-slate-700 mb-0.5">Current Week</p>
-                        <p class="text-xs text-slate-500" id="reportWeekDetail">—</p>
+                        <label for="reportDateFrom" class="block text-[11px] font-bold text-slate-600 mb-1.5 uppercase tracking-wide">
+                            <i class="fa-regular fa-calendar mr-1 text-slate-400"></i> From
+                        </label>
+                        <input type="date" id="reportDateFrom"
+                            class="w-full px-3 py-2 text-xs border border-gray-200 rounded-lg outline-none focus:ring-1 focus:ring-red-800 focus:border-red-800 text-slate-700 bg-white">
+                    </div>
+                    <div>
+                        <label for="reportDateTo" class="block text-[11px] font-bold text-slate-600 mb-1.5 uppercase tracking-wide">
+                            <i class="fa-regular fa-calendar mr-1 text-slate-400"></i> To
+                        </label>
+                        <input type="date" id="reportDateTo"
+                            class="w-full px-3 py-2 text-xs border border-gray-200 rounded-lg outline-none focus:ring-1 focus:ring-red-800 focus:border-red-800 text-slate-700 bg-white">
                     </div>
                 </div>
-                <p class="text-xs text-slate-400 mt-3 leading-relaxed">
-                    Exports all sessions for this week (Monday – Sunday) with student, mentor, subject, topic, date &amp; time, and session mode.
+
+                <div class="flex flex-wrap gap-2">
+                    <button type="button" onclick="setReportPreset('thisWeek')"
+                        class="report-preset-btn px-3 py-1.5 text-[10px] font-bold rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-800 hover:text-white hover:border-slate-800 transition">
+                        This Week
+                    </button>
+                    <button type="button" onclick="setReportPreset('lastWeek')"
+                        class="report-preset-btn px-3 py-1.5 text-[10px] font-bold rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-800 hover:text-white hover:border-slate-800 transition">
+                        Last Week
+                    </button>
+                    <button type="button" onclick="setReportPreset('thisMonth')"
+                        class="report-preset-btn px-3 py-1.5 text-[10px] font-bold rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-800 hover:text-white hover:border-slate-800 transition">
+                        This Month
+                    </button>
+                    <button type="button" onclick="setReportPreset('lastMonth')"
+                        class="report-preset-btn px-3 py-1.5 text-[10px] font-bold rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-800 hover:text-white hover:border-slate-800 transition">
+                        Last Month
+                    </button>
+                    <button type="button" onclick="setReportPreset('allTime')"
+                        class="report-preset-btn px-3 py-1.5 text-[10px] font-bold rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-800 hover:text-white hover:border-slate-800 transition">
+                        All Time
+                    </button>
+                </div>
+
+                <div id="reportRangePreview" class="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 flex items-center gap-3" style="display:none!important;">
+                    <i class="fa-solid fa-calendar-range text-slate-400 text-sm flex-shrink-0"></i>
+                    <p class="text-xs text-slate-600 font-medium" id="reportRangePreviewText">—</p>
+                </div>
+
+                <p class="text-xs text-slate-400 leading-relaxed">
+                    Exports all sessions in the selected range with student, mentor, subject, topic, date &amp; time, and session mode.
+                </p>
+
+                <p id="reportDateError" class="text-xs text-red-600 font-semibold hidden">
+                    <i class="fa-solid fa-circle-exclamation mr-1"></i> Please select a valid date range.
                 </p>
             </div>
             <div class="px-6 py-5 bg-gray-50 border-t border-gray-100">
@@ -1377,16 +1419,6 @@ $rejectBooking = action(function (string $id) {
             document.getElementById('autoRejectModal').style.display = 'none';
         }
 
-        function getWeekRange() {
-            const now = new Date();
-            const end = new Date(now);
-            end.setHours(23, 59, 59, 999);
-            const start = new Date(now);
-            start.setDate(now.getDate() - 6);
-            start.setHours(0, 0, 0, 0);
-            return { mon: start, sun: end };
-        }
-
         function formatDisplay(d) {
             return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
         }
@@ -1395,13 +1427,65 @@ $rejectBooking = action(function (string $id) {
             return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
         }
 
+        function setReportPreset(preset) {
+            const now   = new Date();
+            let from, to;
+
+            if (preset === 'thisWeek') {
+                const day = now.getDay();
+                from = new Date(now); from.setDate(now.getDate() - ((day + 6) % 7)); from.setHours(0,0,0,0);
+                to   = new Date(from); to.setDate(from.getDate() + 6); to.setHours(23,59,59,999);
+            } else if (preset === 'lastWeek') {
+                const day = now.getDay();
+                to   = new Date(now); to.setDate(now.getDate() - ((day + 6) % 7) - 1); to.setHours(23,59,59,999);
+                from = new Date(to); from.setDate(to.getDate() - 6); from.setHours(0,0,0,0);
+            } else if (preset === 'thisMonth') {
+                from = new Date(now.getFullYear(), now.getMonth(), 1);
+                to   = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+            } else if (preset === 'lastMonth') {
+                from = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                to   = new Date(now.getFullYear(), now.getMonth(), 0);
+            } else if (preset === 'allTime') {
+                from = new Date(2000, 0, 1);
+                to   = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+            }
+
+            document.getElementById('reportDateFrom').value = toDateStr(from);
+            document.getElementById('reportDateTo').value   = toDateStr(to);
+            updateReportPreview();
+        }
+
+        function updateReportPreview() {
+            const fromVal = document.getElementById('reportDateFrom').value;
+            const toVal   = document.getElementById('reportDateTo').value;
+            const preview = document.getElementById('reportRangePreview');
+            const previewText = document.getElementById('reportRangePreviewText');
+            const errEl   = document.getElementById('reportDateError');
+
+            if (fromVal && toVal) {
+                const from = new Date(fromVal + 'T00:00:00');
+                const to   = new Date(toVal   + 'T00:00:00');
+                if (from <= to) {
+                    previewText.textContent = `${formatDisplay(from)} – ${formatDisplay(to)}`;
+                    preview.style.removeProperty('display');
+                    errEl.classList.add('hidden');
+                } else {
+                    preview.style.display = 'none';
+                }
+            } else {
+                preview.style.display = 'none';
+            }
+        }
+
         function openReportModal() {
-            const { mon, sun } = getWeekRange();
-            const shortLabel  = `${formatDisplay(mon)} – ${formatDisplay(sun)}`;
-            const detailLabel = `${mon.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })} – ${sun.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}`;
-            document.getElementById('reportWeekLabel').textContent  = shortLabel;
-            document.getElementById('reportWeekDetail').textContent = detailLabel;
-            document.getElementById('reportModal').style.display    = 'flex';
+            // Default to current week on open
+            setReportPreset('thisWeek');
+            document.getElementById('reportDateError').classList.add('hidden');
+            document.getElementById('reportModal').style.display = 'flex';
+
+            // Live preview on date input change
+            document.getElementById('reportDateFrom').oninput = updateReportPreview;
+            document.getElementById('reportDateTo').oninput   = updateReportPreview;
         }
 
         function submitReport() {
@@ -1410,9 +1494,26 @@ $rejectBooking = action(function (string $id) {
                 return;
             }
 
-            const { mon, sun } = getWeekRange();
-            const fromStr = toDateStr(mon);
-            const toStr   = toDateStr(sun);
+            const fromVal = document.getElementById('reportDateFrom').value;
+            const toVal   = document.getElementById('reportDateTo').value;
+            const errEl   = document.getElementById('reportDateError');
+
+            if (!fromVal || !toVal) {
+                errEl.classList.remove('hidden');
+                return;
+            }
+
+            const mon = new Date(fromVal + 'T00:00:00');
+            const sun = new Date(toVal   + 'T23:59:59');
+
+            if (mon > sun) {
+                errEl.classList.remove('hidden');
+                return;
+            }
+
+            errEl.classList.add('hidden');
+            const fromStr = fromVal;
+            const toStr   = toVal;
 
             const topMentors   = @json($this->topMentors);
             const topSubjects  = @json($this->topSubjects);
@@ -1441,11 +1542,11 @@ $rejectBooking = action(function (string $id) {
                     const dateTime = `${dateFormatted}  ${fmt(start)} – ${fmt(end)}  (${dur})`;
                     return [r.mentee ?? 'Unknown', r.mentor ?? 'Unknown', r.subject ?? 'N/A', r.topic ?? '—', dateTime, r.mode ?? 'One-on-One Tutorial'];
                 })
-                : [['No sessions found for this week.', '', '', '', '', '']];
+                : [['No sessions found for the selected date range.', '', '', '', '', '']];
 
             const sessionSheet = XLSX.utils.aoa_to_sheet([sessionHeader, ...sessionRows]);
             sessionSheet['!cols'] = [{ wch: 24 }, { wch: 24 }, { wch: 14 }, { wch: 24 }, { wch: 36 }, { wch: 28 }];
-            XLSX.utils.book_append_sheet(wb, sessionSheet, 'Weekly Sessions');
+            XLSX.utils.book_append_sheet(wb, sessionSheet, 'Sessions');
 
             const statusSummary = { completed: 0, accepted: 0, pending: 0, rejected: 0 };
             filtered.forEach(r => { const s = (r.status ?? '').toLowerCase(); if (statusSummary[s] !== undefined) statusSummary[s]++; });
@@ -1460,7 +1561,7 @@ $rejectBooking = action(function (string $id) {
             const totalM = Math.round(totalMins % 60);
 
             const overviewRows = [
-                ['LRC PEERCONNECT — WEEKLY SESSION REPORT'], [],
+                ['LRC PEERCONNECT — SESSION REPORT'], [],
                 ['Report Period', `${formatDisplay(mon)}  to  ${formatDisplay(sun)}`],
                 ['Generated on',  new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })], [],
                 ['SUMMARY'],
