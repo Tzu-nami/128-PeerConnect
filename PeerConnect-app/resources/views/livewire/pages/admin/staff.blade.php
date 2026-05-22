@@ -2,18 +2,16 @@
 
 use function Livewire\Volt\{state, mount, computed, action, uses};
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Livewire\WithFileUploads;
 use App\Models\StaffProfiles;
-use App\Models\StaffAvailabilities;
 
 uses([WithFileUploads::class]);
 
 state([
-    // Form states
     'showModal' => false,
     'showConfirm' => false,
 
-    // Edit states
     'showEditModal' => false,
     'showEditConfirm' => false,
     'editStaffId' => null,
@@ -25,33 +23,26 @@ state([
     'editAvatarPreview' => '',
     'editAvatar' => null,
 
-    // Add states
     'firstName' => '',
     'lastName' => '',
     'middleInitial' => '',
     'email' => '',
     'role' => '',
     'avatar' => null,
-
-    'availabilities' => [
-        ['id' => '1', 'day_of_week' => '', 'start_time' => '', 'end_time' => '']
-    ],
 ]);
 
-$allStaff = computed(function () {
-    return StaffProfiles::with('availabilities')->get()->map(function ($staff) {
-        $schedule = $staff->availabilities
-            ->groupBy(fn($item) => strtolower($item->day_of_week))
-            ->map(fn($slots) => [
-                'slots' => $slots->sortBy(fn($t) => \Carbon\Carbon::parse($t->start_time)->timestamp)
-                    ->map(fn($t) => [
-                        'start' => \Carbon\Carbon::parse($t->start_time)->format('g:i A'),
-                        'end'   => \Carbon\Carbon::parse($t->end_time)->format('g:i A'),
-                    ])->values()->toArray(),
-            ])->toArray();
+$roleOptions = [
+    'lrc_head' => 'LRC Head',
+    'lrc_assistant' => 'LRC Assistant',
+    'student_assistant' => 'Student Assistant',
+];
 
-        if (empty($schedule)) $schedule = new \stdClass();
+$formatRole = function ($role) use ($roleOptions) {
+    return $roleOptions[$role] ?? ucwords(str_replace('_', ' ', (string) $role));
+};
 
+$allStaff = computed(function () use ($formatRole) {
+    return StaffProfiles::all()->map(function ($staff) use ($formatRole) {
         return [
             'id'            => $staff->id,
             'firstName'     => $staff->firstName,
@@ -59,16 +50,15 @@ $allStaff = computed(function () {
             'middleInitial' => $staff->middleInitial,
             'email'         => $staff->email,
             'role'          => $staff->role,
+            'roleLabel'     => $formatRole($staff->role),
             'avatar'        => $staff->avatar,
-            'schedule'      => $schedule,
         ];
     })->values()->toArray();
 });
 
-// ── ADD STAFF ────────────────────────────────────────────────
 $openModal = action(function () {
     $this->reset(['firstName', 'lastName', 'middleInitial', 'email', 'role', 'avatar', 'showConfirm']);
-    $this->availabilities = [['id' => '1', 'day_of_week' => '', 'start_time' => '', 'end_time' => '']];
+    $this->role = '';
     $this->showModal = true;
 });
 
@@ -77,59 +67,24 @@ $closeModal = action(function () {
     $this->showConfirm = false;
     $this->resetErrorBag();
     $this->reset(['firstName', 'lastName', 'middleInitial', 'email', 'role', 'avatar']);
-    $this->availabilities = [['id' => '1', 'day_of_week' => '', 'start_time' => '', 'end_time' => '']];
+    $this->role = '';
 });
 
-$confirmStaff = action(function () {
-    $this->availabilities = collect($this->availabilities)
-        ->map(fn($row) => [
-            'day_of_week' => strtolower(trim($row['day_of_week'] ?? '')),
-            'start_time'  => trim($row['start_time'] ?? ''),
-            'end_time'    => trim($row['end_time'] ?? ''),
-        ])
-        ->values()
-        ->toArray();
-
+$confirmStaff = action(function () use ($roleOptions) {
     $this->validate([
         'firstName'     => ['required', 'string', 'max:255'],
         'lastName'      => ['required', 'string', 'max:255'],
         'middleInitial' => ['nullable', 'string', 'max:2'],
         'email'         => ['required', 'email', 'max:255'],
-        'role'          => ['required', 'string', 'max:255'],
+        'role'          => ['required', Rule::in(array_keys($roleOptions))],
         'avatar'        => ['required', 'image', 'max:2048'],
-        'availabilities'               => ['required', 'array', 'min:1'],
-        'availabilities.*.day_of_week' => ['required', 'in:monday,tuesday,wednesday,thursday,friday,saturday'],
-        'availabilities.*.start_time'  => ['required', 'date_format:H:i'],
-        'availabilities.*.end_time'    => ['required', 'date_format:H:i'],
     ], [], [
-        'firstName'     => 'first name',
-        'lastName'      => 'last name',
-        'email'         => 'email',
-        'role'          => 'role',
-        'avatar'        => 'profile picture',
-        'availabilities' => 'availabilities',
+        'firstName' => 'first name',
+        'lastName'  => 'last name',
+        'email'     => 'email',
+        'role'      => 'role',
+        'avatar'    => 'profile picture',
     ]);
-
-    $groupedSchedule = [];
-
-    foreach ($this->availabilities as $i => $row) {
-        if ($row['end_time'] <= $row['start_time']) {
-            $this->addError("availabilities.{$i}.end_time", 'Start time should be earlier than end time.');
-            return;
-        }
-
-        $day = $row['day_of_week'];
-        foreach ($groupedSchedule[$day] ?? [] as $existing) {
-            if ($row['start_time'] < $existing['end_time'] && $row['end_time'] > $existing['start_time']) {
-                $this->addError("availabilities.{$i}.start_time", "This time overlaps with another slot on " . ucfirst($day) . ".");
-                return;
-            }
-        }
-        $groupedSchedule[$day][] = [
-            'start_time' => $row['start_time'],
-            'end_time'   => $row['end_time'],
-        ];
-    }
 
     $this->showConfirm = true;
 });
@@ -150,103 +105,44 @@ $saveStaff = action(function () {
         $staff->update(['avatar' => $url]);
     }
 
-    foreach ($this->availabilities as $sched) {
-        StaffAvailabilities::create([
-            'staff_id'    => $staff->id,
-            'day_of_week' => $sched['day_of_week'],
-            'start_time'  => $sched['start_time'],
-            'end_time'    => $sched['end_time'],
-        ]);
-    }
-
     $this->showModal = false;
     $this->showConfirm = false;
     session()->flash('successMessage', "The staff member has been added.");
     $this->redirect(route('admin.staff'), navigate: true);
 });
 
-// ── EDIT STAFF ───────────────────────────────────────────────
 $editStaff = action(function ($id) {
-    $staff = StaffProfiles::with('availabilities')->find($id);
+    $staff = StaffProfiles::find($id);
 
-    $this->editStaffId      = $staff->id;
-    $this->editFirstName    = $staff->firstName;
-    $this->editLastName     = $staff->lastName;
+    $this->editStaffId       = $staff->id;
+    $this->editFirstName     = $staff->firstName;
+    $this->editLastName      = $staff->lastName;
     $this->editMiddleInitial = $staff->middleInitial;
-    $this->editEmail        = $staff->email;
-    $this->editRole         = $staff->role;
+    $this->editEmail         = $staff->email;
+    $this->editRole          = $staff->role;
     $this->editAvatarPreview = $staff->avatar;
-    $this->editAvatar       = null;
-
-    if ($staff->availabilities->count() > 0) {
-        $this->availabilities = $staff->availabilities->map(function ($avail) {
-            return [
-                'id'          => $avail->id,
-                'day_of_week' => strtolower($avail->day_of_week),
-                'start_time'  => \Carbon\Carbon::parse($avail->start_time)->format('H:i'),
-                'end_time'    => \Carbon\Carbon::parse($avail->end_time)->format('H:i'),
-            ];
-        })->toArray();
-    } else {
-        $this->availabilities = [['id' => '1', 'day_of_week' => '', 'start_time' => '', 'end_time' => '']];
-    }
+    $this->editAvatar        = null;
 
     $this->showEditModal = true;
 });
 
-$confirmEdit = action(function ($id, $availabilities) {
-    $availabilities = collect($availabilities)
-        ->map(fn($row) => [
-            'day_of_week' => strtolower(trim($row['day_of_week'] ?? '')),
-            'start_time'  => trim($row['start_time'] ?? ''),
-            'end_time'    => trim($row['end_time'] ?? ''),
-        ])
-        ->values()
-        ->toArray();
-
-    $this->editStaffId    = $id;
-    $this->availabilities = $availabilities;
+$confirmEdit = action(function ($id) use ($roleOptions) {
+    $this->editStaffId = $id;
 
     $this->validate([
         'editFirstName'     => ['required', 'string', 'max:255'],
         'editLastName'      => ['required', 'string', 'max:255'],
         'editMiddleInitial' => ['nullable', 'string', 'max:2'],
         'editEmail'         => ['required', 'email', 'max:255'],
-        'editRole'          => ['required', 'string', 'max:255'],
+        'editRole'          => ['required', Rule::in(array_keys($roleOptions))],
         'editAvatar'        => ['nullable', 'image', 'max:2048'],
-        'availabilities'               => ['required', 'array', 'min:1'],
-        'availabilities.*.day_of_week' => ['required', 'in:monday,tuesday,wednesday,thursday,friday,saturday'],
-        'availabilities.*.start_time'  => ['required', 'date_format:H:i'],
-        'availabilities.*.end_time'    => ['required', 'date_format:H:i'],
     ], [], [
-        'editFirstName'     => 'first name',
-        'editLastName'      => 'last name',
-        'editEmail'         => 'email',
-        'editRole'          => 'role',
-        'editAvatar'        => 'profile picture',
-        'availabilities'    => 'availabilities',
+        'editFirstName' => 'first name',
+        'editLastName'  => 'last name',
+        'editEmail'     => 'email',
+        'editRole'      => 'role',
+        'editAvatar'    => 'profile picture',
     ]);
-
-    $groupedSchedule = [];
-
-    foreach ($this->availabilities as $i => $row) {
-        if ($row['end_time'] <= $row['start_time']) {
-            $this->addError("availabilities.{$i}.end_time", 'Start time should be earlier than end time.');
-            return;
-        }
-
-        $day = $row['day_of_week'];
-        foreach ($groupedSchedule[$day] ?? [] as $existing) {
-            if ($row['start_time'] < $existing['end_time'] && $row['end_time'] > $existing['start_time']) {
-                $this->addError("availabilities.{$i}.start_time", "This time overlaps with another slot on " . ucfirst($day) . ".");
-                return;
-            }
-        }
-        $groupedSchedule[$day][] = [
-            'start_time' => $row['start_time'],
-            'end_time'   => $row['end_time'],
-        ];
-    }
 
     $this->showEditConfirm = true;
 });
@@ -273,18 +169,8 @@ $updateStaff = action(function () {
         $staff->update(['avatar' => $baseUrl . '/' . $filename]);
     }
 
-    StaffAvailabilities::where('staff_id', $staff->id)->delete();
-    foreach ($this->availabilities as $sched) {
-        StaffAvailabilities::create([
-            'staff_id'    => $staff->id,
-            'day_of_week' => $sched['day_of_week'],
-            'start_time'  => $sched['start_time'],
-            'end_time'    => $sched['end_time'],
-        ]);
-    }
-
-    $this->showEditModal    = false;
-    $this->showEditConfirm  = false;
+    $this->showEditModal   = false;
+    $this->showEditConfirm = false;
     session()->flash('successMessage', "The staff profile has been updated.");
     $this->redirect(route('admin.staff'), navigate: true);
 });
@@ -293,11 +179,9 @@ $closeEditModal = action(function () {
     $this->showEditModal   = false;
     $this->showEditConfirm = false;
     $this->resetErrorBag();
-    $this->editAvatar      = null;
-    $this->availabilities  = [];
+    $this->editAvatar = null;
 });
 
-// ── DELETE STAFF ─────────────────────────────────────────────
 $deleteStaff = action(function ($id) {
     $staff = StaffProfiles::findOrFail($id);
 
@@ -319,7 +203,6 @@ mount(function () {
 ?>
 
 <div x-data="staffManagement(@js($this->allStaff), $wire)">
-    {{-- Page heading --}}
     <div class="mb-6 pb-4 border-b border-gray-200 flex flex-wrap items-center justify-between gap-4">
         <div>
             <h1 class="text-3xl font-extrabold tracking-tight text-transparent bg-clip-text bg-up-maroon flex items-center gap-3">
@@ -329,10 +212,7 @@ mount(function () {
         </div>
     </div>
 
-    {{-- Table Card --}}
     <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-visible">
-
-        {{-- Table header --}}
         <div class="p-5 border-b border-gray-100 flex flex-wrap gap-3 items-center justify-between">
             <div>
                 <h2 class="font-bold text-slate-800 text-m">All Staff</h2>
@@ -343,17 +223,16 @@ mount(function () {
                         @click="opening = 'staff'; $wire.openModal().finally(() => opening = null)"
                         x-bind:disabled="opening !== null"
                         class="flex items-center justify-center bg-slate-800 text-white rounded-lg text-xs font-bold hover:bg-black transition shadow-sm h-[34px] w-[120px] disabled:cursor-not-allowed">
-                <span x-show="opening !== 'staff'" class="flex items-center gap-2">
-                    <i class="fa-solid fa-user-plus text-[10px]"></i> Add Staff
-                </span>
+                    <span x-show="opening !== 'staff'" class="flex items-center gap-2">
+                        <i class="fa-solid fa-user-plus text-[10px]"></i> Add Staff
+                    </span>
                     <span x-show="opening === 'staff'" style="display: none;">
-                    <i class="fa-solid fa-spinner fa-spin mr-1"></i> Opening...
-                </span>
+                        <i class="fa-solid fa-spinner fa-spin mr-1"></i> Opening...
+                    </span>
                 </button>
             </div>
         </div>
 
-        {{-- Success message --}}
         @if(session('successMessage'))
             <div x-data="{ show: true }"
                  x-cloak
@@ -375,7 +254,6 @@ mount(function () {
             </div>
         @endif
 
-        {{-- Table --}}
         <div class="overflow-visible">
             <table class="w-full text-left text-sm table-fixed overflow-visible">
                 <thead class="bg-slate-50 border-b border-gray-100">
@@ -401,8 +279,8 @@ mount(function () {
                         <td class="px-5 py-4 align-middle w-[25%]">
                             <p class="text-xs text-slate-600 truncate"
                                x-data
-                               x-init="$nextTick(() => { if ($el.scrollWidth > $el.clientWidth) $el.title = '{{ $staff['role'] }}' })">
-                                {{ $staff['role'] }}
+                               x-init="$nextTick(() => { if ($el.scrollWidth > $el.clientWidth) $el.title = '{{ $staff['roleLabel'] }}' })">
+                                {{ $staff['roleLabel'] }}
                             </p>
                         </td>
                         <td class="px-5 py-4 align-middle w-[30%]">
@@ -447,7 +325,6 @@ mount(function () {
         </div>
     </div>
 
-    {{-- View Details Modal --}}
     <template x-teleport="body">
         <div class="modal-overlay" x-show="showViewModal" @click.self="showViewModal = false" x-cloak>
             <div class="modal-box-crud max-w-2xl flex flex-col" style="max-height: 90vh;">
@@ -460,38 +337,12 @@ mount(function () {
                             <div class="flex-1 min-w-0 pt-1">
                                 <p class="text-white font-black text-2xl leading-tight tracking-tight"
                                    x-text="selectedStaff.lastName + ', ' + selectedStaff.firstName + (selectedStaff.middleInitial ? ' ' + selectedStaff.middleInitial + '.' : '')"></p>
-                                <p class="text-white/60 text-xs mt-1" x-text="selectedStaff.role"></p>
+                                <p class="text-white/60 text-xs mt-1" x-text="selectedStaff.roleLabel"></p>
                                 <p class="text-white/60 text-xs mt-1" x-text="selectedStaff.email"></p>
                             </div>
                             <button @click="showViewModal = false" class="text-white/50 hover:text-white transition flex-shrink-0 mt-1">
                                 <i class="fa-solid fa-xmark text-xl"></i>
                             </button>
-                        </div>
-                        <div class="overflow-y-auto flex-1 p-6 space-y-6 bg-white">
-                            <div>
-                                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Weekly Availability</p>
-                                <div class="avail-grid">
-                                    <template x-for="day in weekDays" :key="day">
-                                        <div>
-                                            <div class="avail-day-header" x-text="day.charAt(0).toUpperCase() + day.slice(1,3)"></div>
-                                            <div class="avail-day-col">
-                                                <template x-if="selectedStaff.schedule[day]">
-                                                    <template x-for="(slot, index) in selectedStaff.schedule[day].slots" :key="index">
-                                                        <div class="avail-slot" x-html="slot.start + '<br>' + slot.end"></div>
-                                                    </template>
-                                                </template>
-                                                <template x-if="!selectedStaff.schedule[day]">
-                                                    <div class="avail-empty"></div>
-                                                </template>
-                                            </div>
-                                        </div>
-                                    </template>
-                                </div>
-                                <p class="text-[12px] mt-3 flex items-center justify-center gap-4">
-                                    <span><span class="inline-block w-3 h-3 rounded bg-[#d1fae5] mr-1 align-middle"></span> Available</span>
-                                    <span><span class="inline-block w-3 h-3 rounded border border-dashed border-gray-200 bg-[#f8fafc] mr-1 align-middle"></span> Unavailable</span>
-                                </p>
-                            </div>
                         </div>
                     </div>
                 </template>
@@ -499,7 +350,6 @@ mount(function () {
         </div>
     </template>
 
-    {{-- Add Staff Modal --}}
     <div x-cloak class="modal-overlay" x-show="$wire.showModal"
          x-data="{ fileName: '', isVerifying: false }"
          x-init="$watch('$wire.showModal', val => { if (!val) { fileName = ''; document.getElementById('avatar-upload').value = ''; } })">
@@ -507,7 +357,7 @@ mount(function () {
             <div class="px-8 py-6 border-b flex justify-between items-center flex-shrink-0 bg-white">
                 <div>
                     <h2 class="text-xl font-black text-slate-800">Add Staff Member</h2>
-                    <p class="text-sm text-gray-400 mt-0.5">Fill in their information, then set their availabilities.</p>
+                    <p class="text-sm text-gray-400 mt-0.5">Fill in their information and profile picture.</p>
                 </div>
                 <button wire:click="closeModal" @click="$wire.showModal = false" class="text-gray-400 hover:text-red-600 transition" x-bind:disabled="isVerifying">
                     <i class="fa-solid fa-xmark text-xl"></i>
@@ -515,8 +365,6 @@ mount(function () {
             </div>
 
             <div class="px-8 py-6 space-y-5 overflow-y-auto bg-white">
-
-                {{-- Step 1: Basic Info + Photo --}}
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div>
                         <div class="flex items-center gap-2 mb-3">
@@ -549,13 +397,17 @@ mount(function () {
                             </div>
                             <div>
                                 <label class="block text-[10px] font-bold text-slate-500 uppercase">Role / Position</label>
-                                <input type="text" wire:model="role" placeholder="e.g. LRC Head" class="form-input text-xs w-full mt-1" maxlength="255" />
+                                <select wire:model="role" class="form-input text-xs w-full mt-1" required>
+                                    <option value="" disabled hidden>Select role</option>
+                                    <option value="lrc_head">LRC Head</option>
+                                    <option value="lrc_assistant">LRC Assistant</option>
+                                    <option value="student_assistant">Student Assistant</option>
+                                </select>
                                 @error('role') <span class="text-[10px] text-red-500">{{ $message }}</span> @enderror
                             </div>
                         </div>
                     </div>
 
-                    {{-- Step 2: Profile Picture --}}
                     <div>
                         <div class="flex items-center gap-2 mb-3">
                             <span class="step-badge">2</span>
@@ -587,133 +439,21 @@ mount(function () {
                         </div>
                     </div>
                 </div>
-
-                {{-- Step 3: Availabilities --}}
-                <div>
-                    <div class="flex items-center gap-2 mb-3">
-                        <span class="step-badge">3</span>
-                        <h3 class="step-title">Availability Schedule</h3>
-                    </div>
-                    <div x-data="{ avails: $wire.entangle('availabilities') }">
-                        <div wire:ignore>
-                            <div class="grid grid-cols-[1fr_1fr_1fr_auto] gap-2 px-1 mb-1">
-                                <label class="text-[10px] font-bold text-slate-500 uppercase">Day</label>
-                                <label class="text-[10px] font-bold text-slate-500 uppercase">Start Time</label>
-                                <label class="text-[10px] font-bold text-slate-500 uppercase">End Time</label>
-                                <div class="w-8"></div>
-                            </div>
-                            <div class="space-y-2">
-                                <template x-for="(row, index) in avails" :key="row.id">
-                                    <div class="grid grid-cols-[1fr_1fr_1fr_auto] gap-2 items-center">
-                                        <select x-model="row.day_of_week" class="form-input text-xs h-10 w-full">
-                                            <option value="">- Day -</option>
-                                            <option value="monday">Monday</option>
-                                            <option value="tuesday">Tuesday</option>
-                                            <option value="wednesday">Wednesday</option>
-                                            <option value="thursday">Thursday</option>
-                                            <option value="friday">Friday</option>
-                                            <option value="saturday">Saturday</option>
-                                        </select>
-                                        <div x-data="mentorTimePicker()" x-modelable="timeValue" x-model="row.start_time" @click.outside="close()" class="w-full relative">
-                                            <div class="custom-time-picker">
-                                                <div class="custom-time-display form-input text-xs h-10 w-full flex items-center gap-2 cursor-pointer bg-white" :class="{ 'ring-1 ring-up-maroon border-up-maroon': open }" @click="toggle()">
-                                                    <div class="time-icon text-gray-400"><i class="fa-regular fa-clock"></i></div>
-                                                    <span :class="selectedTime ? 'font-semibold text-gray-800' : 'text-gray-400'" x-text="selectedTime || 'Start'"></span>
-                                                </div>
-                                                <div class="time-picker-dropdown" :class="{ show: open }" style="z-index: 50;">
-                                                    <div class="tp-ampm">
-                                                        <button type="button" class="tp-ampm-btn" :class="{ active: ampm === 'AM' }" @click="setAmpm('AM')">AM</button>
-                                                        <button type="button" class="tp-ampm-btn" :class="{ active: ampm === 'PM' }" @click="setAmpm('PM')">PM</button>
-                                                    </div>
-                                                    <div class="tp-scroll-row">
-                                                        <div class="tp-col">
-                                                            <div class="tp-col-label">Hour</div>
-                                                            <button type="button" class="tp-btn" @click="changeHour(1)"><i class="fa-solid fa-chevron-up"></i></button>
-                                                            <input class="tp-manual-input tp-hour-input" type="number" min="1" max="12" @input="$el.value = $el.value.slice(0,2)" :value="String(hour).padStart(2,'0')" @change="onHourInput($event)" @keydown.up.prevent="changeHour(1)" @keydown.down.prevent="changeHour(-1)">
-                                                            <button type="button" class="tp-btn" @click="changeHour(-1)"><i class="fa-solid fa-chevron-down"></i></button>
-                                                        </div>
-                                                        <div class="tp-sep">:</div>
-                                                        <div class="tp-col">
-                                                            <div class="tp-col-label">Min</div>
-                                                            <button type="button" class="tp-btn" @click="changeMin(1)"><i class="fa-solid fa-chevron-up"></i></button>
-                                                            <input class="tp-manual-input tp-min-input" type="number" min="0" max="59" @input="$el.value = $el.value.slice(0,2)" :value="String(minute).padStart(2,'0')" @change="onMinInput($event)" @keydown.up.prevent="changeMin(1)" @keydown.down.prevent="changeMin(-1)">
-                                                            <button type="button" class="tp-btn" @click="changeMin(-1)"><i class="fa-solid fa-chevron-down"></i></button>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div x-data="mentorTimePicker()" x-modelable="timeValue" x-model="row.end_time" @click.outside="close()" class="w-full relative">
-                                            <div class="custom-time-picker">
-                                                <div class="custom-time-display form-input text-xs h-10 w-full flex items-center gap-2 cursor-pointer bg-white" :class="{ 'ring-1 ring-up-maroon border-up-maroon': open }" @click="toggle()">
-                                                    <div class="time-icon text-gray-400"><i class="fa-regular fa-clock"></i></div>
-                                                    <span :class="selectedTime ? 'font-semibold text-gray-800' : 'text-gray-400'" x-text="selectedTime || 'End'"></span>
-                                                </div>
-                                                <div class="time-picker-dropdown" :class="{ show: open }" style="z-index: 50;">
-                                                    <div class="tp-ampm">
-                                                        <button type="button" class="tp-ampm-btn" :class="{ active: ampm === 'AM' }" @click="setAmpm('AM')">AM</button>
-                                                        <button type="button" class="tp-ampm-btn" :class="{ active: ampm === 'PM' }" @click="setAmpm('PM')">PM</button>
-                                                    </div>
-                                                    <div class="tp-scroll-row">
-                                                        <div class="tp-col">
-                                                            <div class="tp-col-label">Hour</div>
-                                                            <button type="button" class="tp-btn" @click="changeHour(1)"><i class="fa-solid fa-chevron-up"></i></button>
-                                                            <input class="tp-manual-input tp-hour-input" type="number" min="1" max="12" @input="$el.value = $el.value.slice(0,2)" :value="String(hour).padStart(2,'0')" @change="onHourInput($event)" @keydown.up.prevent="changeHour(1)" @keydown.down.prevent="changeHour(-1)">
-                                                            <button type="button" class="tp-btn" @click="changeHour(-1)"><i class="fa-solid fa-chevron-down"></i></button>
-                                                        </div>
-                                                        <div class="tp-sep">:</div>
-                                                        <div class="tp-col">
-                                                            <div class="tp-col-label">Min</div>
-                                                            <button type="button" class="tp-btn" @click="changeMin(1)"><i class="fa-solid fa-chevron-up"></i></button>
-                                                            <input class="tp-manual-input tp-min-input" type="number" min="0" max="59" @input="$el.value = $el.value.slice(0,2)" :value="String(minute).padStart(2,'0')" @change="onMinInput($event)" @keydown.up.prevent="changeMin(1)" @keydown.down.prevent="changeMin(-1)">
-                                                            <button type="button" class="tp-btn" @click="changeMin(-1)"><i class="fa-solid fa-chevron-down"></i></button>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="flex items-center justify-center">
-                                            <template x-if="avails.length > 1">
-                                                <button type="button" @click="avails.splice(index, 1)" class="w-8 h-8 flex items-center justify-center rounded-lg bg-red-50 text-red-400 hover:bg-red-100 hover:text-red-600 transition">
-                                                    <i class="fa-solid fa-xmark text-xs"></i>
-                                                </button>
-                                            </template>
-                                            <template x-if="avails.length <= 1">
-                                                <div class="w-8"></div>
-                                            </template>
-                                        </div>
-                                    </div>
-                                </template>
-                            </div>
-                            <button @click="avails.push({id: Date.now() + Math.random(), day_of_week: '', start_time: '', end_time: ''})" type="button"
-                                    class="mt-3 flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-800 transition">
-                                <i class="fa-solid fa-plus text-[10px]"></i> Add more days or time slots
-                            </button>
-                        </div>
-                        @if($errors->hasAny(['availabilities', 'availabilities.*']))
-                            <div class="mt-2 p-3 rounded-lg bg-red-50 border border-red-200">
-                                <p class="text-xs text-red-700 font-medium leading-relaxed">Please check if all slots are filled out properly or if there are overlapping times on the same day.</p>
-                            </div>
-                        @endif
-                    </div>
-                </div>
             </div>
 
             <div class="px-8 py-5 bg-white border-t flex-shrink-0"
                  x-data="{
-                avatarReady: $wire.entangle('avatar'),
-                availsReady: $wire.entangle('availabilities'),
-                firstNameReady: $wire.entangle('firstName'),
-                lastNameReady: $wire.entangle('lastName'),
-                emailReady: $wire.entangle('email'),
-                roleReady: $wire.entangle('role'),
-                get canSubmit() {
-                    return this.firstNameReady && this.lastNameReady
-                        && this.emailReady && this.roleReady
-                        && this.avatarReady
-                        && this.availsReady && this.availsReady.some(a => a.day_of_week && a.start_time && a.end_time);
-                }
-            }">
+                    avatarReady: $wire.entangle('avatar'),
+                    firstNameReady: $wire.entangle('firstName'),
+                    lastNameReady: $wire.entangle('lastName'),
+                    emailReady: $wire.entangle('email'),
+                    roleReady: $wire.entangle('role'),
+                    get canSubmit() {
+                        return this.firstNameReady && this.lastNameReady
+                            && this.emailReady && this.roleReady
+                            && this.avatarReady;
+                    }
+                }">
                 <div class="flex gap-3">
                     <button type="button" wire:click="closeModal" @click="$wire.showModal = false" x-bind:disabled="isVerifying"
                             class="btn-modal btn-modal-cancel">Cancel</button>
@@ -729,7 +469,6 @@ mount(function () {
         </div>
     </div>
 
-    {{-- Confirm Add Staff --}}
     <div x-cloak class="modal-overlay" x-show="$wire.showConfirm" wire:click.self="$set('showConfirm', false)">
         <div class="modal-box-crud max-w-sm p-8 text-center m-4">
             <div class="w-16 h-16 bg-blue-100 text-blue-500 rounded-full flex items-center justify-center mx-auto mb-5">
@@ -748,35 +487,32 @@ mount(function () {
         </div>
     </div>
 
-    {{-- Edit Staff Modal --}}
     <div x-cloak class="modal-overlay" x-show="showEditModal" wire:ignore.self
          x-data="{ fileName: '', isVerifying: false,
-    get hasChanges() {
-        if (this.fileName !== '') return true;
-        if ($wire.editFirstName !== editingStaff.firstName) return true;
-        if ($wire.editLastName !== editingStaff.lastName) return true;
-        if ($wire.editEmail !== editingStaff.email) return true;
-        if ($wire.editRole !== editingStaff.role) return true;
-        let origMI = (editingStaff.middleInitial || '').replace('.', '').trim();
-        let newMI = ($wire.editMiddleInitial || '').trim();
-        if (newMI !== origMI) return true;
-        const clean = arr => arr.map(a => `${a.day_of_week}-${a.start_time}-${a.end_time}`).sort().join('|');
-        if (clean(originalForm.availabilities) !== clean(editForm.availabilities)) return true;
-        return false;
-    }}"
+            get hasChanges() {
+                if (this.fileName !== '') return true;
+                if ($wire.editFirstName !== editingStaff.firstName) return true;
+                if ($wire.editLastName !== editingStaff.lastName) return true;
+                if ($wire.editEmail !== editingStaff.email) return true;
+                if ($wire.editRole !== editingStaff.role) return true;
+                let origMI = (editingStaff.middleInitial || '').replace('.', '').trim();
+                let newMI = ($wire.editMiddleInitial || '').trim();
+                if (newMI !== origMI) return true;
+                return false;
+            }}"
          x-init="$watch('$wire.showEditModal', val => { if (!val) { fileName = ''; document.getElementById('edit-avatar-upload').value = ''; } })">
         <div class="modal-box-crud max-w-2xl overflow-hidden flex flex-col" style="max-height: 90vh;">
             <div class="px-8 py-6 bg-white border-b flex justify-between items-center flex-shrink-0">
                 <div>
                     <h2 class="text-xl font-black text-slate-800">Edit Staff Profile</h2>
-                    <p class="text-sm text-gray-400 mt-0.5">Update their information, photo, or availability.</p>
+                    <p class="text-sm text-gray-400 mt-0.5">Update their information and photo.</p>
                 </div>
                 <button @click="showEditModal = false; $wire.closeEditModal()" class="text-gray-400 hover:text-red-600 transition" x-bind:disabled="isVerifying">
                     <i class="fa-solid fa-xmark text-xl"></i>
                 </button>
             </div>
 
-            <div id="editModalScroll" class="px-8 py-6 space-y-5 overflow-y-auto bg-white">
+            <div class="px-8 py-6 space-y-5 overflow-y-auto bg-white">
                 <template x-if="editingStaff">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <div class="flex flex-col">
@@ -810,7 +546,12 @@ mount(function () {
                                 </div>
                                 <div>
                                     <label class="block text-[10px] font-bold text-slate-500 uppercase">Role / Position</label>
-                                    <input type="text" wire:model="editRole" class="form-input text-xs w-full mt-1" maxlength="255" />
+                                    <select wire:model="editRole" class="form-input text-xs w-full mt-1" required>
+                                        <option value="" disabled hidden>Select role</option>
+                                        <option value="lrc_head">LRC Head</option>
+                                        <option value="lrc_assistant">LRC Assistant</option>
+                                        <option value="student_assistant">Student Assistant</option>
+                                    </select>
                                     @error('editRole') <span class="text-[10px] text-red-500">{{ $message }}</span> @enderror
                                 </div>
                             </div>
@@ -845,121 +586,13 @@ mount(function () {
                         </div>
                     </div>
                 </template>
-
-                {{-- Availabilities --}}
-                <div>
-                    <div class="flex items-center gap-2 mb-3">
-                        <span class="step-badge">3</span>
-                        <h3 class="step-title">Availability Schedule</h3>
-                    </div>
-                    <div wire:ignore>
-                        <div class="grid grid-cols-[1fr_1fr_1fr_auto] gap-2 px-1 mb-1">
-                            <label class="text-[10px] font-bold text-slate-500 uppercase">Day</label>
-                            <label class="text-[10px] font-bold text-slate-500 uppercase">Start Time</label>
-                            <label class="text-[10px] font-bold text-slate-500 uppercase">End Time</label>
-                            <div class="w-8"></div>
-                        </div>
-                        <div class="space-y-2">
-                            <template x-for="(row, index) in editForm.availabilities" :key="row.id">
-                                <div class="grid grid-cols-[1fr_1fr_1fr_auto] gap-2 items-center">
-                                    <select x-model="row.day_of_week" class="form-input text-xs h-10 w-full">
-                                        <option value="">- Day -</option>
-                                        <option value="monday">Monday</option>
-                                        <option value="tuesday">Tuesday</option>
-                                        <option value="wednesday">Wednesday</option>
-                                        <option value="thursday">Thursday</option>
-                                        <option value="friday">Friday</option>
-                                        <option value="saturday">Saturday</option>
-                                    </select>
-                                    <div x-data="mentorTimePicker()" x-modelable="timeValue" x-model="row.start_time" @click.outside="close()" class="w-full relative">
-                                        <div class="custom-time-picker">
-                                            <div class="custom-time-display form-input text-xs h-10 w-full flex items-center gap-2 cursor-pointer bg-white" :class="{ 'ring-1 ring-up-maroon border-up-maroon': open }" @click="toggle()">
-                                                <div class="time-icon text-gray-400"><i class="fa-regular fa-clock"></i></div>
-                                                <span :class="selectedTime ? 'font-semibold text-gray-800' : 'text-gray-400'" x-text="selectedTime || 'Start'"></span>
-                                            </div>
-                                            <div class="time-picker-dropdown" :class="{ show: open }" style="z-index: 50;">
-                                                <div class="tp-ampm">
-                                                    <button type="button" class="tp-ampm-btn" :class="{ active: ampm === 'AM' }" @click="setAmpm('AM')">AM</button>
-                                                    <button type="button" class="tp-ampm-btn" :class="{ active: ampm === 'PM' }" @click="setAmpm('PM')">PM</button>
-                                                </div>
-                                                <div class="tp-scroll-row">
-                                                    <div class="tp-col">
-                                                        <div class="tp-col-label">Hour</div>
-                                                        <button type="button" class="tp-btn" @click="changeHour(1)"><i class="fa-solid fa-chevron-up"></i></button>
-                                                        <input class="tp-manual-input tp-hour-input" type="number" min="1" max="12" @input="$el.value = $el.value.slice(0,2)" :value="String(hour).padStart(2,'0')" @change="onHourInput($event)" @keydown.up.prevent="changeHour(1)" @keydown.down.prevent="changeHour(-1)">
-                                                        <button type="button" class="tp-btn" @click="changeHour(-1)"><i class="fa-solid fa-chevron-down"></i></button>
-                                                    </div>
-                                                    <div class="tp-sep">:</div>
-                                                    <div class="tp-col">
-                                                        <div class="tp-col-label">Min</div>
-                                                        <button type="button" class="tp-btn" @click="changeMin(1)"><i class="fa-solid fa-chevron-up"></i></button>
-                                                        <input class="tp-manual-input tp-min-input" type="number" min="0" max="59" @input="$el.value = $el.value.slice(0,2)" :value="String(minute).padStart(2,'0')" @change="onMinInput($event)" @keydown.up.prevent="changeMin(1)" @keydown.down.prevent="changeMin(-1)">
-                                                        <button type="button" class="tp-btn" @click="changeMin(-1)"><i class="fa-solid fa-chevron-down"></i></button>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div x-data="mentorTimePicker()" x-modelable="timeValue" x-model="row.end_time" @click.outside="close()" class="w-full relative">
-                                        <div class="custom-time-picker">
-                                            <div class="custom-time-display form-input text-xs h-10 w-full flex items-center gap-2 cursor-pointer bg-white" :class="{ 'ring-1 ring-up-maroon border-up-maroon': open }" @click="toggle()">
-                                                <div class="time-icon text-gray-400"><i class="fa-regular fa-clock"></i></div>
-                                                <span :class="selectedTime ? 'font-semibold text-gray-800' : 'text-gray-400'" x-text="selectedTime || 'End'"></span>
-                                            </div>
-                                            <div class="time-picker-dropdown" :class="{ show: open }" style="z-index: 50;">
-                                                <div class="tp-ampm">
-                                                    <button type="button" class="tp-ampm-btn" :class="{ active: ampm === 'AM' }" @click="setAmpm('AM')">AM</button>
-                                                    <button type="button" class="tp-ampm-btn" :class="{ active: ampm === 'PM' }" @click="setAmpm('PM')">PM</button>
-                                                </div>
-                                                <div class="tp-scroll-row">
-                                                    <div class="tp-col">
-                                                        <div class="tp-col-label">Hour</div>
-                                                        <button type="button" class="tp-btn" @click="changeHour(1)"><i class="fa-solid fa-chevron-up"></i></button>
-                                                        <input class="tp-manual-input tp-hour-input" type="number" min="1" max="12" @input="$el.value = $el.value.slice(0,2)" :value="String(hour).padStart(2,'0')" @change="onHourInput($event)" @keydown.up.prevent="changeHour(1)" @keydown.down.prevent="changeHour(-1)">
-                                                        <button type="button" class="tp-btn" @click="changeHour(-1)"><i class="fa-solid fa-chevron-down"></i></button>
-                                                    </div>
-                                                    <div class="tp-sep">:</div>
-                                                    <div class="tp-col">
-                                                        <div class="tp-col-label">Min</div>
-                                                        <button type="button" class="tp-btn" @click="changeMin(1)"><i class="fa-solid fa-chevron-up"></i></button>
-                                                        <input class="tp-manual-input tp-min-input" type="number" min="0" max="59" @input="$el.value = $el.value.slice(0,2)" :value="String(minute).padStart(2,'0')" @change="onMinInput($event)" @keydown.up.prevent="changeMin(1)" @keydown.down.prevent="changeMin(-1)">
-                                                        <button type="button" class="tp-btn" @click="changeMin(-1)"><i class="fa-solid fa-chevron-down"></i></button>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="flex items-center justify-center">
-                                        <template x-if="editForm.availabilities.length > 1">
-                                            <button type="button" @click="editForm.availabilities.splice(index, 1)" class="w-8 h-8 flex items-center justify-center rounded-lg bg-red-50 text-red-400 hover:bg-red-100 hover:text-red-600 transition">
-                                                <i class="fa-solid fa-xmark text-xs"></i>
-                                            </button>
-                                        </template>
-                                        <template x-if="editForm.availabilities.length <= 1">
-                                            <div class="w-8"></div>
-                                        </template>
-                                    </div>
-                                </div>
-                            </template>
-                        </div>
-                        <button @click="editForm.availabilities.push({id: Date.now(), day_of_week: '', start_time: '', end_time: ''})" type="button"
-                                class="mt-3 flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-800 transition">
-                            <i class="fa-solid fa-plus text-[10px]"></i> Add more days or time slots
-                        </button>
-                    </div>
-                    @if($errors->hasAny(['availabilities', 'availabilities.*']))
-                        <div class="mt-2 p-3 rounded-lg bg-red-50 border border-red-200">
-                            <p class="text-xs text-red-700 font-medium leading-relaxed">Please check if all slots are filled out properly or if there are overlapping times on the same day.</p>
-                        </div>
-                    @endif
-                </div>
             </div>
 
             <div class="px-8 py-5 bg-white border-t flex-shrink-0">
                 <div class="flex gap-3">
                     <button type="button" @click="showEditModal = false; $wire.closeEditModal()" x-bind:disabled="isVerifying"
                             class="btn-modal btn-modal-cancel">Cancel</button>
-                    <button type="button" @click="if(hasChanges) { isVerifying = true; $wire.confirmEdit(editingStaff.id, editForm.availabilities).finally(() => isVerifying = false) }"
+                    <button type="button" @click="if(hasChanges) { isVerifying = true; $wire.confirmEdit(editingStaff.id).finally(() => isVerifying = false) }"
                             x-bind:disabled="isVerifying || !hasChanges"
                             :class="(!hasChanges || isVerifying) ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700'"
                             class="flex-1 bg-blue-600 text-white py-3 rounded-xl text-xs font-bold shadow-lg transition">
@@ -971,7 +604,6 @@ mount(function () {
         </div>
     </div>
 
-    {{-- Confirm Edit --}}
     <div x-cloak class="modal-overlay" x-show="$wire.showEditConfirm" wire:click.self="$set('showEditConfirm', false)">
         <div class="modal-box-crud max-w-sm p-8 text-center m-4">
             <div class="w-16 h-16 bg-blue-100 text-blue-500 rounded-full flex items-center justify-center mx-auto mb-5">
@@ -990,7 +622,6 @@ mount(function () {
         </div>
     </div>
 
-    {{-- Delete Confirm --}}
     <template x-teleport="body">
         <div x-cloak class="modal-overlay" x-show="showDeleteConfirm" @click.self="if(!isSaving) showDeleteConfirm = false" x-data="{ isSaving: false }">
             <div class="modal-box-crud max-w-sm p-8 text-center m-4">
@@ -998,7 +629,7 @@ mount(function () {
                     <i class="fa-solid fa-triangle-exclamation text-3xl"></i>
                 </div>
                 <h3 class="text-xl font-black text-slate-800">Remove Staff Member?</h3>
-                <p class="text-sm text-gray-500 mt-2 mb-8">Are you sure you want to remove this staff member? Their availability schedule will also be deleted.</p>
+                <p class="text-sm text-gray-500 mt-2 mb-8">Are you sure you want to remove this staff member?</p>
                 <div class="flex gap-3">
                     <button type="button" @click="showDeleteConfirm = false" class="btn-modal btn-modal-cancel" x-bind:disabled="isSaving">Cancel</button>
                     <button type="button" @click="isSaving = true; $wire.deleteStaff(staffToDelete.id).then(() => showDeleteConfirm = false).finally(() => isSaving = false)"
@@ -1010,5 +641,4 @@ mount(function () {
             </div>
         </div>
     </template>
-
 </div>

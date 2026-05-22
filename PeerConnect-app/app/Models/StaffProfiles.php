@@ -17,13 +17,4 @@ class StaffProfiles extends Model {
         'email',
         'avatar'
     ];
-
-    public function availabilities() {
-        return $this->hasMany(StaffAvailabilities::class, 'staff_id');
-    }
-
-    public function getFullNameAttribute() {
-        $mi = $this->middleInitial ? "{$this->middleInitial}." : '';
-        return "{$this->firstName}{$mi}{$this->lastName}";
-    }
 }
