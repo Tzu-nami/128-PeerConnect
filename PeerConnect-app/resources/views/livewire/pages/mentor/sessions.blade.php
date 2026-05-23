@@ -1,6 +1,6 @@
 <?php
 
-use function Livewire\Volt\{layout, mount, computed};
+use function Livewire\Volt\{layout, mount, computed, action, on};
 use App\Models\Bookings;
 use App\Models\MentorProfiles;
 use App\Models\MentorAvailabilities;
@@ -86,6 +86,7 @@ $sessions = computed(function () {
             'group_ids'     => $group->pluck('id')->toArray(),
             'student'       => $group->count() > 1 ? $group->count() . ' Students (Group)' : $studentNames,
             'studentNames'  => $studentNames,
+            'mentor'        => auth()->user()->firstName . ' ' . auth()->user()->lastName,
             'subject'       => optional($b->subject)->code ?? 'N/A',
             'subjectName'   => optional($b->subject)->name ?? '',
             'topic'         => $b->topic ?? '—',
@@ -123,6 +124,32 @@ $summaryCounts = computed(function () {
         'totalHours' => number_format($totalHours, 2),
     ];
 });
+
+$updateSessionTime = action(function (string $bookingId, string $newStartTime, string $newEndTime) {
+    $mentorProfile = MentorProfiles::where('user_id', auth()->id())->first();
+    abort_if(!$mentorProfile, 403);
+    
+    $booking = Bookings::where('id', $bookingId)
+        ->where('mentor_id', $mentorProfile->id)
+        ->firstOrFail();
+
+    $date = \Carbon\Carbon::parse($booking->schedule_start)->toDateString();
+    $newStart = \Carbon\Carbon::parse($date . ' ' . $newStartTime);
+    $newEnd   = \Carbon\Carbon::parse($date . ' ' . $newEndTime);
+
+    if ($newEnd->lte($newStart)) {
+        return;
+    }
+
+    $booking->update([
+        'schedule_start' => $newStart,
+        'schedule_end'   => $newEnd,
+    ]);
+});
+
+on(['request-update-time' => function ($bookingId, $newStartTime, $newEndTime) {
+    $this->updateSessionTime($bookingId, $newStartTime, $newEndTime);
+}]);
 
 ?>
 
@@ -457,6 +484,14 @@ $summaryCounts = computed(function () {
                                             </button>
                                         </template>
 
+                                        <template x-if="s.status === 'completed'">
+                                            <div data-full="Edit Session">
+                                                <button @click.stop="openEditModal(s)" class="w-7 h-7 rounded-lg bg-blue-100 hover:bg-blue-200 text-blue-600 flex items-center justify-center transition-all hover:scale-110 hover:shadow-sm shrink-0">
+                                                    <i class="fa-solid fa-pen text-[11px]"></i>
+                                                </button>
+                                            </div>
+                                        </template>
+
                                     </div>
                                 </template>
 
@@ -620,6 +655,114 @@ $summaryCounts = computed(function () {
             <div class="px-6 py-4 bg-gray-50 border-t border-gray-100">
                 <button onclick="document.getElementById('hoursSessModal').style.display='none'"
                         class="w-full py-2.5 text-sm font-bold text-white bg-red-900 hover:bg-red-800 rounded-xl transition">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="editModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);backdrop-filter:blur(4px);z-index:1300;align-items:center;justify-content:center;padding:24px;">
+        <div class="bg-white rounded-xl shadow-2xl max-w-md w-full mx-4">
+            {{-- Header --}}
+            <div class="flex items-center justify-between px-6 pt-5 pb-4 border-b border-gray-100">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
+                        <i class="fa-solid fa-pen text-blue-600 text-xs"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-bold text-gray-900 leading-none">Edit Session</h3>
+                        <p class="text-[11px] text-gray-400 mt-0.5">Start and end times can be modified</p>
+                    </div>
+                </div>
+                <button onclick="closeEditModal()" class="w-7 h-7 rounded-lg hover:bg-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-600 transition">
+                    <i class="fa-solid fa-xmark text-xs"></i>
+                </button>
+            </div>
+
+            {{-- Session Info (read-only) --}}
+            <div class="px-6 py-4 space-y-3">
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Student</p>
+                        <p class="text-xs font-semibold text-slate-700 truncate" id="editStudent">—</p>
+                    </div>
+                    <div>
+                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Mentor</p>
+                        <p class="text-xs font-semibold text-slate-700 truncate" id="editMentor">—</p>
+                    </div>
+                    <div>
+                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Subject</p>
+                        <p class="text-xs font-semibold text-slate-700" id="editSubject">—</p>
+                    </div>
+                    <div>
+                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Topic</p>
+                        <p class="text-xs font-semibold text-slate-700 truncate" id="editTopic">—</p>
+                    </div>
+                    <div>
+                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Date</p>
+                        <p class="text-xs font-semibold text-slate-700" id="editDate">—</p>
+                    </div>
+                    <div>
+                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Mode</p>
+                        <p class="text-xs font-semibold text-slate-700" id="editMode">—</p>
+                    </div>
+                    <div>
+                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Year Level</p>
+                        <p class="text-xs font-semibold text-slate-700 truncate" id="editYearLevel">—</p>
+                    </div>
+                    <div>
+                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Status</p>
+                        <span id="editStatus" class="font-bold text-[10px] px-2 py-0.5 rounded border border-current">—</span>
+                    </div>
+                </div>
+
+                {{-- Schedule Section --}}
+                <div class="border-t border-dashed border-gray-200 pt-3">
+                    <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3">Schedule</p>
+                    <div class="grid grid-cols-2 gap-3">
+                        {{-- Start Time (editable) --}}
+                        <div>
+                            <label class="text-[10px] font-bold text-blue-600 uppercase tracking-wider block mb-1.5">
+                                Start Time <span class="normal-case font-medium text-blue-400">(editable)</span>
+                            </label>
+                            <div class="relative flex items-center">
+                                <i class="fa-regular fa-clock absolute left-3 text-blue-400 text-xs pointer-events-none"></i>
+                                <input type="time" id="editStartTime" oninput="updateDurationPreview()"
+                                    class="w-full pl-8 pr-3 py-2 text-xs font-semibold text-slate-700 border border-blue-300 rounded-lg bg-white outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-500 transition-shadow">
+                            </div>
+                            <p id="editStartTimeError" style="display:none;" class="text-[10px] text-red-500 mt-1 font-medium"></p>
+                        </div>
+                        {{-- End Time (editable) --}}
+                        <div>
+                            <label class="text-[10px] font-bold text-blue-600 uppercase tracking-wider block mb-1.5">
+                                End Time <span class="normal-case font-medium text-blue-400">(editable)</span>
+                            </label>
+                            <div class="relative flex items-center">
+                                <i class="fa-regular fa-clock absolute left-3 text-blue-400 text-xs pointer-events-none"></i>
+                                <input type="time" id="editEndTime" oninput="updateDurationPreview()"
+                                    class="w-full pl-8 pr-3 py-2 text-xs font-semibold text-slate-700 border border-blue-300 rounded-lg bg-white outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-500 transition-shadow">
+                            </div>
+                            <p id="editEndTimeError" style="display:none;" class="text-[10px] text-red-500 mt-1 font-medium"></p>
+                        </div>
+                    </div>
+
+                    {{-- Duration Preview --}}
+                    <div class="mt-3 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2 flex items-center justify-between">
+                        <span class="text-[10px] font-bold text-blue-400 uppercase tracking-wider">New Duration</span>
+                        <span class="text-xs font-bold text-blue-700" id="editDurationPreview">—</span>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Footer --}}
+            <div class="flex justify-end gap-2 px-6 pb-5 pt-2 border-t border-gray-100">
+                <button id="editCancelBtn" onclick="closeEditModal()"
+                    class="px-4 py-2 text-xs font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition disabled:opacity-50">
+                    Cancel
+                </button>
+                <button id="editSaveBtn" onclick="saveTime()"
+                    class="px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition flex items-center gap-1.5 disabled:opacity-60 disabled:cursor-not-allowed">
+                    <i id="editSaveIcon" class="fa-solid fa-spinner fa-spin text-xs" style="display:none;"></i>
+                    <span id="editSaveText">Save Changes</span>
+                </button>
             </div>
         </div>
     </div>
@@ -1092,5 +1235,143 @@ $summaryCounts = computed(function () {
                 </div>`;
             }).join('');
         document.getElementById('hoursSessModal').style.display = 'flex';
+    }
+
+    let editSessionTarget = null;
+    document.getElementById('editModal').addEventListener('click', function(e) {
+        if (e.target === this) closeEditModal();
+    });
+
+    function openEditModal(s) {
+        editSessionTarget = s;
+        document.getElementById('editStartTime').value = s.start;
+        document.getElementById('editEndTime').value = s.end;
+        document.getElementById('editStartTimeError').style.display = 'none';
+        document.getElementById('editEndTimeError').style.display = 'none';
+        document.getElementById('editStudent').textContent = s.studentNames || s.student || '—';
+        document.getElementById('editMentor').textContent = s.mentor ?? '—';
+        document.getElementById('editSubject').textContent = (s.subject ?? '—') + (s.subjectName ? ' – ' + s.subjectName : '');
+        document.getElementById('editTopic').textContent = s.topic ?? '—';
+        document.getElementById('editDate').textContent = s.date ?? '—';
+        document.getElementById('editMode').textContent = s.mode ?? '—';
+        document.getElementById('editYearLevel').textContent = s.yearLevel ?? '—';
+        
+        const statusEl = document.getElementById('editStatus');
+        statusEl.className = `font-bold text-[10px] px-2 py-0.5 rounded border border-current ${_getStatusColor(s.status)}`;
+        statusEl.textContent = _getStatusLabel(s.status);
+
+        updateDurationPreview();
+        document.getElementById('editModal').style.display = 'flex';
+    }
+
+    function closeEditModal() {
+        document.getElementById('editModal').style.display = 'none';
+        editSessionTarget = null;
+    }
+
+    function formatTo12h(time24) {
+        if (!time24) return '—';
+        const [h, m] = time24.split(':').map(Number);
+        const ampm = h >= 12 ? 'PM' : 'AM';
+        const h12 = h % 12 || 12;
+        return `${h12}:${String(m).padStart(2, '0')} ${ampm}`;
+    }
+
+    function updateDurationPreview() {
+        const shStr = document.getElementById('editStartTime').value;
+        const ehStr = document.getElementById('editEndTime').value;
+        const previewEl = document.getElementById('editDurationPreview');
+        
+        if (!editSessionTarget || !shStr || !ehStr) {
+            previewEl.textContent = '—';
+            return;
+        }
+        
+        const [sh, sm] = shStr.split(':').map(Number);
+        const [eh, em] = ehStr.split(':').map(Number);
+        const diff = (eh * 60 + em) - (sh * 60 + sm);
+        
+        if (diff <= 0) {
+            previewEl.textContent = 'Invalid Range';
+            return;
+        }
+        
+        const hrs = Math.floor(diff / 60);
+        const mins = diff % 60;
+        if (hrs === 0) previewEl.textContent = `${mins} min`;
+        else if (mins === 0) previewEl.textContent = `${hrs} hr`;
+        else previewEl.textContent = `${hrs} hr ${mins} min`;
+    }
+
+    async function saveTime() {
+        const startErr = document.getElementById('editStartTimeError');
+        const endErr = document.getElementById('editEndTimeError');
+        startErr.style.display = 'none';
+        endErr.style.display = 'none';
+        
+        const startTime = document.getElementById('editStartTime').value;
+        const endTime = document.getElementById('editEndTime').value;
+        
+        const [sh, sm] = startTime.split(':').map(Number);
+        const [eh, em] = endTime.split(':').map(Number);
+        
+        if ((eh * 60 + em) <= (sh * 60 + sm)) {
+            startErr.textContent = 'Invalid range.';
+            startErr.style.display = 'block';
+            endErr.textContent = 'End time must be after start time.';
+            endErr.style.display = 'block';
+            return;
+        }
+        
+        const saveBtn = document.getElementById('editSaveBtn');
+        const cancelBtn = document.getElementById('editCancelBtn');
+        const btnText = document.getElementById('editSaveText');
+        const btnIcon = document.getElementById('editSaveIcon');
+        
+        saveBtn.disabled = true;
+        cancelBtn.disabled = true;
+        btnText.textContent = 'Saving...';
+        btnIcon.style.display = 'inline-block';
+        
+        const idsToUpdate = editSessionTarget.group_ids || [editSessionTarget.id];
+
+        try {
+            const modalEl = document.getElementById('editModal');
+            const wireId = modalEl.closest('[wire\\:id]').getAttribute('wire:id');
+            const wire = Livewire.find(wireId);
+            const updatePromises = idsToUpdate.map(bookingId => {
+                return wire.updateSessionTime(bookingId, startTime, endTime);
+            });
+            
+            await Promise.all(updatePromises); 
+            editSessionTarget.start = startTime;
+            editSessionTarget.end = endTime;
+            editSessionTarget.time = formatTo12h(startTime) + ' – ' + formatTo12h(endTime);
+            
+            const diffMins = (eh * 60 + em) - (sh * 60 + sm);
+            const diffHours = diffMins / 60;
+            const durationText = diffHours === 1 ? '1 hr' : String(diffHours.toFixed(2)).replace(/\.?0+$/, '');
+            
+            editSessionTarget.duration = editSessionTarget.time + ' (' + durationText + ')';
+            editSessionTarget.durationHours = diffHours;
+            
+            closeEditModal();
+
+            showBanner('sessionsBannerArea', `
+                <div style="border:1px solid #bbf7d0;background:#f0fdf4;border-radius:8px;padding:10px 12px;display:flex;align-items:center;gap:8px;">
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7.5" stroke="#22c55e" stroke-width="1"/><path d="M5 8l2.5 2.5L11 5.5" stroke="#22c55e" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    <div style="flex:1;color:#15803d;font-weight:600;">Time updated successfully.</div>
+                </div>
+            `);
+        } catch (err) {
+            console.error("Error updating time:", err);
+            endErr.textContent = 'Failed to save. Please try again.';
+            endErr.style.display = 'block';
+        } finally {
+            saveBtn.disabled = false;
+            cancelBtn.disabled = false;
+            btnText.textContent = 'Save Changes';
+            btnIcon.style.display = 'none';
+        }
     }
 </script>
