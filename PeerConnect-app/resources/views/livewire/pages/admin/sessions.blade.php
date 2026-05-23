@@ -667,25 +667,25 @@ function _adminStatusLabel(status) {
 
 function _adminSessRow(item, pillColor, pillLabel) {
     const line1 = `${item.subject ?? '—'} — ${item.topic || '—'}`;
-    const line2 = `${item.mentor ?? '—'} — ${item.studentNames || item.student ?? '—'}`;
+    const line2 = `${item.mentor ?? '—'} · ${item.student ?? '—'}`;
     const line3 = `${item.date ?? '—'}, ${item.time ?? '—'}`;
     return `<div class="flex items-center gap-3 py-2.5 border-b border-gray-50 last:border-0">
         <div class="w-8 h-8 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center text-[10px] font-bold flex-shrink-0">
             ${(item.student ?? '?').slice(0,2).toUpperCase()}
         </div>
         <div class="flex-1 min-w-0">
-            <p class="text-xs font-bold text-slate-700 truncate" style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis;" onmouseenter="this.title=this.scrollWidth>this.clientWidth?'${line1.replace(/'/g,'&#39;')}':'';">${line1}</p>
-            <p class="text-[10px] text-gray-400 truncate" style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis;" onmouseenter="this.title=this.scrollWidth>this.clientWidth?'${line2.replace(/'/g,'&#39;')}':'';">${line2}</p>
-            <p class="text-[10px] text-gray-400 truncate" style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis;" onmouseenter="this.title=this.scrollWidth>this.clientWidth?'${line3.replace(/'/g,'&#39;')}':'';">${line3}</p>
+            <p class="text-xs font-bold text-slate-700 truncate" style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis;" onmouseenter="this.title=this.scrollWidth>this.clientWidth?'${line1.replace(/'/g,'&#39;').replace(/"/g,'&quot;')}':'';">${line1}</p>
+            <p class="text-[10px] text-gray-400 truncate" style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis;" onmouseenter="this.title=this.scrollWidth>this.clientWidth?'${line2.replace(/'/g,'&#39;').replace(/"/g,'&quot;')}':'';">${line2}</p>
+            <p class="text-[10px] text-gray-400 truncate" style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">${line3}</p>
         </div>
         <div class="flex-shrink-0">
-            <span class="${pillColor} font-bold text-[10px] bg-gray-50 px-2 py-1 rounded border border-current opacity-80 capitalize" style="font-size:10px;line-height:1;">${pillLabel}</span>
+            <span class="${pillColor} font-bold text-[10px] bg-gray-50 px-2 py-1 rounded border border-current opacity-80 capitalize" style="white-space:nowrap;">${pillLabel}</span>
         </div>
     </div>`;
 }
 
 function openAdminTotalModal() {
-    const items = [..._adminSessData].sort((a,b) => (b.rawDate ?? '').localeCompare(a.rawDate ?? ''));
+    const items = [..._adminSessData].sort((a,b) => (b.date ?? '').localeCompare(a.date ?? ''));
     document.getElementById('adminTotalModalCount').innerText = `${items.length} session${items.length !== 1 ? 's' : ''}`;
     document.getElementById('adminTotalModalBody').innerHTML = !items.length
         ? `<p class="text-xs text-gray-400 italic py-4 text-center">No sessions yet.</p>`
@@ -694,7 +694,7 @@ function openAdminTotalModal() {
 }
 
 function openAdminAcceptedModal() {
-    const items = _adminSessData.filter(i => i.status === 'accepted').sort((a,b) => (b.rawDate ?? '').localeCompare(a.rawDate ?? ''));
+    const items = _adminSessData.filter(i => i.status === 'accepted').sort((a,b) => (b.date ?? '').localeCompare(a.date ?? ''));
     document.getElementById('adminAcceptedModalCount').innerText = `${items.length} session${items.length !== 1 ? 's' : ''}`;
     document.getElementById('adminAcceptedModalBody').innerHTML = !items.length
         ? `<p class="text-xs text-gray-400 italic py-4 text-center">No accepted sessions.</p>`
@@ -703,7 +703,7 @@ function openAdminAcceptedModal() {
 }
 
 function openAdminPendingModal() {
-    const items = _adminSessData.filter(i => i.status === 'pending').sort((a,b) => (b.rawDate ?? '').localeCompare(a.rawDate ?? ''));
+    const items = _adminSessData.filter(i => i.status === 'pending').sort((a,b) => (b.date ?? '').localeCompare(a.date ?? ''));
     document.getElementById('adminPendingModalCount').innerText = `${items.length} session${items.length !== 1 ? 's' : ''}`;
     document.getElementById('adminPendingModalBody').innerHTML = !items.length
         ? `<p class="text-xs text-gray-400 italic py-4 text-center">No pending sessions.</p>`
@@ -712,7 +712,7 @@ function openAdminPendingModal() {
 }
 
 function openAdminCompletedModal() {
-    const items = _adminSessData.filter(i => i.status === 'completed').sort((a,b) => (b.rawDate ?? '').localeCompare(a.rawDate ?? ''));
+    const items = _adminSessData.filter(i => i.status === 'completed').sort((a,b) => (b.date ?? '').localeCompare(a.date ?? ''));
     document.getElementById('adminCompletedModalCount').innerText = `${items.length} session${items.length !== 1 ? 's' : ''}`;
     document.getElementById('adminCompletedModalBody').innerHTML = !items.length
         ? `<p class="text-xs text-gray-400 italic py-4 text-center">No completed sessions yet.</p>`
@@ -721,29 +721,28 @@ function openAdminCompletedModal() {
 }
 
 function openAdminHoursModal() {
-    const items = _adminSessData.filter(i => i.status === 'completed').sort((a,b) => (b.rawDate ?? '').localeCompare(a.rawDate ?? ''));
+    const items = _adminSessData.filter(i => i.status === 'completed').sort((a,b) => (b.date ?? '').localeCompare(a.date ?? ''));
     document.getElementById('adminHoursModalBody').innerHTML = !items.length
         ? `<p class="text-xs text-gray-400 italic py-4 text-center">No completed sessions yet.</p>`
         : items.map(i => {
             const hrs = typeof i.durationHours === 'number'
                 ? (i.durationHours === 1 ? '1 hr' : i.durationHours.toFixed(2).replace(/\.?0+$/, '') + ' hrs')
                 : '—';
-const line1 = `${i.subject ?? '—'} — ${i.topic || '—'}`;
-const line2 = `${item.mentor ?? '—'} — ${item.studentNames || item.student ?? '—'}`;
-const line3 = `${i.date ?? '—'}, ${i.time ?? '—'}`;
-return `<div class="flex items-center gap-3 py-2.5 border-b border-gray-50 last:border-0">
-    <div class="w-8 h-8 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center text-[10px] font-bold flex-shrink-0">
-        ${(i.student ?? '?').slice(0,2).toUpperCase()}
-    </div>
-    <div class="flex-1 min-w-0">
-        <p class="text-xs font-bold text-slate-700 truncate" style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis;" onmouseenter="this.title=this.scrollWidth>this.clientWidth?'${line1.replace(/'/g,'&#39;')}':'';">${line1}</p>
-        <p class="text-[10px] text-gray-400 truncate" style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis;" onmouseenter="this.title=this.scrollWidth>this.clientWidth?'${line2.replace(/'/g,'&#39;')}':'';">${line2}</p>
-        <p class="text-[10px] text-gray-400 truncate" style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis;" onmouseenter="this.title=this.scrollWidth>this.clientWidth?'${line3.replace(/'/g,'&#39;')}':'';">${line3}</p>
-    </div>
+            const line1 = `${i.subject ?? '—'} — ${i.topic || '—'}`;
+            const line2 = `${i.mentor ?? '—'} · ${i.student ?? '—'}`;
+            return `<div class="flex items-center gap-3 py-2.5 border-b border-gray-50 last:border-0">
+                <div class="w-8 h-8 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center text-[10px] font-bold flex-shrink-0">
+                    ${(i.student ?? '?').slice(0,2).toUpperCase()}
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-xs font-bold text-slate-700 truncate" style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis;" onmouseenter="this.title=this.scrollWidth>this.clientWidth?'${line1.replace(/'/g,'&#39;').replace(/"/g,'&quot;')}':'';">${line1}</p>
+                    <p class="text-[10px] text-gray-400 truncate" style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis;" onmouseenter="this.title=this.scrollWidth>this.clientWidth?'${line2.replace(/'/g,'&#39;').replace(/"/g,'&quot;')}':'';">${line2}</p>
+                    <p class="text-[10px] text-gray-400 truncate">${i.date ?? '—'}, ${i.time ?? '—'}</p>
+                </div>
                 <div class="flex-shrink-0 flex items-center gap-2">
                     <span class="text-xs font-black text-purple-600">${hrs}</span>
-                    <span class="text-gray-500 font-bold text-[10px] bg-gray-50 px-2 py-1 rounded border border-current opacity-80 capitalize" style="font-size:10px;line-height:1;">Completed</span>
-                </div>
+                    <span class="text-gray-500 font-bold text-[10px] bg-gray-50 px-2 py-1 rounded border border-current opacity-80" style="font-size:10px;padding:4px 8px;line-height:1;white-space:nowrap;">Completed</span>
+                     </div>
             </div>`;
         }).join('');
     document.getElementById('adminHoursModal').style.display = 'flex';
@@ -752,8 +751,8 @@ return `<div class="flex items-center gap-3 py-2.5 border-b border-gray-50 last:
 function openSessionDetailModal(s) {
     const statusColor = _adminStatusColor(s.status);
     const statusLabel = _adminStatusLabel(s.status);
-    document.getElementById('sdModalTitle').innerText = s.student ?? 'Unknown Student';
-    document.getElementById('sdModalSubtitle').innerText = s.subject + (s.subjectName ? ' – ' + s.subjectName : '');
+    document.getElementById('sdModalTitle').innerText = s.student ?? 'Unknown';
+    document.getElementById('sdModalSubtitle').innerText = (s.subject ?? '—') + (s.subjectName ? ' – ' + s.subjectName : '');
     document.getElementById('sdModalBody').innerHTML = `
         <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 flex items-start gap-3">
             <i class="fa-solid fa-calendar-days text-slate-400 mt-0.5 text-sm flex-shrink-0"></i>
@@ -780,10 +779,6 @@ function openSessionDetailModal(s) {
                 <span class="text-slate-700 font-bold">${s.mode ?? '—'}</span>
             </div>
             <div class="flex justify-between py-2.5">
-                <span class="text-gray-400 font-medium">Year Level</span>
-                <span class="text-slate-700 font-bold">${s.yearLevel ?? '—'}</span>
-            </div>
-            <div class="flex justify-between py-2.5">
                 <span class="text-gray-400 font-medium">Status</span>
                 <span class="${statusColor} font-bold text-[10px] bg-gray-50 px-2 py-1 rounded border border-current opacity-80 capitalize">${statusLabel}</span>
             </div>
@@ -792,3 +787,4 @@ function openSessionDetailModal(s) {
     document.getElementById('sessionDetailModal').style.display = 'flex';
 }
 </script>
+</div>
