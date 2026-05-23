@@ -109,17 +109,19 @@ $summaryCounts = computed(function () {
     ];
 });
 
-$updateEndTime = action(function (int $bookingId, string $newEndTime) {
+$updateSessionTime = action(function (int $bookingId, string $newStartTime, string $newEndTime) {
     $booking = Bookings::findOrFail($bookingId);
 
     $date = \Carbon\Carbon::parse($booking->schedule_start)->toDateString();
-    $newEnd = \Carbon\Carbon::parse($date . ' ' . $newEndTime);
+    $newStart = \Carbon\Carbon::parse($date . ' ' . $newStartTime);
+    $newEnd   = \Carbon\Carbon::parse($date . ' ' . $newEndTime);
 
-    if ($newEnd->lte(\Carbon\Carbon::parse($booking->schedule_start))) {
+    if ($newEnd->lte($newStart)) {
         return;
     }
 
-    $booking->schedule_end = $newEnd;
+    $booking->schedule_start = $newStart;
+    $booking->schedule_end   = $newEnd;
     $booking->save();
 });
 
@@ -472,7 +474,7 @@ $updateEndTime = action(function (int $bookingId, string $newEndTime) {
                     </div>
                     <div>
                         <h3 class="text-sm font-bold text-gray-900 leading-none">Edit Session</h3>
-                        <p class="text-[11px] text-gray-400 mt-0.5">Only end time can be modified</p>
+                        <p class="text-[11px] text-gray-400 mt-0.5">Modify the start or end times</p>
                     </div>
                 </div>
                 <button @click="closeEditModal()" class="w-7 h-7 rounded-lg hover:bg-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-600 transition">
@@ -522,15 +524,17 @@ $updateEndTime = action(function (int $bookingId, string $newEndTime) {
                 <div class="border-t border-dashed border-gray-200 pt-3">
                     <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3">Schedule</p>
                     <div class="grid grid-cols-2 gap-3">
-                        {{-- Start Time (locked) --}}
+                        {{-- Start Time (editable) --}}
                         <div>
-                            <label class="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-1.5">
-                                Start Time <span class="normal-case font-normal text-gray-300">(locked)</span>
+                            <label class="text-[10px] font-bold text-blue-600 uppercase tracking-wider block mb-1.5">
+                                Start Time <span class="normal-case font-medium text-blue-400">(editable)</span>
                             </label>
-                            <div class="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
-                                <i class="fa-regular fa-clock text-gray-300 text-xs"></i>
-                                <span class="text-xs font-semibold text-gray-400" x-text="editSession ? formatTo12h(editSession.start) : '—'"></span>
+                            <div class="relative flex items-center">
+                                <i class="fa-regular fa-clock absolute left-3 text-blue-400 text-xs pointer-events-none"></i>
+                                <input type="time" x-model="editStartTime"
+                                    class="w-full pl-8 pr-3 py-2 text-xs font-semibold text-slate-700 border border-blue-300 rounded-lg bg-white outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-500 transition-shadow">
                             </div>
+                            <p x-show="editStartTimeError" x-cloak class="text-[10px] text-red-500 mt-1 font-medium" x-text="editStartTimeError"></p>
                         </div>
                         {{-- End Time (editable) --}}
                         <div>
@@ -547,7 +551,7 @@ $updateEndTime = action(function (int $bookingId, string $newEndTime) {
                     </div>
 
                     {{-- Duration Preview --}}
-                    <div class="mt-3 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2 flex items-center justify-between" x-show="editEndTime && editSession">
+                    <div class="mt-3 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2 flex items-center justify-between" x-show="editStartTime && editEndTime && editSession">
                         <span class="text-[10px] font-bold text-blue-400 uppercase tracking-wider">New Duration</span>
                         <span class="text-xs font-bold text-blue-700" x-text="computeNewDuration()"></span>
                     </div>

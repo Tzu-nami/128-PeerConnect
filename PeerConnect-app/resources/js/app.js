@@ -938,13 +938,17 @@ Alpine.data('sessionManagement', (initialSessions = [], initialCounts = {}) => (
     // Edit Modal
     showEditModal: false,
     editSession: null,
+    editStartTime: '',
     editEndTime: '',
+    editStartTimeError: '',
     editEndTimeError: '',
     isSavingEdit: false,
 
     openEditModal(s) {
         this.editSession = s;
+        this.editStartTime = s.start;
         this.editEndTime = s.end;
+        this.editStartTimeError = '';
         this.editEndTimeError = '';
         this.showEditModal = true;
     },
@@ -952,7 +956,9 @@ Alpine.data('sessionManagement', (initialSessions = [], initialCounts = {}) => (
     closeEditModal() {
         this.showEditModal = false;
         this.editSession = null;
+        this.editStartTime = '';
         this.editEndTime = '';
+        this.editStartTimeError = '';
         this.editEndTimeError = '';
     },
 
@@ -965,11 +971,12 @@ Alpine.data('sessionManagement', (initialSessions = [], initialCounts = {}) => (
     },
 
     computeNewDuration() {
-        if (!this.editSession || !this.editEndTime) return '—';
-        const [sh, sm] = this.editSession.start.split(':').map(Number);
+        if (!this.editSession || !this.editStartTime || !this.editEndTime) return '—';
+        const [sh, sm] = this.editStartTime.split(':').map(Number);
         const [eh, em] = this.editEndTime.split(':').map(Number);
         const diff = (eh * 60 + em) - (sh * 60 + sm);
-        if (diff <= 0) return 'Invalid';
+        
+        if (diff <= 0) return 'Invalid Range';
         const hrs = Math.floor(diff / 60);
         const mins = diff % 60;
         if (hrs === 0) return `${mins} min`;
@@ -978,10 +985,14 @@ Alpine.data('sessionManagement', (initialSessions = [], initialCounts = {}) => (
     },
 
     async saveEndTime() {
+        this.editStartTimeError = '';
         this.editEndTimeError = '';
-        const [sh, sm] = this.editSession.start.split(':').map(Number);
+        
+        const [sh, sm] = this.editStartTime.split(':').map(Number);
         const [eh, em] = this.editEndTime.split(':').map(Number);
+        
         if ((eh * 60 + em) <= (sh * 60 + sm)) {
+            this.editStartTimeError = 'Invalid range.';
             this.editEndTimeError = 'End time must be after the start time.';
             return;
         }
@@ -994,14 +1005,24 @@ Alpine.data('sessionManagement', (initialSessions = [], initialCounts = {}) => (
                 const formData = new FormData();
                 formData.append('_token', document.querySelector('meta[name="csrf-token"]').content);
                 formData.append('booking_id', bookingId);
+                formData.append('start_time', this.editStartTime);
                 formData.append('end_time', this.editEndTime);
 
                 const res = await fetch('/admin/sessions/update-end-time', { method: 'POST', body: formData });
                 if (!res.ok) throw new Error('Request failed');
             }));
 
+            this.editSession.start = this.editStartTime;
             this.editSession.end = this.editEndTime;
-            this.editSession.time = this.formatTo12h(this.editSession.start) + ' – ' + this.formatTo12h(this.editEndTime);
+            this.editSession.time = this.formatTo12h(this.editStartTime) + ' – ' + this.formatTo12h(this.editEndTime);
+            
+            const diffMins = (eh * 60 + em) - (sh * 60 + sm);
+            const diffHours = diffMins / 60;
+            const durationText = diffHours === 1 ? '1 hr' : String(diffHours.toFixed(2)).replace(/\.?0+$/, '');
+            
+            this.editSession.duration = this.editSession.time + ' (' + durationText + ')';
+            this.editSession.durationHours = diffHours;
+            
             this.closeEditModal();
             this.triggerBanner('Time updated successfully.', 'success');
         } catch (err) {
