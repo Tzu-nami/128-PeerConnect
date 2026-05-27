@@ -5,6 +5,7 @@ namespace App\Providers;
 use Illuminate\Support\ServiceProvider;
 use App\Services\Avatar;
 use Illuminate\Support\Facades\View;
+use Illuminate\Support\Facades\URL;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -14,22 +15,6 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(Avatar::class);
-        if (isset($_ENV['VERCEL'])) {
-            config([
-                'view.compiled' => '/tmp/storage/framework/views',
-                'cache.stores.file.path' => '/tmp/storage/framework/cache/data',
-                'session.files' => '/tmp/storage/framework/sessions',
-            ]);
-            if (!is_dir('/tmp/storage/framework/views')) {
-                mkdir('/tmp/storage/framework/views', 0755, true);
-            }
-            if (!is_dir('/tmp/storage/framework/cache/data')) {
-                mkdir('/tmp/storage/framework/cache/data', 0755, true);
-            }
-            if (!is_dir('/tmp/storage/framework/sessions')) {
-                mkdir('/tmp/storage/framework/sessions', 0755, true);
-            }
-        }
     }
 
     /**
@@ -37,6 +22,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        if (isset($_SERVER['VERCEL']) || isset($_ENV['VERCEL'])) {
+            URL::forceScheme('https');
+        }
         // Allow variables to be available in all views
         View::composer('*', function ($view) {
             $user = auth()->user();
