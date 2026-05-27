@@ -15,7 +15,20 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->app->singleton(Avatar::class);
         if (isset($_ENV['VERCEL'])) {
-            config(['view.compiled' => '/tmp/storage/framework/views']);
+            config([
+                'view.compiled' => '/tmp/storage/framework/views',
+                'cache.stores.file.path' => '/tmp/storage/framework/cache/data',
+                'session.files' => '/tmp/storage/framework/sessions',
+            ]);
+            if (!is_dir('/tmp/storage/framework/views')) {
+                mkdir('/tmp/storage/framework/views', 0755, true);
+            }
+            if (!is_dir('/tmp/storage/framework/cache/data')) {
+                mkdir('/tmp/storage/framework/cache/data', 0755, true);
+            }
+            if (!is_dir('/tmp/storage/framework/sessions')) {
+                mkdir('/tmp/storage/framework/sessions', 0755, true);
+            }
         }
     }
 
