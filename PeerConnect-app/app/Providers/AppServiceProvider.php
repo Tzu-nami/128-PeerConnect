@@ -14,6 +14,9 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(Avatar::class);
+        if (isset($_ENV['VERCEL'])) {
+            config(['view.compiled' => '/tmp/storage/framework/views']);
+        }
     }
 
     /**

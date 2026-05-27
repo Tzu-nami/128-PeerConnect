@@ -9,7 +9,7 @@ use Illuminate\Support\Str;
 class Avatar {
     // Uploads file to supabase then returns url
     public function upload(UploadedFile $file, string $userId): string {
-        $extension = $file->getClientOriginalExtenstion();
+        $extension = $file->getClientOriginalExtension();
         $filename = "mentor-{$userId}-" . Str::uuid() . ".{$extension}";
 
         // Grab data of image and post into supabase bucket
