@@ -17,7 +17,7 @@ $app = Application::configure(basePath: dirname(__DIR__))
     })
     ->withExceptions(function (Exceptions $exceptions) {
         
-        // --- THE ULTIMATE INTERCEPTOR RETURNS ---
+        // --- KEEP THE INTERCEPTOR FOR NOW ---
         $exceptions->render(function (Throwable $e, Request $request) {
             echo "<h1 style='color:red; font-family:sans-serif;'>THE REAL ORIGINAL ERROR:</h1>";
             echo "<h2 style='font-family:sans-serif;'>" . get_class($e) . "</h2>";
@@ -28,24 +28,11 @@ $app = Application::configure(basePath: dirname(__DIR__))
 
     })->create();
 
-// --- VERCEL SERVERLESS PATH OVERRIDES (Keep this!) ---
+// --- CREATE VIEW DIRECTORY (Safe for L11) ---
 if (isset($_SERVER['VERCEL']) || isset($_ENV['VERCEL'])) {
-    $app->useStoragePath('/tmp/storage');
-    $app->useBootstrapCachePath('/tmp/bootstrap/cache');
-    
-    $directories = [
-        '/tmp/storage/app',
-        '/tmp/storage/logs',
-        '/tmp/storage/framework/cache/data',
-        '/tmp/storage/framework/sessions',
-        '/tmp/storage/framework/views',
-        '/tmp/bootstrap/cache',
-    ];
-    
-    foreach ($directories as $dir) {
-        if (!is_dir($dir)) {
-            mkdir($dir, 0755, true);
-        }
+    $viewPath = '/tmp/storage/framework/views';
+    if (!is_dir($viewPath)) {
+        mkdir($viewPath, 0755, true);
     }
 }
 
