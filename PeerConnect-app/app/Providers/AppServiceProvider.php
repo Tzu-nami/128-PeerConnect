@@ -5,7 +5,6 @@ namespace App\Providers;
 use Illuminate\Support\ServiceProvider;
 use App\Services\Avatar;
 use Illuminate\Support\Facades\View;
-use Illuminate\Support\Facades\URL;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -22,9 +21,6 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        if (isset($_SERVER['VERCEL']) || isset($_ENV['VERCEL'])) {
-            URL::forceScheme('https');
-        }
         // Allow variables to be available in all views
         View::composer('*', function ($view) {
             $user = auth()->user();
