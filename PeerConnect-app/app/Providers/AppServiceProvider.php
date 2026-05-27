@@ -22,7 +22,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         // Allow variables to be available in all views
-        View::composer(['layouts.app', 'layouts.guest'], function ($view) {
+        View::composer('*', function ($view) {
             $user = auth()->user();
             $bookUrl = route('auth.google');
             $dashboardUrl = route('auth.google');
